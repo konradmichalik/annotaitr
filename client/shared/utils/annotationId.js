@@ -19,8 +19,9 @@ export function createAnnotationId() {
  * Deliberately duplicated in server/core/annotationHandle.js: client and server
  * share no modules, and both need to derive the same handle from the same id.
  */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export function annotationHandle(id) {
-  if (typeof id !== 'string') { return null }
-  const [first] = id.split('-')
-  return /^[0-9a-f]{8}$/i.test(first) ? first.toLowerCase() : null
+  if (typeof id !== 'string' || !UUID.test(id)) { return null }
+  return id.slice(0, 8).toLowerCase()
 }

@@ -61,11 +61,13 @@ in the feedback markdown so the agent has something to address:
 ## 1. Comment on (Line 42) [#a3f19c2e]
 ```
 
-**Handle = the first group of the annotation UUID**, i.e. `id.split('-')[0]`,
-which is exactly 8 hex characters. Both client and server derive it
-independently from the same `id`, so no shared module and no ID registry is
-needed. The number stays for human readability within a round; the handle
-carries identity across rounds.
+**Handle = the first group of the annotation UUID**, which is exactly 8 hex
+characters. The full id is matched against the complete UUID shape before the
+prefix is taken: validating only the first group would hand `a3f19c2e-foo` and
+`a3f19c2e-bar` the same handle, which is the one failure this design cannot
+afford. Both client and server derive it independently from the same `id`, so no
+shared module and no ID registry is needed. The number stays for human
+readability within a round; the handle carries identity across rounds.
 
 No collision check. At 8 hex characters (32 bits), 100 annotations in a
 session collide with probability around 1e-6. The 6 characters proposed in

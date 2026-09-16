@@ -44,6 +44,13 @@ describe('annotationHandle', () => {
     expect(annotationHandle('a3f19c2-1b4d-4f7a-9c3e-2d5f8a1b6c4d')).toBeNull()
   })
 
+  it('returns null when only the first group is UUID-shaped, so prefix twins cannot collide', () => {
+    expect(annotationHandle('a3f19c2e-not-a-uuid')).toBeNull()
+    expect(annotationHandle('a3f19c2e')).toBeNull()
+    expect(annotationHandle('a3f19c2e-1b4d-4f7a-9c3e')).toBeNull()
+    expect(annotationHandle('a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d-extra')).toBeNull()
+  })
+
   it('returns null for a missing or non-string id', () => {
     expect(annotationHandle(undefined)).toBeNull()
     expect(annotationHandle(null)).toBeNull()
