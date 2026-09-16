@@ -19,6 +19,11 @@ After the user submits their decision:
 - If approved: No action needed
 - If feedback provided: Apply the requested changes to the file
 
+Each annotation heading ends with a short handle in brackets, such as
+`[#a3f19c2e]`. The numbering is recalculated every round, the handle is not.
+Use it whenever you refer to a specific annotation, both when reporting back to
+the user and in the next round's feedback notes.
+
 ## Re-review loop
 
 Unless the user specified `--no-review`, after applying changes:
@@ -27,10 +32,11 @@ Unless the user specified `--no-review`, after applying changes:
    - Use `feedbackNotes` parameter with `[{text, line?}]` entries
    - Include `line` for location-specific notes (use line numbers from the **updated** file)
    - Omit `line` for general notes
+   - Quote the handle of the annotation a note answers
 
 2. Re-open the annotator with notes:
    ```
-   annotate_markdown({ filePath: "...", feedbackNotes: [{text: "Changed X", line: 5}] })
+   annotate_markdown({ filePath: "...", feedbackNotes: [{text: "#a3f19c2e: changed X", line: 5}] })
    ```
 
 3. If approved → done. If more feedback → apply and repeat.

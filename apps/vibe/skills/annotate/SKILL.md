@@ -36,6 +36,11 @@ The command prints the result to stdout:
   - **"Comment on"** entries: apply the user's comment as a change to the referenced text.
   - **"Insert text"** entries: insert the provided text at the specified location.
 
+Each annotation heading ends with a short handle in brackets, such as
+`[#a3f19c2e]`. The numbering is positional and is recalculated every round, the
+handle is not. Use it whenever you refer to a specific annotation, both when
+reporting back to the user and in the next round's feedback notes.
+
 > Requires the `annotaitr` CLI on your `PATH` (`npm install -g annotaitr`,
 > or `npm link` from a local checkout). `md-annotator` still works as a
 > compatibility alias for the same binary.
@@ -46,12 +51,14 @@ Unless the user said otherwise, after applying all changes:
 
 1. **Build feedback notes** describing what you changed — a JSON array of
    `{ "text": "...", "line": <number> }` entries. `line` is the line number in
-   the **updated** file; omit it for general notes.
+   the **updated** file; omit it for general notes. Quote the handle of the
+   annotation a note answers, so the user can tell which of their marks you are
+   replying to.
 
 2. **Re-open the annotator** with the notes so the user sees what changed:
 
    ```bash
-   annotaitr --origin vibe --feedback-notes '[{"text":"Rewrote intro for clarity","line":5},{"text":"Removed redundant section"}]' <file1.md> [file2.md ...]
+   annotaitr --origin vibe --feedback-notes '[{"text":"#a3f19c2e: rewrote intro for clarity","line":5},{"text":"#7b210e44: left as-is, the section is referenced elsewhere"}]' <file1.md> [file2.md ...]
    ```
 
 3. **Evaluate the result:**

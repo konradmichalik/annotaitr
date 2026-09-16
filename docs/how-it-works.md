@@ -53,6 +53,14 @@ collect further feedback; markdown mode's `--feedback-notes` lets that
 re-opened round show what changed since the last submission, so the reviewer
 isn't looking at a blank slate.
 
+Every annotation carries a short handle in the feedback output, written as
+`[#a3f19c2e]`. It is the first group of the annotation's internal UUID, so it
+stays the same no matter how the annotations get renumbered in a later round.
+The numbering itself is positional and is recomputed every time, which makes it
+useless as a reference once the document has changed. The handle gives an agent
+something stable to quote back, as in "fixed `#a3f19c2e`, left `#7b210e44`
+alone because …".
+
 A heartbeat request from the browser tab, polled every few seconds, detects
 a closed tab and resolves the decision as disconnected rather than hanging
 the CLI forever. Interrupting the process (`Ctrl+C`) resolves it as

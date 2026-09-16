@@ -38,6 +38,12 @@ each giving a line reference and the requested change:
 - **"Comment on"** entries: apply the comment as a change to the referenced text
 - **"Insert text"** entries: insert the given text at the specified location
 
+In both shapes, every annotation heading carries a short handle in brackets,
+such as `[#a3f19c2e]`. The numbering is positional and is recalculated every
+round, the handle is not. Use it whenever you refer to a specific annotation,
+both when reporting back to the user and in the next round's feedback notes:
+"fixed `#a3f19c2e`, left `#7b210e44` alone because the intro already covers it".
+
 In both shapes: if the output shows `APPROVED:`, the target was approved with
 no changes needed — confirm and stop. If it shows `APPROVED WITH NOTES:`, it
 was approved as-is but carries annotations; do **not** make changes, read the
