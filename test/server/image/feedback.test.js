@@ -70,6 +70,43 @@ describe('exportFeedback', () => {
     expect(output).not.toContain('close to annotation')
   })
 
+  it('puts the handle right after the number for a shape annotation', () => {
+    const marked = { ...box, id: 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d' }
+    const output = exportFeedback([marked], 100, 100, '/tmp/annotated.png')
+    expect(output).toContain('### 1. [#a3f19c2e] Boxed area:')
+  })
+
+  it('puts the handle right after the number for a general comment', () => {
+    const comment = {
+      id: '7b210e44-9f2c-4a1b-8e6d-3c7a5b9d1e2f',
+      type: 'comment',
+      color: null,
+      text: 'Overall this looks great'
+    }
+    const output = exportFeedback([comment], 100, 100, '/tmp/annotated.png')
+    expect(output).toContain('### 1. [#7b210e44] General comment about the whole image')
+  })
+
+  it('keeps the handle ahead of the proximity note', () => {
+    const a = { id: 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d', type: 'box', color: '#e11d48', text: '', geometry: { x: 85, y: 15, width: 4, height: 4 } }
+    const b = { id: '7b210e44-9f2c-4a1b-8e6d-3c7a5b9d1e2f', type: 'box', color: '#e11d48', text: '', geometry: { x: 90, y: 18, width: 4, height: 4 } }
+    const output = exportFeedback([a, b], 100, 100, '/tmp/annotated.png')
+    expect(output).toContain('### 1. [#a3f19c2e] Boxed area:')
+    expect(output).toContain('close to annotation 2')
+  })
+
+  it('omits the handle when the annotation has no id', () => {
+    const output = exportFeedback([box], 100, 100, '/tmp/annotated.png')
+    expect(output).toContain('### 1. Boxed area:')
+    expect(output).not.toContain('[#')
+  })
+
+  it('carries handles into approve-with-notes output', () => {
+    const marked = { ...pin, id: 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d' }
+    const output = formatApprovalWithNotesOutput([marked], 100, 100, '/tmp/annotated.png')
+    expect(output).toContain('### 1. [#a3f19c2e] Comment pin:')
+  })
+
   it('formats a general comment without a position or nearby-marker note', () => {
     const comment = { type: 'comment', color: null, text: 'Overall this looks great' }
     const output = exportFeedback([comment], 100, 100, '/tmp/annotated.png')

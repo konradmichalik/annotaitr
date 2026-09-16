@@ -1,3 +1,18 @@
+import { annotationHandle } from '../core/annotationHandle.js'
+
+/**
+ * Splice the annotation's handle into the end of a formatted block's first
+ * line, whatever shape that line has. Every branch of formatAnnotation builds
+ * its own heading, so tagging the line afterwards beats threading the handle
+ * through all of them.
+ */
+function withHandle(formatted, id) {
+  const handle = annotationHandle(id)
+  if (!handle) { return formatted }
+  const lineEnd = formatted.indexOf('\n')
+  return `${formatted.slice(0, lineEnd)} [#${handle}]${formatted.slice(lineEnd)}`
+}
+
 /**
  * Format an approval decision for stdout.
  *
@@ -146,6 +161,17 @@ function formatAnnotation(ann, block, heading) {
   return output + '\n'
 }
 
+/**
+ * A global comment is not tied to a selection, so it has no line reference to
+ * put in a heading. It still needs one: without it there is nowhere to carry
+ * the handle, and an agent cannot address the comment across rounds.
+ */
+function formatGlobalComment(ann, heading) {
+  const handle = annotationHandle(ann.id)
+  const handleTag = handle ? ` [#${handle}]` : ''
+  return `${heading} General comment${handleTag}\n> ${(ann.text ?? '').replace(/\n/g, '\n> ')}\n\n`
+}
+
 function getBlockOrder(blockId, blocks) {
   const sourceMatch = blockId?.match(/^source-line-(\d+)$/)
   if (sourceMatch) { return parseInt(sourceMatch[1], 10) + 1 }
@@ -197,13 +223,13 @@ export function exportMultiFileFeedback(files) {
     if (globalComments.length > 0) {
       output += `### General Feedback\n\n`
       globalComments.forEach(ann => {
-        output += `> ${(ann.text ?? '').replace(/\n/g, '\n> ')}\n\n`
+        output += formatGlobalComment(ann, '####')
       })
     }
 
     for (const ann of regularAnnotations) {
       const block = file.blocks.find(blk => blk.id === ann.blockId)
-      output += formatAnnotation(ann, block, `### ${globalIndex}.`)
+      output += withHandle(formatAnnotation(ann, block, `### ${globalIndex}.`), ann.id)
       globalIndex++
     }
   }
@@ -233,13 +259,13 @@ export function exportFeedback(annotations, blocks) {
   if (globalComments.length > 0) {
     output += `## General Feedback\n\n`
     globalComments.forEach(ann => {
-      output += `> ${(ann.text ?? '').replace(/\n/g, '\n> ')}\n\n`
+      output += formatGlobalComment(ann, '###')
     })
   }
 
   regularAnnotations.forEach((ann, index) => {
     const block = blocks.find(blk => blk.id === ann.blockId)
-    output += formatAnnotation(ann, block, `## ${index + 1}.`)
+    output += withHandle(formatAnnotation(ann, block, `## ${index + 1}.`), ann.id)
   })
 
   output += '---\n'

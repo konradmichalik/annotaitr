@@ -242,6 +242,74 @@ describe('exportMultiFileFeedback', () => {
   })
 })
 
+describe('annotation handles', () => {
+  const UUID_A = 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d'
+  const UUID_B = '7b210e44-9f2c-4a1b-8e6d-3c7a5b9d1e2f'
+
+  it('appends the handle to a comment heading', () => {
+    const output = exportFeedback([makeAnnotation({ id: UUID_A })], [makeBlock()])
+    expect(output).toContain('## 1. Comment on (Line 1) [#a3f19c2e]')
+  })
+
+  it('appends the handle after an existing quick-label tag', () => {
+    const annotations = [makeAnnotation({
+      id: UUID_A,
+      label: { id: 'unclear', emoji: '❓', text: 'Unclear', color: 'yellow' }
+    })]
+    const output = exportFeedback(annotations, [makeBlock()])
+    expect(output).toContain('Comment on (Line 1) [❓ Unclear] [#a3f19c2e]')
+  })
+
+  it('appends the handle to a deletion heading', () => {
+    const annotations = [makeAnnotation({ id: UUID_A, type: 'DELETION', text: null, originalText: 'world' })]
+    const output = exportFeedback(annotations, [makeBlock()])
+    expect(output).toContain('## 1. Remove this (Line 1) [#a3f19c2e]')
+  })
+
+  it('appends the handle to an element-level heading', () => {
+    const blocks = [makeBlock({ type: 'code', content: 'graph TD', language: 'mermaid' })]
+    const annotations = [makeAnnotation({ id: UUID_A, targetType: 'diagram', text: 'Redraw this' })]
+    const output = exportFeedback(annotations, blocks)
+    expect(output).toContain('## 1. Comment on Mermaid diagram (Line 1) [#a3f19c2e]')
+  })
+
+  it('gives a global comment a heading carrying its handle', () => {
+    const annotations = [makeAnnotation({
+      id: UUID_A,
+      targetType: 'global',
+      text: 'The document needs an intro.',
+      originalText: ''
+    })]
+    const output = exportFeedback(annotations, [makeBlock()])
+    expect(output).toContain('### General comment [#a3f19c2e]')
+    expect(output).toContain('> The document needs an intro.')
+  })
+
+  it('uses a deeper global-comment heading in multi-file output', () => {
+    const files = [
+      {
+        path: '/a.md',
+        annotations: [makeAnnotation({ id: UUID_A, targetType: 'global', text: 'Needs an intro.' })],
+        blocks: [makeBlock()]
+      },
+      {
+        path: '/b.md',
+        annotations: [makeAnnotation({ id: UUID_B })],
+        blocks: [makeBlock()]
+      }
+    ]
+    const output = exportMultiFileFeedback(files)
+    expect(output).toContain('#### General comment [#a3f19c2e]')
+    expect(output).toContain('### 1. Comment on (Line 1) [#7b210e44]')
+  })
+
+  it('omits the handle when the id is not UUID-shaped', () => {
+    const output = exportFeedback([makeAnnotation({ id: 'ann-1' })], [makeBlock()])
+    expect(output).toContain('## 1. Comment on (Line 1)\n')
+    expect(output).not.toContain('[#')
+  })
+})
+
 describe('formatApprovalOutput', () => {
   it('emits the plain approval marker when no notes were left', () => {
     const output = formatApprovalOutput({ approved: true })
