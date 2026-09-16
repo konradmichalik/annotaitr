@@ -16,11 +16,13 @@ Address the annotation feedback above. The user has reviewed the markdown file i
 - **"Comment on"** entries: Apply the user's comment as a change to the referenced text
 - **"Insert text"** entries: Insert the provided text at the specified location
 
-Each heading ends with a short handle in brackets, such as `[#a3f19c2e]`. The
-numbering is positional and is recalculated every round, the handle is not. Use
-it whenever you refer to a specific annotation, both when reporting back to the
-user and in the next round's feedback notes: "fixed `#a3f19c2e`, left
-`#7b210e44` alone because the intro already covers it".
+Each heading normally ends with a short handle in brackets, such as
+`[#a3f19c2e]`. The numbering is positional and is recalculated every round, the
+handle is not. Use it whenever you refer to a specific annotation, both when
+reporting back to the user and in the next round's feedback notes: "fixed
+`#a3f19c2e`, left `#7b210e44` alone because the intro already covers it". If a
+heading carries no handle, refer to that annotation by its number and quoted
+text instead, and never invent one.
 
 If the output shows `APPROVED:`, the user approved the file with no changes needed — confirm and stop.
 

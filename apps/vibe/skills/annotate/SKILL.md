@@ -36,10 +36,12 @@ The command prints the result to stdout:
   - **"Comment on"** entries: apply the user's comment as a change to the referenced text.
   - **"Insert text"** entries: insert the provided text at the specified location.
 
-Each annotation heading ends with a short handle in brackets, such as
+Each annotation heading normally ends with a short handle in brackets, such as
 `[#a3f19c2e]`. The numbering is positional and is recalculated every round, the
 handle is not. Use it whenever you refer to a specific annotation, both when
-reporting back to the user and in the next round's feedback notes.
+reporting back to the user and in the next round's feedback notes. If a heading
+carries no handle, refer to that annotation by its number and quoted text
+instead, and never invent one.
 
 > Requires the `annotaitr` CLI on your `PATH` (`npm install -g annotaitr`,
 > or `npm link` from a local checkout). `md-annotator` still works as a

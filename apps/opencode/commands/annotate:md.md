@@ -19,10 +19,12 @@ After the user submits their decision:
 - If approved: No action needed
 - If feedback provided: Apply the requested changes to the file
 
-Each annotation heading ends with a short handle in brackets, such as
+Each annotation heading normally ends with a short handle in brackets, such as
 `[#a3f19c2e]`. The numbering is recalculated every round, the handle is not.
 Use it whenever you refer to a specific annotation, both when reporting back to
-the user and in the next round's feedback notes.
+the user and in the next round's feedback notes. If a heading carries no handle,
+refer to that annotation by its number and quoted text instead, and never invent
+one.
 
 ## Re-review loop
 
