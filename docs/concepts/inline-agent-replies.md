@@ -12,28 +12,30 @@ and re-opens the annotator. What the agent actually did about each individual
 mark reaches the reviewer only as prose in the terminal, which is precisely
 the thing annotaitr exists to let people stop watching.
 
-Concretely, in the current code:
+Concretely, this was the code before S1. The baseline is kept because the
+reasoning below builds on it; S1 has since closed the first point and gave
+markdown global comments a heading:
 
 - **No stable handle.** `exportFeedback()` numbers annotations `## 1.`, `## 2.`
-  by document order (`server/markdown/feedback.js:240-243`), and
+  by document order (`server/markdown/feedback.js`), and
   `exportMultiFileFeedback()` does the same with a running `globalIndex`
-  (`feedback.js:190,206-207`). The numbering is recomputed on every call, so
+  (`feedback.js`). The numbering is recomputed on every call, so
   there is nothing the agent can quote back that survives a second pass.
 - **Notes are line-anchored, not annotation-anchored.**
   `convertNotesToAnnotations()` accepts `{ text, line }`
-  (`server/markdown/notes.js:12`). A note says "something happened near line
+  (`server/markdown/notes.js`). A note says "something happened near line
   5", not "this answers your comment about the intro". If the line is out of
   range, `createLineAnnotation()` silently returns a global annotation
-  (`notes.js:50-57`), with no signal to the reviewer that the anchor was lost.
+  (`notes.js`), with no signal to the reviewer that the anchor was lost.
 - **Notes are read-only and one-way.** Both `exportFeedback()`
-  (`feedback.js:220`) and `exportMultiFileFeedback()` (`feedback.js:172-175`)
+  (`feedback.js`) and `exportMultiFileFeedback()` (`feedback.js`)
   filter `type === 'NOTES'` out of the outgoing feedback. A reviewer who
   disagrees with an agent note has no way to say so inside the tool.
-- **Image mode has nothing.** `index.js:419` fails hard with
+- **Image mode has nothing.** `index.js` fails hard with
   `--feedback-notes only applies to markdown targets, not images.`
 
 There is no notion of a round or a session anywhere in `server/` or `client/`
-today. `docs/how-it-works.md:46` uses the word "round" in prose only.
+today. `docs/how-it-works.md` uses the word "round" in prose only.
 
 The result is that round 2 of a review is close to a blank slate. The reviewer
 re-reads the whole document to work out which of their five points landed, and
@@ -65,9 +67,13 @@ in the feedback markdown so the agent has something to address:
 characters. The full id is matched against the complete UUID shape before the
 prefix is taken: validating only the first group would hand `a3f19c2e-foo` and
 `a3f19c2e-bar` the same handle, which is the one failure this design cannot
-afford. Both client and server derive it independently from the same `id`, so no
-shared module and no ID registry is needed. The number stays for human
-readability within a round; the handle carries identity across rounds.
+afford. Both client and server derive it independently from the same `id` (the
+server for stdout, the client for the markdown copy export), so no shared module
+and no ID registry is needed. The number stays for human readability within a
+round; the handle carries identity for as long as the annotation exists. S1 does
+not make annotations outlive a round: the markdown draft is keyed by the content
+hash and is dropped once the agent edits the file. Carrying identity into the
+next round is the job of re-anchoring (3.3) and the session file (3.4).
 
 No collision check. At 8 hex characters (32 bits), 100 annotations in a
 session collide with probability around 1e-6. The 6 characters proposed in
@@ -75,20 +81,20 @@ draft 1 would give roughly 1 in 3400, and the failure mode is a reply silently
 attaching to the wrong thread, which is the worst outcome this design has.
 More importantly, a session-wide uniqueness check needs a single place where
 IDs are minted, and markdown mode does not have one: IDs are generated inline
-at four call sites (`client/markdown/src/components/Viewer/Viewer.jsx:174,203,229`
-and `client/markdown/src/App.jsx:373`). Widening the handle keeps S1 a pure
+at four call sites (`client/markdown/src/components/Viewer/Viewer.jsx`
+and `client/markdown/src/App.jsx`). Widening the handle keeps S1 a pure
 formatting change.
 
 **Prerequisite.** Markdown mode calls bare `crypto.randomUUID()` at those four
 sites. Image mode wraps it in `createAnnotationId()` with a manual v4 fallback
-for insecure contexts (`client/image/src/state/annotationReducer.js:7-19`).
+for insecure contexts (`client/image/src/state/annotationReducer.js`).
 `crypto.randomUUID` is undefined outside a secure context, which a non-loopback
 `ANNOTAITR_HOST` produces. Today that is a latent bug; once handles are part of
 the agent contract it becomes load-bearing. Port the image-mode helper to
 markdown mode as part of S1.
 
 The `id` already survives the POST into the formatters unmodified
-(`server/markdown/routes.js:146`, `server/image/routes.js:70`), so nothing has
+(`server/markdown/routes.js`, `server/image/routes.js`), so nothing has
 to be threaded through.
 
 **The handle is deliberately not written into the JSON export**, which draft 1
@@ -102,16 +108,19 @@ is documented instead.
 
 **Markdown global comments have no heading to hang a handle on.** They are
 emitted as a bare `> text` line with no number and no label
-(`server/markdown/feedback.js:199-201,235-237`). "Every annotation becomes a
+(`server/markdown/feedback.js`). "Every annotation becomes a
 thread" is therefore false for them as the output stands. They need a real
 heading format, not a splice, and that change belongs in S1 rather than being
 discovered in S2. Image mode does not have this gap: it numbers general
-comments already (`server/image/feedback.js:42`).
+comments already (`server/image/feedback.js`).
 
 This is the enabling change for everything below, and it is small enough to
 ship on its own: even with no other work, an agent can write "fixed
-`#a3f19c2e`, skipped `#7b210e44` because …" in chat and the reviewer can follow
-it.
+`#a3f19c2e`, skipped `#7b210e44` because …" in chat. The annotator does not
+display handles, so on their own they mean nothing to the reviewer. The agent
+files therefore tell agents to pair each handle with a few words naming the
+passage. Showing handles on the marks themselves belongs to the inline
+rendering in S2.
 
 ### 3.2 Reply model
 
@@ -177,7 +186,7 @@ moved, and the annotated text may not exist any more.
 
 **`blockId` cannot be used for this.** The parser assigns
 `` id: `block-${currentId++}` `` at every construction site
-(`client/markdown/src/utils/parser.js:71` and ~17 further sites). It is a plain
+(`client/markdown/src/utils/parser.js` and ~17 further sites). It is a plain
 sequence counter, so inserting a single paragraph near the top renumbers every
 block below it. Any implementer reaching for `blockId` as an anchor is building
 a silent mis-attachment.
@@ -191,10 +200,10 @@ a silent mis-attachment.
    covers the common case where the agent declined or deferred everything, and
    it is the only step in the ladder that is exact rather than probabilistic.
    In markdown mode this reuses shipped infrastructure: a sha256 `contentHash`
-   is already computed (`server/markdown/adapter.js:52`,
-   `server/markdown/routes.js:102`), served to the client
-   (`routes.js:132`), carried in the JSON export, and there is already a
-   `hashMismatch` flag (`routes.js:43`). Image mode has no equivalent, which is
+   is already computed (`server/markdown/adapter.js`,
+   `server/markdown/routes.js`), served to the client
+   (`routes.js`), carried in the JSON export, and there is already a
+   `hashMismatch` flag (`routes.js`). Image mode has no equivalent, which is
    one more reason the ladder does not apply there (see 3.5).
 1. **Exact quote + context.** Store `originalText` plus ~32 characters of
    prefix and suffix (the shape of a W3C `TextQuoteSelector`). A unique match
@@ -316,7 +325,7 @@ different shape.
   pin/box and put the thread inside the existing comment popover.
 - **The number cannot be replaced by the handle.** Image annotation numbers are
   baked into the output image pixels by the render legend, and
-  `findNearbyAnnotationNumbers()` (`server/image/feedback.js:35`) is
+  `findNearbyAnnotationNumbers()` (`server/image/feedback.js`) is
   index-based. Number and handle have to coexist permanently, and a ghost
   overlay from an earlier round must render its handle, because its old number
   means nothing against a re-numbered current round.
@@ -424,14 +433,14 @@ and whether the answer changes once S1.5 has real numbers.
   session file plus subcommand plus ladder first (agent-visible, testable
   without UI), inline rendering second.
 - **The CLI has no subcommand concept.** Argument parsing is a hand-rolled loop
-  where any non-flag token becomes a target (`index.js:108-175`, target at line
+  where any non-flag token becomes a target (`index.js`, target at line
   152), and `main()` always starts a server. `annotaitr reply` needs top-level
   dispatch ahead of that loop plus a second execution path that never binds a
   port. This is structural work, not a flag addition, and it is the part of S2
   most likely to be underestimated. The `--session` family of flags, by
   contrast, drops into the existing loop. There is also no persistence path in
   the codebase today: the only writes are write-once temp artifacts that are
-  never read back (`server/image/output.js:13`, `server/image/clipboard.js:30`),
+  never read back (`server/image/output.js`, `server/image/clipboard.js`),
   so the session file is a new module including discovery, staleness and
   cleanup.
 
