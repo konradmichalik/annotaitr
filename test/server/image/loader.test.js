@@ -2,6 +2,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { writeFile, rm } from 'node:fs/promises'
 import { describe, it, expect, afterEach, vi } from 'vitest'
+import { createCanvas, loadImage } from '@napi-rs/canvas'
 import { loadImageFromFile } from '../../../server/image/loader.js'
 import { makeFixturePng } from '../../helpers/fixtureImage.js'
 
@@ -35,6 +36,117 @@ describe('loadImageFromFile', () => {
     expect(result.width).toBe(40)
     expect(result.height).toBe(30)
     expect(Buffer.isBuffer(result.buffer)).toBe(true)
+  })
+})
+
+describe('loadImageFromFile with an SVG', () => {
+  const svgPath = join(tmpdir(), `annotaitr-svg-${process.pid}.svg`)
+  const svg = (attrs) => `<svg xmlns="http://www.w3.org/2000/svg" ${attrs}><circle cx="12" cy="12" r="10"/></svg>`
+  const isPng = (buffer) => buffer.subarray(0, 4).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+
+  afterEach(async () => {
+    await rm(svgPath, { force: true })
+  })
+
+  it('rasterizes a small viewBox-only SVG to a PNG scaled up to 1600px on its longer side', async () => {
+    await writeFile(svgPath, svg('viewBox="0 0 24 12"'))
+    const result = await loadImageFromFile(svgPath)
+    expect(result.width).toBe(1600)
+    expect(result.height).toBe(800)
+    expect(isPng(result.buffer)).toBe(true)
+  })
+
+  it('keeps the intrinsic size of an SVG that is already large enough', async () => {
+    await writeFile(svgPath, svg('width="2000" height="1000"'))
+    const result = await loadImageFromFile(svgPath)
+    expect(result.width).toBe(2000)
+    expect(result.height).toBe(1000)
+    expect(isPng(result.buffer)).toBe(true)
+  })
+
+  it('paints an opaque white background behind transparent SVG content', async () => {
+    await writeFile(svgPath, svg('width="1600" height="1600"'))
+    const { buffer } = await loadImageFromFile(svgPath)
+    const image = await loadImage(buffer)
+    const ctx = createCanvas(image.width, image.height).getContext('2d')
+    ctx.drawImage(image, 0, 0)
+    expect([...ctx.getImageData(0, 0, 1, 1).data]).toEqual([255, 255, 255, 255])
+  })
+
+  it('scales an explicitly sized SVG up and renders its content at the new size', async () => {
+    await writeFile(svgPath, '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50"><rect width="100" height="50" fill="red"/></svg>')
+    const result = await loadImageFromFile(svgPath)
+    expect([result.width, result.height]).toEqual([1600, 800])
+    const image = await loadImage(result.buffer)
+    const ctx = createCanvas(image.width, image.height).getContext('2d')
+    ctx.drawImage(image, 0, 0)
+    expect([...ctx.getImageData(1590, 790, 1, 1).data]).toEqual([255, 0, 0, 255])
+  })
+
+  it('scales an SVG with huge declared dimensions down to 8000px instead of allocating them', async () => {
+    await writeFile(svgPath, svg('width="200000" height="10000"'))
+    const result = await loadImageFromFile(svgPath)
+    expect([result.width, result.height]).toEqual([8000, 400])
+  })
+
+  it('scales a huge viewBox-only SVG down to 8000px', async () => {
+    await writeFile(svgPath, svg('viewBox="0 0 1e9 1e7"'))
+    const result = await loadImageFromFile(svgPath)
+    expect([result.width, result.height]).toEqual([8000, 80])
+  })
+
+  it('takes the size from the viewBox when width and height are relative', async () => {
+    await writeFile(svgPath, svg('width="100%" height="100%" viewBox="0 0 40 20"'))
+    const result = await loadImageFromFile(svgPath)
+    expect([result.width, result.height]).toEqual([1600, 800])
+  })
+
+  it('finds the root <svg> tag behind a long prolog', async () => {
+    await writeFile(svgPath, `<?xml version="1.0"?>\n<!-- ${'x'.repeat(9000)} -->\n${svg('width="400" height="200"')}`)
+    const result = await loadImageFromFile(svgPath)
+    expect([result.width, result.height]).toEqual([1600, 800])
+  })
+
+  it('ignores an <svg> tag inside a comment before the real root', async () => {
+    await writeFile(svgPath, `<!-- old: <svg width="10" height="10"> -->\n${svg('width="400" height="200"')}`)
+    const result = await loadImageFromFile(svgPath)
+    expect([result.width, result.height]).toEqual([1600, 800])
+  })
+
+  it('reads the size past a quoted attribute containing >', async () => {
+    await writeFile(svgPath, svg('aria-label="A > B" width="400" height="200"'))
+    const result = await loadImageFromFile(svgPath)
+    expect([result.width, result.height]).toEqual([1600, 800])
+  })
+
+  it('rejects a width or height that overflows to Infinity', async () => {
+    await writeFile(svgPath, svg('width="1e309" height="100"'))
+    await expect(loadImageFromFile(svgPath)).rejects.toThrow(/no usable size/)
+  })
+
+  it('rejects a viewBox that overflows to Infinity', async () => {
+    await writeFile(svgPath, svg('viewBox="0 0 1e309 100"'))
+    await expect(loadImageFromFile(svgPath)).rejects.toThrow(/no usable size/)
+  })
+
+  it('rejects an SVG without width, height, or viewBox', async () => {
+    await writeFile(svgPath, svg(''))
+    await expect(loadImageFromFile(svgPath)).rejects.toThrow(/no usable size/)
+  })
+
+  it('rejects an SVG sized only in relative units', async () => {
+    await writeFile(svgPath, svg('width="10em" height="5em"'))
+    await expect(loadImageFromFile(svgPath)).rejects.toThrow(/no usable size/)
+  })
+
+  it('rejects an SVG whose body is malformed', async () => {
+    await writeFile(svgPath, '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect</svg>')
+    await expect(loadImageFromFile(svgPath)).rejects.toThrow(/Invalid SVG/)
+  })
+
+  it('rejects malformed SVG markup', async () => {
+    await writeFile(svgPath, '<svg nope')
+    await expect(loadImageFromFile(svgPath)).rejects.toThrow()
   })
 })
 

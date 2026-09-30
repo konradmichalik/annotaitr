@@ -1,6 +1,6 @@
 import { extname } from 'node:path'
 
-const SUPPORTED_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp'])
+const SUPPORTED_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.svg'])
 
 /**
  * Pure, dependency-free detection helpers, kept separate from
@@ -10,6 +10,10 @@ const SUPPORTED_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp'])
  */
 export function isImageFile(filePath) {
   return SUPPORTED_EXTENSIONS.has(extname(filePath).toLowerCase())
+}
+
+export function isSvgFile(filePath) {
+  return extname(filePath).toLowerCase() === '.svg'
 }
 
 export function isSupportedCaptureUrl(value) {

@@ -16,7 +16,7 @@ mode-specific except `--help`, `--origin` and `--as`.
 | No target, otherwise | Prints help and exits `0` |
 | One or more existing files, all markdown/plain-text | Markdown |
 | A single `http(s)` URL | Image (capture) |
-| A single existing file with a supported image extension (`.png`, `.jpg`, `.jpeg`, `.webp`) | Image (local file) |
+| A single existing file with a supported image extension (`.png`, `.jpg`, `.jpeg`, `.webp`, `.svg`) | Image (local file) |
 | Anything else | Exits `1` naming the supported extensions and suggesting `--as` |
 
 ```bash
@@ -24,18 +24,28 @@ annotaitr README.md docs/guide.md    # markdown: multiple files, tab bar
 annotaitr ./mockup.png               # image: local file
 annotaitr http://localhost:3000      # image: capture
 annotaitr                            # image: clipboard (macOS), or help
-annotaitr --as image ./diagram.svg   # skip detection, force a mode
+annotaitr ./diagram.svg              # image: SVG, rasterized to PNG
+annotaitr --as image ./mockup.png    # skip detection, force a mode
 ```
 
 ## `--as`
 
-Forces `image` or `markdown`, skipping detection entirely. Use it when a
-target's extension doesn't say what it is: an `.svg` diagram meant for image
-review, for instance.
+Forces `image` or `markdown`, skipping detection entirely. The target still
+needs an extension the forced mode supports.
 
 ```bash
-annotaitr --as image ./diagram.svg
+annotaitr --as image ./mockup.png
 ```
+
+## SVG files
+
+An `.svg` target is rendered to a PNG before the annotator opens, so it is
+annotated like any other image. The renderer runs no scripts and loads no
+external resources. The longer side is rendered at the declared size, but at
+least 1600px and at most 8000px: icons are scaled up, oversized drawings
+scaled down, both as vectors without loss. Transparent areas get a white
+background. The SVG needs a `width`/`height` in px (or unitless) or a
+`viewBox`, otherwise it has no size to render at and is rejected.
 
 ## `--origin`
 
