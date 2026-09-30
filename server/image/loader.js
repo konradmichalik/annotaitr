@@ -49,6 +49,13 @@ const MAX_SVG_RASTER_SIDE = 8000
 
 const PX_LENGTH = /^\s*([\d.]+(?:e[+-]?\d+)?)\s*(?:px)?\s*$/i
 
+// An overflowing value such as 1e309 parses to Infinity, which would turn
+// the raster size into NaN; the Image setters ignore NaN, and Skia then
+// falls back to allocating the declared size.
+function isUsableLength(value) {
+  return Number.isFinite(value) && value > 0
+}
+
 function readSvgAttribute(rootTag, name) {
   return rootTag.match(new RegExp(`\\s${name}\\s*=\\s*(["'])(.*?)\\1`, 'i'))?.[2]
 }
@@ -59,13 +66,13 @@ function readSvgAttribute(rootTag, name) {
  * size first, and Skia aborts the whole process when that fails.
  */
 function readSvgSize(source) {
-  const rootTag = source.toString('utf8').replace(/<!--[\s\S]*?-->/g, '').match(/<svg\b[^>]*>/i)?.[0] ?? ''
+  const rootTag = source.toString('utf8').replace(/<!--[\s\S]*?-->/g, '').match(/<svg\b(?:[^>"']|"[^"]*"|'[^']*')*>/i)?.[0] ?? ''
   const width = Number(readSvgAttribute(rootTag, 'width')?.match(PX_LENGTH)?.[1])
   const height = Number(readSvgAttribute(rootTag, 'height')?.match(PX_LENGTH)?.[1])
-  if (width > 0 && height > 0) { return { width, height } }
+  if (isUsableLength(width) && isUsableLength(height)) { return { width, height } }
 
   const viewBox = readSvgAttribute(rootTag, 'viewBox')?.trim().split(/[\s,]+/).map(Number) ?? []
-  if (viewBox.length === 4 && viewBox[2] > 0 && viewBox[3] > 0) {
+  if (viewBox.length === 4 && isUsableLength(viewBox[2]) && isUsableLength(viewBox[3])) {
     return { width: viewBox[2], height: viewBox[3] }
   }
   return null

@@ -113,6 +113,22 @@ describe('loadImageFromFile with an SVG', () => {
     expect([result.width, result.height]).toEqual([1600, 800])
   })
 
+  it('reads the size past a quoted attribute containing >', async () => {
+    await writeFile(svgPath, svg('aria-label="A > B" width="400" height="200"'))
+    const result = await loadImageFromFile(svgPath)
+    expect([result.width, result.height]).toEqual([1600, 800])
+  })
+
+  it('rejects a width or height that overflows to Infinity', async () => {
+    await writeFile(svgPath, svg('width="1e309" height="100"'))
+    await expect(loadImageFromFile(svgPath)).rejects.toThrow(/no usable size/)
+  })
+
+  it('rejects a viewBox that overflows to Infinity', async () => {
+    await writeFile(svgPath, svg('viewBox="0 0 1e309 100"'))
+    await expect(loadImageFromFile(svgPath)).rejects.toThrow(/no usable size/)
+  })
+
   it('rejects an SVG without width, height, or viewBox', async () => {
     await writeFile(svgPath, svg(''))
     await expect(loadImageFromFile(svgPath)).rejects.toThrow(/no usable size/)
