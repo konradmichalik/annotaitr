@@ -6,17 +6,33 @@ args: target
 
 ## Image Annotations
 
-!`annotaitr --origin claude-code $ARGUMENTS`
+!`setopt no_bad_pattern no_nomatch 2>/dev/null; annotaitr --origin claude-code $ARGUMENTS`
 
-If no target is given, this reads the current image from the macOS clipboard
-(the same source a pasted screenshot would use), so `/annotaitr:image` alone
-works after copying a screenshot without needing to save it to a file first
-(a pasted chat image is not the same thing and does not work as a target
-here).
+If no target is given, this reads the current image from the macOS clipboard,
+so `/annotaitr:image` alone works after copying a screenshot without needing
+to save it to a file first.
 
 `$ARGUMENTS` is passed to the shell as typed, unquoted. A path containing
 spaces (macOS screenshots are named that way by default) needs quotes typed
 around it: `/annotaitr:image "~/Desktop/Screenshot 2026-01-01 at 12.00.00.png"`.
+
+## Pasted chat images
+
+If the output above starts with `PASTED CHAT IMAGE:`, the user passed an
+`[Image #N]` chip for an image pasted or dropped into the chat. The shell runs
+before the image's path is known, so open it yourself:
+
+1. Find the `[Image: source: <path>]` line for that image in this
+   conversation.
+2. Run `annotaitr --origin claude-code '<path>'` with the Bash tool and
+   `run_in_background: true`, since it blocks until the user submits.
+3. Tell the user in one line that the annotator is open, then end your turn.
+   When the background command finishes, read its output and continue with
+   the task below.
+
+Image mode takes exactly one image. If several chips were given, ask which one
+to open. If no source line exists for the chip, say so and ask the user to
+save the image or copy it to the clipboard instead.
 
 ## Your task
 
@@ -55,5 +71,6 @@ requests.
 ## Re-review loop
 
 After applying all changes, re-open the annotator on the same target (a URL
-re-captures live; a file path re-loads the same image) to confirm the fix
+re-captures live; a file path, including a pasted image's path, re-loads the
+same image) to confirm the fix
 looks right, then repeat until `APPROVED:` or `APPROVED WITH NOTES:`.

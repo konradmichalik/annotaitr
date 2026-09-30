@@ -27,7 +27,7 @@ Which mode runs is auto-detected from the target: see Usage below and
 **Image and web page review:**
 
 - **Web page capture**: full-page screenshot of any `http(s)` URL via Playwright, at a chosen viewport
-- **Clipboard support**: run with no target to annotate whatever screenshot is on the (macOS) clipboard
+- **Clipboard support**: run with no target to annotate whatever screenshot is on the (macOS) clipboard, or pass a screenshot pasted into the Claude Code chat
 - **Drawing tools**: boxes, arrows (with an optional dimension-line style for marking distance/spacing), freehand marks, highlighter marks, and numbered comment pins, each with an optional comment and color
 - **Coarse position descriptions**: feedback names each annotation's plain-language position, and flags annotations positioned close together
 - **Annotated screenshot export**: submitting bakes the markup into a copy of the image and passes its path to the agent
@@ -114,6 +114,8 @@ Opens `README.md` in the browser; approve it or leave annotations, and
 ```
 
 Or force a mode directly: `/annotaitr:md README.md`, `/annotaitr:image ./mockup.png`.
+
+A screenshot pasted into the chat works as a target too: `/annotaitr:image [Image #1]`. Claude looks up the saved image and opens the annotator on it in the background, which takes a few seconds longer than passing a path.
 
 **OpenCode:**
 

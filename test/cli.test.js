@@ -135,6 +135,23 @@ describe('detectMode', () => {
   })
 })
 
+describe('pasted chat image chip as target', () => {
+  // The shell treats `#1]` of `[Image #1]` as a comment, so only `[Image`
+  // arrives. Exiting 0 keeps Claude Code from aborting the slash command.
+  it.each([['[Image'], ['[Image #1]']])('points the agent at the image source path for %s', (chip) => {
+    const result = spawnSync('node', ['index.js', '--origin', 'claude-code', chip])
+    expect(result.status).toBe(0)
+    expect(result.stdout.toString()).toMatch(/^PASTED CHAT IMAGE:/)
+    expect(result.stdout.toString()).toContain('[Image: source:')
+  })
+
+  it('takes precedence over a forced mode', () => {
+    const result = spawnSync('node', ['index.js', '--as', 'image', '[Image'])
+    expect(result.status).toBe(0)
+    expect(result.stdout.toString()).toMatch(/^PASTED CHAT IMAGE:/)
+  })
+})
+
 describe('bin invocation through a symlink', () => {
   // Mirrors how npm sets up a global install: bin/annotaitr is a symlink to
   // this file. import.meta.url resolves through it, so process.argv[1] must

@@ -14,6 +14,7 @@ mode-specific except `--help`, `--origin` and `--as`.
 |--------|------|
 | No target, on macOS with an image on the clipboard | Image (clipboard) |
 | No target, otherwise | Prints help and exits `0` |
+| A Claude Code chat image chip (a target starting with `[Image`) | Prints a `PASTED CHAT IMAGE:` hint for the agent and exits `0` |
 | One or more existing files, all markdown/plain-text | Markdown |
 | A single `http(s)` URL | Image (capture) |
 | A single existing file with a supported image extension (`.png`, `.jpg`, `.jpeg`, `.webp`, `.svg`) | Image (local file) |
