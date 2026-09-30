@@ -5,7 +5,7 @@ export default defineConfig({
     jsx: 'automatic'
   },
   test: {
-    exclude: ['node_modules/**', 'test/e2e/**'],
+    exclude: ['**/node_modules/**', 'test/e2e/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
