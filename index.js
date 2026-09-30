@@ -52,7 +52,7 @@ Which mode runs is auto-detected from the target:
   - no target                  reads an image from the clipboard (macOS only)
   - one or more existing files, all markdown/plain-text   -> markdown mode
   - a single http(s) URL                                   -> image mode (capture)
-  - a single existing image file (.png, .jpg, .jpeg, .webp) -> image mode
+  - a single existing image file (.png, .jpg, .jpeg, .webp, .svg) -> image mode
 
 Options:
   --help                       Show this help message
@@ -85,7 +85,7 @@ Examples:
   annotaitr ./mockup.png
   annotaitr http://localhost:3000
   annotaitr --viewport mobile http://localhost:3000/checkout
-  annotaitr --as image ./diagram.svg
+  annotaitr ./diagram.svg
   annotaitr                              # read an image from the clipboard (macOS)
 `.trim()
 
@@ -226,7 +226,7 @@ function buildDetectionError(targets) {
   return (
     `Unsupported target: ${targets[0]}\n` +
     `Markdown/plain-text extensions: ${markdownExtensions().join(', ')}\n` +
-    'Image extensions: .png, .jpg, .jpeg, .webp (or a http(s) URL to capture)\n' +
+    'Image extensions: .png, .jpg, .jpeg, .webp, .svg (or a http(s) URL to capture)\n' +
     'Use --as image or --as markdown to force a mode.'
   )
 }

@@ -7,6 +7,7 @@ describe('isImageFile', () => {
     expect(isImageFile('/a/b/shot.JPG')).toBe(true)
     expect(isImageFile('/a/b/shot.jpeg')).toBe(true)
     expect(isImageFile('/a/b/shot.webp')).toBe(true)
+    expect(isImageFile('/a/b/diagram.SVG')).toBe(true)
   })
 
   it('rejects unsupported extensions', () => {

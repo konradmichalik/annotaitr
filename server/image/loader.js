@@ -6,9 +6,9 @@
  */
 
 import { readFile, stat } from 'node:fs/promises'
-import { loadImage } from '@napi-rs/canvas'
+import { createCanvas, loadImage, Image } from '@napi-rs/canvas'
 import { chromium } from 'playwright'
-import { isImageFile, isSupportedCaptureUrl } from './capture.js'
+import { isImageFile, isSvgFile, isSupportedCaptureUrl } from './capture.js'
 import { config } from './config.js'
 
 /**
@@ -18,7 +18,7 @@ import { config } from './config.js'
  */
 export async function loadImageFromFile(filePath) {
   if (!isImageFile(filePath)) {
-    throw new Error(`Unsupported image format: ${filePath}. Supported: .png, .jpg, .jpeg, .webp`)
+    throw new Error(`Unsupported image format: ${filePath}. Supported: .png, .jpg, .jpeg, .webp, .svg`)
   }
 
   const stats = await stat(filePath)
@@ -26,8 +26,10 @@ export async function loadImageFromFile(filePath) {
     throw new Error(`Image too large: ${filePath} (${stats.size} bytes, max ${config.maxImageBytes})`)
   }
 
-  const buffer = await readFile(filePath)
-  const image = await loadImage(buffer)
+  const source = await readFile(filePath)
+  const { buffer, image } = isSvgFile(filePath)
+    ? await rasterizeSvg(source, filePath)
+    : { buffer: source, image: await loadImage(source) }
 
   if (image.width > config.maxImageDimension || image.height > config.maxImageDimension) {
     throw new Error(
@@ -36,6 +38,76 @@ export async function loadImageFromFile(filePath) {
   }
 
   return { buffer, width: image.width, height: image.height }
+}
+
+// Icons often declare a tiny intrinsic size (24x24) that is unusable for
+// drawing on, while a 100-byte file can declare 200000x200000. As a vector,
+// an SVG re-renders at any size without loss, so its longer side is clamped
+// into this range instead of taken as-is.
+const MIN_SVG_RASTER_SIDE = 1600
+const MAX_SVG_RASTER_SIDE = 8000
+
+const PX_LENGTH = /^\s*([\d.]+(?:e[+-]?\d+)?)\s*(?:px)?\s*$/i
+
+function readSvgAttribute(rootTag, name) {
+  return rootTag.match(new RegExp(`\\s${name}\\s*=\\s*(["'])(.*?)\\1`, 'i'))?.[2]
+}
+
+/**
+ * Read the declared size from the root <svg> tag. Letting the decoder
+ * report it instead is not an option: it allocates a bitmap at the declared
+ * size first, and Skia aborts the whole process when that fails.
+ */
+function readSvgSize(source) {
+  const rootTag = source.toString('utf8').replace(/<!--[\s\S]*?-->/g, '').match(/<svg\b[^>]*>/i)?.[0] ?? ''
+  const width = Number(readSvgAttribute(rootTag, 'width')?.match(PX_LENGTH)?.[1])
+  const height = Number(readSvgAttribute(rootTag, 'height')?.match(PX_LENGTH)?.[1])
+  if (width > 0 && height > 0) { return { width, height } }
+
+  const viewBox = readSvgAttribute(rootTag, 'viewBox')?.trim().split(/[\s,]+/).map(Number) ?? []
+  if (viewBox.length === 4 && viewBox[2] > 0 && viewBox[3] > 0) {
+    return { width: viewBox[2], height: viewBox[3] }
+  }
+  return null
+}
+
+function decodeSvgAt(source, width, height) {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = reject
+    image.width = width
+    image.height = height
+    image.src = source
+  })
+}
+
+/**
+ * Render an SVG to an opaque PNG. Skia's SVG renderer runs no scripts and
+ * fetches no external resources, unlike loading the file in a browser.
+ * Setting the size before `src` renders the vectors at that size instead of
+ * stretching a small bitmap. The white background matches how a browser
+ * shows a standalone SVG, so dark strokes stay visible in a dark theme.
+ */
+async function rasterizeSvg(source, filePath) {
+  const declared = readSvgSize(source)
+  if (!declared) {
+    throw new Error(`SVG has no usable size: ${filePath}. Add a px width/height or a viewBox.`)
+  }
+
+  const longerSide = Math.max(declared.width, declared.height)
+  const targetSide = Math.min(Math.max(longerSide, MIN_SVG_RASTER_SIDE), MAX_SVG_RASTER_SIDE)
+  const scale = targetSide / longerSide
+  const width = Math.max(1, Math.round(declared.width * scale))
+  const height = Math.max(1, Math.round(declared.height * scale))
+
+  const image = await decodeSvgAt(source, width, height)
+  const canvas = createCanvas(width, height)
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, width, height)
+  ctx.drawImage(image, 0, 0, width, height)
+  return { buffer: canvas.toBuffer('image/png'), image: { width, height } }
 }
 
 /**
