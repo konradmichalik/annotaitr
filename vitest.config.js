@@ -9,7 +9,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      include: ['server/**/*.js', 'client/image/src/**/*.js', 'client/markdown/src/**/*.js'],
+      include: ['server/**/*.js', 'client/image/src/**/*.js', 'client/markdown/src/**/*.js', 'client/shared/**/*.js'],
       exclude: ['node_modules/', 'client/dist/']
     }
   }

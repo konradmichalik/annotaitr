@@ -9,6 +9,7 @@ import { ExportModal } from './components/ExportModal.jsx'
 import { FeedbackNotesModal } from './components/FeedbackNotesModal.jsx'
 import { validateAnnotationImport } from './utils/export.js'
 import { getTextStats } from './utils/textStats.js'
+import { createAnnotationId } from '../../shared/utils/annotationId.js'
 import { UpdateBanner } from '../../shared/components/UpdateBanner.jsx'
 import { FileTabsBar } from './components/FileTabsBar.jsx'
 import { initialAnnotationState } from './state/annotationReducer.js'
@@ -370,7 +371,7 @@ export default function App() {
 
   const handleAddGlobalComment = useCallback(() => {
     const ann = {
-      id: crypto.randomUUID(),
+      id: createAnnotationId(),
       blockId: '',
       startOffset: 0,
       endOffset: 0,

@@ -53,6 +53,19 @@ collect further feedback; markdown mode's `--feedback-notes` lets that
 re-opened round show what changed since the last submission, so the reviewer
 isn't looking at a blank slate.
 
+Every annotation carries a short handle in the feedback output, written as
+`[#a3f19c2e]`. It is the first group of the annotation's internal UUID, so it
+stays fixed for as long as the annotation exists, including across a JSON
+export and re-import or a restored draft. The numbering is positional and is
+recomputed on every export. The handle gives an agent something unambiguous to
+quote back, as in "fixed `#a3f19c2e` (the intro), left `#7b210e44` alone
+because …". The annotator does not display handles, so agents are told to pair
+each one with a few words naming the passage. Annotations are not carried into
+a round in which the document has changed, so today a handle identifies a mark
+within one round and in the agent's report on it. Linking a mark to the agent's
+reply in the next round is the subject of
+[the inline replies concept](concepts/inline-agent-replies.md).
+
 A heartbeat request from the browser tab, polled every few seconds, detects
 a closed tab and resolves the decision as disconnected rather than hanging
 the CLI forever. Interrupting the process (`Ctrl+C`) resolves it as

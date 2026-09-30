@@ -4,21 +4,6 @@ export const initialAnnotationState = {
   redo: []
 }
 
-export function createAnnotationId() {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID()
-  }
-  // crypto.randomUUID() requires a secure context (HTTPS, or localhost/127.0.0.1).
-  // ANNOTAITR_HOST can be pointed at a non-loopback address for LAN access, where
-  // the page is served over plain HTTP and the API is simply absent - fall back to
-  // a manually-assembled v4 UUID instead of throwing on the very first annotation.
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
-}
-
 /** What `annotations` looks like once `entry` (a history entry) is undone. */
 function annotationsAfterUndo(annotations, entry) {
   if (entry.action === 'add') { return annotations.filter((a) => a.id !== entry.annotation.id) }

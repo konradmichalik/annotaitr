@@ -1,5 +1,6 @@
 import { describePosition, findNearbyAnnotationNumbers } from './geometry.js'
 import { resolveArrowStyle } from './annotationStyles.js'
+import { annotationHandle } from '../core/annotationHandle.js'
 
 const TYPE_LABELS = {
   box: 'Boxed area',
@@ -36,10 +37,15 @@ function formatAnnotationList(annotations, imageWidth, imageHeight) {
 
   return annotations.map((annotation, index) => {
     const comment = annotation.text ? `> ${annotation.text.replace(/\n/g, '\n> ')}` : '> (no comment text)'
+    const handle = annotationHandle(annotation.id)
+    // The handle sits next to the number rather than at the end of the line as
+    // in markdown mode: the number is what's baked into the image pixels, and a
+    // proximity note would otherwise push the handle far away from it.
+    const marker = handle ? `${index + 1}. [#${handle}]` : `${index + 1}.`
     if (annotation.type === 'comment') {
       // A general comment isn't placed anywhere on the image - no position,
       // no nearby-marker note, nothing pinned to it visually.
-      return `### ${index + 1}. General comment about the whole image\n${comment}\n`
+      return `### ${marker} General comment about the whole image\n${comment}\n`
     }
     const label = annotationLabel(annotation)
     const position = describePosition(annotation, imageWidth, imageHeight)
@@ -47,7 +53,7 @@ function formatAnnotationList(annotations, imageWidth, imageHeight) {
     const nearbyNote = nearby.length > 0
       ? ` — close to annotation${nearby.length > 1 ? 's' : ''} ${nearby.join(', ')}, check the numbered marker in the image`
       : ''
-    return `### ${index + 1}. ${label}: ${position}${nearbyNote}\n${comment}\n`
+    return `### ${marker} ${label}: ${position}${nearbyNote}\n${comment}\n`
   }).join('\n')
 }
 

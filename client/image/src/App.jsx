@@ -1,6 +1,7 @@
 /* global __APP_VERSION__ */
 import { useEffect, useReducer, useState, useCallback, useRef } from 'react'
-import { annotationReducer, initialAnnotationState, createAnnotationId } from './state/annotationReducer.js'
+import { annotationReducer, initialAnnotationState } from './state/annotationReducer.js'
+import { createAnnotationId } from '../../shared/utils/annotationId.js'
 import Toolbar from './components/Toolbar.jsx'
 import ZoomControls from './components/ZoomControls.jsx'
 import ImageCanvas from './components/ImageCanvas.jsx'

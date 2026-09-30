@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach, vi } from 'vitest'
-import { annotationReducer, initialAnnotationState, createAnnotationId } from '../../../client/image/src/state/annotationReducer.js'
+import { describe, it, expect } from 'vitest'
+import { annotationReducer, initialAnnotationState } from '../../../client/image/src/state/annotationReducer.js'
 
 const makeAnnotation = (overrides = {}) => ({
   id: 'ann-1',
@@ -9,32 +9,6 @@ const makeAnnotation = (overrides = {}) => ({
   color: '#e11d48',
   createdAt: 0,
   ...overrides
-})
-
-describe('createAnnotationId', () => {
-  const originalCrypto = globalThis.crypto
-
-  afterEach(() => {
-    vi.stubGlobal('crypto', originalCrypto)
-  })
-
-  it('uses crypto.randomUUID() when available', () => {
-    expect(createAnnotationId()).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
-  })
-
-  it('falls back to a manually-assembled v4 UUID when crypto.randomUUID is unavailable, e.g. a non-secure-context HTTP origin', () => {
-    vi.stubGlobal('crypto', {})
-    const id = createAnnotationId()
-    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
-  })
-
-  it('never produces two equal IDs across many calls, in either path', () => {
-    const ids = new Set()
-    for (let i = 0; i < 200; i++) { ids.add(createAnnotationId()) }
-    vi.stubGlobal('crypto', {})
-    for (let i = 0; i < 200; i++) { ids.add(createAnnotationId()) }
-    expect(ids.size).toBe(400)
-  })
 })
 
 describe('annotationReducer', () => {

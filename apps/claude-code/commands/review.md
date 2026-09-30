@@ -38,6 +38,18 @@ each giving a line reference and the requested change:
 - **"Comment on"** entries: apply the comment as a change to the referenced text
 - **"Insert text"** entries: insert the given text at the specified location
 
+In both shapes, an annotation heading normally carries a short handle in
+brackets, such as `[#a3f19c2e]`. The number is positional and is recalculated
+on every export, the handle stays fixed for as long as the annotation exists.
+Use it whenever you refer to a specific annotation when reporting back to the
+user. The reviewer never sees handles in the annotator, so pair each one with a
+few words naming the passage: "fixed `#a3f19c2e` (intro wording), left
+`#7b210e44` (install steps) alone because the intro already covers it". In
+markdown reviews, also start each feedback note with the handle of the
+annotation it answers; image mode has no feedback notes. If a heading carries
+no handle, refer to that annotation by its number and quoted text instead, and
+never invent one.
+
 In both shapes: if the output shows `APPROVED:`, the target was approved with
 no changes needed — confirm and stop. If it shows `APPROVED WITH NOTES:`, it
 was approved as-is but carries annotations; do **not** make changes, read the

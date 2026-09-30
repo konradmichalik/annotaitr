@@ -10,6 +10,7 @@ import { BlockRenderer, HtmlWrapper } from './BlockRenderer.jsx'
 import { MathBlock } from './MathBlock.jsx'
 import { CodeBlock } from './CodeBlock.jsx'
 import { useHighlighter } from '../../hooks/useHighlighter.js'
+import { createAnnotationId } from '../../../../shared/utils/annotationId.js'
 import { useDocumentSearch } from '../../hooks/useDocumentSearch.js'
 import { highlightMatches, setActiveMatch, clearSearchHighlights } from '../../utils/searchHighlight.js'
 import { SearchBar } from '../SearchBar.jsx'
@@ -171,7 +172,7 @@ export const Viewer = forwardRef(function Viewer({
         return
       }
       const { blockId, offset, afterContext } = toolbarState.insertionData
-      const annId = crypto.randomUUID()
+      const annId = createAnnotationId()
       const newAnnotation = {
         id: annId,
         blockId,
@@ -200,7 +201,7 @@ export const Viewer = forwardRef(function Viewer({
     if (toolbarState.tokenMode && !toolbarState.mode) {
       const { tokenData } = toolbarState
       const newAnnotation = {
-        id: crypto.randomUUID(),
+        id: createAnnotationId(),
         blockId: tokenData.blockId,
         startOffset: tokenData.charStart,
         endOffset: tokenData.charEnd,
@@ -226,7 +227,7 @@ export const Viewer = forwardRef(function Viewer({
       } else {
         const { elementData } = toolbarState
         const newAnnotation = {
-          id: crypto.randomUUID(),
+          id: createAnnotationId(),
           blockId: elementData.blockId,
           startOffset: 0,
           endOffset: 0,

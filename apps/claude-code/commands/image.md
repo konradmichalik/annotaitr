@@ -31,6 +31,15 @@ spacing between two points rather than pointing at a single target.
   see exactly what was marked and where.
 - Each annotation lists its type, a coarse position (e.g. "top right, ~15%
   from top, ~85% from left"), and its comment text.
+- Each heading normally carries a short handle in brackets after the number,
+  such as `### 1. [#a3f19c2e]`. The number matches the marker drawn in the image
+  and is positional, the handle stays fixed for as long as the annotation
+  exists. Use the handle when you report back which annotations you addressed.
+  The reviewer never sees handles in the annotator, so pair each one with a few
+  words naming the spot: "fixed `#a3f19c2e` (header spacing), left `#7b210e44`
+  (footer gap) alone because that spacing is intentional". If a heading carries
+  no handle, refer to that annotation by its number instead, and never invent
+  one.
 - Combine what you see in the image with the comment text and position to
   find the relevant source (search the repo for matching visible text, class
   names, or component structure) and apply the requested change.
