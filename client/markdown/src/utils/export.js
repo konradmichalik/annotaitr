@@ -3,6 +3,13 @@
  * Mirrors server/feedback.js format for consistency.
  */
 
+import { annotationHandle } from '../../../shared/utils/annotationId.js'
+
+function handleTag(id) {
+  const handle = annotationHandle(id)
+  return handle ? ` [#${handle}]` : ''
+}
+
 /**
  * Format annotations as exportable markdown.
  */
@@ -29,6 +36,7 @@ export function formatAnnotationsForExport(annotations, blocks, filePath) {
   if (globalComments.length > 0) {
     output += `## General Feedback\n\n`
     globalComments.forEach(ann => {
+      output += `### General comment${handleTag(ann.id)}\n\n`
       output += `> ${(ann.text ?? '').replace(/\n/g, '\n> ')}\n\n`
     })
   }
@@ -36,12 +44,13 @@ export function formatAnnotationsForExport(annotations, blocks, filePath) {
   regularAnnotations.forEach((ann, index) => {
     const block = blocks.find(blk => blk.id === ann.blockId)
     const blockStartLine = block?.startLine || 1
+    const tag = handleTag(ann.id)
 
     // Element-level annotations
     if (ann.targetType === 'image') {
       const isDeletion = ann.type === 'DELETION'
       const label = isDeletion ? 'Remove image' : 'Comment on image'
-      output += `## ${index + 1}. ${label} (Line ${blockStartLine})\n\n`
+      output += `## ${index + 1}. ${label} (Line ${blockStartLine})${tag}\n\n`
       output += `Image: \`${ann.originalText}\`\n\n`
       if (ann.imageAlt) { output += `Alt text: "${ann.imageAlt}"\n\n` }
       if (ann.imageSrc) { output += `Source: ${ann.imageSrc}\n\n` }
@@ -55,7 +64,7 @@ export function formatAnnotationsForExport(annotations, blocks, filePath) {
     if (ann.targetType === 'diagram') {
       const isDeletion = ann.type === 'DELETION'
       const label = isDeletion ? 'Remove Mermaid diagram' : 'Comment on Mermaid diagram'
-      output += `## ${index + 1}. ${label} (Line ${blockStartLine})\n\n`
+      output += `## ${index + 1}. ${label} (Line ${blockStartLine})${tag}\n\n`
       output += `\`\`\`mermaid\n${block?.content || ann.originalText}\n\`\`\`\n\n`
       if (isDeletion) {
         output += `> User wants this diagram removed from the document.\n\n`
@@ -77,15 +86,15 @@ export function formatAnnotationsForExport(annotations, blocks, filePath) {
     output += `## ${index + 1}. `
 
     if (ann.type === 'DELETION') {
-      output += `Remove (${lineRef})\n\n`
+      output += `Remove (${lineRef})${tag}\n\n`
       output += `\`\`\`\n${ann.originalText}\n\`\`\`\n\n`
     } else if (ann.type === 'COMMENT') {
       const labelTag = ann.label ? ` [${ann.label.emoji} ${ann.label.text}]` : ''
-      output += `Comment (${lineRef})${labelTag}\n\n`
+      output += `Comment (${lineRef})${labelTag}${tag}\n\n`
       output += `\`\`\`\n${ann.originalText}\n\`\`\`\n\n`
       output += `> ${ann.text}\n\n`
     } else if (ann.type === 'INSERTION') {
-      output += `Insert text (${lineRef})\n\n`
+      output += `Insert text (${lineRef})${tag}\n\n`
       if (ann.afterContext) {
         output += `After: \`${ann.afterContext}\`\n\n`
       }

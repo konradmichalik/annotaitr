@@ -63,6 +63,23 @@ describe('formatAnnotationsForExport', () => {
     const output = formatAnnotationsForExport(annotations, blocks, '/test.md')
     expect(output.indexOf('First')).toBeLessThan(output.indexOf('Second'))
   })
+
+  it('appends the handle to the heading, like the stdout feedback', () => {
+    const ann = makeAnnotation({ id: 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d' })
+    const output = formatAnnotationsForExport([ann], [makeBlock()], '/test.md')
+    expect(output).toContain('## 1. Comment (Line 1) [#a3f19c2e]\n')
+  })
+
+  it('gives a global comment a heading that carries its handle', () => {
+    const ann = makeAnnotation({ id: '7b210e44-9f2c-4a1b-8e6d-3c7a5b9d1e2f', targetType: 'global', blockId: '', text: 'Overall fine' })
+    const output = formatAnnotationsForExport([ann], [makeBlock()], '/test.md')
+    expect(output).toContain('## General Feedback\n\n### General comment [#7b210e44]\n\n> Overall fine')
+  })
+
+  it('omits the handle when the id is not UUID-shaped', () => {
+    const output = formatAnnotationsForExport([makeAnnotation()], [makeBlock()], '/test.md')
+    expect(output).not.toContain('[#')
+  })
 })
 
 describe('formatAnnotationsForJsonExport', () => {
