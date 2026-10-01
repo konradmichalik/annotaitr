@@ -73,3 +73,43 @@ test('a full box annotation submits and the CLI prints structured feedback', asy
     if (!child.killed && child.exitCode === null) { child.kill() }
   }
 })
+
+test('a saved general comment does not reopen for editing when the sidebar is shown again', async ({ page }) => {
+  const dir = await mkdtemp(join(tmpdir(), 'annotaitr-e2e-'))
+  const { path: imagePath, buffer } = makeFixturePngFile(dir)
+  await writeFile(imagePath, buffer)
+
+  const child = spawn('node', [join(process.cwd(), 'index.js'), imagePath], {
+    cwd: process.cwd(),
+    env: { ...process.env, ANNOTAITR_PORT: '0', ANNOTAITR_NO_OPEN: '1' }
+  })
+
+  try {
+    const url = await new Promise((resolve, reject) => {
+      let stderr = ''
+      child.stderr.on('data', (chunk) => {
+        stderr += chunk.toString()
+        const match = stderr.match(/Server running at (http:\/\/\S+)/)
+        if (match) { resolve(match[1]) }
+      })
+      child.on('exit', (code) => reject(new Error(`CLI exited early with code ${code}: ${stderr}`)))
+    })
+
+    await page.goto(url)
+    await page.getByRole('button', { name: 'Add general comment' }).click()
+    await page.locator('.panel-global-textarea').fill('Overall fine')
+    await page.getByRole('button', { name: 'Save' }).click()
+
+    await page.getByRole('button', { name: 'Hide annotations' }).click()
+    await page.getByRole('button', { name: 'Show annotations' }).click()
+
+    await expect(page.locator('.panel-comment-text', { hasText: 'Overall fine' })).toBeVisible()
+    // The edit mode would come from an effect after mounting, so give it time
+    // to run before asserting it did not.
+    await page.waitForTimeout(300)
+    await expect(page.locator('.panel-global-textarea')).toHaveCount(0)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+    if (!child.killed && child.exitCode === null) { child.kill() }
+  }
+})

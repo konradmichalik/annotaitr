@@ -139,6 +139,7 @@ export default function App() {
   }, [])
 
   const addGlobalComment = useCallback(() => addComment({}), [addComment])
+  const clearAutoEdit = useCallback(() => setAutoEditId(null), [])
 
   const addSpanComment = useCallback(() => {
     addComment({ time: range.start, endTime: range.end })
@@ -550,6 +551,7 @@ export default function App() {
               onEditGlobalComment={editGlobalComment}
               timeLabelFor={isVideo ? formatTimes : null}
               autoEditId={autoEditId}
+              onAutoEditConsumed={clearAutoEdit}
             />
           </aside>
         )}

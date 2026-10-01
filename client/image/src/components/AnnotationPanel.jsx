@@ -126,14 +126,20 @@ function commentTitle(annotation, number) {
  * `timeLabelFor` switches to the recording layout: one list in the given
  * (time) order, every entry numbered as in the feedback and tagged with its
  * time. Without it, the still-image layout lists general comments first.
- * `autoEditId` opens a just-added comment for typing straight away.
+ * `autoEditId` opens a just-added comment for typing straight away;
+ * `onAutoEditConsumed` lets the parent clear it, so a panel mounted again
+ * later (the sidebar shown again) does not reopen that comment.
  */
-export default function AnnotationPanel({ annotations, onRemove, onEdit, onEditGlobalComment, timeLabelFor = null, autoEditId = null }) {
+export default function AnnotationPanel({
+  annotations, onRemove, onEdit, onEditGlobalComment, timeLabelFor = null, autoEditId = null, onAutoEditConsumed = null
+}) {
   const [editingGlobalId, setEditingGlobalId] = useState(null)
 
   useEffect(() => {
-    if (autoEditId) { setEditingGlobalId(autoEditId) }
-  }, [autoEditId])
+    if (!autoEditId) { return }
+    setEditingGlobalId(autoEditId)
+    onAutoEditConsumed?.()
+  }, [autoEditId, onAutoEditConsumed])
 
   const handleSaveGlobal = (id, text) => {
     onEditGlobalComment(id, text)
