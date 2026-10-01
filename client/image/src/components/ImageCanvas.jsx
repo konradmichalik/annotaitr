@@ -203,7 +203,8 @@ export default function ImageCanvas({
   // before any pointer interaction.
   // describeTime(annotation | null) names what an annotation is pinned to in
   // time, null meaning the one being drawn.
-  media = null, numberFor = null, nextNumber = annotations.length + 1, onBeforeInteract = null, describeTime = null
+  media = null, numberFor = null, nextNumber = annotations.length + 1, onBeforeInteract = null, describeTime = null,
+  voiceNotes = false
 }) {
   const wrapperRef = useRef(null)
   // Set by the wheel handler just before onZoomBy fires, and consumed by the
@@ -650,6 +651,7 @@ export default function ImageCanvas({
           initialDashStyle={pending.dashStyle}
           isEditing={!!pending.id}
           timeBadge={describeTime ? describeTime(pending.id ? pending.before : null) : null}
+          voiceNotes={voiceNotes}
           onSubmit={handleCommentSubmit}
           onClose={handleCommentClose}
         />

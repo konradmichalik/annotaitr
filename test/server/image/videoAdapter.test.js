@@ -71,7 +71,7 @@ describe('video annotator server', () => {
   it('serves video metadata', async () => {
     await start()
     const body = await (await fetch(`${server.url}/api/meta`)).json()
-    expect(body.data).toEqual({ kind: 'video', mediaKind: 'video', mimeType: 'video/webm', origin: 'cli', targetLabel: 'clip.webm' })
+    expect(body.data).toEqual({ kind: 'video', mediaKind: 'video', mimeType: 'video/webm', origin: 'cli', targetLabel: 'clip.webm', voiceNotes: false })
   })
 
   it('streams the file with range support', async () => {

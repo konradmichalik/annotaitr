@@ -476,6 +476,7 @@ export default function App() {
                 nextNumber={video.nextNumber}
                 onBeforeInteract={isVideo ? beforeCanvasInteract : null}
                 describeTime={isVideo ? describeTime : null}
+                voiceNotes={!!meta.voiceNotes}
                 zoom={zoom}
                 onZoomBy={zoomBy}
                 editingAnnotationId={editingAnnotationId}

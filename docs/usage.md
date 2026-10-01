@@ -100,6 +100,24 @@ directory:
 Videos are limited to 500 MB and GIFs to 50 MB and 2000 frames. One
 submission exports at most 50 distinct frames.
 
+## Voice notes
+
+With [whisper.cpp](https://github.com/ggml-org/whisper.cpp) and ffmpeg
+installed, the comment box of image mode (stills and recordings) gets a
+microphone button: speak the comment instead of typing it, and the
+transcript lands in the text field to correct before saving. The recording
+is transcribed on this machine and deleted right after; nothing is sent
+anywhere.
+
+```bash
+brew install whisper.cpp ffmpeg
+# a model, e.g. the multilingual "small" one (~470 MB)
+curl -L -o ~/.cache/ggml-small.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin
+export ANNOTAITR_WHISPER_MODEL=~/.cache/ggml-small.bin
+```
+
+Without a model, `whisper-cli` or ffmpeg the button is simply not shown.
+
 ## `--origin`
 
 Identifies the caller in the feedback output and to the client's origin
@@ -151,6 +169,9 @@ ANNOTAITR_FEEDBACK_NOTES='[{"text":"Rewrote intro","line":5}]' annotaitr README.
 | `ANNOTAITR_TIMEOUT` | both | Heartbeat timeout in ms (default `30000`, range `5000`-`300000`) |
 | `ANNOTAITR_NO_OPEN` | both | Skip opening a browser tab automatically |
 | `ANNOTAITR_CAPTURE_TIMEOUT` | image | Page-load timeout in ms for URL capture |
+| `ANNOTAITR_WHISPER_MODEL` | image | Path to a whisper.cpp ggml model; enables [voice notes](#voice-notes) |
+| `ANNOTAITR_WHISPER_BIN` | image | whisper.cpp binary (default `whisper-cli` on `PATH`) |
+| `ANNOTAITR_WHISPER_LANG` | image | Spoken language for voice notes, e.g. `de` (default `auto`) |
 | `ANNOTAITR_FEEDBACK_NOTES` | markdown | Same as `--feedback-notes` |
 | `PLANTUML_SERVER_URL` | markdown | PlantUML render server (default `https://www.plantuml.com/plantuml`) |
 | `KROKI_SERVER_URL` | markdown | Kroki render server (default `https://kroki.io`) |

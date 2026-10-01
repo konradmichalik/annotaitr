@@ -7,6 +7,7 @@ import {
 } from '../utils/annotationStyles.js'
 import { useDropdown } from '../hooks/useDropdown.js'
 import { useOutsideClick } from '../hooks/useOutsideClick.js'
+import VoiceNoteButton from './VoiceNoteButton.jsx'
 
 const POPOVER_WIDTH = 280
 const POPOVER_HEIGHT_ESTIMATE = 150
@@ -211,7 +212,7 @@ function DashPickerControl({ dashStyle, onChange }) {
  */
 function PopoverControls({
   annotationType, color, onColorChange, arrowStyle, onArrowStyleChange,
-  strokeWidth, onStrokeWidthChange, dashStyle, onDashStyleChange, timeBadge
+  strokeWidth, onStrokeWidthChange, dashStyle, onDashStyleChange, timeBadge, onVoiceText
 }) {
   const fields = STYLE_FIELDS[annotationType] || []
   return (
@@ -222,6 +223,7 @@ function PopoverControls({
         <WidthPickerControl type={annotationType} strokeWidth={strokeWidth} onChange={onStrokeWidthChange} />
       )}
       {fields.includes('dashStyle') && <DashPickerControl dashStyle={dashStyle} onChange={onDashStyleChange} />}
+      {onVoiceText && <VoiceNoteButton onText={onVoiceText} />}
       {timeBadge && <span className="comment-popover-time">{timeBadge}</span>}
     </div>
   )
@@ -253,7 +255,7 @@ function PopoverFooter({ isEditing, onCancel, onSubmit }) {
  */
 export default function CommentPopover({
   anchorPoint, initialText = '', initialColor, annotationType, initialArrowStyle,
-  initialStrokeWidth, initialDashStyle, isEditing = false, timeBadge = null, onSubmit, onClose
+  initialStrokeWidth, initialDashStyle, isEditing = false, timeBadge = null, voiceNotes = false, onSubmit, onClose
 }) {
   const [text, setText] = useState(initialText)
   const [color, setColor] = useState(initialColor || ANNOTATION_COLORS[0].hex)
@@ -276,6 +278,13 @@ export default function CommentPopover({
   // open dropdown panel are still "inside" here, since those panels render
   // as normal children of this root rather than being portaled elsewhere.
   useOutsideClick(popoverRef, onClose)
+
+  // A transcript is appended rather than replacing what was typed, and the
+  // field gets focus back so it can be corrected right away.
+  const appendVoiceText = useCallback((spoken) => {
+    setText((current) => (current.trim() ? `${current.trimEnd()} ${spoken}` : spoken))
+    textareaRef.current?.focus()
+  }, [])
 
   const handleSubmit = useCallback(() => {
     onSubmit({ text: text.trim(), color, arrowStyle, strokeWidth, dashStyle })
@@ -306,6 +315,7 @@ export default function CommentPopover({
         strokeWidth={strokeWidth} onStrokeWidthChange={setStrokeWidth}
         dashStyle={dashStyle} onDashStyleChange={setDashStyle}
         timeBadge={timeBadge}
+        onVoiceText={voiceNotes ? appendVoiceText : null}
       />
       <div className="comment-popover-body">
         <textarea

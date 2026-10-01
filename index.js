@@ -104,6 +104,9 @@ Environment:
   ANNOTAITR_TIMEOUT          Heartbeat timeout in ms (default: 30000, range: 5000-300000)
   ANNOTAITR_NO_OPEN          Skip opening a browser tab automatically
   ANNOTAITR_CAPTURE_TIMEOUT  Image mode: page-load timeout in ms for URL capture
+  ANNOTAITR_WHISPER_MODEL    Image mode: whisper.cpp model path, enables voice notes
+  ANNOTAITR_WHISPER_BIN      Image mode: whisper.cpp binary (default: whisper-cli)
+  ANNOTAITR_WHISPER_LANG     Image mode: voice note language, e.g. de (default: auto)
   ANNOTAITR_FEEDBACK_NOTES   Markdown mode: JSON string or file path for feedback notes
   (MD_ANNOTATOR_* still works as a deprecated fallback)
 

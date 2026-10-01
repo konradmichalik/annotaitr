@@ -66,7 +66,7 @@ describe('image annotator server', () => {
     await start()
     const res = await fetch(`${server.url}/api/meta`)
     const body = await res.json()
-    expect(body.data).toEqual({ width: 40, height: 30, origin: 'cli', targetLabel: null })
+    expect(body.data).toEqual({ width: 40, height: 30, origin: 'cli', targetLabel: null, voiceNotes: false })
   })
 
   it('serves the target label when provided', async () => {

@@ -52,11 +52,11 @@ function sameTimes(a, b) {
  * frames it needs (POST /api/frame-plan), stores them (PUT /api/frames) and
  * renders the output once a decision arrives.
  */
-export function createVideoApiRouter({ video, origin, targetLabel, state, resolveDecision }) {
+export function createVideoApiRouter({ video, origin, targetLabel, state, voiceNotes = false, resolveDecision }) {
   const router = Router()
 
   router.get('/api/meta', (_req, res) => {
-    res.json(success({ kind: 'video', mediaKind: video.kind, mimeType: video.mimeType, origin, targetLabel }))
+    res.json(success({ kind: 'video', mediaKind: video.kind, mimeType: video.mimeType, origin, targetLabel, voiceNotes }))
   })
 
   router.get('/api/media', (_req, res) => {

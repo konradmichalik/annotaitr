@@ -172,5 +172,11 @@ export const PLAYER_ICONS = {
       <line x1="4" y1="5" x2="4" y2="19" /><line x1="20" y1="5" x2="20" y2="19" />
       <line x1="8" y1="12" x2="16" y2="12" /><polyline points="11 9 8 12 11 15" /><polyline points="13 9 16 12 13 15" />
     </svg>
+  ),
+  microphone: (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d="M5 11a7 7 0 0 0 14 0" /><line x1="12" y1="18" x2="12" y2="21" />
+    </svg>
   )
 }

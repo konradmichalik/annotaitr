@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { startAnnotatorServer } from '../core/server.js'
 import { createVideoApiRouter } from './videoRoutes.js'
+import { transcriptionConfig, detectTranscription, createTranscriptionRouter } from './transcribe.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DIST_DIR = join(__dirname, '..', '..', 'client', 'dist', 'image')
@@ -28,12 +29,16 @@ export async function buildVideoServer({ video, origin = 'cli', targetLabel = nu
     planning: false, deciding: false, decided: false
   }
 
+  const transcription = transcriptionConfig()
+  const voiceNotes = await detectTranscription(transcription)
+
   const server = await startAnnotatorServer({
     bundleDir,
     staticDirs: [],
     onReady,
     mountRoutes(app, { safeResolve }) {
-      app.use(createVideoApiRouter({ video, origin, targetLabel, state, resolveDecision: safeResolve }))
+      app.use(createVideoApiRouter({ video, origin, targetLabel, state, voiceNotes, resolveDecision: safeResolve }))
+      app.use(createTranscriptionRouter({ available: voiceNotes, config: transcription }))
     }
   })
 

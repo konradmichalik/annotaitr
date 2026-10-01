@@ -42,7 +42,7 @@ function sniffImageType(buffer) {
   return 'png'
 }
 
-export function createApiRouter({ imageBuffer, imageWidth, imageHeight, origin, targetLabel, state, resolveDecision }) {
+export function createApiRouter({ imageBuffer, imageWidth, imageHeight, origin, targetLabel, state, voiceNotes = false, resolveDecision }) {
   const router = Router()
 
   router.get('/api/image', (_req, res) => {
@@ -50,7 +50,7 @@ export function createApiRouter({ imageBuffer, imageWidth, imageHeight, origin, 
   })
 
   router.get('/api/meta', (_req, res) => {
-    res.json(success({ width: imageWidth, height: imageHeight, origin, targetLabel }))
+    res.json(success({ width: imageWidth, height: imageHeight, origin, targetLabel, voiceNotes }))
   })
 
   router.get('/api/annotations', (_req, res) => {

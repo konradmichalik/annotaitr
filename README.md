@@ -31,6 +31,7 @@ Which mode runs is auto-detected from the target: see Usage below and
 - **Drawing tools**: boxes, arrows (with an optional dimension-line style for marking distance/spacing), freehand marks, highlighter marks, and numbered comment pins, each with an optional comment and color
 - **Coarse position descriptions**: feedback names each annotation's plain-language position, and flags annotations positioned close together
 - **Annotated screenshot export**: submitting bakes the markup into a copy of the image and passes its path to the agent
+- **Voice notes**: speak a comment instead of typing it, transcribed locally with whisper.cpp when it is installed
 - **Videos and GIFs**: annotate screen recordings on a timeline, as single moments or spans; the agent gets each annotated frame as a PNG plus a strip per span and an overview
 
 **Markdown and plain-text review:**
