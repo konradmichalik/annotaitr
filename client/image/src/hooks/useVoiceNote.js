@@ -68,9 +68,11 @@ export function useVoiceNote(onText) {
         setStatus('transcribing')
         try {
           const text = await transcribe(new Blob(chunks, { type: recorder.mimeType }))
+          if (!mountedRef.current) { return }
           if (text) { onTextRef.current(text) }
           setStatus('idle')
         } catch (err) {
+          if (!mountedRef.current) { return }
           setError(err.message)
           setStatus('error')
         }
