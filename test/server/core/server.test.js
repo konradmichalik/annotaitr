@@ -67,6 +67,11 @@ describe('isAllowedHost', () => {
     expect(isAllowedHost('192.168.1.5:4000', 4000, '192.168.1.5')).toBe(true)
   })
 
+  it('reads a Host without port as the HTTP default port 80', () => {
+    expect(isAllowedHost('localhost', 80, '127.0.0.1')).toBe(true)
+    expect(isAllowedHost('localhost', 4000, '127.0.0.1')).toBe(false)
+  })
+
   it('rejects other names, other ports and a missing header', () => {
     expect(isAllowedHost('evil.example:4000', 4000, '127.0.0.1')).toBe(false)
     expect(isAllowedHost('127.0.0.1:4001', 4000, '127.0.0.1')).toBe(false)

@@ -24,8 +24,9 @@ const WILDCARD_HOSTS = new Set(['0.0.0.0', '::'])
  */
 export function isAllowedHost(hostHeader, port, bindHost) {
   if (WILDCARD_HOSTS.has(bindHost)) { return true }
-  const match = hostHeader?.match(/^(\[[^\]]+\]|[^:]+):(\d+)$/)
-  if (!match || Number(match[2]) !== port) { return false }
+  // A browser leaves the port out for HTTP's default port 80 (RFC 9110).
+  const match = hostHeader?.match(/^(\[[^\]]+\]|[^:]+)(?::(\d+))?$/)
+  if (!match || Number(match[2] ?? 80) !== port) { return false }
   const name = match[1].toLowerCase()
   const bindName = bindHost.includes(':') ? `[${bindHost}]` : bindHost
   return LOOPBACK_NAMES.has(name) || name === bindName.toLowerCase()
