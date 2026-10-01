@@ -4,7 +4,7 @@ import { TOOL_ICONS, ACTION_ICONS } from '../utils/icons.jsx'
 const TYPE_LABELS = { box: 'Box', arrow: 'Arrow', freehand: 'Freehand', highlighter: 'Highlight', pin: 'Pin' }
 
 /** A general comment about the whole image (no geometry, no canvas presence): edited inline right here, not via the canvas popover. */
-function GlobalCommentItem({ annotation, isEditing, onStartEdit, onSave, onCancel, onRemove }) {
+function GlobalCommentItem({ annotation, title = 'General comment', timeLabel = null, isEditing, onStartEdit, onSave, onCancel, onRemove }) {
   const [text, setText] = useState(annotation.text || '')
   const textareaRef = useRef(null)
 
@@ -28,7 +28,8 @@ function GlobalCommentItem({ annotation, isEditing, onStartEdit, onSave, onCance
       <div className="panel-item-header">
         <span className="panel-item-title">
           <span className="panel-item-icon">{ACTION_ICONS.addComment}</span>
-          General comment
+          {title}
+          {timeLabel && <span className="panel-time-chip">{timeLabel}</span>}
         </span>
         <div className="panel-item-actions">
           {!isEditing && (
@@ -77,11 +78,62 @@ function GlobalCommentItem({ annotation, isEditing, onStartEdit, onSave, onCance
   )
 }
 
-export default function AnnotationPanel({ annotations, onRemove, onEdit, onEditGlobalComment }) {
+function ShapeItem({ annotation, number, timeLabel, onEdit, onRemove }) {
+  return (
+    <li className="panel-item" onClick={() => onEdit(annotation.id)}>
+      <div className="panel-item-header">
+        <span className="panel-item-title">
+          <span className="panel-item-icon" style={{ color: annotation.color }}>
+            {TOOL_ICONS[annotation.type]}
+          </span>
+          {number}. {TYPE_LABELS[annotation.type] || annotation.type}
+          {timeLabel && <span className="panel-time-chip">{timeLabel}</span>}
+        </span>
+        <div className="panel-item-actions">
+          <button
+            type="button"
+            className="panel-edit-btn"
+            onClick={(event) => { event.stopPropagation(); onEdit(annotation.id) }}
+            title="Edit annotation"
+            aria-label="Edit annotation"
+          >
+            {ACTION_ICONS.edit}
+          </button>
+          <button
+            type="button"
+            className="panel-delete-btn"
+            onClick={(event) => { event.stopPropagation(); onRemove(annotation.id) }}
+            title="Remove annotation"
+            aria-label="Remove annotation"
+          >
+            &times;
+          </button>
+        </div>
+      </div>
+      <p className="panel-comment-text">
+        {annotation.text || <span className="panel-comment-empty">No comment</span>}
+      </p>
+    </li>
+  )
+}
+
+function commentTitle(annotation, number) {
+  if (typeof annotation.time !== 'number') { return `${number}. General comment` }
+  return `${number}. ${typeof annotation.endTime === 'number' ? 'Span comment' : 'Comment'}`
+}
+
+/**
+ * `timeLabelFor` switches to the recording layout: one list in the given
+ * (time) order, every entry numbered as in the feedback and tagged with its
+ * time. Without it, the still-image layout lists general comments first.
+ * `autoEditId` opens a just-added comment for typing straight away.
+ */
+export default function AnnotationPanel({ annotations, onRemove, onEdit, onEditGlobalComment, timeLabelFor = null, autoEditId = null }) {
   const [editingGlobalId, setEditingGlobalId] = useState(null)
 
-  const globalComments = annotations.filter((a) => a.type === 'comment')
-  const shapeAnnotations = annotations.filter((a) => a.type !== 'comment')
+  useEffect(() => {
+    if (autoEditId) { setEditingGlobalId(autoEditId) }
+  }, [autoEditId])
 
   const handleSaveGlobal = (id, text) => {
     onEditGlobalComment(id, text)
@@ -89,63 +141,46 @@ export default function AnnotationPanel({ annotations, onRemove, onEdit, onEditG
   }
 
   if (annotations.length === 0) {
-    return <p className="panel-empty">No annotations yet. Pick a tool above and mark up the image.</p>
+    return <p className="panel-empty">No annotations yet. Pick a tool above and mark up the {timeLabelFor ? 'recording' : 'image'}.</p>
+  }
+
+  const renderComment = (annotation, extra = {}) => (
+    <GlobalCommentItem
+      key={annotation.id}
+      annotation={annotation}
+      isEditing={editingGlobalId === annotation.id}
+      onStartEdit={() => setEditingGlobalId(annotation.id)}
+      onSave={(text) => handleSaveGlobal(annotation.id, text)}
+      onCancel={() => setEditingGlobalId(null)}
+      onRemove={onRemove}
+      {...extra}
+    />
+  )
+
+  if (timeLabelFor) {
+    return (
+      <ul className="panel-list">
+        {annotations.map((annotation, index) => (annotation.type === 'comment'
+          ? renderComment(annotation, { title: commentTitle(annotation, index + 1), timeLabel: timeLabelFor(annotation) })
+          : (
+            <ShapeItem
+              key={annotation.id} annotation={annotation} number={index + 1}
+              timeLabel={timeLabelFor(annotation)} onEdit={onEdit} onRemove={onRemove}
+            />
+          )))}
+      </ul>
+    )
   }
 
   return (
     <ul className="panel-list">
-      {globalComments.map((annotation) => (
-        <GlobalCommentItem
-          key={annotation.id}
-          annotation={annotation}
-          isEditing={editingGlobalId === annotation.id}
-          onStartEdit={() => setEditingGlobalId(annotation.id)}
-          onSave={(text) => handleSaveGlobal(annotation.id, text)}
-          onCancel={() => setEditingGlobalId(null)}
-          onRemove={onRemove}
-        />
+      {annotations.filter((a) => a.type === 'comment').map((annotation) => renderComment(annotation))}
+      {annotations.filter((a) => a.type !== 'comment').map((annotation) => (
+        // Index into the full (unfiltered) list - it has to match the
+        // canvas's badge numbers, which count over every annotation
+        // including general comments.
+        <ShapeItem key={annotation.id} annotation={annotation} number={annotations.indexOf(annotation) + 1} onEdit={onEdit} onRemove={onRemove} />
       ))}
-      {shapeAnnotations.map((annotation) => {
-        // Index into the full (unfiltered) list, not this filtered map's own
-        // index - it has to match the canvas's badge numbers, which count
-        // over every annotation including general comments.
-        const index = annotations.indexOf(annotation)
-        return (
-          <li key={annotation.id} className="panel-item" onClick={() => onEdit(annotation.id)}>
-            <div className="panel-item-header">
-              <span className="panel-item-title">
-                <span className="panel-item-icon" style={{ color: annotation.color }}>
-                  {TOOL_ICONS[annotation.type]}
-                </span>
-                {index + 1}. {TYPE_LABELS[annotation.type] || annotation.type}
-              </span>
-              <div className="panel-item-actions">
-                <button
-                  type="button"
-                  className="panel-edit-btn"
-                  onClick={(event) => { event.stopPropagation(); onEdit(annotation.id) }}
-                  title="Edit annotation"
-                  aria-label="Edit annotation"
-                >
-                  {ACTION_ICONS.edit}
-                </button>
-                <button
-                  type="button"
-                  className="panel-delete-btn"
-                  onClick={(event) => { event.stopPropagation(); onRemove(annotation.id) }}
-                  title="Remove annotation"
-                  aria-label="Remove annotation"
-                >
-                  &times;
-                </button>
-              </div>
-            </div>
-            <p className="panel-comment-text">
-              {annotation.text || <span className="panel-comment-empty">No comment</span>}
-            </p>
-          </li>
-        )
-      })}
     </ul>
   )
 }

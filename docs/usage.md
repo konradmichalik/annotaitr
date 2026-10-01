@@ -18,6 +18,7 @@ mode-specific except `--help`, `--origin` and `--as`.
 | One or more existing files, all markdown/plain-text | Markdown |
 | A single `http(s)` URL | Image (capture) |
 | A single existing file with a supported image extension (`.png`, `.jpg`, `.jpeg`, `.webp`, `.svg`) | Image (local file) |
+| A single existing video or GIF (`.mp4`, `.m4v`, `.webm`, `.mov`, `.gif`) | Image (video, on a timeline) |
 | Anything else | Exits `1` naming the supported extensions and suggesting `--as` |
 
 ```bash
@@ -26,6 +27,7 @@ annotaitr ./mockup.png               # image: local file
 annotaitr http://localhost:3000      # image: capture
 annotaitr                            # image: clipboard (macOS), or help
 annotaitr ./diagram.svg              # image: SVG, rasterized to PNG
+annotaitr ./bug-recording.mov        # image: video on a timeline
 annotaitr --as image ./mockup.png    # skip detection, force a mode
 ```
 
@@ -48,6 +50,56 @@ scaled down, both as vectors without loss. Transparent areas get a white
 background. The SVG needs a `width`/`height` in px (or unitless) or a
 `viewBox`, otherwise it has no size to render at and is rejected.
 
+## Videos and GIFs
+
+A video or GIF opens with a player docked below the canvas. Pause on a
+frame and draw on it with the usual tools: each annotation is pinned to the
+frame it was drawn on. For something that lasts, click **Mark span** (`I`)
+at its start, move to its end and click **Set end here** (`O`). Then pick a
+tool (or click **Pin** next to the span) and click the start frame, or use
+**Comment span** to comment without drawing. The comment box shows what the
+new annotation is pinned to, `At 00:01.000` or `Span 00:01.000 → 00:03.000`.
+
+| Key | Action |
+|-----|--------|
+| `Space` | Play or pause |
+| `←` / `→` | One frame back or forward |
+| `Shift` + `←` / `→` | One second back or forward |
+| `I` / `O` | Mark span / Set end here |
+| `M` | Sound on or off |
+| `Alt` + `←` / `→` on a focused marker | Move it one frame, with `Shift` its end (a moment becomes a span) |
+
+Each annotation shows as a marker above the scrubber: a numbered dot for a
+moment, a bar with the tool icon (or a speech bubble for a text-only span)
+and the start of the comment for a span. Click a marker to jump
+to it, drag it to move the annotation to another time, and drag a span's
+edge to lengthen or shorten it. A moment becomes a span by dragging the
+handle that appears to the right of its marker. Every change can be undone.
+
+Sound starts muted. The speaker button next to the speed (or `M`) turns it
+on, and hovering it shows the volume slider; the setting is remembered. The
+agent gets no sound, only the frames.
+
+The browser plays the file and grabs the frames itself, so only
+`@napi-rs/canvas` is needed, not playwright. Which codecs play depends on
+the browser: an HEVC `.mov` does not play everywhere. The annotator then
+shows the conversion command:
+
+```bash
+ffmpeg -i input.mov -c:v libx264 -pix_fmt yuv420p output.mp4
+```
+
+Agents cannot watch video, so the feedback points at still images in a temp
+directory:
+
+- one PNG per annotated moment, with the markup and a legend baked in
+- a strip of six frames across every span
+- `overview.png`, twelve frames spread over the whole recording with the
+  annotation numbers on the nearest frame
+
+Videos are limited to 500 MB and GIFs to 50 MB and 2000 frames. One
+submission exports at most 50 distinct frames.
+
 ## `--origin`
 
 Identifies the caller in the feedback output and to the client's origin
@@ -57,7 +109,8 @@ terminal invocation never needs it.
 
 ## `--viewport`
 
-Image mode only, and only meaningful when the target is a URL. A preset
+Image mode only, and only meaningful when the target is a URL. A local
+image, video or GIF rejects it. A preset
 (the default `desktop`, or `laptop`, `tablet`, `mobile`) or an explicit
 `<width>x<height>`.
 

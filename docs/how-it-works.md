@@ -24,6 +24,23 @@ Approving with annotations present becomes **Approve with Notes**: the
 target is accepted as-is, but the notes are passed along as context rather
 than discarded.
 
+### Videos and GIFs
+
+A video or GIF is image mode on a timeline. The server never decodes it: it
+streams the file with range requests, and the browser plays it (a GIF is
+decoded in the browser and composited onto a canvas). Every annotation
+carries a `time`, a span also an `endTime`, and the geometry is in the
+video's own pixels, so the position wording works as for a still image.
+Annotations are numbered in time order, with general comments last.
+
+On submit the browser asks the server which frames the output needs
+(`POST /api/frame-plan`), seeks a hidden copy of the player to each time,
+grabs the frame as a PNG and uploads it (`PUT /api/frames`). The server then
+bakes each moment's annotations into its frame, lays out a strip per span
+and an overview of the whole recording, and prints feedback that points at
+those files. Agents read images, not video, so the frames are the
+deliverable.
+
 ## Markdown mode
 
 Once a file is open in the browser:

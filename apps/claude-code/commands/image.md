@@ -1,5 +1,5 @@
 ---
-description: Open an image file or a captured web page in the browser-based annotator for visual review
+description: Open an image file, a captured web page, a video or a GIF in the browser-based annotator for visual review
 allowed-tools: Bash(annotaitr *), Read, Edit
 args: target
 ---
@@ -59,6 +59,26 @@ spacing between two points rather than pointing at a single target.
 - Combine what you see in the image with the comment text and position to
   find the relevant source (search the repo for matching visible text, class
   names, or component structure) and apply the requested change.
+
+### Video and GIF feedback
+
+A video or GIF target (`.mp4`, `.m4v`, `.webm`, `.mov`, `.gif`) produces
+feedback that opens with `on the recording <name>` instead of an annotated
+screenshot. You cannot watch the video, so it hands you stills instead:
+
+- `Overview:` is a contact sheet of twelve frames across the whole recording,
+  with annotation numbers on the nearest frame. Read it first to follow the
+  flow.
+- Each timed annotation is `at <mm:ss.mmm>` or `from <start> to <end>` and
+  names its `Frame:`, the frame it was drawn on with the markup baked in.
+  Read that frame the same way as an annotated screenshot.
+- A span also names a `Strip:` of six frames across it. Read it to see what
+  changes over the span (an element that flickers, moves or never stops
+  loading).
+- `General comment about the whole recording` has no frame.
+
+Re-running on the same file reopens the same recording. If the fix only
+shows in a new recording, say so instead of re-opening the old one.
 
 If the output shows `APPROVED:`, the user approved the page with no changes
 needed: confirm and stop.

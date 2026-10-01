@@ -70,6 +70,7 @@
     "jsdom": "^29.0.1",
     "katex": "^0.18.1",
     "mermaid": "^11.12.3",
+    "omggif": "^1.0.10",
     "pako": "^2.1.0",
     "plantuml-encoder": "^1.4.0",
     "stylelint": "^17.0.0",

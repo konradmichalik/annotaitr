@@ -8,7 +8,7 @@
     {
       "name": "annotaitr",
       "source": "./apps/claude-code",
-      "description": "Open images, captured web pages, or Markdown files in a browser-based annotator for AI-assisted review"
+      "description": "Open images, captured web pages, videos, GIFs, or Markdown files in a browser-based annotator for AI-assisted review"
     }
   ]
 }

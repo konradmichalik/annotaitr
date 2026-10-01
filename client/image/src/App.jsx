@@ -8,7 +8,15 @@ import ImageCanvas from './components/ImageCanvas.jsx'
 import AnnotationPanel from './components/AnnotationPanel.jsx'
 import ExportModal from './components/ExportModal.jsx'
 import SettingsModal from './components/SettingsModal.jsx'
+import Timeline from './components/Timeline.jsx'
+import MediaSlot from './components/MediaSlot.jsx'
 import { useSettings } from './hooks/useSettings.js'
+import { useMediaPlayer } from './hooks/useMediaPlayer.js'
+import { useVideoReview } from './hooks/useVideoReview.js'
+import { useTimelineShortcuts } from './hooks/useTimelineShortcuts.js'
+import { uploadFrames } from './utils/uploadFrames.js'
+import { formatTimes } from './utils/timeline.js'
+import { readError } from './utils/readError.js'
 import { useAutoClose } from '../../shared/hooks/useAutoClose.js'
 import { useServerConnection } from '../../shared/hooks/useServerConnection.js'
 import { useResizablePanel } from '../../shared/hooks/useResizablePanel.js'
@@ -39,11 +47,24 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialSidebarCollapsed)
   const [status, setStatus] = useState('')
   const [toast, setToast] = useState(null)
+  const [autoEditId, setAutoEditId] = useState(null)
+  const [exportProgress, setExportProgress] = useState(null)
   const { settings, updateSetting, resetSettings } = useSettings()
+  const { isVideo, controller, playerState, error: mediaError } = useMediaPlayer(meta)
+  const video = useVideoReview({ controller, playerState, annotations: state.annotations })
+  const mediaWidth = isVideo ? controller?.width : meta?.width
+  const mediaHeight = isVideo ? controller?.height : meta?.height
+  const subject = isVideo ? 'recording' : 'image'
   const { state: autoCloseState, enableAndStart } = useAutoClose(!!decision, settings.autoCloseDelay)
   const { serverGone, reconnectState } = useServerConnection({ submitted: !!decision })
   const { width: panelWidth, handleMouseDown: handlePanelResize } = useResizablePanel('img-annotator-panel-width', 300, 1)
   const toastTimerRef = useRef(null)
+  // Guards submit() synchronously: the buttons only disable once frame
+  // export reports progress, which is too late to stop a double click.
+  const submittingRef = useRef(false)
+  // The annotation as it was when a marker drag began, so the whole drag
+  // becomes one undo step.
+  const markerDragRef = useRef(null)
   const errorTimerRef = useRef(null)
 
   const showToast = useCallback((message) => {
@@ -99,20 +120,68 @@ export default function App() {
     return () => clearTimeout(timer)
   }, [state.annotations, meta, decision])
 
+  const { takeTimes, range, clearRange } = video
   const addAnnotation = useCallback((partial) => {
     dispatch({
       type: 'ADD',
-      annotation: { id: createAnnotationId(), createdAt: Date.now(), ...partial }
+      annotation: { id: createAnnotationId(), createdAt: Date.now(), ...partial, ...takeTimes() }
     })
-  }, [])
+  }, [takeTimes])
 
-  const addGlobalComment = useCallback(() => {
+  const addComment = useCallback((times) => {
+    const id = createAnnotationId()
     dispatch({
       type: 'ADD',
-      annotation: { id: createAnnotationId(), createdAt: Date.now(), type: 'comment', geometry: null, text: '', color: null }
+      annotation: { id, createdAt: Date.now(), type: 'comment', geometry: null, text: '', color: null, ...times }
     })
+    setAutoEditId(id)
     setSidebarCollapsed(false)
   }, [])
+
+  const addGlobalComment = useCallback(() => addComment({}), [addComment])
+
+  const addSpanComment = useCallback(() => {
+    addComment({ time: range.start, endTime: range.end })
+    clearRange()
+  }, [addComment, range, clearRange])
+
+  const { seekTo } = video
+  const editAnnotation = useCallback((id) => {
+    const annotation = state.annotations.find((a) => a.id === id)
+    if (annotation) { seekTo(annotation) }
+    setEditingAnnotationId(id)
+  }, [state.annotations, seekTo])
+
+  const changeMarkerTimes = useCallback((id, times, phase) => {
+    const current = state.annotations.find((a) => a.id === id)
+    if (!current) { return }
+    if (markerDragRef.current?.id !== id) { markerDragRef.current = { id, before: current } }
+    if (phase === 'preview') {
+      dispatch({ type: 'UPDATE', id, changes: times })
+      return
+    }
+    dispatch({ type: 'EDIT', id, before: markerDragRef.current.before, after: { ...current, ...times } })
+    markerDragRef.current = null
+  }, [state.annotations])
+
+  const { drawTimes } = video
+  const describeTime = useCallback(
+    (annotation) => formatTimes(annotation ?? drawTimes, { at: 'At ', from: 'Span ', to: ' → ' }),
+    [drawTimes]
+  )
+
+  const { captureTimes } = video
+  const beforeCanvasInteract = useCallback(() => {
+    controller.pause()
+    captureTimes()
+  }, [controller, captureTimes])
+
+  useTimelineShortcuts({
+    controller,
+    disabled: settingsOpen || showExport || !!decision || !!exportProgress,
+    onMarkStart: video.markStart,
+    onMarkEnd: video.markEnd
+  })
 
   const editGlobalComment = useCallback((id, text) => {
     const before = state.annotations.find((a) => a.id === id)
@@ -136,28 +205,46 @@ export default function App() {
   const redo = useCallback(() => dispatch({ type: 'REDO' }), [])
 
   const importAnnotations = useCallback((annotations) => {
+    if (isVideo && annotations.some((a) => a.type !== 'comment' && typeof a.time !== 'number')) {
+      setErrorStatus('Import failed: these annotations belong to a still image, not to a recording.')
+      return
+    }
     dispatch({ type: 'SET_ALL', annotations })
     showToast(`Imported ${annotations.length} annotation${annotations.length === 1 ? '' : 's'}`)
-  }, [showToast])
+  }, [showToast, isVideo, setErrorStatus])
 
   const submit = useCallback(async (endpoint) => {
+    if (submittingRef.current) { return }
+    submittingRef.current = true
     try {
       // Flush the current annotations synchronously before deciding - /api/approve
       // and /api/feedback read the server's own state.annotations, which the
       // debounced auto-save effect above may not have posted yet if the user
       // submits within 500ms of their last edit.
-      await fetch('/api/annotations', {
+      const flush = await fetch('/api/annotations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ annotations: state.annotations })
       })
+      // Deciding on whatever the server last accepted would drop or alter
+      // annotations without the reviewer noticing.
+      if (!flush.ok) { throw new Error(`annotations were not saved: ${await readError(flush)}`) }
+      // A recording's output is built from frames only the browser can
+      // decode, so they are grabbed and uploaded before the decision.
+      if (controller && state.annotations.length > 0) {
+        controller.pause()
+        await uploadFrames(controller, (done, total) => setExportProgress({ done, total }))
+      }
       const res = await fetch(`/api/${endpoint}`, { method: 'POST' })
-      if (!res.ok) { throw new Error(`Server responded with ${res.status}`) }
+      if (!res.ok) { throw new Error(await readError(res)) }
       setDecision(endpoint === 'approve' ? 'approved' : 'feedback')
     } catch (err) {
       setErrorStatus(`${endpoint === 'approve' ? 'Approve' : 'Submit'} failed: ${err.message}`)
+    } finally {
+      setExportProgress(null)
+      submittingRef.current = false
     }
-  }, [setErrorStatus, state.annotations])
+  }, [setErrorStatus, state.annotations, controller])
 
   const zoomBy = useCallback((delta) => {
     setZoom((z) => Math.round(Math.max(0.1, Math.min(3, z + delta)) * 100) / 100)
@@ -166,7 +253,7 @@ export default function App() {
   const zoomReset = useCallback(() => setZoom(1), [])
 
   const zoomFit = useCallback(() => {
-    if (!meta) { return }
+    if (!mediaWidth) { return }
     const appMain = document.querySelector('.app-main')
     if (!appMain) { return }
     // Reserve room for .app-main's own padding (12px each side) plus, on the
@@ -175,12 +262,21 @@ export default function App() {
     const TOPBAR_RESERVED_HEIGHT = 76
     const availableWidth = appMain.clientWidth - APP_MAIN_PADDING
     const availableHeight = appMain.clientHeight - TOPBAR_RESERVED_HEIGHT
-    const fit = Math.min(availableWidth / meta.width, availableHeight / meta.height)
+    const fit = Math.min(availableWidth / mediaWidth, availableHeight / mediaHeight)
     setZoom(Math.round(Math.max(0.1, Math.min(3, fit)) * 100) / 100)
-  }, [meta])
+  }, [mediaWidth, mediaHeight])
 
   const annotationCount = state.annotations.length
   const origin = meta?.origin
+
+  function statusText() {
+    if (exportProgress) { return `Preparing frames ${exportProgress.done}/${exportProgress.total}...` }
+    if (status) { return status }
+    if (video.spanComplete) { return 'Span marked. Pick a tool (or click "Pin") and click the frame to mark something in it, or click "Comment span" to comment without drawing.' }
+    if (video.range.start !== null) { return 'Span started. Move to where it ends (play, scrub or use the arrows), then click "Set end here".' }
+    if (isVideo) { return 'Pause on a frame and draw on it. Space plays, arrows step frames, I and O mark a span.' }
+    return 'Click a mark to select it, drag to move, or press Delete to remove it.'
+  }
 
   if (serverGone && !decision) {
     return (
@@ -254,7 +350,7 @@ export default function App() {
               {decision === 'approved'
                 ? (annotationCount > 0
                   ? `Approved as-is. ${annotationCount} annotation${annotationCount === 1 ? '' : 's'} passed along as notes.`
-                  : 'No changes requested. The image was approved as-is.')
+                  : `No changes requested. The ${subject} was approved as-is.`)
                 : `${annotationCount} annotation${annotationCount === 1 ? '' : 's'} ${ORIGIN_LABELS[origin] ? `sent to ${ORIGIN_LABELS[origin]}` : 'submitted'}.`}
             </p>
             <p className="done-hint">
@@ -308,7 +404,7 @@ export default function App() {
             type="button"
             onClick={() => submit('feedback')}
             className="btn btn-feedback"
-            disabled={annotationCount === 0}
+            disabled={annotationCount === 0 || !!exportProgress}
             title={annotationCount === 0 ? 'Add annotations first' : `Submit ${annotationCount} annotation(s)`}
           >
             Feedback
@@ -318,9 +414,10 @@ export default function App() {
             type="button"
             onClick={() => submit('approve')}
             className="btn btn-approve"
+            disabled={!!exportProgress}
             title={annotationCount > 0
               ? `Approve as-is and pass ${annotationCount} annotation(s) along as notes`
-              : 'Approve the image as-is'}
+              : `Approve the ${subject} as-is`}
           >
             {annotationCount > 0 ? 'Approve with Notes' : 'Approve'}
           </button>
@@ -352,40 +449,63 @@ export default function App() {
       </header>
 
       <main className="app-body">
-        <div className="app-main">
-          <div className="canvas-topbar">
-            <Toolbar
-              activeTool={activeTool}
-              onSelectTool={setActiveTool}
-              colorMode={settings.colorMode}
-              fixedColor={settings.fixedColor}
-              onChangeColorMode={(mode) => updateSetting('colorMode', mode)}
-              onChangeFixedColor={(color) => updateSetting('fixedColor', color)}
-            />
-            <ZoomControls zoom={zoom} onZoomBy={zoomBy} onZoomReset={zoomReset} onZoomFit={zoomFit} />
+        <div className="app-stage">
+          <div className="app-main">
+            <div className="canvas-topbar">
+              <Toolbar
+                activeTool={activeTool}
+                onSelectTool={setActiveTool}
+                colorMode={settings.colorMode}
+                fixedColor={settings.fixedColor}
+                onChangeColorMode={(mode) => updateSetting('colorMode', mode)}
+                onChangeFixedColor={(color) => updateSetting('fixedColor', color)}
+              />
+              <ZoomControls zoom={zoom} onZoomBy={zoomBy} onZoomReset={zoomReset} onZoomFit={zoomFit} />
+            </div>
+            {mediaError && <p className="media-error" role="alert">{mediaError}</p>}
+            {meta && (isVideo ? controller && playerState : imageUrl) && (
+              <ImageCanvas
+                imageUrl={imageUrl}
+                imageAlt={meta.targetLabel ? `Annotating ${meta.targetLabel}` : 'Image being annotated'}
+                imageWidth={mediaWidth}
+                imageHeight={mediaHeight}
+                activeTool={activeTool}
+                annotations={video.visible}
+                media={isVideo ? <MediaSlot element={controller.element} label={`Recording ${meta.targetLabel ?? ''}`.trim()} /> : null}
+                numberFor={isVideo ? video.numberFor : null}
+                nextNumber={video.nextNumber}
+                onBeforeInteract={isVideo ? beforeCanvasInteract : null}
+                describeTime={isVideo ? describeTime : null}
+                zoom={zoom}
+                onZoomBy={zoomBy}
+                editingAnnotationId={editingAnnotationId}
+                onAddAnnotation={addAnnotation}
+                onUpdateAnnotation={updateAnnotation}
+                onCommitEdit={commitEditAnnotation}
+                onRemoveAnnotation={removeAnnotation}
+                onRequestEdit={setEditingAnnotationId}
+                onUndo={undo}
+                onRedo={redo}
+                colorMode={settings.colorMode}
+                fixedColor={settings.fixedColor}
+              />
+            )}
           </div>
-          {imageUrl && meta && (
-            <ImageCanvas
-              imageUrl={imageUrl}
-              imageAlt={meta.targetLabel ? `Annotating ${meta.targetLabel}` : 'Image being annotated'}
-              imageWidth={meta.width}
-              imageHeight={meta.height}
+            {isVideo && controller && playerState && (
+              <Timeline
+                controller={controller}
+                playerState={playerState}
+                markers={video.markers}
+                range={video.range}
+                onMarkStart={video.markStart}
+                onMarkEnd={video.markEnd}
+                onClearRange={video.clearRange}
+                onCommentRange={addSpanComment}
+              onChangeMarkerTimes={changeMarkerTimes}
               activeTool={activeTool}
-              annotations={state.annotations}
-              zoom={zoom}
-              onZoomBy={zoomBy}
-              editingAnnotationId={editingAnnotationId}
-              onAddAnnotation={addAnnotation}
-              onUpdateAnnotation={updateAnnotation}
-              onCommitEdit={commitEditAnnotation}
-              onRemoveAnnotation={removeAnnotation}
-              onRequestEdit={setEditingAnnotationId}
-              onUndo={undo}
-              onRedo={redo}
-              colorMode={settings.colorMode}
-              fixedColor={settings.fixedColor}
-            />
-          )}
+              onPickTool={setActiveTool}
+              />
+            )}
         </div>
         {!sidebarCollapsed && (
           <div className="panel-resize-handle" onMouseDown={handlePanelResize} />
@@ -423,18 +543,20 @@ export default function App() {
               </button>
             </div>
             <AnnotationPanel
-              annotations={state.annotations}
+              annotations={video.ordered}
               onRemove={removeAnnotation}
-              onEdit={setEditingAnnotationId}
+              onEdit={editAnnotation}
               onEditGlobalComment={editGlobalComment}
+              timeLabelFor={isVideo ? formatTimes : null}
+              autoEditId={autoEditId}
             />
           </aside>
         )}
       </main>
 
       <footer className="app-status">
-        <span>{status || 'Click a mark to select it, drag to move, or press Delete to remove it.'}</span>
-        {meta && <span className="image-stats">{meta.width} &times; {meta.height}px</span>}
+        <span role="status">{statusText()}</span>
+        {mediaWidth && <span className="image-stats">{mediaWidth} &times; {mediaHeight}px</span>}
       </footer>
 
       {showExport && (

@@ -98,20 +98,20 @@ function HighlighterShape({ geometry, color, strokeWidth, dash, selectionProps }
   )
 }
 
-function PinShape({ geometry, color, index, selectionProps }) {
+function PinShape({ geometry, color, number, selectionProps }) {
   const { x, y } = geometry
   return (
     <>
       {selectionProps && <circle cx={x} cy={y} r="18" fill="none" {...selectionProps} />}
       <circle cx={x} cy={y} r="14" fill={color} />
       <text x={x} y={y} textAnchor="middle" dominantBaseline="central" fill="#fff" fontSize="13" fontWeight="700">
-        {index + 1}
+        {number}
       </text>
     </>
   )
 }
 
-function AnnotationShape({ annotation, index, markerId, dashed = false, selected = false }) {
+function AnnotationShape({ annotation, number, markerId, dashed = false, selected = false }) {
   const color = annotation.color || DEFAULT_COLOR
   const strokeWidth = strokeWidthOf(annotation)
   // The live "uncommitted preview" dash always wins over a stored dashStyle:
@@ -125,7 +125,7 @@ function AnnotationShape({ annotation, index, markerId, dashed = false, selected
   if (type === 'arrow') { return <ArrowShape annotation={annotation} color={color} strokeWidth={strokeWidth} dash={dash} markerId={markerId} selectionProps={selectionProps} /> }
   if (type === 'freehand') { return <FreehandShape geometry={geometry} color={color} strokeWidth={strokeWidth} dash={dash} selectionProps={selectionProps} /> }
   if (type === 'highlighter') { return <HighlighterShape geometry={geometry} color={color} strokeWidth={strokeWidth} dash={dash} selectionProps={selectionProps} /> }
-  if (type === 'pin') { return <PinShape geometry={geometry} color={color} index={index} selectionProps={selectionProps} /> }
+  if (type === 'pin') { return <PinShape geometry={geometry} color={color} number={number} selectionProps={selectionProps} /> }
   return null
 }
 
@@ -197,7 +197,13 @@ function SelectionToolbar({ point, onEdit, onRemove, onClose }) {
 export default function ImageCanvas({
   imageUrl, imageAlt = 'Image being annotated', imageWidth, imageHeight, activeTool, annotations, zoom, onZoomBy,
   editingAnnotationId, onAddAnnotation, onUpdateAnnotation, onCommitEdit, onRemoveAnnotation, onRequestEdit,
-  onUndo, onRedo, colorMode = 'rotate', fixedColor = DEFAULT_COLOR
+  onUndo, onRedo, colorMode = 'rotate', fixedColor = DEFAULT_COLOR,
+  // A video passes its player element, the frame-visible subset of its
+  // annotations, their recording-wide numbers, and a hook to pause playback
+  // before any pointer interaction.
+  // describeTime(annotation | null) names what an annotation is pinned to in
+  // time, null meaning the one being drawn.
+  media = null, numberFor = null, nextNumber = annotations.length + 1, onBeforeInteract = null, describeTime = null
 }) {
   const wrapperRef = useRef(null)
   // Set by the wheel handler just before onZoomBy fires, and consumed by the
@@ -381,6 +387,7 @@ export default function ImageCanvas({
     // already called setPending(null) via onClose in the same event.
     if (pending) { return }
     event.preventDefault()
+    onBeforeInteract?.()
     const point = pointFromEvent(event, wrapperRef, imageWidth, imageHeight, zoom)
 
     // An existing annotation under the cursor always takes over, regardless
@@ -414,7 +421,7 @@ export default function ImageCanvas({
 
     setDragStart(point)
     setDragPoint(point)
-  }, [activeTool, imageWidth, imageHeight, zoom, pending, annotations, selectedId])
+  }, [activeTool, imageWidth, imageHeight, zoom, pending, annotations, selectedId, onBeforeInteract])
 
   const handleMouseMove = useCallback((event) => {
     if (resizeState.current) {
@@ -588,7 +595,7 @@ export default function ImageCanvas({
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
     >
-      <img src={imageUrl} alt={imageAlt} width={imageWidth * zoom} height={imageHeight * zoom} draggable={false} />
+      {media ?? <img src={imageUrl} alt={imageAlt} width={imageWidth * zoom} height={imageHeight * zoom} draggable={false} />}
       <svg
         className="annotation-overlay"
         width={imageWidth * zoom} height={imageHeight * zoom}
@@ -610,10 +617,13 @@ export default function ImageCanvas({
           ))}
         </defs>
         {annotations.map((annotation, index) => (
-          <AnnotationShape key={annotation.id} annotation={annotation} index={index} markerId={`arrowhead-${annotation.id}`} selected={annotation.id === selectedId} />
+          <AnnotationShape
+            key={annotation.id} annotation={annotation} number={numberFor ? numberFor(annotation) : index + 1}
+            markerId={`arrowhead-${annotation.id}`} selected={annotation.id === selectedId}
+          />
         ))}
-        {pending && !pending.id && <AnnotationShape annotation={pending} index={annotations.length} markerId="arrowhead-preview" />}
-        {!pending && livePreview && <AnnotationShape annotation={livePreview} index={annotations.length} markerId="arrowhead-preview" dashed />}
+        {pending && !pending.id && <AnnotationShape annotation={pending} number={nextNumber} markerId="arrowhead-preview" />}
+        {!pending && livePreview && <AnnotationShape annotation={livePreview} number={nextNumber} markerId="arrowhead-preview" dashed />}
         {!pending && selectedAnnotation && (
           <SelectionHandles annotation={selectedAnnotation} zoom={zoom} onHandleMouseDown={handleHandleMouseDown} />
         )}
@@ -639,6 +649,7 @@ export default function ImageCanvas({
           initialStrokeWidth={pending.strokeWidth}
           initialDashStyle={pending.dashStyle}
           isEditing={!!pending.id}
+          timeBadge={describeTime ? describeTime(pending.id ? pending.before : null) : null}
           onSubmit={handleCommentSubmit}
           onClose={handleCommentClose}
         />
