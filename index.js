@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { resolve as resolvePath } from 'node:path'
+import { resolve as resolvePath, basename } from 'node:path'
 import { readFileSync, realpathSync } from 'node:fs'
 import { access, constants } from 'node:fs/promises'
 import { readEnvWithFallback } from './server/core/config.js'
@@ -9,7 +9,7 @@ import { withLifecycle } from './server/core/lifecycle.js'
 import { isAnnotatableFile, supportedExtensions as markdownExtensions } from './server/markdown/file.js'
 import { buildMarkdownServer } from './server/markdown/adapter.js'
 import { formatApprovalOutput as formatMarkdownApproval } from './server/markdown/feedback.js'
-import { isImageFile, isSupportedCaptureUrl } from './server/image/capture.js'
+import { isImageFile, isVideoFile, isSupportedCaptureUrl, videoExtensions } from './server/image/capture.js'
 import { parseViewportSpec } from './server/image/config.js'
 import { saveClipboardImage } from './server/image/clipboard.js'
 
@@ -38,6 +38,28 @@ async function loadImageRuntime() {
   }
 }
 
+/**
+ * A video needs no playwright (the browser plays it and grabs frames), only
+ * @napi-rs/canvas to render the output, so it gets its own loader with its
+ * own install hint.
+ */
+async function loadVideoRuntime() {
+  try {
+    const [video, adapter] = await Promise.all([
+      import('./server/image/video.js'),
+      import('./server/image/videoAdapter.js')
+    ])
+    return { resolveVideoFile: video.resolveVideoFile, buildVideoServer: adapter.buildVideoServer }
+  } catch (error) {
+    if (error.code === 'ERR_MODULE_NOT_FOUND') {
+      throw new Error(
+        'Annotating a video needs @napi-rs/canvas, an optional dependency. Install it with: npm i @napi-rs/canvas'
+      )
+    }
+    throw error
+  }
+}
+
 const VALID_ORIGINS = ['cli', 'claude-code', 'opencode', 'vibe']
 const VALID_MODES = ['image', 'markdown']
 
@@ -46,8 +68,8 @@ const CHAT_IMAGE_HINT =
   'Find the `[Image: source: <path>]` line for it in the conversation and run annotaitr on that path.\n'
 
 const HELP_TEXT = `
-annotaitr — Annotate an image, a captured web page, or Markdown/plain-text
-files in the browser
+annotaitr — Annotate an image, a captured web page, a video or GIF, or
+Markdown/plain-text files in the browser
 
 Usage:
   annotaitr [options] [target ...]
@@ -57,6 +79,8 @@ Which mode runs is auto-detected from the target:
   - one or more existing files, all markdown/plain-text   -> markdown mode
   - a single http(s) URL                                   -> image mode (capture)
   - a single existing image file (.png, .jpg, .jpeg, .webp, .svg) -> image mode
+  - a single existing video or GIF (${videoExtensions().join(', ')}) -> image mode,
+    annotated on a timeline, with every annotated frame exported as PNG
 
 Options:
   --help                       Show this help message
@@ -90,6 +114,7 @@ Examples:
   annotaitr http://localhost:3000
   annotaitr --viewport mobile http://localhost:3000/checkout
   annotaitr ./diagram.svg
+  annotaitr ./bug-recording.mov
   annotaitr                              # read an image from the clipboard (macOS)
 `.trim()
 
@@ -194,6 +219,7 @@ async function fileExists(path) {
  * 2. every target exists and is markdown/plain-text -> markdown (multiple allowed)
  * 3. a single http(s) URL -> image (capture)
  * 4. a single existing file with a supported image extension -> image (local file)
+ * 4b. a single existing video or GIF -> image (video capture)
  * 5. anything else -> a detailed error
  */
 export async function detectMode(targets) {
@@ -214,6 +240,9 @@ export async function detectMode(targets) {
     if ((await fileExists(abs)) && isImageFile(abs)) {
       return { mode: 'image', capture: 'file', resolvedPath: abs }
     }
+    if ((await fileExists(abs)) && isVideoFile(abs)) {
+      return { mode: 'image', capture: 'video', resolvedPath: abs }
+    }
   }
 
   return { error: buildDetectionError(targets) }
@@ -231,6 +260,7 @@ function buildDetectionError(targets) {
     `Unsupported target: ${targets[0]}\n` +
     `Markdown/plain-text extensions: ${markdownExtensions().join(', ')}\n` +
     'Image extensions: .png, .jpg, .jpeg, .webp, .svg (or a http(s) URL to capture)\n' +
+    `Video extensions: ${videoExtensions().join(', ')}\n` +
     'Use --as image or --as markdown to force a mode.'
   )
 }
@@ -322,7 +352,38 @@ async function runMarkdown({ targets, origin, feedbackNotes }) {
   ))
 }
 
+async function runVideo({ target, origin, viewportSpec }) {
+  if (viewportSpec) {
+    fail('--viewport only applies to a URL target, not a video file.')
+    return
+  }
+  const { resolveVideoFile, buildVideoServer } = await loadVideoRuntime()
+  let video
+  try {
+    video = await resolveVideoFile(resolvePath(target))
+  } catch (error) {
+    fail(error.message)
+    return
+  }
+
+  const server = withLifecycle(await buildVideoServer({ video, origin, targetLabel: basename(target) }))
+  process.stderr.write(`Server running at ${server.url}\n`)
+  await openBrowser(server.url)
+
+  const decision = await server.waitForDecision()
+  await handleOutcome(server, decision, () => decision.output)
+}
+
+/** A local video or GIF. A URL is captured as a page, whatever its path ends in. */
+export function isVideoTarget(target) {
+  return isVideoFile(target) && !isSupportedCaptureUrl(target)
+}
+
 async function runImage({ targets, origin, viewportSpec, clipboardPath }) {
+  if (targets.length === 1 && isVideoTarget(targets[0])) {
+    await runVideo({ target: targets[0], origin, viewportSpec })
+    return
+  }
   const { loadImageFromFile, captureUrl, buildImageServer } = await loadImageRuntime()
   const { capture, targetLabel, error } = await resolveImageCapture(targets, viewportSpec, { clipboardPath, loadImageFromFile, captureUrl })
   if (error) { fail(error); return }

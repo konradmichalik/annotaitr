@@ -61,7 +61,7 @@ function drawDimensionCaps(ctx, x1, y1, x2, y2, color, tickLength, lineWidth) {
   ctx.stroke()
 }
 
-function drawBadge(ctx, x, y, index, color) {
+function drawBadge(ctx, x, y, number, color) {
   ctx.beginPath()
   ctx.arc(x, y, BADGE_RADIUS, 0, Math.PI * 2)
   ctx.fillStyle = color
@@ -70,16 +70,16 @@ function drawBadge(ctx, x, y, index, color) {
   ctx.font = 'bold 12px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText(String(index + 1), x, y)
+  ctx.fillText(String(number), x, y)
 }
 
-function drawBox(ctx, geometry, index, color) {
+function drawBox(ctx, geometry, number, color) {
   const { x, y, width, height } = geometry
   ctx.strokeRect(x, y, width, height)
-  drawBadge(ctx, x, y, index, color)
+  drawBadge(ctx, x, y, number, color)
 }
 
-function drawArrow(ctx, annotation, index, color) {
+function drawArrow(ctx, annotation, number, color) {
   const { x1, y1, x2, y2 } = annotation.geometry
   const style = resolveArrowStyle(annotation.arrowStyle)
   const lineWidth = serverStrokeWidth(annotation)
@@ -96,7 +96,7 @@ function drawArrow(ctx, annotation, index, color) {
   } else if (style === 'head') {
     drawArrowhead(ctx, x1, y1, x2, y2, color, serverHeadLength(annotation), lineWidth)
   }
-  drawBadge(ctx, x1, y1, index, color)
+  drawBadge(ctx, x1, y1, number, color)
 }
 
 function strokePoints(ctx, points) {
@@ -108,14 +108,14 @@ function strokePoints(ctx, points) {
   ctx.stroke()
 }
 
-function drawFreehand(ctx, geometry, index, color) {
+function drawFreehand(ctx, geometry, number, color) {
   const points = geometry.points
   if (points.length < 2) { return }
   strokePoints(ctx, points)
-  drawBadge(ctx, points[0].x, points[0].y, index, color)
+  drawBadge(ctx, points[0].x, points[0].y, number, color)
 }
 
-function drawHighlighter(ctx, geometry, index, color) {
+function drawHighlighter(ctx, geometry, number, color) {
   const points = geometry.points
   if (points.length < 2) { return }
   ctx.save()
@@ -126,10 +126,10 @@ function drawHighlighter(ctx, geometry, index, color) {
   // unconditionally by drawAnnotation's dispatch before this runs.
   strokePoints(ctx, points)
   ctx.restore()
-  drawBadge(ctx, points[0].x, points[0].y, index, color)
+  drawBadge(ctx, points[0].x, points[0].y, number, color)
 }
 
-function drawPin(ctx, geometry, index) {
+function drawPin(ctx, geometry, number) {
   const { x, y } = geometry
   ctx.beginPath()
   ctx.arc(x, y, PIN_RADIUS, 0, Math.PI * 2)
@@ -138,10 +138,10 @@ function drawPin(ctx, geometry, index) {
   ctx.font = 'bold 16px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText(String(index + 1), x, y)
+  ctx.fillText(String(number), x, y)
 }
 
-function drawAnnotation(ctx, annotation, index) {
+function drawAnnotation(ctx, annotation, number) {
   const color = annotation.color || DEFAULT_COLOR
   ctx.strokeStyle = color
   ctx.fillStyle = color
@@ -153,11 +153,11 @@ function drawAnnotation(ctx, annotation, index) {
   ctx.lineWidth = serverStrokeWidth(annotation)
   ctx.setLineDash(serverDashArray(annotation))
 
-  if (annotation.type === 'box') { drawBox(ctx, annotation.geometry, index, color) }
-  else if (annotation.type === 'arrow') { drawArrow(ctx, annotation, index, color) }
-  else if (annotation.type === 'freehand') { drawFreehand(ctx, annotation.geometry, index, color) }
-  else if (annotation.type === 'highlighter') { drawHighlighter(ctx, annotation.geometry, index, color) }
-  else if (annotation.type === 'pin') { drawPin(ctx, annotation.geometry, index) }
+  if (annotation.type === 'box') { drawBox(ctx, annotation.geometry, number, color) }
+  else if (annotation.type === 'arrow') { drawArrow(ctx, annotation, number, color) }
+  else if (annotation.type === 'freehand') { drawFreehand(ctx, annotation.geometry, number, color) }
+  else if (annotation.type === 'highlighter') { drawHighlighter(ctx, annotation.geometry, number, color) }
+  else if (annotation.type === 'pin') { drawPin(ctx, annotation.geometry, number) }
 }
 
 /** Greedy word-wrap of `text` to fit within `maxWidth`, using `ctx`'s current font. */
@@ -179,11 +179,19 @@ function wrapText(ctx, text, maxWidth) {
   return lines
 }
 
-function buildLegendEntries(ctx, annotations, maxWidth) {
+/** A comment pinned to a moment or span of a recording is not about the whole image. */
+function legendLabel(annotation) {
+  if (annotation.type === 'comment' && typeof annotation.time === 'number') {
+    return typeof annotation.endTime === 'number' ? 'Span comment' : 'Comment'
+  }
+  return TYPE_LABELS[annotation.type] || annotation.type
+}
+
+function buildLegendEntries(ctx, annotations, numbers, maxWidth) {
   ctx.font = `${LEGEND_FONT_SIZE}px sans-serif`
   return annotations.map((annotation, index) => ({
-    index,
-    type: annotation.type,
+    number: numbers[index],
+    label: legendLabel(annotation),
     color: annotation.color || DEFAULT_COLOR,
     lines: wrapText(ctx, annotation.text?.trim() || '(no comment)', maxWidth)
   }))
@@ -195,15 +203,17 @@ function buildLegendEntries(ctx, annotations, maxWidth) {
  * listing each annotation's comment. The legend keeps the comments attached
  * to the same file as the markup instead of only existing in the separate
  * feedback text — a viewer of just this image still sees what was said.
+ * `numbers` are the labels drawn per annotation: a recording numbers across
+ * all of its frames, so one frame's annotations need not start at 1.
  */
-export async function flattenAnnotations(imageBuffer, annotations) {
+export async function flattenAnnotations(imageBuffer, annotations, numbers = annotations.map((_, index) => index + 1)) {
   const image = await loadImage(imageBuffer)
 
   // A throwaway context to measure legend text before the final canvas
   // (whose height depends on the legend) can be created.
   const measureCtx = createCanvas(1, 1).getContext('2d')
   const legendMaxWidth = image.width - LEGEND_PADDING * 2 - 22
-  const entries = annotations.length > 0 ? buildLegendEntries(measureCtx, annotations, legendMaxWidth) : []
+  const entries = annotations.length > 0 ? buildLegendEntries(measureCtx, annotations, numbers, legendMaxWidth) : []
 
   const totalLines = entries.reduce((sum, entry) => sum + 1 + entry.lines.length, 0)
   const legendHeight = entries.length === 0
@@ -214,7 +224,7 @@ export async function flattenAnnotations(imageBuffer, annotations) {
   const ctx = canvas.getContext('2d')
 
   ctx.drawImage(image, 0, 0)
-  annotations.forEach((annotation, index) => drawAnnotation(ctx, annotation, index))
+  annotations.forEach((annotation, index) => drawAnnotation(ctx, annotation, numbers[index]))
 
   if (legendHeight > 0) {
     ctx.fillStyle = LEGEND_BG
@@ -231,7 +241,7 @@ export async function flattenAnnotations(imageBuffer, annotations) {
 
       ctx.font = `bold ${LEGEND_FONT_SIZE}px sans-serif`
       ctx.fillStyle = LEGEND_HEADER_COLOR
-      ctx.fillText(`${entry.index + 1}. ${TYPE_LABELS[entry.type] || entry.type}`, LEGEND_PADDING + 18, y)
+      ctx.fillText(`${entry.number}. ${entry.label}`, LEGEND_PADDING + 18, y)
       y += LEGEND_LINE_HEIGHT
 
       ctx.font = `${LEGEND_FONT_SIZE}px sans-serif`
@@ -243,6 +253,50 @@ export async function flattenAnnotations(imageBuffer, annotations) {
 
       if (i < entries.length - 1) { y += LEGEND_GAP }
     })
+  }
+
+  return canvas.toBuffer('image/png')
+}
+
+export const CONTACT_SHEET_GAP = 8
+export const CONTACT_SHEET_LABEL_HEIGHT = 22
+const CONTACT_SHEET_FONT_SIZE = 13
+
+/**
+ * Lay frames out as a labelled grid (a strip across a span, or an overview
+ * of the whole recording), so the agent sees a sequence in one image
+ * instead of having to open every frame.
+ *
+ * @param {{ buffer: Buffer, label: string }[]} tiles - all frames share one size
+ * @param {{ columns: number, tileWidth: number }} layout - tileWidth is a maximum, frames are never upscaled
+ */
+export async function composeContactSheet(tiles, { columns, tileWidth }) {
+  // Decoded one at a time: a full-size frame can take hundreds of megabytes.
+  const first = await loadImage(tiles[0].buffer)
+  const width = Math.min(tileWidth, first.width)
+  const height = Math.round((first.height * width) / first.width)
+  const cellHeight = height + CONTACT_SHEET_LABEL_HEIGHT
+  const cols = Math.min(columns, tiles.length)
+  const rows = Math.ceil(tiles.length / cols)
+
+  const canvas = createCanvas(
+    cols * width + (cols + 1) * CONTACT_SHEET_GAP,
+    rows * cellHeight + (rows + 1) * CONTACT_SHEET_GAP
+  )
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = LEGEND_BG
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.font = `${CONTACT_SHEET_FONT_SIZE}px sans-serif`
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+
+  for (const [index, tile] of tiles.entries()) {
+    const image = index === 0 ? first : await loadImage(tile.buffer)
+    const x = CONTACT_SHEET_GAP + (index % cols) * (width + CONTACT_SHEET_GAP)
+    const y = CONTACT_SHEET_GAP + Math.floor(index / cols) * (cellHeight + CONTACT_SHEET_GAP)
+    ctx.drawImage(image, x, y, width, height)
+    ctx.fillStyle = LEGEND_HEADER_COLOR
+    ctx.fillText(tile.label, x + 4, y + height + CONTACT_SHEET_LABEL_HEIGHT / 2)
   }
 
   return canvas.toBuffer('image/png')

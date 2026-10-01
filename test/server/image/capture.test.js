@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isImageFile, isSupportedCaptureUrl } from '../../../server/image/capture.js'
+import { isImageFile, isVideoFile, isGifFile, isSupportedCaptureUrl } from '../../../server/image/capture.js'
 
 describe('isImageFile', () => {
   it('accepts supported extensions', () => {
@@ -26,5 +26,26 @@ describe('isSupportedCaptureUrl', () => {
     expect(isSupportedCaptureUrl('file:///etc/passwd')).toBe(false)
     expect(isSupportedCaptureUrl('not a url')).toBe(false)
     expect(isSupportedCaptureUrl('./relative/path.png')).toBe(false)
+  })
+})
+
+describe('isVideoFile', () => {
+  it('accepts video and GIF extensions', () => {
+    for (const name of ['a.mp4', 'a.webm', 'a.MOV', 'a.m4v', 'a.gif']) {
+      expect(isVideoFile(`/x/${name}`)).toBe(true)
+    }
+  })
+
+  it('rejects still images and other files', () => {
+    expect(isVideoFile('/x/a.png')).toBe(false)
+    expect(isVideoFile('/x/a.md')).toBe(false)
+    expect(isVideoFile('/x/a.mkv')).toBe(false)
+  })
+})
+
+describe('isGifFile', () => {
+  it('detects only .gif', () => {
+    expect(isGifFile('/x/a.GIF')).toBe(true)
+    expect(isGifFile('/x/a.mp4')).toBe(false)
   })
 })
