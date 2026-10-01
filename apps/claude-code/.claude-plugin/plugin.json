@@ -1,6 +1,6 @@
 {
   "name": "annotaitr",
   "description": "Open images, captured web pages, or Markdown files in a browser-based annotator for AI-assisted review",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "commands": "./commands/"
 }
