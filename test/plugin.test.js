@@ -16,6 +16,13 @@ describe('claude-code plugin manifest', () => {
       expect(content).toContain('annotaitr --origin claude-code')
     }
   })
+
+  it('keeps zsh from rejecting a pasted [Image #N] chip in /annotaitr:image and /annotaitr:review', () => {
+    for (const command of ['image', 'review']) {
+      const content = readFileSync(`apps/claude-code/commands/${command}.md`, 'utf-8')
+      expect(content).toContain('!`setopt no_bad_pattern no_nomatch 2>/dev/null; annotaitr --origin claude-code $ARGUMENTS`')
+    }
+  })
 })
 
 describe('marketplace manifest', () => {

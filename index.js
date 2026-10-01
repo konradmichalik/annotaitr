@@ -41,6 +41,10 @@ async function loadImageRuntime() {
 const VALID_ORIGINS = ['cli', 'claude-code', 'opencode', 'vibe']
 const VALID_MODES = ['image', 'markdown']
 
+const CHAT_IMAGE_HINT =
+  'PASTED CHAT IMAGE: the target is an image pasted or dropped into the chat, not a file path. ' +
+  'Find the `[Image: source: <path>]` line for it in the conversation and run annotaitr on that path.\n'
+
 const HELP_TEXT = `
 annotaitr — Annotate an image, a captured web page, or Markdown/plain-text
 files in the browser
@@ -398,6 +402,13 @@ async function main() {
 
   if (error) { fail(error); return }
   if (help) { printHelpAndExit(0); return }
+
+  // A Claude Code chat image reaches us as the chip text, not a path. Exit 0
+  // so the slash command still hands its instructions to the agent.
+  if (targets.some((t) => t.startsWith('[Image'))) {
+    process.stdout.write(CHAT_IMAGE_HINT)
+    return
+  }
 
   if (targets.length === 0 && !modeOverride) {
     await runBareInvocation({ origin, viewportSpec })
