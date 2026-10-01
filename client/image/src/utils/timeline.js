@@ -88,8 +88,17 @@ const roundMs = (value) => Math.round(value * 1000) / 1000
  * 'end' to the right turns it into a span. A span never gets
  * shorter than `minSpan`, nothing leaves 0..duration, and `snap` puts each
  * time on a frame the player can show (a GIF frame's start).
+ *
+ * Snapping can still pull a span's end back onto its start, e.g. on a GIF
+ * frame held longer than `minSpan`. Such a result keeps the previous times,
+ * since a span that ends where it starts is not a span the server accepts.
  */
-export function dragMarkerTimes(times, mode, delta, { duration, minSpan, snap = (t) => t }) {
+export function dragMarkerTimes(times, mode, delta, options) {
+  const next = draggedTimes(times, mode, delta, options)
+  return isSpan(next) && next.endTime <= next.time ? { ...times } : next
+}
+
+function draggedTimes(times, mode, delta, { duration, minSpan, snap = (t) => t }) {
   const fix = (t) => roundMs(snap(t))
   if (!isSpan(times)) {
     if (mode !== 'end') { return { time: fix(clamp(times.time + delta, 0, duration)) } }

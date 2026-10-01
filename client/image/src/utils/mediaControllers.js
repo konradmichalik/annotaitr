@@ -11,6 +11,7 @@ import { createGifTimeline } from './gifTimeline.js'
  *   play(), pause(), togglePlay(), setRate(rate), setMuted(muted), setVolume(volume)
  *   seek(time), step(frames)           both pause first: a jump lands on a frame to look at or draw on
  *   snap(time) -> time                 the time to store for the frame shown at `time`
+ *   frameDurationAt(time) -> seconds   how long the frame shown at `time` lasts
  *   grabFrame(time) -> Promise<Blob>   a PNG of that frame, without moving the visible player
  *   destroy()
  */
@@ -256,6 +257,7 @@ function createVideoController(video, src, initialFrameDuration) {
     // Seeking a video to any time shows the frame covering it, and the
     // player then reports exactly that time, so no rounding is needed.
     snap: (time) => time,
+    frameDurationAt: () => frameDuration,
     grabFrame,
     destroy() {
       onStop()
@@ -375,6 +377,7 @@ function createGifController(timeline) {
     setMuted() {},
     setVolume() {},
     snap: (time) => starts[timeline.frameIndexAt(time)],
+    frameDurationAt: (time) => delays[timeline.frameIndexAt(time)],
     grabFrame,
     destroy() {
       if (rafId !== null) { cancelAnimationFrame(rafId) }

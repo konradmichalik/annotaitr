@@ -101,6 +101,20 @@ describe('dragMarkerTimes', () => {
     expect(dragMarkerTimes({ time: 2 }, 'end', -1, opts)).toEqual({ time: 2 })
   })
 
+  describe('with frames longer than the minimum span, as in a GIF with a held frame', () => {
+    const wholeSeconds = { duration: 10, minSpan: 0.1, snap: (t) => Math.floor(t) }
+
+    it('keeps the previous times instead of snapping an end back onto its start', () => {
+      expect(dragMarkerTimes({ time: 2 }, 'end', 0.3, wholeSeconds)).toEqual({ time: 2 })
+      expect(dragMarkerTimes({ time: 2, endTime: 3 }, 'end', -0.6, wholeSeconds)).toEqual({ time: 2, endTime: 3 })
+      expect(dragMarkerTimes({ time: 2, endTime: 2.5 }, 'move', 0.2, wholeSeconds)).toEqual({ time: 2, endTime: 2.5 })
+    })
+
+    it('reaches the next frame when the minimum span is the marker\'s own frame', () => {
+      expect(dragMarkerTimes({ time: 2 }, 'end', 0.3, { ...wholeSeconds, minSpan: 1 })).toEqual({ time: 2, endTime: 3 })
+    })
+  })
+
   it('applies a snap function to every resulting time', () => {
     const snap = (t) => Math.floor(t * 4) / 4
     expect(dragMarkerTimes({ time: 2 }, 'move', 0.6, { ...opts, snap })).toEqual({ time: 2.5 })

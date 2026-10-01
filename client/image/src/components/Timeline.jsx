@@ -91,7 +91,7 @@ function SpanMarkerContent({ marker }) {
  * or a whole span by its body, a span's start or end by its edge. The player
  * follows the drag, so the frame the drawing will sit on stays in view.
  */
-function Markers({ markers, controller, frameDuration, onSelect, onChangeTimes, rowRef }) {
+function Markers({ markers, controller, onSelect, onChangeTimes, rowRef }) {
   const [width, setWidth] = useState(0)
   const dragRef = useRef(null)
   const suppressClickRef = useRef(false)
@@ -106,10 +106,12 @@ function Markers({ markers, controller, frameDuration, onSelect, onChangeTimes, 
   }, [rowRef])
 
   const { lanes, laneCount } = layoutMarkerLanes(markers, duration, width)
-  const dragOptions = { duration, minSpan: frameDuration, snap: controller.snap }
-
+  // One frame of the marker's own start, not of the frame on screen: GIF
+  // frames differ in length, and the shortest span ends on the next frame.
+  const ownFrame = (marker) => controller.frameDurationAt(marker.time)
   const timesAfter = (marker, mode, delta) => dragMarkerTimes(
-    { time: marker.time, endTime: marker.endTime }, mode, delta, dragOptions
+    { time: marker.time, endTime: marker.endTime }, mode, delta,
+    { duration, minSpan: ownFrame(marker), snap: controller.snap }
   )
 
   const showFrameOf = (times, mode) => controller.seek(mode === 'end' ? times.endTime : times.time)
@@ -145,7 +147,7 @@ function Markers({ markers, controller, frameDuration, onSelect, onChangeTimes, 
     if (!event.altKey || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) { return }
     event.preventDefault()
     const mode = event.shiftKey ? 'end' : 'move'
-    const times = timesAfter(marker, mode, (event.key === 'ArrowLeft' ? -1 : 1) * frameDuration)
+    const times = timesAfter(marker, mode, (event.key === 'ArrowLeft' ? -1 : 1) * ownFrame(marker))
     onChangeTimes(marker.id, times, 'commit')
     showFrameOf(times, mode)
   }
@@ -209,7 +211,7 @@ export default function Timeline({
   const markersRef = useRef(null)
   const [hover, setHover] = useState(null)
   const { duration } = controller
-  const { currentTime, playing, rate, frameDuration, hasAudio, muted, volume } = playerState
+  const { currentTime, playing, rate, hasAudio, muted, volume } = playerState
 
   const timeAtPointer = useCallback((event) => {
     const rect = trackRef.current.getBoundingClientRect()
@@ -247,7 +249,7 @@ export default function Timeline({
     <div className="timeline">
       <div className="timeline-scrubber">
         <Markers
-          markers={markers} controller={controller} frameDuration={frameDuration}
+          markers={markers} controller={controller}
           onSelect={controller.seek} onChangeTimes={onChangeMarkerTimes} rowRef={markersRef}
         />
         <div
