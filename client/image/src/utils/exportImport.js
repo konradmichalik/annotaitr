@@ -89,6 +89,21 @@ function validateAnnotation(ann, index) {
   if (ann.arrowStyle !== undefined && typeof ann.arrowStyle !== 'string') {
     throw new Error(`Annotation ${index + 1}: arrowStyle must be a string.`)
   }
+  validateTimes(ann, index)
+}
+
+function isValidTime(value) {
+  return isFiniteNumber(value) && value >= 0
+}
+
+/** time/endTime only exist on annotations of a video or GIF. */
+function validateTimes(ann, index) {
+  if (ann.time !== undefined && !isValidTime(ann.time)) {
+    throw new Error(`Annotation ${index + 1}: time must be a number >= 0.`)
+  }
+  if (ann.endTime !== undefined && (!isValidTime(ann.endTime) || ann.time === undefined || ann.endTime <= ann.time)) {
+    throw new Error(`Annotation ${index + 1}: endTime must be a number after time.`)
+  }
 }
 
 export function serializeAnnotations(annotations) {

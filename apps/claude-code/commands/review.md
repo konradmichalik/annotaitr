@@ -40,6 +40,11 @@ Read the annotated image directly to see exactly what was marked and where;
 combine that with each annotation's coarse position and comment text to find
 the relevant source and apply the requested change.
 
+**Video and GIF feedback**: recognizable by `on the recording <name>` and an
+`Overview:` path near the top. Read the overview first, then each
+annotation's `Frame:` (the frame it was drawn on, markup baked in) and, for a
+span (`from <start> to <end>`), its `Strip:` of frames across the span.
+
 **Markdown feedback** — a `# Annotation Feedback` document (or `APPROVED:` /
 `APPROVED WITH NOTES:` with no such document) with one block per annotation,
 each giving a line reference and the requested change:

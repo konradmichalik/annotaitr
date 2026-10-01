@@ -47,7 +47,6 @@
     "qs": "^6.16.0"
   },
   "dependencies": {
-    "cors": "^2.8.5",
     "express": "^4.21.0",
     "open": "^10.1.0",
     "react": "^19.0.0",
@@ -70,6 +69,7 @@
     "jsdom": "^29.0.1",
     "katex": "^0.18.1",
     "mermaid": "^11.12.3",
+    "omggif": "^1.0.10",
     "pako": "^2.1.0",
     "plantuml-encoder": "^1.4.0",
     "stylelint": "^17.0.0",

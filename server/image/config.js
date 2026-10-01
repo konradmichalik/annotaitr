@@ -49,5 +49,13 @@ function getCaptureTimeoutMs() {
 export const config = {
   captureTimeoutMs: getCaptureTimeoutMs(),
   maxImageBytes: 15 * 1024 * 1024,
-  maxImageDimension: 20000
+  maxImageDimension: 20000,
+  // A video is streamed from disk and never held in memory, so its cap only
+  // guards against an accidental target. A GIF is decoded whole in the
+  // browser, which is why its cap is far lower.
+  maxVideoBytes: 500 * 1024 * 1024,
+  // 8K. A frame PNG declares its size in a few bytes but decodes to
+  // width x height x 4, and the overview holds a dozen of them.
+  maxVideoDimension: 8192,
+  maxGifBytes: 50 * 1024 * 1024
 }

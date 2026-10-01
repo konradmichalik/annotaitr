@@ -8,8 +8,29 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import express from 'express'
-import cors from 'cors'
 import { config } from './config.js'
+
+const LOOPBACK_NAMES = new Set(['127.0.0.1', 'localhost', '[::1]'])
+const WILDCARD_HOSTS = new Set(['0.0.0.0', '::'])
+
+/**
+ * Whether a request's Host header names this server. A web page the user
+ * has open elsewhere can point a hostname it controls at 127.0.0.1 (DNS
+ * rebinding) and then talk to the annotator as same-origin, reading the
+ * target and submitting a decision. Its Host header still carries that
+ * foreign name, so only loopback names and the bind host are let through.
+ * Binding to every interface is an explicit opt-in to network access, so
+ * there the name is not checked.
+ */
+export function isAllowedHost(hostHeader, port, bindHost) {
+  if (WILDCARD_HOSTS.has(bindHost)) { return true }
+  // A browser leaves the port out for HTTP's default port 80 (RFC 9110).
+  const match = hostHeader?.match(/^(\[[^\]]+\]|[^:]+)(?::(\d+))?$/)
+  if (!match || Number(match[2] ?? 80) !== port) { return false }
+  const name = match[1].toLowerCase()
+  const bindName = bindHost.includes(':') ? `[${bindHost}]` : bindHost
+  return LOOPBACK_NAMES.has(name) || name === bindName.toLowerCase()
+}
 
 /**
  * Bind to the first free port in `candidates`. The listen error must be
@@ -57,7 +78,12 @@ export async function startAnnotatorServer({ bundleDir, htmlContent = null, stat
   }
 
   const app = express()
-  app.use(cors())
+  // No CORS: the client is always served from this same origin, and any
+  // cross-origin access would let other pages read the target or submit.
+  app.use((req, res, next) => {
+    if (isAllowedHost(req.headers.host, req.socket.localPort, config.host)) { return next() }
+    res.status(403).json({ success: false, error: 'Forbidden host' })
+  })
   app.use(express.json({ limit: config.jsonLimit }))
 
   if (preloadedHtml) {

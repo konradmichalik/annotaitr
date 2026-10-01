@@ -17,7 +17,7 @@ const ARROW_STYLE_LABELS = {
 }
 
 /** An arrow's end style changes what it means (a target, a span, a plain connection, a two-way link), so it needs its own wording per style. */
-function annotationLabel(annotation) {
+export function annotationLabel(annotation) {
   if (annotation.type === 'arrow') {
     const label = ARROW_STYLE_LABELS[resolveArrowStyle(annotation.arrowStyle)]
     if (label) { return label }

@@ -3,7 +3,7 @@ import { join, resolve as resolvePath } from 'node:path'
 import { mkdtemp, writeFile, rm, symlink } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { parseArgs, detectMode } from '../index.js'
+import { parseArgs, detectMode, isVideoTarget } from '../index.js'
 
 const BASE = ['node', 'index.js']
 
@@ -116,6 +116,12 @@ describe('detectMode', () => {
     expect(await detectMode([pngPath])).toEqual({ mode: 'image', capture: 'file', resolvedPath: pngPath })
   })
 
+  it.each([['clip.mp4'], ['rec.mov'], ['anim.gif'], ['flow.webm']])('detects an existing %s as image mode with a video capture', async (name) => {
+    const path = join(dir, name)
+    await writeFile(path, 'x')
+    expect(await detectMode([path])).toEqual({ mode: 'image', capture: 'video', resolvedPath: path })
+  })
+
   it('errors on a mix of markdown and image targets', async () => {
     const result = await detectMode([mdPath, pngPath])
     expect(result.error).toMatch(/Could not determine a single mode/)
@@ -149,6 +155,43 @@ describe('pasted chat image chip as target', () => {
     const result = spawnSync('node', ['index.js', '--as', 'image', '[Image'])
     expect(result.status).toBe(0)
     expect(result.stdout.toString()).toMatch(/^PASTED CHAT IMAGE:/)
+  })
+})
+
+describe('isVideoTarget', () => {
+  it('takes a local video or GIF path', () => {
+    expect(isVideoTarget('./rec.mov')).toBe(true)
+    expect(isVideoTarget('/tmp/anim.gif')).toBe(true)
+  })
+
+  it('leaves a URL to page capture, even when it ends in a video extension', () => {
+    expect(isVideoTarget('https://example.com/demo.mp4')).toBe(false)
+  })
+})
+
+describe('video targets', () => {
+  let dir, videoPath
+
+  beforeAll(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'annotaitr-cli-video-'))
+    videoPath = join(dir, 'clip.mp4')
+    await writeFile(videoPath, 'x')
+  })
+
+  afterAll(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  it('rejects --viewport for a video, which is never captured', () => {
+    const result = spawnSync('node', ['index.js', '--viewport', 'mobile', videoPath])
+    expect(result.status).toBe(1)
+    expect(result.stderr.toString()).toMatch(/--viewport only applies to a URL target/)
+  })
+
+  it('reports a missing video forced with --as image', () => {
+    const result = spawnSync('node', ['index.js', '--as', 'image', join(dir, 'missing.mp4')])
+    expect(result.status).toBe(1)
+    expect(result.stderr.toString()).toMatch(/File not found/)
   })
 })
 

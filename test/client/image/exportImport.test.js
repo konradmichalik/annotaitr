@@ -82,3 +82,20 @@ describe('serializeAnnotations / parseAnnotationsJson', () => {
     expect(() => parseAnnotationsJson(json)).toThrow(/dashStyle/)
   })
 })
+
+describe('parseAnnotationsJson with video times', () => {
+  const timed = { id: 't', type: 'box', geometry: { x: 0, y: 0, width: 1, height: 1 }, time: 1.5, endTime: 3 }
+
+  it('keeps time and endTime on import', () => {
+    expect(parseAnnotationsJson(JSON.stringify([timed]))).toEqual([timed])
+  })
+
+  it('rejects a negative or non-numeric time', () => {
+    expect(() => parseAnnotationsJson(JSON.stringify([{ ...timed, time: -1 }]))).toThrow(/time/)
+    expect(() => parseAnnotationsJson(JSON.stringify([{ ...timed, time: '1' }]))).toThrow(/time/)
+  })
+
+  it('rejects an endTime that is not after time', () => {
+    expect(() => parseAnnotationsJson(JSON.stringify([{ ...timed, endTime: 1 }]))).toThrow(/endTime/)
+  })
+})

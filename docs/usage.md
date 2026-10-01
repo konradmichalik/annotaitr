@@ -18,6 +18,7 @@ mode-specific except `--help`, `--origin` and `--as`.
 | One or more existing files, all markdown/plain-text | Markdown |
 | A single `http(s)` URL | Image (capture) |
 | A single existing file with a supported image extension (`.png`, `.jpg`, `.jpeg`, `.webp`, `.svg`) | Image (local file) |
+| A single existing video or GIF (`.mp4`, `.m4v`, `.webm`, `.mov`, `.gif`) | Image (video, on a timeline) |
 | Anything else | Exits `1` naming the supported extensions and suggesting `--as` |
 
 ```bash
@@ -26,6 +27,7 @@ annotaitr ./mockup.png               # image: local file
 annotaitr http://localhost:3000      # image: capture
 annotaitr                            # image: clipboard (macOS), or help
 annotaitr ./diagram.svg              # image: SVG, rasterized to PNG
+annotaitr ./bug-recording.mov        # image: video on a timeline
 annotaitr --as image ./mockup.png    # skip detection, force a mode
 ```
 
@@ -48,6 +50,74 @@ scaled down, both as vectors without loss. Transparent areas get a white
 background. The SVG needs a `width`/`height` in px (or unitless) or a
 `viewBox`, otherwise it has no size to render at and is rejected.
 
+## Videos and GIFs
+
+A video or GIF opens with a player docked below the canvas. Pause on a
+frame and draw on it with the usual tools: each annotation is pinned to the
+frame it was drawn on. For something that lasts, click **Mark span** (`I`)
+at its start, move to its end and click **Set end here** (`O`). Then pick a
+tool (or click **Pin** next to the span) and click the start frame, or use
+**Comment span** to comment without drawing. The comment box shows what the
+new annotation is pinned to, `At 00:01.000` or `Span 00:01.000 → 00:03.000`.
+
+| Key | Action |
+|-----|--------|
+| `Space` | Play or pause |
+| `←` / `→` | One frame back or forward |
+| `Shift` + `←` / `→` | One second back or forward |
+| `I` / `O` | Mark span / Set end here |
+| `M` | Sound on or off |
+| `Alt` + `←` / `→` on a focused marker | Move it one frame, with `Shift` its end (a moment becomes a span) |
+
+Each annotation shows as a marker above the scrubber: a numbered dot for a
+moment, a bar with the tool icon (or a speech bubble for a text-only span)
+and the start of the comment for a span. Click a marker to jump
+to it, drag it to move the annotation to another time, and drag a span's
+edge to lengthen or shorten it. A moment becomes a span by dragging the
+handle that appears to the right of its marker. Every change can be undone.
+
+Sound starts muted. The speaker button next to the speed (or `M`) turns it
+on, and hovering it shows the volume slider; the setting is remembered. The
+agent gets no sound, only the frames.
+
+The browser plays the file and grabs the frames itself, so only
+`@napi-rs/canvas` is needed, not playwright. Which codecs play depends on
+the browser: an HEVC `.mov` does not play everywhere. The annotator then
+shows the conversion command:
+
+```bash
+ffmpeg -i input.mov -c:v libx264 -pix_fmt yuv420p output.mp4
+```
+
+Agents cannot watch video, so the feedback points at still images in a temp
+directory:
+
+- one PNG per annotated moment, with the markup and a legend baked in
+- a strip of six frames across every span
+- `overview.png`, twelve frames spread over the whole recording with the
+  annotation numbers on the nearest frame
+
+Videos are limited to 500 MB and GIFs to 50 MB and 2000 frames. One
+submission exports at most 50 distinct frames.
+
+## Voice notes
+
+With [whisper.cpp](https://github.com/ggml-org/whisper.cpp) and ffmpeg
+installed, the comment box of image mode (stills and recordings) gets a
+microphone button: speak the comment instead of typing it, and the
+transcript lands in the text field to correct before saving. The recording
+is transcribed on this machine and deleted right after; nothing is sent
+anywhere.
+
+```bash
+brew install whisper.cpp ffmpeg
+# a model, e.g. the multilingual "small" one (~470 MB)
+curl -L -o ~/.cache/ggml-small.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin
+export ANNOTAITR_WHISPER_MODEL=~/.cache/ggml-small.bin
+```
+
+Without a model, `whisper-cli` or ffmpeg the button is simply not shown.
+
 ## `--origin`
 
 Identifies the caller in the feedback output and to the client's origin
@@ -57,7 +127,8 @@ terminal invocation never needs it.
 
 ## `--viewport`
 
-Image mode only, and only meaningful when the target is a URL. A preset
+Image mode only, and only meaningful when the target is a URL. A local
+image, video or GIF rejects it. A preset
 (the default `desktop`, or `laptop`, `tablet`, `mobile`) or an explicit
 `<width>x<height>`.
 
@@ -98,6 +169,9 @@ ANNOTAITR_FEEDBACK_NOTES='[{"text":"Rewrote intro","line":5}]' annotaitr README.
 | `ANNOTAITR_TIMEOUT` | both | Heartbeat timeout in ms (default `30000`, range `5000`-`300000`) |
 | `ANNOTAITR_NO_OPEN` | both | Skip opening a browser tab automatically |
 | `ANNOTAITR_CAPTURE_TIMEOUT` | image | Page-load timeout in ms for URL capture |
+| `ANNOTAITR_WHISPER_MODEL` | image | Path to a whisper.cpp ggml model; enables [voice notes](#voice-notes) |
+| `ANNOTAITR_WHISPER_BIN` | image | whisper.cpp binary (default `whisper-cli` on `PATH`) |
+| `ANNOTAITR_WHISPER_LANG` | image | Spoken language for voice notes, e.g. `de` (default `auto`) |
 | `ANNOTAITR_FEEDBACK_NOTES` | markdown | Same as `--feedback-notes` |
 | `PLANTUML_SERVER_URL` | markdown | PlantUML render server (default `https://www.plantuml.com/plantuml`) |
 | `KROKI_SERVER_URL` | markdown | Kroki render server (default `https://kroki.io`) |

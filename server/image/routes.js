@@ -10,11 +10,11 @@ function failure(error) { return { success: false, error } }
 // server share no modules, so this is duplicated deliberately) - POST
 // /api/annotations is reachable directly, bypassing the client's own import
 // validator entirely, so it needs its own copy of the same bound.
-const MAX_ANNOTATIONS = 10000
-const MAX_POINTS_PER_ANNOTATION = 5000
+export const MAX_ANNOTATIONS = 10000
+export const MAX_POINTS_PER_ANNOTATION = 5000
 
 /** Reject a payload carrying more annotations, or a points-geometry mark with more points, than the client itself would ever produce. */
-function annotationsWithinLimits(annotations) {
+export function annotationsWithinLimits(annotations) {
   if (annotations.length > MAX_ANNOTATIONS) { return false }
   return annotations.every((annotation) => {
     const points = annotation?.geometry?.points
@@ -42,7 +42,7 @@ function sniffImageType(buffer) {
   return 'png'
 }
 
-export function createApiRouter({ imageBuffer, imageWidth, imageHeight, origin, targetLabel, state, resolveDecision }) {
+export function createApiRouter({ imageBuffer, imageWidth, imageHeight, origin, targetLabel, state, voiceNotes = false, resolveDecision }) {
   const router = Router()
 
   router.get('/api/image', (_req, res) => {
@@ -50,7 +50,7 @@ export function createApiRouter({ imageBuffer, imageWidth, imageHeight, origin, 
   })
 
   router.get('/api/meta', (_req, res) => {
-    res.json(success({ width: imageWidth, height: imageHeight, origin, targetLabel }))
+    res.json(success({ width: imageWidth, height: imageHeight, origin, targetLabel, voiceNotes }))
   })
 
   router.get('/api/annotations', (_req, res) => {

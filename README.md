@@ -2,7 +2,7 @@
 
 # <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-dark.svg"><source media="(prefers-color-scheme: light)" srcset="docs/images/logo.svg"><img alt="annotaitr" src="docs/images/logo.svg" width="300"></picture>
 
-An AI coding agent plugin that opens images, captured web pages, or Markdown files in a browser-based annotator.
+An AI coding agent plugin that opens images, captured web pages, videos, GIFs, or Markdown files in a browser-based annotator.
 
 [![Test](https://github.com/konradmichalik/annotaitr/actions/workflows/test.yml/badge.svg)](https://github.com/konradmichalik/annotaitr/actions/workflows/test.yml)
 [![License](https://img.shields.io/github/license/konradmichalik/annotaitr)](LICENSE)
@@ -31,6 +31,8 @@ Which mode runs is auto-detected from the target: see Usage below and
 - **Drawing tools**: boxes, arrows (with an optional dimension-line style for marking distance/spacing), freehand marks, highlighter marks, and numbered comment pins, each with an optional comment and color
 - **Coarse position descriptions**: feedback names each annotation's plain-language position, and flags annotations positioned close together
 - **Annotated screenshot export**: submitting bakes the markup into a copy of the image and passes its path to the agent
+- **Voice notes**: speak a comment instead of typing it, transcribed locally with whisper.cpp when it is installed
+- **Videos and GIFs**: annotate screen recordings on a timeline, as single moments or spans; the agent gets each annotated frame as a PNG plus a strip per span and an overview
 
 **Markdown and plain-text review:**
 
@@ -137,6 +139,7 @@ or the tool directly: `annotate_markdown({ filePath: "/path/to/file.md" })`.
 annotaitr README.md               # markdown
 annotaitr ./mockup.png            # image, local file
 annotaitr http://localhost:3000   # image, capture
+annotaitr ./bug-recording.mov     # image, video on a timeline
 ```
 
 Full flag and environment variable reference: [docs/usage.md](docs/usage.md).

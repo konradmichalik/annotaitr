@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { loadImage, createCanvas } from '@napi-rs/canvas'
-import { flattenAnnotations } from '../../../server/image/render.js'
+import { flattenAnnotations, composeContactSheet, CONTACT_SHEET_GAP, CONTACT_SHEET_LABEL_HEIGHT } from '../../../server/image/render.js'
 import { makeFixturePng } from '../../helpers/fixtureImage.js'
 
 describe('flattenAnnotations', () => {
@@ -167,5 +167,38 @@ describe('flattenAnnotations', () => {
     const result = await flattenAnnotations(source, [])
     const decoded = await loadImage(result)
     expect(decoded.height).toBe(100)
+  })
+})
+
+describe('flattenAnnotations with explicit numbers', () => {
+  it('draws the given number instead of the array position', async () => {
+    const source = makeFixturePng(60, 40, '#000000')
+    const pin = { type: 'pin', color: '#ff0000', geometry: { x: 30, y: 20 } }
+    const byPosition = await flattenAnnotations(source, [pin])
+    const byNumber = await flattenAnnotations(source, [pin], [7])
+    expect(Buffer.compare(byPosition, byNumber)).not.toBe(0)
+  })
+
+  it('lists a timed comment in the legend without drawing anything on the frame', async () => {
+    const source = makeFixturePng(200, 100, '#000000')
+    const result = await flattenAnnotations(source, [{ type: 'comment', geometry: null, text: 'spinner hangs', time: 1, endTime: 2 }], [3])
+    const decoded = await loadImage(result)
+    expect(decoded.height).toBeGreaterThan(100)
+  })
+})
+
+describe('composeContactSheet', () => {
+  it('lays tiles out in a grid scaled to the tile width, with a label bar under each', async () => {
+    const tiles = Array.from({ length: 5 }, (_, i) => ({ buffer: makeFixturePng(200, 100), label: `00:0${i}.000` }))
+    const result = await composeContactSheet(tiles, { columns: 3, tileWidth: 100 })
+    const decoded = await loadImage(result)
+    expect(decoded.width).toBe(3 * 100 + 4 * CONTACT_SHEET_GAP)
+    expect(decoded.height).toBe(2 * (50 + CONTACT_SHEET_LABEL_HEIGHT) + 3 * CONTACT_SHEET_GAP)
+  })
+
+  it('never upscales a tile beyond the source width', async () => {
+    const result = await composeContactSheet([{ buffer: makeFixturePng(80, 40), label: 'x' }], { columns: 1, tileWidth: 400 })
+    const decoded = await loadImage(result)
+    expect(decoded.width).toBe(80 + 2 * CONTACT_SHEET_GAP)
   })
 })

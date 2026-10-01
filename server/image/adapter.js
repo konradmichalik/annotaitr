@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { startAnnotatorServer } from '../core/server.js'
 import { createApiRouter } from './routes.js'
+import { transcriptionConfig, detectTranscription, createTranscriptionRouter } from './transcribe.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DIST_DIR = join(__dirname, '..', '..', 'client', 'dist', 'image')
@@ -29,6 +30,8 @@ export async function buildImageServer(options) {
   const { imageBuffer, imageWidth, imageHeight, origin = 'cli', targetLabel = null, onReady = null } = options
 
   const state = { annotations: [] }
+  const transcription = transcriptionConfig()
+  const voiceNotes = await detectTranscription(transcription)
 
   return startAnnotatorServer({
     bundleDir,
@@ -42,8 +45,10 @@ export async function buildImageServer(options) {
         origin,
         targetLabel,
         state,
+        voiceNotes,
         resolveDecision: safeResolve
       }))
+      app.use(createTranscriptionRouter({ available: voiceNotes, config: transcription }))
     }
   })
 }
