@@ -32,6 +32,8 @@ function overlap(a, b) {
 }
 
 // On a tie the later element wins: in document order that is the inner one.
+// Panel divs are collected after everything else (server/image/domMap.js),
+// so any tie that can pit one against a specific element ranks containers last first.
 function smallest(elements) {
   return elements.reduce((best, el) => (best && area(best.box) < area(el.box) ? best : el), null)
 }
@@ -59,7 +61,8 @@ function matchRegion(map, region) {
   const scored = map
     .map((el, order) => ({ el, order, score: overlap(el.box, region) }))
     .filter(({ score }) => score >= MIN_OVERLAP)
-    .sort((a, b) => b.score - a.score || area(a.el.box) - area(b.el.box) || b.order - a.order)
+    .sort((a, b) => b.score - a.score || area(a.el.box) - area(b.el.box)
+      || isContainer(a.el) - isContainer(b.el) || b.order - a.order)
   if (scored.length > 0) { return scored[0].el }
   return matchPoint(map, { x: region.x + region.width / 2, y: region.y + region.height / 2 })
 }

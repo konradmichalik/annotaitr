@@ -102,6 +102,14 @@ describe('matchAnnotation', () => {
     expect(matchAnnotation(map, { type: 'element', geometry: { ...section.box } })).toEqual([section])
   })
 
+  it('resolves a box shared by a paragraph and its panel to the paragraph, even when the panel comes later in the map', () => {
+    const lead = el('p.lead', 260, 418, 1400, 60, { tag: 'p', name: 'The TYPO3 project is backed' })
+    const wrapper = el('div.content-main', 260, 418, 1400, 60)
+    const selected = { type: 'element', geometry: { x: 260, y: 418, width: 1400, height: 60 } }
+    expect(matchAnnotation([lead, wrapper], selected)).toEqual([lead])
+    expect(matchAnnotation([lead, wrapper], pin(960, 435))).toEqual([lead])
+  })
+
   it('matches nothing for a general comment or an empty map', () => {
     expect(matchAnnotation(map, { type: 'comment', geometry: null })).toEqual([])
     expect(matchAnnotation([], pin(150, 150))).toEqual([])

@@ -16,7 +16,10 @@ const map = [
   el('div.member-banner', 1025, 1839, 590, 600),
   el('a.t3js-banner', 1245, 1967, 150, 60, { tag: 'a' }),
   el('a.t3js-banner img', 1245, 1967, 150, 60, { tag: 'img', name: 'toujou', media: 'toujou.svg' }),
-  el('div.toggle', 100, 300, 80, 30, { role: 'button' })
+  el('div.toggle', 100, 300, 80, 30, { role: 'button' }),
+  el('p.lead', 260, 418, 1400, 60, { tag: 'p', name: 'The TYPO3 project is backed' }),
+  // Panels are collected after everything else, so a wrapper with the same box comes later.
+  el('div.content-main', 260, 418, 1400, 60)
 ]
 
 const annotations = [
@@ -41,6 +44,8 @@ const annotations = [
   { type: 'freehand', geometry: { points: [] } },
   { type: 'element', geometry: { x: 1025, y: 1839, width: 590, height: 600 } },
   { type: 'element', geometry: { x: 1245, y: 1967, width: 150, height: 60 } },
+  { type: 'element', geometry: { x: 260, y: 418, width: 1400, height: 60 } },
+  { type: 'box', geometry: { x: 255, y: 413, width: 1410, height: 70 } },
   { type: 'comment', geometry: null }
 ]
 

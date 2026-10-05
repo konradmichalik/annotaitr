@@ -65,7 +65,8 @@ function matchRegion(map, region) {
   const scored = map
     .map((el, order) => ({ el, order, score: overlap(el.box, region) }))
     .filter(({ score }) => score >= MIN_OVERLAP)
-    .sort((a, b) => b.score - a.score || area(a.el.box) - area(b.el.box) || b.order - a.order)
+    .sort((a, b) => b.score - a.score || area(a.el.box) - area(b.el.box)
+      || isContainer(a.el) - isContainer(b.el) || b.order - a.order)
   if (scored.length > 0) { return scored[0].el }
   return matchPoint(map, { x: region.x + region.width / 2, y: region.y + region.height / 2 })
 }
