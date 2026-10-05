@@ -74,7 +74,7 @@ export function createVideoApiRouter({ video, origin, targetLabel, state, voiceN
     }
     if (!annotationsWithinLimits(annotations)) {
       return res.status(400).json(failure(
-        `Too many annotations or points (max ${MAX_ANNOTATIONS} annotations, ${MAX_POINTS_PER_ANNOTATION} points each)`
+        `Too many annotations or points, or a malformed point (max ${MAX_ANNOTATIONS} annotations, ${MAX_POINTS_PER_ANNOTATION} points each)`
       ))
     }
     const timeError = validateVideoAnnotations(annotations)

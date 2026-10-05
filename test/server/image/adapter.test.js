@@ -194,6 +194,18 @@ describe('image annotator server', () => {
     expect(res.status).toBe(400)
   })
 
+  it('rejects a POST /api/annotations payload whose geometry.points holds a missing or non-numeric point', async () => {
+    await start()
+    for (const points of [[null], [{ x: 1 }], [{ x: '1', y: 2 }], [{ x: 1, y: Number.MAX_VALUE * 2 }]]) {
+      const res = await fetch(`${server.url}/api/annotations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ annotations: [{ id: 'a1', type: 'freehand', geometry: { points } }] })
+      })
+      expect(res.status).toBe(400)
+    }
+  })
+
   it('accepts a POST /api/annotations payload within both limits', async () => {
     await start()
     const points = Array.from({ length: 5000 }, (_, i) => ({ x: i, y: i }))

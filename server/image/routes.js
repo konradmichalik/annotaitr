@@ -13,12 +13,18 @@ function failure(error) { return { success: false, error } }
 export const MAX_ANNOTATIONS = 10000
 export const MAX_POINTS_PER_ANNOTATION = 5000
 
-/** Reject a payload carrying more annotations, or a points-geometry mark with more points, than the client itself would ever produce. */
+const isPoint = (p) => Number.isFinite(p?.x) && Number.isFinite(p?.y)
+
+/**
+ * Reject a payload carrying more annotations, or a points-geometry mark with
+ * more points, than the client itself would ever produce, and a mark with a
+ * malformed point, which would otherwise crash the feedback formatting.
+ */
 export function annotationsWithinLimits(annotations) {
   if (annotations.length > MAX_ANNOTATIONS) { return false }
   return annotations.every((annotation) => {
     const points = annotation?.geometry?.points
-    return !Array.isArray(points) || points.length <= MAX_POINTS_PER_ANNOTATION
+    return !Array.isArray(points) || (points.length <= MAX_POINTS_PER_ANNOTATION && points.every(isPoint))
   })
 }
 
@@ -64,7 +70,7 @@ export function createApiRouter({ imageBuffer, imageWidth, imageHeight, origin, 
     }
     if (!annotationsWithinLimits(annotations)) {
       return res.status(400).json(failure(
-        `Too many annotations or points (max ${MAX_ANNOTATIONS} annotations, ${MAX_POINTS_PER_ANNOTATION} points each)`
+        `Too many annotations or points, or a malformed point (max ${MAX_ANNOTATIONS} annotations, ${MAX_POINTS_PER_ANNOTATION} points each)`
       ))
     }
     state.annotations = [...annotations]
