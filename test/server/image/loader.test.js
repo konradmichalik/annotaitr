@@ -190,7 +190,7 @@ describe('captureUrl', () => {
     const { captureUrl } = await import('../../../server/image/loader.js')
     const result = await captureUrl('http://localhost:3000', { width: 1920, height: 1080 })
     expect(result.domMap).toEqual([
-      { tag: 'img', role: '', name: 'Team photo', media: 'team.jpg', selector: 'main img', box: { x: 10, y: 20, width: 100, height: 50 } }
+      { tag: 'img', role: '', name: 'Team photo', media: 'team.jpg', selector: 'main img', heading: '', box: { x: 10, y: 20, width: 100, height: 50 } }
     ])
   })
 

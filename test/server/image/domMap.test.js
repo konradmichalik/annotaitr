@@ -58,6 +58,19 @@ describe('normalizeDomMap', () => {
     expect(card).toMatchObject({ tag: 'div', name: '', selector: 'div.member-banner' })
   })
 
+  it('names an unnamed panel or landmark after its first heading, and nothing else', () => {
+    const [panel, landmark, labelled, paragraph] = normalizeDomMap([
+      raw({ tag: 'div', heading: '  The TYPO3 Project\nand its Governance ', self: { tag: 'div', id: '', cls: 'frame' } }),
+      raw({ tag: 'section', heading: 'Pricing', self: { tag: 'section', id: 'pricing', cls: '' } }),
+      raw({ tag: 'nav', ariaLabel: 'Main navigation', heading: 'Menu', self: { tag: 'nav', id: '', cls: 'menu' } }),
+      raw({ tag: 'p', text: 'Body copy', heading: 'Stray', self: { tag: 'p', id: '', cls: '' } })
+    ])
+    expect(panel.heading).toBe('The TYPO3 Project and its Governance')
+    expect(landmark.heading).toBe('Pricing')
+    expect(labelled.heading).toBe('')
+    expect(paragraph.heading).toBe('')
+  })
+
   it('drops a plain div with neither a readable class nor an id', () => {
     expect(normalizeDomMap([raw({ tag: 'div', self: { tag: 'div', id: '', cls: '' } })])).toEqual([])
     expect(normalizeDomMap([raw({ tag: 'div', self: { tag: 'div', id: '', cls: 'css-1x2y3z4w5v6u7t8s9r0q1p2o3n4m5' } })])).toEqual([])

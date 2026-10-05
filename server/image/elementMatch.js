@@ -97,14 +97,15 @@ export function matchAnnotation(map, annotation) {
   return []
 }
 
-function describeElement({ tag, role, name, media, selector }) {
+function describeElement({ tag, role, name, media, heading, selector }) {
   const roleTag = role && role !== tag ? `${tag}[${role}]` : tag
   // Page text is untrusted: JSON quoting escapes quotes and backslashes, and
   // dropping backticks keeps it from opening a code span in the agent's view.
   const quote = (text) => JSON.stringify(text.replace(/`/g, ''))
   const quoted = name ? ` ${quote(name)}` : ''
   const file = media ? ` (${quote(media)})` : ''
-  return `${roleTag}${quoted}${file} · ${selector}`
+  const titled = heading ? ` (heading ${quote(heading)})` : ''
+  return `${roleTag}${quoted}${file}${titled} · ${selector}`
 }
 
 /** One `Element:` line for the matched elements, or null when nothing matched. */

@@ -126,6 +126,11 @@ describe('formatElementLine', () => {
     expect(formatElementLine([tricky])).toBe('Element: p "Say \\"hi\\" now" · p')
   })
 
+  it('adds the heading of an unnamed panel, quoted like a name', () => {
+    const panel = el('#c588 div.frame-container', 0, 0, 1, 1, { heading: 'The "TYPO3" Project' })
+    expect(formatElementLine([panel])).toBe('Element: div (heading "The \\"TYPO3\\" Project") · #c588 div.frame-container')
+  })
+
   it('omits a role that just repeats the tag and an empty name', () => {
     expect(formatElementLine([el('nav', 0, 0, 1, 1, { tag: 'nav', role: 'nav' })])).toBe('Element: nav · nav')
   })

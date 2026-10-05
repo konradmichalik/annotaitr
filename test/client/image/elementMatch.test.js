@@ -87,5 +87,6 @@ describe('elementLabel', () => {
     expect(elementLabel(map[7])).toBe('div.toggle[button]')
     expect(elementLabel(map[2])).toBe('a.main-nav__link "TYPO3 Association"')
     expect(elementLabel(map[4])).toBe('div.member-banner')
+    expect(elementLabel({ ...map[4], heading: 'Members' })).toBe('div.member-banner (heading "Members")')
   })
 })

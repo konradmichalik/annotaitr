@@ -57,9 +57,9 @@ export function collectRawElements({ candidates: selector, fallbacks, minPanelSi
     // A container's text is its whole subtree, which names nothing; innerText
     // keeps the breaks between menu entries or cells that textContent drops.
     text: containerTags.has(node(el).tag) ? '' : (el.innerText ?? el.textContent ?? '').slice(0, 200),
-    alt: el.getAttribute('alt') || '',
-    ariaLabel: el.getAttribute('aria-label') || '',
-    title: el.getAttribute('title') || '',
+    alt: el.getAttribute('alt') || '', ariaLabel: el.getAttribute('aria-label') || '', title: el.getAttribute('title') || '',
+    // The first visible heading inside a container is what a person would call it.
+    heading: containerTags.has(node(el).tag) ? ([...el.querySelectorAll('h1, h2, h3, h4, h5, h6')].find((h) => h.checkVisibility())?.innerText ?? '').slice(0, 200) : '',
     src: sourceOf(el),
     self: node(el),
     ancestors: ancestorsOf(el)
@@ -156,6 +156,7 @@ function normalizeElement(raw) {
     name,
     media: mediaName(raw.src),
     selector: buildSelector(raw),
+    heading: !name && (CONTAINERS.has(tag) || tag === 'div') ? cleanText(raw.heading) : '',
     box: { x: raw.x, y: raw.y, width: raw.width, height: raw.height }
   }
 }

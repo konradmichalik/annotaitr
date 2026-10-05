@@ -28,7 +28,7 @@ const PAGE = `<!doctype html>
     <div class="spacer"></div>
     <section id="pricing"><a class="cta" href="#" role="button" style="display:inline-block;width:120px;height:40px;background:#f00;color:#f00">Start trial</a></section>
     <img src="${PIXEL}" width="50" height="50">
-    <div class="card" style="width:400px;height:200px"><button type="button">Buy</button></div>
+    <div class="card" style="width:400px;height:200px"><h3>Plans</h3><button type="button">Buy</button></div>
   </main>
   <footer class="bar bottom"><button type="button">Help</button></footer>
 </body></html>`
@@ -79,7 +79,7 @@ test('a captured page carries a DOM map whose boxes line up with the screenshot'
   expect(byName('Help')).toBeUndefined()
 
   const card = capture.domMap.find((el) => el.selector.endsWith('div.card'))
-  expect(card).toMatchObject({ tag: 'div', name: '', box: { width: 400, height: 200 } })
+  expect(card).toMatchObject({ tag: 'div', name: '', heading: 'Plans', box: { width: 400, height: 200 } })
   const emptySpot = { type: 'pin', geometry: { x: card.box.x + 300, y: card.box.y + 150 } }
   expect(matchAnnotation(capture.domMap, emptySpot)).toEqual([card])
 

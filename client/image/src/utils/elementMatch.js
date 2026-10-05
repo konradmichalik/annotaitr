@@ -103,11 +103,11 @@ export function matchAnnotation(map, annotation) {
 }
 
 /** A short on-screen name: the element's own selector token, its role, name and media file. */
-export function elementLabel({ tag, role, name, media, selector }) {
+export function elementLabel({ tag, role, name, media, heading, selector }) {
   const own = selector.split(' ').at(-1) || tag
   const base = own.startsWith('#') ? `${tag}${own}` : own
   const roleTag = role && role !== tag ? `${base}[${role}]` : base
-  return `${roleTag}${name ? ` "${name}"` : ''}${media ? ` (${media})` : ''}`
+  return `${roleTag}${name ? ` "${name}"` : ''}${media ? ` (${media})` : ''}${heading ? ` (heading "${heading}")` : ''}`
 }
 
 /** On-screen names for matched elements, joined like the feedback's `Element:` line, or null without a match. */

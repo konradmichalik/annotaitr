@@ -29,7 +29,9 @@ matched to the smallest element under a pin or arrow tip, or to the element
 a box, freehand or highlighter mark overlaps most. Landmarks such as `main`
 or `nav` and plain panel divs (a readable class or id, larger than 40 px)
 only count when nothing more specific is under or near the mark, so an
-empty spot in a card names the card rather than the page. The feedback gets an
+empty spot in a card names the card rather than the page. An unnamed
+landmark or panel is named after its first visible heading, such as
+`div (heading "Pricing")`. The feedback gets an
 `Element:` line such as `Element: img "Team photo" ("team.jpg") · #hero img`.
 While annotating, the same match is visible before anything is submitted.
 The **Element** tool, offered only for a captured URL, outlines and names
