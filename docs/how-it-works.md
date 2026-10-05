@@ -49,6 +49,16 @@ Approving with annotations present becomes **Approve with Notes**: the
 target is accepted as-is, but the notes are passed along as context rather
 than discarded.
 
+### Copying and saving
+
+The menu in the sidebar header copies the annotated image (markup and
+legend baked in, as the agent gets it) to the clipboard or saves it as a
+PNG, and copies the feedback as Markdown, without the temp-file path that
+only means something to an agent. Both are rendered from the annotations
+on screen at that moment and decide nothing: the CLI keeps waiting. The same
+menu still opens the JSON export and import. Recordings offer only the JSON
+export, since they have no single image.
+
 ### Capturing again
 
 For a URL, the viewport button next to the zoom controls captures the page

@@ -251,3 +251,55 @@ test('a recapture answered with an error page shows the status instead of a pars
     if (child.exitCode === null) { child.kill() }
   }
 })
+
+test('the export menu copies the annotated image and the feedback, and saves the image', async ({ page, context }) => {
+  const { child, url } = startCli([baseUrl, '--viewport', '800x600'])
+  try {
+    const appUrl = await url
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(appUrl).origin })
+    await page.goto(appUrl)
+    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Pin').click()
+    const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
+    const zoom = canvas.width / 800
+    await page.mouse.click(canvas.x + 170 * zoom, canvas.y + 160 * zoom)
+    await page.getByPlaceholder('Add a comment (optional)...').fill('Swap the photo')
+    await page.getByRole('button', { name: 'Add', exact: true }).click()
+
+    const menu = page.getByRole('button', { name: 'Export', exact: true })
+    await menu.click()
+    await expect(page.getByRole('menuitem', { name: 'Copy annotated image' })).toBeFocused()
+    await page.keyboard.press('ArrowDown')
+    await expect(page.getByRole('menuitem', { name: 'Save annotated image' })).toBeFocused()
+    await page.keyboard.press('ArrowUp')
+    await page.keyboard.press('ArrowUp')
+    await expect(page.getByRole('menuitem', { name: /Export \/ import/ })).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(menu).toBeFocused()
+
+    await menu.click()
+    await page.getByRole('menuitem', { name: 'Copy feedback as Markdown' }).click()
+    await expect(page.locator('.toast')).toHaveText('Feedback copied as Markdown')
+    const text = await page.evaluate(() => navigator.clipboard.readText())
+    expect(text).toContain('> Swap the photo')
+    expect(text).toContain('Element: img "Team photo" ("team.png") · #hero')
+    expect(text).not.toContain('Annotated screenshot:')
+
+    await menu.click()
+    await page.getByRole('menuitem', { name: 'Copy annotated image' }).click()
+    await expect(page.locator('.toast')).toHaveText('Annotated image copied')
+    const types = await page.evaluate(async () => (await navigator.clipboard.read()).flatMap((item) => item.types))
+    expect(types).toContain('image/png')
+
+    await menu.click()
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('menuitem', { name: 'Save annotated image' }).click()
+    ])
+    expect(download.suggestedFilename()).toMatch(/^annotated-127-0-0-1-\d+\.png$/)
+
+    // Exporting decides nothing: the CLI is still waiting.
+    expect(child.exitCode).toBeNull()
+  } finally {
+    if (child.exitCode === null) { child.kill() }
+  }
+})

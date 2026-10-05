@@ -246,6 +246,71 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.export-menu {
+  position: relative;
+}
+
+.export-menu > .panel-icon-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.export-menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 290px;
+  padding: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+.export-menu-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* The JSON export is a different kind of action than copying or saving. */
+.export-menu-item--separated {
+  margin-top: 4px;
+  border-top: 1px solid var(--border-light);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+.export-menu-item svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.export-menu-item:hover:not(:disabled),
+.export-menu-item:focus-visible {
+  background: var(--bg-secondary);
+}
+
+.export-menu-item:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.export-menu-item:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
 .canvas-topbar-end {
   display: flex;
   gap: 8px;

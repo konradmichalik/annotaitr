@@ -117,6 +117,15 @@ describe('exportFeedback', () => {
   })
 })
 
+describe('feedback text without a written image', () => {
+  it('leaves out the screenshot path, which only means something to the agent', () => {
+    const output = exportFeedback([pin], 100, 100, null)
+    expect(output).not.toContain('Annotated screenshot:')
+    expect(output).toContain('1 annotation on the screenshot.')
+    expect(output).toContain('This spacing looks off')
+  })
+})
+
 describe('element lines from a captured page', () => {
   const photo = { tag: 'img', role: '', name: 'Team photo', media: 'team.jpg', selector: '#hero img', box: { x: 0, y: 0, width: 40, height: 40 } }
   const domMap = [photo]

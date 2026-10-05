@@ -278,3 +278,30 @@ export const CAPTURE_ICONS = {
     </svg>
   )
 }
+
+// Tabler photo, download, markdown and braces, for the export menu.
+export const EXPORT_ICONS = {
+  copyImage: (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12z" />
+      <path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" />
+    </svg>
+  ),
+  saveImage: (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" /><path d="M7 11l5 5l5 -5" /><path d="M12 4l0 12" />
+    </svg>
+  ),
+  copyText: (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z" />
+      <path d="M7 15v-6l2 2l2 -2v6" /><path d="M14 13l2 2l2 -2m-2 2v-6" />
+    </svg>
+  ),
+  json: (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <path d="M7 4a2 2 0 0 0 -2 2v3a2 3 0 0 1 -2 3a2 3 0 0 1 2 3v3a2 2 0 0 0 2 2" />
+      <path d="M17 4a2 2 0 0 1 2 2v3a2 3 0 0 0 2 3a2 3 0 0 0 -2 3v3a2 2 0 0 1 -2 2" />
+    </svg>
+  )
+}

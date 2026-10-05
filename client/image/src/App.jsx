@@ -9,6 +9,7 @@ import CaptureOverlay from './components/CaptureOverlay.jsx'
 import ImageCanvas from './components/ImageCanvas.jsx'
 import AnnotationPanel from './components/AnnotationPanel.jsx'
 import ExportModal from './components/ExportModal.jsx'
+import ExportMenu from './components/ExportMenu.jsx'
 import SettingsModal from './components/SettingsModal.jsx'
 import Timeline from './components/Timeline.jsx'
 import MediaSlot from './components/MediaSlot.jsx'
@@ -583,19 +584,13 @@ export default function App() {
                   <line x1="8" y1="12" x2="16" y2="12" />
                 </svg>
               </button>
-              <button
-                type="button"
-                className="panel-icon-btn"
-                onClick={() => setShowExport(true)}
-                title="Export / Import"
-                aria-label="Export / Import"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
-              </button>
+              <ExportMenu
+                annotations={state.annotations}
+                target={meta?.targetLabel}
+                imageActions={!isVideo}
+                onOpenJson={() => setShowExport(true)}
+                onDone={showToast}
+              />
             </div>
             <AnnotationPanel
               annotations={video.ordered}

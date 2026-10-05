@@ -90,6 +90,48 @@ function mountRecapture(router, { state, recapture }) {
   })
 }
 
+/** The `annotations` of a request body if it is within the limits, else the error to answer with. */
+function annotationsFromBody(body) {
+  const annotations = body?.annotations
+  if (!Array.isArray(annotations)) { return { error: 'annotations must be an array' } }
+  if (!annotationsWithinLimits(annotations)) {
+    return {
+      error: `Too many annotations or points, or a malformed point (max ${MAX_ANNOTATIONS} annotations, ${MAX_POINTS_PER_ANNOTATION} points each)`
+    }
+  }
+  return { annotations }
+}
+
+/**
+ * Render or describe the annotations the client sends, for copying and
+ * saving from the annotator. They come with the request rather than from
+ * state, which the client only saves after a pause, and nothing is decided.
+ */
+function mountExport(router, { state }) {
+  router.post('/api/annotated-image', async (req, res) => {
+    const { annotations, error } = annotationsFromBody(req.body)
+    if (error) { return res.status(400).json(failure(error)) }
+    try {
+      res.type('png').send(await flattenAnnotations(state.capture.buffer, annotations))
+    } catch (renderError) {
+      res.status(500).json(failure(renderError.message))
+    }
+  })
+
+  router.post('/api/feedback-text', (req, res) => {
+    const { annotations, error } = annotationsFromBody(req.body)
+    if (error) { return res.status(400).json(failure(error)) }
+    const { width, height, domMap, settings } = state.capture
+    const note = settings ? describeCapture(settings) : null
+    try {
+      res.json(success({ text: exportFeedback(annotations, width, height, null, domMap, note) }))
+    } catch (formatError) {
+      // The limits check no shape, so a mark without coordinates only fails here.
+      res.status(400).json(failure(`Could not describe these annotations: ${formatError.message}`))
+    }
+  })
+}
+
 export function createApiRouter({ origin, targetLabel, state, voiceNotes = false, recapture = null, resolveDecision }) {
   const router = Router()
 
@@ -114,20 +156,14 @@ export function createApiRouter({ origin, targetLabel, state, voiceNotes = false
   })
 
   router.post('/api/annotations', (req, res) => {
-    const { annotations } = req.body
-    if (!Array.isArray(annotations)) {
-      return res.status(400).json(failure('annotations must be an array'))
-    }
-    if (!annotationsWithinLimits(annotations)) {
-      return res.status(400).json(failure(
-        `Too many annotations or points, or a malformed point (max ${MAX_ANNOTATIONS} annotations, ${MAX_POINTS_PER_ANNOTATION} points each)`
-      ))
-    }
+    const { annotations, error } = annotationsFromBody(req.body)
+    if (error) { return res.status(400).json(failure(error)) }
     state.annotations = [...annotations]
     res.json(success({ saved: true, count: annotations.length }))
   })
 
   mountRecapture(router, { state, recapture })
+  mountExport(router, { state })
 
   router.post('/api/approve', async (_req, res) => {
     if (state.annotations.length === 0) {

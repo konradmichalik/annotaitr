@@ -153,6 +153,44 @@ describe('image annotator server', () => {
     expect((await (await fetch(`${server.url}/api/elements`)).json()).data).toEqual({ elements: [] })
   })
 
+  describe('exporting the current annotations', () => {
+    const pin = { id: 'a1', type: 'pin', geometry: { x: 5, y: 5 }, text: 'Too tight', color: '#e11d48' }
+    const post = (path, body) => fetch(`${server.url}${path}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    })
+
+    it('renders the annotations it is given as a PNG, without saving them or deciding anything', async () => {
+      await start()
+      const res = await post('/api/annotated-image', { annotations: [pin] })
+      expect(res.headers.get('content-type')).toBe('image/png')
+      const png = Buffer.from(await res.arrayBuffer())
+      expect(png.subarray(0, 4).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47]))).toBe(true)
+      expect(png.equals(makeFixturePng(40, 30))).toBe(false)
+      expect((await (await fetch(`${server.url}/api/annotations`)).json()).data.annotations).toEqual([])
+      expect(await isStillPending(server)).toBe(true)
+    })
+
+    it('returns the feedback text for the annotations it is given, without a screenshot path', async () => {
+      await start()
+      const body = await (await post('/api/feedback-text', { annotations: [pin] })).json()
+      expect(body.data.text).toContain('Too tight')
+      expect(body.data.text).not.toContain('Annotated screenshot:')
+    })
+
+    it('answers a malformed annotation with a JSON error instead of crashing', async () => {
+      await start()
+      const res = await post('/api/feedback-text', { annotations: [{ id: 'x', type: 'pin', geometry: null, text: '' }] })
+      expect(res.status).toBe(400)
+      expect((await res.json()).success).toBe(false)
+    })
+
+    it('applies the same limits as saving annotations', async () => {
+      await start()
+      expect((await post('/api/annotated-image', { annotations: 'nope' })).status).toBe(400)
+      expect((await post('/api/feedback-text', { annotations: [{ ...pin, type: 'freehand', geometry: { points: [null] } }] })).status).toBe(400)
+    })
+  })
+
   describe('recapturing a URL', () => {
     const desktop = { viewport: { width: 1920, height: 1080 }, delayMs: 0, section: null }
     const pin = { id: 'a1', type: 'pin', geometry: { x: 5, y: 5 }, text: 'hi', color: '#e11d48' }

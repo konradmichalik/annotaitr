@@ -95,7 +95,9 @@ export function formatApprovalWithNotesOutput(annotations, imageWidth, imageHeig
 export function exportFeedback(annotations, imageWidth, imageHeight, annotatedImagePath, domMap = null, captureNote = null) {
   const count = annotations.length
   let output = `${count} annotation${count === 1 ? '' : 's'} on the screenshot.\n\n`
-  output += `Annotated screenshot: ${annotatedImagePath}\n`
+  // Without a written image the text is for a person (copied from the
+  // annotator), and a temp path would mean nothing to them.
+  if (annotatedImagePath) { output += `Annotated screenshot: ${annotatedImagePath}\n` }
   output += captureLine(captureNote)
   output += 'Look at the image, then match each note below to the visible element or nearby text.\n'
   output += `${elementNotice(domMap)}\n`
