@@ -59,6 +59,12 @@ export function createApiRouter({ imageBuffer, imageWidth, imageHeight, origin, 
     res.json(success({ width: imageWidth, height: imageHeight, origin, targetLabel, voiceNotes }))
   })
 
+  // Lets the client outline the element under the pointer and name the
+  // element each annotation will be matched to, before anything is submitted.
+  router.get('/api/elements', (_req, res) => {
+    res.json(success({ elements: domMap ?? [] }))
+  })
+
   router.get('/api/annotations', (_req, res) => {
     res.json(success({ annotations: state.annotations }))
   })

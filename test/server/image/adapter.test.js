@@ -144,6 +144,15 @@ describe('image annotator server', () => {
     expect(decision.annotationCount).toBe(1)
   })
 
+  it('serves the DOM map of a captured page, and an empty list for any other image', async () => {
+    const domMap = [{ tag: 'a', role: 'button', name: 'Start trial', media: '', selector: 'a.cta', box: { x: 0, y: 0, width: 20, height: 20 } }]
+    await start({ domMap })
+    expect((await (await fetch(`${server.url}/api/elements`)).json()).data).toEqual({ elements: domMap })
+    server.stop()
+    await start()
+    expect((await (await fetch(`${server.url}/api/elements`)).json()).data).toEqual({ elements: [] })
+  })
+
   it('names the matched page element in feedback and approve-with-notes, and keeps the map off /api/meta', async () => {
     const domMap = [{ tag: 'a', role: 'button', name: 'Start trial', media: '', selector: 'a.cta', box: { x: 0, y: 0, width: 20, height: 20 } }]
     const annotations = [{ id: 'a1', type: 'pin', geometry: { x: 5, y: 5 }, text: 'hi', color: '#e11d48' }]

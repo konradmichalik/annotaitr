@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { TOOL_ICONS, ACTION_ICONS } from '../utils/icons.jsx'
+import { matchAnnotation, describeElements } from '../utils/elementMatch.js'
 
 const TYPE_LABELS = { box: 'Box', arrow: 'Arrow', freehand: 'Freehand', highlighter: 'Highlight', pin: 'Pin' }
 
@@ -78,7 +79,7 @@ function GlobalCommentItem({ annotation, title = 'General comment', timeLabel = 
   )
 }
 
-function ShapeItem({ annotation, number, timeLabel, onEdit, onRemove }) {
+function ShapeItem({ annotation, number, timeLabel, elementHint = null, onEdit, onRemove }) {
   return (
     <li className="panel-item" onClick={() => onEdit(annotation.id)}>
       <div className="panel-item-header">
@@ -110,6 +111,7 @@ function ShapeItem({ annotation, number, timeLabel, onEdit, onRemove }) {
           </button>
         </div>
       </div>
+      {elementHint && <p className="panel-element" title={elementHint}>{elementHint}</p>}
       <p className="panel-comment-text">
         {annotation.text || <span className="panel-comment-empty">No comment</span>}
       </p>
@@ -131,7 +133,8 @@ function commentTitle(annotation, number) {
  * later (the sidebar shown again) does not reopen that comment.
  */
 export default function AnnotationPanel({
-  annotations, onRemove, onEdit, onEditGlobalComment, timeLabelFor = null, autoEditId = null, onAutoEditConsumed = null
+  annotations, onRemove, onEdit, onEditGlobalComment, timeLabelFor = null, autoEditId = null, onAutoEditConsumed = null,
+  elements = []
 }) {
   const [editingGlobalId, setEditingGlobalId] = useState(null)
 
@@ -185,7 +188,10 @@ export default function AnnotationPanel({
         // Index into the full (unfiltered) list - it has to match the
         // canvas's badge numbers, which count over every annotation
         // including general comments.
-        <ShapeItem key={annotation.id} annotation={annotation} number={annotations.indexOf(annotation) + 1} onEdit={onEdit} onRemove={onRemove} />
+        <ShapeItem
+          key={annotation.id} annotation={annotation} number={annotations.indexOf(annotation) + 1}
+          elementHint={describeElements(matchAnnotation(elements, annotation))} onEdit={onEdit} onRemove={onRemove}
+        />
       ))}
     </ul>
   )

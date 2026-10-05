@@ -255,7 +255,8 @@ function PopoverFooter({ isEditing, onCancel, onSubmit }) {
  */
 export default function CommentPopover({
   anchorPoint, initialText = '', initialColor, annotationType, initialArrowStyle,
-  initialStrokeWidth, initialDashStyle, isEditing = false, timeBadge = null, voiceNotes = false, onSubmit, onClose
+  initialStrokeWidth, initialDashStyle, isEditing = false, timeBadge = null, voiceNotes = false, elementHint = null,
+  onSubmit, onClose
 }) {
   const [text, setText] = useState(initialText)
   const [color, setColor] = useState(initialColor || ANNOTATION_COLORS[0].hex)
@@ -317,6 +318,11 @@ export default function CommentPopover({
         timeBadge={timeBadge}
         onVoiceText={voiceNotes ? appendVoiceText : null}
       />
+      {elementHint && (
+        <p className="comment-popover-element" title={elementHint}>
+          Element: <span className="comment-popover-element-name">{elementHint}</span>
+        </p>
+      )}
       <div className="comment-popover-body">
         <textarea
           ref={textareaRef}

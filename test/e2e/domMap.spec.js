@@ -1,5 +1,7 @@
 // test/e2e/domMap.spec.js
 import { createServer } from 'node:http'
+import { spawn } from 'node:child_process'
+import { join } from 'node:path'
 import { test, expect } from '@playwright/test'
 import { createCanvas, loadImage } from '@napi-rs/canvas'
 import { captureUrl } from '../../server/image/loader.js'
@@ -82,4 +84,65 @@ test('a captured page carries a DOM map whose boxes line up with the screenshot'
 
   const pin = { type: 'pin', geometry: { x: cta.box.x + 10, y: cta.box.y + 10 } }
   expect(matchAnnotation(capture.domMap, pin)).toEqual([cta])
+})
+
+function startCli(args) {
+  const child = spawn('node', [join(process.cwd(), 'index.js'), ...args], {
+    cwd: process.cwd(),
+    env: { ...process.env, ANNOTAITR_PORT: '0', ANNOTAITR_NO_OPEN: '1' }
+  })
+  const output = { stdout: '' }
+  child.stdout.on('data', (chunk) => { output.stdout += chunk.toString() })
+  const url = new Promise((resolve, reject) => {
+    let stderr = ''
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString()
+      const match = stderr.match(/Server running at (http:\/\/\S+)/)
+      if (match) { resolve(match[1]) }
+    })
+    child.on('exit', (code) => reject(new Error(`CLI exited early with code ${code}: ${stderr}`)))
+  })
+  return { child, output, url }
+}
+
+test('the annotator outlines and names the element under the pointer, and the feedback names the same one', async ({ page }) => {
+  const { child, output, url } = startCli([baseUrl, '--viewport', '800x600'])
+  try {
+    await page.goto(await url)
+    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Pin').click()
+
+    const canvas = page.locator('.image-canvas-wrapper')
+    const box = await canvas.boundingBox()
+    const zoom = box.width / 800
+    // The hero image sits at 20,60 with a size of 300x200 in page pixels.
+    const spot = { x: box.x + 170 * zoom, y: box.y + 160 * zoom }
+    await page.mouse.move(spot.x, spot.y)
+    await expect(page.locator('.element-highlight')).toHaveCount(1)
+    await expect(page.locator('.element-highlight-label')).toHaveText('img#hero "Team photo" (team.png)')
+
+    await page.mouse.click(spot.x, spot.y)
+    await expect(page.locator('.comment-popover-element')).toHaveText('Element: img#hero "Team photo" (team.png)')
+    await page.getByPlaceholder('Add a comment (optional)...').fill('Swap the photo')
+    await page.getByRole('button', { name: 'Add', exact: true }).click()
+    await expect(page.locator('.panel-element')).toHaveText('img#hero "Team photo" (team.png)')
+    await expect(page.locator('.element-highlight')).toHaveCount(0)
+
+    // Moving the mark away leaves no outline behind at the spot it came from.
+    await page.mouse.move(spot.x, spot.y)
+    await page.mouse.down()
+    await page.mouse.move(spot.x + 200 * zoom, spot.y + 300 * zoom, { steps: 5 })
+    await expect(page.locator('.element-highlight')).toHaveCount(0)
+    await page.mouse.up()
+    await page.mouse.down()
+    await page.mouse.move(spot.x, spot.y, { steps: 5 })
+    await page.mouse.up()
+    await expect(page.locator('.panel-element')).toHaveText('img#hero "Team photo" (team.png)')
+
+    await page.getByRole('button', { name: 'Feedback' }).click()
+    await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
+    expect(await new Promise((resolve) => child.on('exit', resolve))).toBe(0)
+    expect(output.stdout).toContain('Element: img "Team photo" ("team.png") · #hero')
+  } finally {
+    if (child.exitCode === null) { child.kill() }
+  }
 })

@@ -6,6 +6,7 @@ import {
 } from '../utils/drawing.js'
 import { resolveArrowStyle, strokeWidthOf, dashArrayFor, pickStyleFields } from '../utils/annotationStyles.js'
 import { cursorForTool } from '../utils/cursors.js'
+import { matchAnnotation, describeElements } from '../utils/elementMatch.js'
 import { ANNOTATION_COLORS } from '../utils/annotationColors.js'
 import { ACTION_ICONS } from '../utils/icons.jsx'
 import CommentPopover from './CommentPopover.jsx'
@@ -204,7 +205,7 @@ export default function ImageCanvas({
   // describeTime(annotation | null) names what an annotation is pinned to in
   // time, null meaning the one being drawn.
   media = null, numberFor = null, nextNumber = annotations.length + 1, onBeforeInteract = null, describeTime = null,
-  voiceNotes = false
+  voiceNotes = false, elements = []
 }) {
   const wrapperRef = useRef(null)
   // Set by the wheel handler just before onZoomBy fires, and consumed by the
@@ -259,6 +260,9 @@ export default function ImageCanvas({
   const [pending, setPending] = useState(null)
   const [selectedId, setSelectedId] = useState(null)
   const [hoveringAnnotation, setHoveringAnnotation] = useState(false)
+  // Where the pointer rests over the image, for outlining the page element a
+  // mark placed there would be matched to. Only tracked for a captured page.
+  const [hoverPoint, setHoverPoint] = useState(null)
   const [isGrabbing, setIsGrabbing] = useState(false)
   const moveState = useRef(null)
   const resizeState = useRef(null)
@@ -389,6 +393,9 @@ export default function ImageCanvas({
     if (pending) { return }
     event.preventDefault()
     onBeforeInteract?.()
+    // A drag takes over from here; the outline at the press point would
+    // otherwise stay behind while an existing mark is moved away from it.
+    setHoverPoint(null)
     const point = pointFromEvent(event, wrapperRef, imageWidth, imageHeight, zoom)
 
     // An existing annotation under the cursor always takes over, regardless
@@ -462,15 +469,21 @@ export default function ImageCanvas({
 
     if (!pending) {
       const point = pointFromEvent(event, wrapperRef, imageWidth, imageHeight, zoom)
-      setHoveringAnnotation(!!findAnnotationAt(point, annotations))
+      const overAnnotation = !!findAnnotationAt(point, annotations)
+      setHoveringAnnotation(overAnnotation)
+      const outlines = elements.length > 0 && activeTool !== 'select' && !overAnnotation
+      setHoverPoint(outlines ? point : null)
     }
-  }, [activeTool, strokePoints.length, dragStart, imageWidth, imageHeight, zoom, onUpdateAnnotation, pending, annotations])
+  }, [activeTool, strokePoints.length, dragStart, imageWidth, imageHeight, zoom, onUpdateAnnotation, pending, annotations, elements])
 
   // Wraps every `setPending` call that starts a brand-new annotation (as
   // opposed to editing an existing one) so the created-count increment can't
   // drift out of sync with it - see nextColor above for why the count exists.
   const createPending = useCallback((partial) => {
     setPending(partial)
+    // The pointer now rests on the new mark, so the hover outline would
+    // otherwise linger over it until the next mouse move.
+    setHoverPoint(null)
     createdCountRef.current += 1
   }, [])
 
@@ -584,6 +597,12 @@ export default function ImageCanvas({
     livePreview = { type: activeTool, geometry: { points: strokePoints }, color: nextColor }
   }
 
+  // While a mark is being drawn or commented on, outline what it will be
+  // matched to; otherwise what a mark at the pointer would be matched to.
+  const matchTarget = pending ?? livePreview ?? (hoverPoint && { type: 'pin', geometry: hoverPoint })
+  const highlighted = matchAnnotation(elements, matchTarget)
+  const elementHint = describeElements(highlighted)
+
   let cursor = cursorForTool(activeTool)
   if (hoveringAnnotation) { cursor = 'grab' }
   if (isGrabbing) { cursor = 'grabbing' }
@@ -595,6 +614,7 @@ export default function ImageCanvas({
       style={{ width: imageWidth * zoom, height: imageHeight * zoom, cursor }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
+      onMouseLeave={() => setHoverPoint(null)}
     >
       {media ?? <img src={imageUrl} alt={imageAlt} width={imageWidth * zoom} height={imageHeight * zoom} draggable={false} />}
       <svg
@@ -617,6 +637,12 @@ export default function ImageCanvas({
             </marker>
           ))}
         </defs>
+        {highlighted.map(({ selector, box }) => (
+          <rect
+            key={`element-${selector}-${box.x}-${box.y}`} className="element-highlight"
+            x={box.x} y={box.y} width={box.width} height={box.height} vectorEffect="non-scaling-stroke"
+          />
+        ))}
         {annotations.map((annotation, index) => (
           <AnnotationShape
             key={annotation.id} annotation={annotation} number={numberFor ? numberFor(annotation) : index + 1}
@@ -629,6 +655,15 @@ export default function ImageCanvas({
           <SelectionHandles annotation={selectedAnnotation} zoom={zoom} onHandleMouseDown={handleHandleMouseDown} />
         )}
       </svg>
+      {!pending && elementHint && (
+        // Visual only: the same name is in the comment popover and the sidebar.
+        <span
+          className="element-highlight-label" aria-hidden="true"
+          style={{ left: highlighted[0].box.x * zoom, top: Math.max(0, highlighted[0].box.y * zoom - 24) }}
+        >
+          {elementHint}
+        </span>
+      )}
       {!pending && selectedAnnotation && (
         <SelectionToolbar
           point={toClientPoint(wrapperRef, annotationTopAnchor(selectedAnnotation), zoom)}
@@ -652,6 +687,7 @@ export default function ImageCanvas({
           isEditing={!!pending.id}
           timeBadge={describeTime ? describeTime(pending.id ? pending.before : null) : null}
           voiceNotes={voiceNotes}
+          elementHint={elementHint}
           onSubmit={handleCommentSubmit}
           onClose={handleCommentClose}
         />

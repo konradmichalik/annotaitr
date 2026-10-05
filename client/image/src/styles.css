@@ -342,6 +342,31 @@ body {
   pointer-events: none;
 }
 
+/* Page element a mark is (or would be) matched to, like a DevTools inspect
+   outline. The white drop shadow keeps it visible on dark screenshots. */
+.element-highlight {
+  fill: rgb(94 129 172 / 12%);
+  stroke: var(--primary-strong);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 1px #fff);
+}
+
+.element-highlight-label {
+  position: absolute;
+  max-width: 420px;
+  padding: 2px 8px;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--primary-strong);
+  color: var(--on-primary-strong);
+  font-family: monospace;
+  font-size: 0.75rem;
+  line-height: 20px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
 .panel-empty {
   padding: 1.5rem 1rem;
   font-size: 0.8125rem;
@@ -432,6 +457,16 @@ body {
   font-size: 0.8125rem;
   color: var(--text);
   line-height: 1.4;
+}
+
+.panel-element {
+  margin-bottom: 0.25rem;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-family: monospace;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .panel-comment-empty {
@@ -1022,6 +1057,21 @@ button.voice-note:hover {
   color: var(--text);
   font-family: monospace;
   font-size: 0.75rem;
+}
+
+.comment-popover-element {
+  margin: 0;
+  padding: 0.5rem 0.5rem 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.comment-popover-element-name {
+  color: var(--text);
+  font-family: monospace;
 }
 
 .comment-popover-body {

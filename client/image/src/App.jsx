@@ -37,6 +37,9 @@ function getInitialSidebarCollapsed() {
 export default function App() {
   const [state, dispatch] = useReducer(annotationReducer, initialAnnotationState)
   const [meta, setMeta] = useState(null)
+  // Elements of a captured web page (empty for files, the clipboard and
+  // recordings), so the canvas can outline and name what each mark hits.
+  const [elements, setElements] = useState([])
   const [imageUrl, setImageUrl] = useState(null)
   const [decision, setDecision] = useState(null)
   const [activeTool, setActiveTool] = useState('select')
@@ -96,6 +99,10 @@ export default function App() {
   useEffect(() => {
     fetch('/api/meta').then((r) => r.json()).then((r) => setMeta(r.data)).catch((err) => setErrorStatus('Error loading image metadata: ' + err.message))
     setImageUrl('/api/image')
+    fetch('/api/elements')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => setElements(r?.data?.elements ?? []))
+      .catch(() => setElements([]))
     fetch('/api/annotations')
       .then((r) => r.json())
       .then((r) => dispatch({ type: 'SET_ALL', annotations: r.data.annotations }))
@@ -478,6 +485,7 @@ export default function App() {
                 onBeforeInteract={isVideo ? beforeCanvasInteract : null}
                 describeTime={isVideo ? describeTime : null}
                 voiceNotes={!!meta.voiceNotes}
+                elements={elements}
                 zoom={zoom}
                 onZoomBy={zoomBy}
                 editingAnnotationId={editingAnnotationId}
@@ -549,6 +557,7 @@ export default function App() {
               onRemove={removeAnnotation}
               onEdit={editAnnotation}
               onEditGlobalComment={editGlobalComment}
+              elements={elements}
               timeLabelFor={isVideo ? formatTimes : null}
               autoEditId={autoEditId}
               onAutoEditConsumed={clearAutoEdit}
