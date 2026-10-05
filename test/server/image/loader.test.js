@@ -154,7 +154,8 @@ vi.mock('playwright', () => {
   const page = {
     goto: vi.fn().mockResolvedValue(undefined),
     screenshot: vi.fn().mockResolvedValue(Buffer.from('fake-png-bytes')),
-    evaluate: vi.fn().mockResolvedValue({ width: 1920, height: 3000 })
+    evaluate: vi.fn().mockResolvedValue({ width: 1920, height: 3000 }),
+    waitForTimeout: vi.fn().mockResolvedValue(undefined)
   }
   const browser = {
     newPage: vi.fn().mockResolvedValue(page),
@@ -203,6 +204,50 @@ describe('captureUrl', () => {
     const result = await captureUrl('http://localhost:3000', { width: 1920, height: 1080 })
     expect(result.buffer).toEqual(Buffer.from('fake-png-bytes'))
     expect(result.domMap).toEqual([])
+  })
+
+  it('waits the given delay after load before taking the screenshot', async () => {
+    const playwright = await import('playwright')
+    const { __mockPage: page } = playwright
+    page.waitForTimeout.mockClear()
+    const { captureUrl } = await import('../../../server/image/loader.js')
+    await captureUrl('http://localhost:3000', { width: 1920, height: 1080 }, { delayMs: 500 })
+    expect(page.waitForTimeout).toHaveBeenCalledWith(500)
+    expect(page.waitForTimeout.mock.invocationCallOrder[0]).toBeLessThan(page.screenshot.mock.invocationCallOrder.at(-1))
+  })
+
+  it('captures only the visible viewport after scrolling to a section, with element boxes in that frame', async () => {
+    const playwright = await import('playwright')
+    const { __mockPage: page } = playwright
+    page.screenshot.mockClear()
+    page.evaluate.mockClear()
+    page.evaluate.mockResolvedValueOnce(true).mockResolvedValueOnce([])
+    const { captureUrl } = await import('../../../server/image/loader.js')
+    const result = await captureUrl('http://localhost:3000', { width: 375, height: 812 }, { section: { anchor: '#pricing' } })
+    expect(page.screenshot).toHaveBeenCalledWith({ fullPage: false, type: 'png' })
+    expect([result.width, result.height]).toEqual([375, 812])
+    expect(page.evaluate.mock.calls[0][1]).toEqual({ anchor: '#pricing' })
+    expect(page.evaluate.mock.calls[1][1]).toMatchObject({ viewportOnly: true })
+  })
+
+  it('scrolls to a pixel position for a scrollY section', async () => {
+    const playwright = await import('playwright')
+    const { __mockPage: page } = playwright
+    page.evaluate.mockClear()
+    page.evaluate.mockResolvedValueOnce(true).mockResolvedValueOnce([])
+    const { captureUrl } = await import('../../../server/image/loader.js')
+    await captureUrl('http://localhost:3000', { width: 375, height: 812 }, { section: { scrollY: 1200 } })
+    expect(page.evaluate.mock.calls[0][1]).toEqual({ scrollY: 1200 })
+  })
+
+  it('fails with a clear message when the anchor is not on the page, and still closes the browser', async () => {
+    const playwright = await import('playwright')
+    playwright.__mockPage.evaluate.mockResolvedValueOnce(false)
+    playwright.__mockBrowser.close.mockClear()
+    const { captureUrl } = await import('../../../server/image/loader.js')
+    await expect(captureUrl('http://localhost:3000', { width: 375, height: 812 }, { section: { anchor: '#missing' } }))
+      .rejects.toThrow(/#missing.*not found/)
+    expect(playwright.__mockBrowser.close).toHaveBeenCalled()
   })
 
   it('closes the browser even when navigation fails', async () => {

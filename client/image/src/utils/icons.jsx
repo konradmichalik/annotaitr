@@ -188,3 +188,93 @@ export const PLAYER_ICONS = {
     </svg>
   )
 }
+
+// Tabler device-desktop, device-laptop, device-tablet, device-mobile and
+// dimensions, for the viewport picker.
+export const VIEWPORT_ICONS = {
+  desktop: (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <path d="M3 5a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10z" />
+      <path d="M7 20h10" /><path d="M9 16v4" /><path d="M15 16v4" />
+    </svg>
+  ),
+  laptop: (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <path d="M3 19l18 0" /><path d="M5 7a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v8a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1z" />
+    </svg>
+  ),
+  tablet: (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <path d="M5 4a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v16a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1v-16z" />
+      <path d="M11 17a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
+    </svg>
+  ),
+  mobile: (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <path d="M6 5a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2v-14z" />
+      <path d="M11 4h2" /><path d="M12 17v.01" />
+    </svg>
+  ),
+  custom: (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <path d="M3 5h11" /><path d="M12 7l2 -2l-2 -2" /><path d="M5 3l-2 2l2 2" />
+      <path d="M19 10v11" /><path d="M17 19l2 2l2 -2" /><path d="M21 12l-2 -2l-2 2" />
+      <path d="M3 12a2 2 0 0 1 2 -2h7a2 2 0 0 1 2 2v7a2 2 0 0 1 -2 2h-7a2 2 0 0 1 -2 -2z" />
+    </svg>
+  )
+}
+
+// Tabler arrow-autofit-height, app-window, hash and arrow-bar-to-down: full
+// page, first screen, from an anchor, from a scroll position.
+export const SECTION_ICONS = {
+  top: (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z" />
+      <path d="M6 8h.01" /><path d="M9 8h.01" />
+    </svg>
+  ),
+  full: (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <path d="M12 20h-6a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h6" />
+      <path d="M18 14v7" /><path d="M18 3v7" /><path d="M15 18l3 3l3 -3" /><path d="M15 6l3 -3l3 3" />
+    </svg>
+  ),
+  anchor: (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <path d="M5 9l14 0" /><path d="M5 15l14 0" /><path d="M11 4l-4 16" /><path d="M17 4l-4 16" />
+    </svg>
+  ),
+  scrollY: (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <path d="M4 20l16 0" /><path d="M12 14l0 -10" /><path d="M12 14l4 -4" /><path d="M12 14l-4 -4" />
+    </svg>
+  )
+}
+
+// Tabler clock, camera, chevron-down, alert-triangle and rotate-clockwise.
+export const CAPTURE_ICONS = {
+  rotate: (
+    <svg {...ICON_PROPS} width={14} height={14} aria-hidden="true">
+      <path d="M4.05 11a8 8 0 1 1 .5 4m-.5 5v-5h5" />
+    </svg>
+  ),
+  delay: (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 7v5l3 3" />
+    </svg>
+  ),
+  capture: (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2" />
+      <path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+    </svg>
+  ),
+  chevron: (
+    <svg {...ICON_PROPS} width={14} height={14} aria-hidden="true"><path d="M6 9l6 6l6 -6" /></svg>
+  ),
+  warning: (
+    <svg {...ICON_PROPS} width={14} height={14} aria-hidden="true">
+      <path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" />
+    </svg>
+  )
+}

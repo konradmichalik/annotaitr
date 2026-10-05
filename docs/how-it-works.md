@@ -49,6 +49,18 @@ Approving with annotations present becomes **Approve with Notes**: the
 target is accepted as-is, but the notes are passed along as context rather
 than discarded.
 
+### Capturing again
+
+For a URL, the viewport button next to the zoom controls captures the page
+again in place: the server reruns the capture with the new viewport,
+section and delay, swaps the screenshot and its element map, and the open
+tab reloads them, while the CLI keeps waiting for the decision. A section
+captures only the visible viewport, at the top of the page or scrolled to
+an anchor or offset, so
+fixed headers appear where the reviewer sees them and are kept in the
+element map. Annotations are discarded on a new capture, because their
+coordinates belong to the old layout.
+
 ### Videos and GIFs
 
 A video or GIF is image mode on a timeline. The server never decodes it: it

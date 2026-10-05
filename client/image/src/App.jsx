@@ -4,6 +4,8 @@ import { annotationReducer, initialAnnotationState } from './state/annotationRed
 import { createAnnotationId } from '../../shared/utils/annotationId.js'
 import Toolbar from './components/Toolbar.jsx'
 import ZoomControls from './components/ZoomControls.jsx'
+import ViewportControl from './components/ViewportControl.jsx'
+import CaptureOverlay from './components/CaptureOverlay.jsx'
 import ImageCanvas from './components/ImageCanvas.jsx'
 import AnnotationPanel from './components/AnnotationPanel.jsx'
 import ExportModal from './components/ExportModal.jsx'
@@ -34,12 +36,22 @@ function getInitialSidebarCollapsed() {
   return getItem('img-annotator-sidebar-collapsed') === 'true'
 }
 
+/** Elements of a captured web page; empty for files, the clipboard and recordings. */
+function loadElements(setElements) {
+  return fetch('/api/elements')
+    .then((r) => (r.ok ? r.json() : null))
+    .then((r) => setElements(r?.data?.elements ?? []))
+    .catch(() => setElements([]))
+}
+
 export default function App() {
   const [state, dispatch] = useReducer(annotationReducer, initialAnnotationState)
   const [meta, setMeta] = useState(null)
   // Elements of a captured web page (empty for files, the clipboard and
   // recordings), so the canvas can outline and name what each mark hits.
   const [elements, setElements] = useState([])
+  // What is being captured right now ("Tablet 768×1024"), or null.
+  const [recapturing, setRecapturing] = useState(null)
   const [imageUrl, setImageUrl] = useState(null)
   const [decision, setDecision] = useState(null)
   const [activeTool, setActiveTool] = useState('select')
@@ -99,10 +111,7 @@ export default function App() {
   useEffect(() => {
     fetch('/api/meta').then((r) => r.json()).then((r) => setMeta(r.data)).catch((err) => setErrorStatus('Error loading image metadata: ' + err.message))
     setImageUrl('/api/image')
-    fetch('/api/elements')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((r) => setElements(r?.data?.elements ?? []))
-      .catch(() => setElements([]))
+    loadElements(setElements)
     fetch('/api/annotations')
       .then((r) => r.json())
       .then((r) => dispatch({ type: 'SET_ALL', annotations: r.data.annotations }))
@@ -126,6 +135,34 @@ export default function App() {
     }, 500)
     return () => clearTimeout(timer)
   }, [state.annotations, meta, decision])
+
+  // Capture the URL again with new settings. The server discards the
+  // annotations, since their coordinates belong to the old layout, so the
+  // reviewer confirms that first. Resolves to an error message, or null.
+  const recapture = useCallback(async (request, label) => {
+    const count = state.annotations.length
+    const plural = count === 1 ? '' : 's'
+    if (count > 0 && !window.confirm(`Capturing again discards ${count} annotation${plural}. Continue?`)) {
+      return `Not captured again, ${count === 1 ? 'your annotation is' : `your ${count} annotations are`} kept.`
+    }
+    setRecapturing(label)
+    try {
+      const res = await fetch('/api/recapture', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request)
+      })
+      const body = await res.json()
+      if (!body.success) { return body.error }
+      dispatch({ type: 'SET_ALL', annotations: [] })
+      setMeta((current) => ({ ...current, width: body.data.width, height: body.data.height, capture: body.data.capture }))
+      setImageUrl(`/api/image?capture=${Date.now()}`)
+      await loadElements(setElements)
+      return null
+    } catch (error) {
+      return `Capture failed: ${error.message}`
+    } finally {
+      setRecapturing(null)
+    }
+  }, [state.annotations.length])
 
   const { takeTimes, range, clearRange } = video
   const addAnnotation = useCallback((partial) => {
@@ -470,9 +507,15 @@ export default function App() {
                 onChangeColorMode={(mode) => updateSetting('colorMode', mode)}
                 onChangeFixedColor={(color) => updateSetting('fixedColor', color)}
               />
-              <ZoomControls zoom={zoom} onZoomBy={zoomBy} onZoomReset={zoomReset} onZoomFit={zoomFit} />
+              <div className="canvas-topbar-end">
+                {meta?.capture && (
+                  <ViewportControl capture={meta.capture} busy={!!recapturing} annotationCount={state.annotations.length} onApply={recapture} />
+                )}
+                <ZoomControls zoom={zoom} onZoomBy={zoomBy} onZoomReset={zoomReset} onZoomFit={zoomFit} />
+              </div>
             </div>
             {mediaError && <p className="media-error" role="alert">{mediaError}</p>}
+            {recapturing && <CaptureOverlay label={recapturing} />}
             {meta && (isVideo ? controller && playerState : imageUrl) && (
               <ImageCanvas
                 imageUrl={imageUrl}

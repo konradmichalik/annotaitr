@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { flattenAnnotations } from './render.js'
 import { writeAnnotatedImage } from './output.js'
 import { formatApprovalOutput, formatApprovalWithNotesOutput, exportFeedback } from './feedback.js'
+import { parseCaptureSettings, describeCapture, VIEWPORT_PRESETS } from './config.js'
 
 function success(data) { return { success: true, data } }
 function failure(error) { return { success: false, error } }
@@ -48,21 +49,64 @@ function sniffImageType(buffer) {
   return 'png'
 }
 
-export function createApiRouter({ imageBuffer, imageWidth, imageHeight, origin, targetLabel, domMap = null, state, voiceNotes = false, resolveDecision }) {
+// The presets travel with the meta so the client's viewport picker never
+// needs its own copy of the sizes.
+function captureMeta(settings) {
+  return settings ? { ...settings, description: describeCapture(settings), presets: VIEWPORT_PRESETS } : null
+}
+
+/** Everything a decision needs from the capture as it is right now, which a recapture may have replaced. */
+async function decisionInputs(state) {
+  const { buffer, width, height, domMap, settings } = state.capture
+  const annotatedImagePath = await writeAnnotatedImage(await flattenAnnotations(buffer, state.annotations))
+  const note = settings ? describeCapture(settings) : null
+  return { width, height, annotatedImagePath, domMap, note }
+}
+
+/**
+ * Capture the URL again with new settings, in place: the open tab reloads
+ * the new screenshot and map, the waiting CLI keeps waiting. Annotations
+ * are discarded, since their coordinates belong to the old layout. Only a
+ * URL target gets a `recapture` function.
+ */
+function mountRecapture(router, { state, recapture }) {
+  let running = false
+  router.post('/api/recapture', async (req, res) => {
+    if (!recapture) { return res.status(404).json(failure('Only a captured URL can be captured again')) }
+    if (running) { return res.status(409).json(failure('A capture is already running')) }
+    const { settings, error } = parseCaptureSettings(req.body)
+    if (error) { return res.status(400).json(failure(error)) }
+    running = true
+    try {
+      const capture = await recapture(settings)
+      state.capture = { ...capture, settings }
+      state.annotations = []
+      res.json(success({ width: capture.width, height: capture.height, capture: captureMeta(settings) }))
+    } catch (captureError) {
+      res.status(502).json(failure(captureError.message))
+    } finally {
+      running = false
+    }
+  })
+}
+
+export function createApiRouter({ origin, targetLabel, state, voiceNotes = false, recapture = null, resolveDecision }) {
   const router = Router()
 
   router.get('/api/image', (_req, res) => {
-    res.type(sniffImageType(imageBuffer)).send(imageBuffer)
+    // A recapture replaces the image behind the same URL.
+    res.set('Cache-Control', 'no-store').type(sniffImageType(state.capture.buffer)).send(state.capture.buffer)
   })
 
   router.get('/api/meta', (_req, res) => {
-    res.json(success({ width: imageWidth, height: imageHeight, origin, targetLabel, voiceNotes }))
+    const { width, height, settings } = state.capture
+    res.json(success({ width, height, origin, targetLabel, voiceNotes, capture: captureMeta(settings) }))
   })
 
   // Lets the client outline the element under the pointer and name the
   // element each annotation will be matched to, before anything is submitted.
   router.get('/api/elements', (_req, res) => {
-    res.json(success({ elements: domMap ?? [] }))
+    res.json(success({ elements: state.capture.domMap ?? [] }))
   })
 
   router.get('/api/annotations', (_req, res) => {
@@ -83,6 +127,8 @@ export function createApiRouter({ imageBuffer, imageWidth, imageHeight, origin, 
     res.json(success({ saved: true, count: annotations.length }))
   })
 
+  mountRecapture(router, { state, recapture })
+
   router.post('/api/approve', async (_req, res) => {
     if (state.annotations.length === 0) {
       res.json(success({ message: 'Approved' }))
@@ -90,9 +136,8 @@ export function createApiRouter({ imageBuffer, imageWidth, imageHeight, origin, 
       return
     }
     try {
-      const flattened = await flattenAnnotations(imageBuffer, state.annotations)
-      const annotatedImagePath = await writeAnnotatedImage(flattened)
-      const output = formatApprovalWithNotesOutput(state.annotations, imageWidth, imageHeight, annotatedImagePath, domMap)
+      const { width, height, annotatedImagePath, domMap, note } = await decisionInputs(state)
+      const output = formatApprovalWithNotesOutput(state.annotations, width, height, annotatedImagePath, domMap, note)
       res.json(success({ message: 'Approved with notes' }))
       setTimeout(
         () => resolveDecision({ approved: true, output, annotationCount: state.annotations.length }),
@@ -109,9 +154,8 @@ export function createApiRouter({ imageBuffer, imageWidth, imageHeight, origin, 
       return res.status(400).json(failure('No annotations to submit: use Approve instead'))
     }
     try {
-      const flattened = await flattenAnnotations(imageBuffer, state.annotations)
-      const annotatedImagePath = await writeAnnotatedImage(flattened)
-      const output = exportFeedback(state.annotations, imageWidth, imageHeight, annotatedImagePath, domMap)
+      const { width, height, annotatedImagePath, domMap, note } = await decisionInputs(state)
+      const output = exportFeedback(state.annotations, width, height, annotatedImagePath, domMap, note)
       res.json(success({ message: 'Feedback submitted' }))
       setTimeout(
         () => resolveDecision({ approved: false, output, annotationCount: state.annotations.length }),

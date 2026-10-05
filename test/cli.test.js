@@ -5,6 +5,10 @@ import { spawnSync } from 'node:child_process'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { parseArgs, detectMode, isVideoTarget } from '../index.js'
 
+// For CLI runs that must be rejected up front: if one ever starts a server
+// instead, it opens no browser and fails on the timeout rather than hanging.
+const NO_SERVER = { env: { ...process.env, ANNOTAITR_NO_OPEN: '1' }, timeout: 10_000 }
+
 const BASE = ['node', 'index.js']
 
 describe('parseArgs', () => {
@@ -13,6 +17,7 @@ describe('parseArgs', () => {
       targets: ['README.md'],
       origin: 'cli',
       viewportSpec: null,
+      delaySpec: null,
       feedbackNotes: null,
       modeOverride: null,
       viewportFlagGiven: false,
@@ -64,6 +69,14 @@ describe('parseArgs', () => {
 
   it('errors on an unknown --as value', () => {
     expect(parseArgs([...BASE, '--as', 'bogus', 'x']).error).toMatch(/--as requires/)
+  })
+
+  it('parses --delay', () => {
+    expect(parseArgs([...BASE, '--delay', '750', 'http://x']).delaySpec).toBe('750')
+  })
+
+  it('errors when --delay has no value', () => {
+    expect(parseArgs([...BASE, '--delay']).error).toMatch(/--delay requires/)
   })
 
   it('errors when --viewport has no value', () => {
@@ -180,6 +193,18 @@ describe('video targets', () => {
 
   afterAll(async () => {
     await rm(dir, { recursive: true, force: true })
+  })
+
+  it('rejects --delay for a video, which is never captured', () => {
+    const result = spawnSync('node', ['index.js', '--delay', '500', videoPath], NO_SERVER)
+    expect(result.status).toBe(1)
+    expect(result.stderr.toString()).toMatch(/--delay only applies to a URL target/)
+  })
+
+  it('rejects an out-of-range --delay before capturing anything', () => {
+    const result = spawnSync('node', ['index.js', '--delay', '99999', 'http://127.0.0.1:9/'], NO_SERVER)
+    expect(result.status).toBe(1)
+    expect(result.stderr.toString()).toMatch(/--delay must be a whole number of milliseconds from 0 to 10000/)
   })
 
   it('rejects --viewport for a video, which is never captured', () => {

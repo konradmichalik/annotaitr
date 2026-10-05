@@ -87,6 +87,17 @@ test('a captured page carries a DOM map whose boxes line up with the screenshot'
   expect(matchAnnotation(capture.domMap, pin)).toEqual([cta])
 })
 
+test('a section capture shows only the viewport at the anchor, and the map uses that frame', async () => {
+  const capture = await captureUrl(baseUrl, { width: 800, height: 600 }, { section: { anchor: '#pricing' } })
+  expect([capture.width, capture.height]).toEqual([800, 600])
+  const cta = capture.domMap.find((el) => el.name === 'Start trial')
+  expect(cta.box.y).toBeLessThan(600)
+  expect(await pixelAt(capture.buffer, cta.box.x + 2, cta.box.y + 2)).toEqual([255, 0, 0, 255])
+  // In a section the fixed bars are on screen where they measure, so they belong in the map.
+  expect(capture.domMap.find((el) => el.name === 'Home').box.y).toBe(0)
+  expect(capture.domMap.find((el) => el.name === 'Team photo')).toBeUndefined()
+})
+
 function startCli(args) {
   const child = spawn('node', [join(process.cwd(), 'index.js'), ...args], {
     cwd: process.cwd(),
@@ -153,6 +164,76 @@ test('the Element tool outlines and picks a page element, other tools only name 
     expect(await new Promise((resolve) => child.on('exit', resolve))).toBe(0)
     expect(output.stdout).toMatch(/### 1\. \[#\w+\] Selected element: .*\nElement: img "Team photo" \("team.png"\) · #hero\n> Swap the photo/)
     expect(output.stdout).toMatch(/### 2\. \[#\w+\] Comment pin: .*\nElement: button "Contact us" · #contact/)
+  } finally {
+    if (child.exitCode === null) { child.kill() }
+  }
+})
+
+test('the viewport picker captures the page again in place, after confirming that annotations go', async ({ page }) => {
+  const { child, output, url } = startCli([baseUrl, '--viewport', '800x600', '--delay', '200'])
+  try {
+    const appUrl = await url
+    await page.goto(appUrl)
+    const meta = async () => (await (await page.request.get(`${appUrl}/api/meta`)).json()).data
+    const trigger = page.locator('.viewport-trigger')
+    // The radios are visually hidden inside their tiles, so pick a tile the way a user does.
+    const choose = (name) => page.locator('label', { has: page.getByRole('radio', { name, exact: true }) }).click()
+    const captureAgain = () => Promise.all([
+      page.waitForResponse('**/api/recapture'),
+      page.getByRole('button', { name: 'Capture again' }).click()
+    ])
+    await expect(trigger).toHaveText('Custom 800×600')
+
+    // Measured on every call: a narrower capture is centered somewhere else.
+    const pinAt = async (x, y) => {
+      const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
+      await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Pin').click()
+      await page.mouse.click(canvas.x + x, canvas.y + y)
+      await page.getByRole('button', { name: 'Add', exact: true }).click()
+    }
+    await pinAt(60, 300)
+    await expect(page.getByText('1. Pin')).toBeVisible()
+
+    // Declining keeps the annotation and the capture.
+    await trigger.click()
+    await choose('Tablet')
+    await expect(page.getByText('Discards your annotation')).toBeVisible()
+    page.once('dialog', (dialog) => dialog.dismiss())
+    await page.getByRole('button', { name: 'Capture again' }).click()
+    await expect(page.getByRole('alert')).toHaveText('Not captured again, your annotation is kept.')
+    await expect(page.getByText('1. Pin')).toBeVisible()
+
+    page.once('dialog', (dialog) => dialog.accept())
+    await choose('Phone')
+    await captureAgain()
+    await expect(trigger).toHaveText('Phone 375×812')
+    await expect(page.getByText('1. Pin')).toHaveCount(0)
+    // The fixture's 400px card makes the page wider than the phone, and a full-page capture shows all of it.
+    expect((await meta()).capture.viewport).toEqual({ width: 375, height: 812 })
+
+    await trigger.click()
+    await page.getByRole('button', { name: 'Landscape' }).click()
+    await captureAgain()
+    await expect(trigger).toHaveText('Phone landscape 812×375')
+    expect((await meta()).capture.viewport).toEqual({ width: 812, height: 375 })
+
+    await trigger.click()
+    await choose('First screen')
+    await captureAgain()
+    expect(await meta()).toMatchObject({ width: 812, height: 375, capture: { section: { scrollY: 0 } } })
+
+    await trigger.click()
+    await choose('Anchor')
+    await page.getByLabel('Anchor id').fill('pricing')
+    await captureAgain()
+    await expect(trigger).toHaveText('Phone landscape 812×375')
+    expect(await meta()).toMatchObject({ width: 812, height: 375, capture: { section: { anchor: '#pricing' }, delayMs: 200 } })
+
+    await pinAt(30, 30)
+    await page.getByRole('button', { name: 'Feedback' }).click()
+    await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
+    expect(await new Promise((resolve) => child.on('exit', resolve))).toBe(0)
+    expect(output.stdout).toContain('Captured at mobile landscape (812×375), section #pricing, after 200 ms\n')
   } finally {
     if (child.exitCode === null) { child.kill() }
   }

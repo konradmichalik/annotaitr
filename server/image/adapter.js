@@ -25,12 +25,20 @@ const bundleDir = existsSync(join(DIST_DIR, 'index.html')) ? DIST_DIR : DEV_DIR
  * @param {string} [options.origin='cli']
  * @param {string} [options.targetLabel] - the URL or file path that was captured
  * @param {Array|null} [options.domMap] - elements of a captured page (server/image/domMap.js), only for URL captures
+ * @param {Object|null} [options.captureSettings] - viewport, delay and section a URL was captured with
+ * @param {Function|null} [options.recapture] - (settings) => capture, captures the URL again; only for URL captures
  * @param {Function} [options.onReady] - (url, port) => void
  */
 export async function buildImageServer(options) {
-  const { imageBuffer, imageWidth, imageHeight, origin = 'cli', targetLabel = null, domMap = null, onReady = null } = options
+  const {
+    imageBuffer, imageWidth, imageHeight, origin = 'cli', targetLabel = null, domMap = null,
+    captureSettings = null, recapture = null, onReady = null
+  } = options
 
-  const state = { annotations: [] }
+  const state = {
+    annotations: [],
+    capture: { buffer: imageBuffer, width: imageWidth, height: imageHeight, domMap, settings: captureSettings }
+  }
   const transcription = transcriptionConfig()
   const voiceNotes = await detectTranscription(transcription)
 
@@ -40,14 +48,11 @@ export async function buildImageServer(options) {
     onReady,
     mountRoutes(app, { safeResolve }) {
       app.use(createApiRouter({
-        imageBuffer,
-        imageWidth,
-        imageHeight,
         origin,
         targetLabel,
-        domMap,
         state,
         voiceNotes,
+        recapture,
         resolveDecision: safeResolve
       }))
       app.use(createTranscriptionRouter({ available: voiceNotes, config: transcription }))

@@ -66,7 +66,7 @@ describe('image annotator server', () => {
     await start()
     const res = await fetch(`${server.url}/api/meta`)
     const body = await res.json()
-    expect(body.data).toEqual({ width: 40, height: 30, origin: 'cli', targetLabel: null, voiceNotes: false })
+    expect(body.data).toEqual({ width: 40, height: 30, origin: 'cli', targetLabel: null, voiceNotes: false, capture: null })
   })
 
   it('serves the target label when provided', async () => {
@@ -151,6 +151,84 @@ describe('image annotator server', () => {
     server.stop()
     await start()
     expect((await (await fetch(`${server.url}/api/elements`)).json()).data).toEqual({ elements: [] })
+  })
+
+  describe('recapturing a URL', () => {
+    const desktop = { viewport: { width: 1920, height: 1080 }, delayMs: 0, section: null }
+    const pin = { id: 'a1', type: 'pin', geometry: { x: 5, y: 5 }, text: 'hi', color: '#e11d48' }
+    const post = (path, body) => fetch(`${server.url}${path}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    })
+    const fakeCapture = (width, height) => ({
+      buffer: makeFixturePng(width, height), width, height,
+      domMap: [{ tag: 'a', role: '', name: `at ${width}`, media: '', selector: 'a', heading: '', box: { x: 0, y: 0, width: 10, height: 10 } }]
+    })
+
+    it('reports the capture settings in /api/meta', async () => {
+      await start({ captureSettings: desktop, recapture: vi.fn() })
+      const meta = (await (await fetch(`${server.url}/api/meta`)).json()).data
+      expect(meta.capture).toMatchObject({ ...desktop, description: 'desktop (1920×1080), full page' })
+      expect(meta.capture.presets.mobile).toEqual({ width: 375, height: 812 })
+    })
+
+    it('swaps in the new screenshot, size and element map, and discards the annotations', async () => {
+      const recapture = vi.fn().mockResolvedValue(fakeCapture(37, 81))
+      await start({ captureSettings: desktop, recapture })
+      await post('/api/annotations', { annotations: [pin] })
+      const res = await post('/api/recapture', { viewport: 'tablet', delayMs: 300, section: { anchor: '#pricing' } })
+      expect(res.status).toBe(200)
+      const settings = { viewport: { width: 768, height: 1024 }, delayMs: 300, section: { anchor: '#pricing' } }
+      expect(recapture).toHaveBeenCalledWith(settings)
+      const meta = (await (await fetch(`${server.url}/api/meta`)).json()).data
+      expect([meta.width, meta.height]).toEqual([37, 81])
+      expect(meta.capture.description).toBe('tablet (768×1024), section #pricing, after 300 ms')
+      expect((await (await fetch(`${server.url}/api/elements`)).json()).data.elements[0].name).toBe('at 37')
+      expect((await (await fetch(`${server.url}/api/annotations`)).json()).data.annotations).toEqual([])
+      const image = Buffer.from(await (await fetch(`${server.url}/api/image`)).arrayBuffer())
+      expect(image.equals(makeFixturePng(37, 81))).toBe(true)
+    })
+
+    it('names the capture in the feedback', async () => {
+      await start({ captureSettings: desktop, recapture: vi.fn().mockResolvedValue(fakeCapture(37, 81)) })
+      await post('/api/recapture', { viewport: 'mobile' })
+      await post('/api/annotations', { annotations: [pin] })
+      await post('/api/feedback', {})
+      expect((await server.waitForDecision()).output).toContain('Captured at mobile (375×812), full page\n')
+    })
+
+    it('rejects invalid settings without capturing', async () => {
+      const recapture = vi.fn()
+      await start({ captureSettings: desktop, recapture })
+      const res = await post('/api/recapture', { viewport: '10x10' })
+      expect(res.status).toBe(400)
+      expect(recapture).not.toHaveBeenCalled()
+    })
+
+    it('refuses a second recapture while one is running', async () => {
+      let finish
+      const recapture = vi.fn().mockReturnValue(new Promise((resolve) => { finish = resolve }))
+      await start({ captureSettings: desktop, recapture })
+      const first = post('/api/recapture', { viewport: 'mobile' })
+      await vi.waitFor(() => expect(recapture).toHaveBeenCalled())
+      expect((await post('/api/recapture', { viewport: 'tablet' })).status).toBe(409)
+      finish(fakeCapture(37, 81))
+      expect((await first).status).toBe(200)
+    })
+
+    it('keeps the current capture and annotations when the capture fails', async () => {
+      await start({ captureSettings: desktop, recapture: vi.fn().mockRejectedValue(new Error('Anchor #x not found on the page')) })
+      await post('/api/annotations', { annotations: [pin] })
+      const res = await post('/api/recapture', { viewport: 'mobile', section: { anchor: '#x' } })
+      expect(res.status).toBe(502)
+      expect((await res.json()).error).toMatch(/#x not found/)
+      expect((await (await fetch(`${server.url}/api/meta`)).json()).data.width).toBe(40)
+      expect((await (await fetch(`${server.url}/api/annotations`)).json()).data.annotations).toEqual([pin])
+    })
+
+    it('is not offered for a local image', async () => {
+      await start()
+      expect((await post('/api/recapture', { viewport: 'mobile' })).status).toBe(404)
+    })
   })
 
   it('names the matched page element in feedback and approve-with-notes, and keeps the map off /api/meta', async () => {
