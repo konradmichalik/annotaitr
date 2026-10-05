@@ -150,8 +150,8 @@ export default function App() {
       const res = await fetch('/api/recapture', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request)
       })
+      if (!res.ok) { return await readError(res) }
       const body = await res.json()
-      if (!body.success) { return body.error }
       dispatch({ type: 'SET_ALL', annotations: [] })
       setMeta((current) => ({ ...current, width: body.data.width, height: body.data.height, capture: body.data.capture }))
       setImageUrl(`/api/image?capture=${Date.now()}`)

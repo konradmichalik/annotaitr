@@ -238,3 +238,16 @@ test('the viewport picker captures the page again in place, after confirming tha
     if (child.exitCode === null) { child.kill() }
   }
 })
+
+test('a recapture answered with an error page shows the status instead of a parse error', async ({ page }) => {
+  const { child, url } = startCli([baseUrl, '--viewport', '800x600'])
+  try {
+    await page.goto(await url)
+    await page.route('**/api/recapture', (route) => route.fulfill({ status: 500, contentType: 'text/html', body: '<html>Internal Server Error</html>' }))
+    await page.locator('.viewport-trigger').click()
+    await page.getByRole('button', { name: 'Capture again' }).click()
+    await expect(page.getByRole('alert')).toHaveText('Server responded with 500')
+  } finally {
+    if (child.exitCode === null) { child.kill() }
+  }
+})
