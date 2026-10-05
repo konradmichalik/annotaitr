@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { ANNOTATION_COLORS } from '../utils/annotationColors.js'
-import { ARROW_STYLE_ICONS } from '../utils/icons.jsx'
+import { ARROW_STYLE_ICONS, TOOL_ICONS } from '../utils/icons.jsx'
 import {
   ARROW_STYLES, resolveArrowStyle, STYLE_FIELDS, presetsFor, strokeWidthOf, DASH_STYLES
 } from '../utils/annotationStyles.js'
@@ -320,7 +320,9 @@ export default function CommentPopover({
       />
       {elementHint && (
         <p className="comment-popover-element" title={elementHint}>
-          Element: <span className="comment-popover-element-name">{elementHint}</span>
+          {TOOL_ICONS.element}
+          <span className="visually-hidden">Element: </span>
+          <span className="comment-popover-element-name">{elementHint}</span>
         </p>
       )}
       <div className="comment-popover-body">
