@@ -10,6 +10,7 @@ import { createCanvas, loadImage, Image } from '@napi-rs/canvas'
 import { chromium } from 'playwright'
 import { isImageFile, isSvgFile, isSupportedCaptureUrl } from './capture.js'
 import { config } from './config.js'
+import { collectRawElements, normalizeDomMap, CANDIDATES, PANEL_CANDIDATES, MIN_PANEL_SIDE, MAX_ELEMENTS, CONTAINERS } from './domMap.js'
 
 /**
  * Load and validate a local image file. Rejects unsupported extensions and
@@ -118,12 +119,67 @@ async function rasterizeSvg(source, filePath) {
 }
 
 /**
- * Capture a full-page screenshot of `url` at the given viewport size.
+ * Measured after the screenshot without scrolling, so boxes line up with the
+ * full-page image. The map is a bonus: a page that breaks the evaluate still
+ * gets captured, just without element lines in the feedback.
+ */
+async function collectDomMap(page, viewportOnly) {
+  try {
+    const options = {
+      candidates: CANDIDATES,
+      fallbacks: PANEL_CANDIDATES,
+      minPanelSide: MIN_PANEL_SIDE,
+      limit: MAX_ELEMENTS,
+      containers: [...CONTAINERS, 'div'],
+      viewportOnly
+    }
+    return normalizeDomMap(await page.evaluate(collectRawElements, options))
+  } catch {
+    return []
+  }
+}
+
+// Runs in the page. "instant" overrides a site's smooth scrolling, which
+// would otherwise still be moving when the screenshot is taken.
+function scrollInPage(section) {
+  if (section.anchor) {
+    const target = document.querySelector(section.anchor)
+    if (!target) { return false }
+    target.scrollIntoView({ block: 'start', behavior: 'instant' })
+    return true
+  }
+  window.scrollTo({ top: section.scrollY, behavior: 'instant' })
+  return true
+}
+
+async function scrollToSection(page, section) {
+  if (!section) { return }
+  if (!(await page.evaluate(scrollInPage, section))) {
+    throw new Error(`Anchor ${section.anchor} not found on the page`)
+  }
+}
+
+function assertWithinLimits(buffer, box) {
+  if (buffer.length > config.maxImageBytes) {
+    throw new Error(`Screenshot too large: ${buffer.length} bytes, max ${config.maxImageBytes}`)
+  }
+  if (box.width > config.maxImageDimension || box.height > config.maxImageDimension) {
+    throw new Error(
+      `Screenshot dimensions too large: ${box.width}x${box.height} (max ${config.maxImageDimension}px per side)`
+    )
+  }
+}
+
+/**
+ * Capture a screenshot of `url` at the given viewport size: the full page,
+ * or with a `section` only the visible viewport after scrolling to an
+ * anchor or a pixel offset. `delayMs` waits after load (and the scroll)
+ * for animations and lazy content to settle.
  * Redirects are followed by the browser itself; each hop is a real
  * navigation the browser re-validates against its own protocol rules, so no
  * separate redirect-chain check is needed here.
  */
-export async function captureUrl(url, viewport) {
+export async function captureUrl(url, viewport, { delayMs = 0, section = null } = {}) {
   if (!isSupportedCaptureUrl(url)) {
     throw new Error(`Unsupported URL: ${url}. Only http:// and https:// are accepted.`)
   }
@@ -132,22 +188,15 @@ export async function captureUrl(url, viewport) {
   try {
     const page = await browser.newPage({ viewport })
     await page.goto(url, { timeout: config.captureTimeoutMs, waitUntil: 'load' })
-    const buffer = await page.screenshot({ fullPage: true, type: 'png' })
-    const box = await page.evaluate(() => ({
+    await scrollToSection(page, section)
+    if (delayMs > 0) { await page.waitForTimeout(delayMs) }
+    const buffer = await page.screenshot({ fullPage: !section, type: 'png' })
+    const box = section ? viewport : await page.evaluate(() => ({
       width: document.documentElement.scrollWidth,
       height: document.documentElement.scrollHeight
     }))
-
-    if (buffer.length > config.maxImageBytes) {
-      throw new Error(`Screenshot too large: ${buffer.length} bytes, max ${config.maxImageBytes}`)
-    }
-    if (box.width > config.maxImageDimension || box.height > config.maxImageDimension) {
-      throw new Error(
-        `Screenshot dimensions too large: ${box.width}x${box.height} (max ${config.maxImageDimension}px per side)`
-      )
-    }
-
-    return { buffer, width: box.width, height: box.height }
+    assertWithinLimits(buffer, box)
+    return { buffer, width: box.width, height: box.height, domMap: await collectDomMap(page, Boolean(section)) }
   } finally {
     await browser.close()
   }

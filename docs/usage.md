@@ -137,6 +137,30 @@ annotaitr --viewport mobile http://localhost:3000/checkout
 annotaitr --viewport 1024x768 http://localhost:3000
 ```
 
+The viewport can also be changed after the page opened: the button next
+to the zoom controls (e.g. `Desktop 1920×1080`) picks a preset or a custom
+size, a section and a delay, and captures the page again in the same tab.
+Tablet and Phone can be turned to landscape, which the feedback names as
+`tablet landscape (1024×768)`; `--viewport 1024x768` captures the same
+from the start.
+A section captures only the visible viewport instead of the full page:
+the first screen at the top, or scrolled to an anchor (`#pricing`) or a
+pixel offset. Capturing again
+discards the annotations made so far, after a confirmation. For a URL
+target, the feedback names the capture it refers to, e.g.
+`Captured at tablet (768×1024), section #pricing, after 500 ms`.
+
+## `--delay`
+
+Image mode only, URL targets only. Waits this many milliseconds (0 to
+10000) after the page has loaded before capturing, so animations,
+carousels and lazy content can settle. A local image, video, GIF or
+Markdown target rejects it.
+
+```bash
+annotaitr --delay 1500 http://localhost:3000
+```
+
 ## `--feedback-notes`
 
 Markdown mode only. Attaches read-only AI notes to the first file, so a

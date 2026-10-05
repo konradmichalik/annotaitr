@@ -315,3 +315,18 @@ describe('freehandBounds', () => {
     expect(freehandBounds(points)).toEqual({ x: 5, y: 2, width: 15, height: 28 })
   })
 })
+
+describe('a selected page element', () => {
+  const element = { type: 'element', geometry: { x: 10, y: 20, width: 40, height: 30 } }
+
+  it('is hit anywhere inside its box, like a drawn box', () => {
+    expect(hitTestAnnotation({ x: 30, y: 35 }, element)).toBe(true)
+    expect(hitTestAnnotation({ x: 5, y: 35 }, element)).toBe(false)
+  })
+
+  it('anchors its popover and toolbar like a box', () => {
+    expect(annotationCentroid(element)).toEqual({ x: 30, y: 35 })
+    expect(annotationBottomAnchor(element)).toEqual({ x: 30, y: 50 })
+    expect(annotationTopAnchor(element)).toEqual({ x: 30, y: 20 })
+  })
+})

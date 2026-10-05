@@ -3,6 +3,7 @@ import ColorModePicker from './ColorModePicker.jsx'
 
 const TOOLS = [
   { id: 'select', label: 'Select' },
+  { id: 'element', label: 'Element' },
   { id: 'box', label: 'Box' },
   { id: 'arrow', label: 'Arrow' },
   { id: 'freehand', label: 'Freehand' },
@@ -10,12 +11,14 @@ const TOOLS = [
   { id: 'pin', label: 'Pin' }
 ]
 
+/** `elementTool` offers picking a page element, which only a captured web page has. */
 export default function Toolbar({
-  activeTool, onSelectTool, colorMode, fixedColor, onChangeColorMode, onChangeFixedColor
+  activeTool, onSelectTool, colorMode, fixedColor, onChangeColorMode, onChangeFixedColor, elementTool = false
 }) {
+  const tools = elementTool ? TOOLS : TOOLS.filter((tool) => tool.id !== 'element')
   return (
     <div className="toolbar" role="toolbar" aria-label="Annotation tools">
-      {TOOLS.map((tool) => (
+      {tools.map((tool) => (
         <button
           key={tool.id}
           type="button"

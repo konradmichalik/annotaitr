@@ -66,7 +66,7 @@ describe('image annotator server', () => {
     await start()
     const res = await fetch(`${server.url}/api/meta`)
     const body = await res.json()
-    expect(body.data).toEqual({ width: 40, height: 30, origin: 'cli', targetLabel: null, voiceNotes: false })
+    expect(body.data).toEqual({ width: 40, height: 30, origin: 'cli', targetLabel: null, voiceNotes: false, capture: null })
   })
 
   it('serves the target label when provided', async () => {
@@ -144,6 +144,151 @@ describe('image annotator server', () => {
     expect(decision.annotationCount).toBe(1)
   })
 
+  it('serves the DOM map of a captured page, and an empty list for any other image', async () => {
+    const domMap = [{ tag: 'a', role: 'button', name: 'Start trial', media: '', selector: 'a.cta', box: { x: 0, y: 0, width: 20, height: 20 } }]
+    await start({ domMap })
+    expect((await (await fetch(`${server.url}/api/elements`)).json()).data).toEqual({ elements: domMap })
+    server.stop()
+    await start()
+    expect((await (await fetch(`${server.url}/api/elements`)).json()).data).toEqual({ elements: [] })
+  })
+
+  describe('exporting the current annotations', () => {
+    const pin = { id: 'a1', type: 'pin', geometry: { x: 5, y: 5 }, text: 'Too tight', color: '#e11d48' }
+    const post = (path, body) => fetch(`${server.url}${path}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    })
+
+    it('renders the annotations it is given as a PNG, without saving them or deciding anything', async () => {
+      await start()
+      const res = await post('/api/annotated-image', { annotations: [pin] })
+      expect(res.headers.get('content-type')).toBe('image/png')
+      const png = Buffer.from(await res.arrayBuffer())
+      expect(png.subarray(0, 4).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47]))).toBe(true)
+      expect(png.equals(makeFixturePng(40, 30))).toBe(false)
+      expect((await (await fetch(`${server.url}/api/annotations`)).json()).data.annotations).toEqual([])
+      expect(await isStillPending(server)).toBe(true)
+    })
+
+    it('returns the feedback text for the annotations it is given, without a screenshot path', async () => {
+      await start()
+      const body = await (await post('/api/feedback-text', { annotations: [pin] })).json()
+      expect(body.data.text).toContain('Too tight')
+      expect(body.data.text).not.toContain('Annotated screenshot:')
+    })
+
+    it('answers a malformed annotation with a JSON error instead of crashing', async () => {
+      await start()
+      const res = await post('/api/feedback-text', { annotations: [{ id: 'x', type: 'pin', geometry: null, text: '' }] })
+      expect(res.status).toBe(400)
+      expect((await res.json()).success).toBe(false)
+    })
+
+    it('applies the same limits as saving annotations', async () => {
+      await start()
+      expect((await post('/api/annotated-image', { annotations: 'nope' })).status).toBe(400)
+      expect((await post('/api/feedback-text', { annotations: [{ ...pin, type: 'freehand', geometry: { points: [null] } }] })).status).toBe(400)
+    })
+  })
+
+  describe('recapturing a URL', () => {
+    const desktop = { viewport: { width: 1920, height: 1080 }, delayMs: 0, section: null }
+    const pin = { id: 'a1', type: 'pin', geometry: { x: 5, y: 5 }, text: 'hi', color: '#e11d48' }
+    const post = (path, body) => fetch(`${server.url}${path}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    })
+    const fakeCapture = (width, height) => ({
+      buffer: makeFixturePng(width, height), width, height,
+      domMap: [{ tag: 'a', role: '', name: `at ${width}`, media: '', selector: 'a', heading: '', box: { x: 0, y: 0, width: 10, height: 10 } }]
+    })
+
+    it('reports the capture settings in /api/meta', async () => {
+      await start({ captureSettings: desktop, recapture: vi.fn() })
+      const meta = (await (await fetch(`${server.url}/api/meta`)).json()).data
+      expect(meta.capture).toMatchObject({ ...desktop, description: 'desktop (1920×1080), full page' })
+      expect(meta.capture.presets.mobile).toEqual({ width: 375, height: 812 })
+    })
+
+    it('swaps in the new screenshot, size and element map, and discards the annotations', async () => {
+      const recapture = vi.fn().mockResolvedValue(fakeCapture(37, 81))
+      await start({ captureSettings: desktop, recapture })
+      await post('/api/annotations', { annotations: [pin] })
+      const res = await post('/api/recapture', { viewport: 'tablet', delayMs: 300, section: { anchor: '#pricing' } })
+      expect(res.status).toBe(200)
+      const settings = { viewport: { width: 768, height: 1024 }, delayMs: 300, section: { anchor: '#pricing' } }
+      expect(recapture).toHaveBeenCalledWith(settings)
+      const meta = (await (await fetch(`${server.url}/api/meta`)).json()).data
+      expect([meta.width, meta.height]).toEqual([37, 81])
+      expect(meta.capture.description).toBe('tablet (768×1024), section #pricing, after 300 ms')
+      expect((await (await fetch(`${server.url}/api/elements`)).json()).data.elements[0].name).toBe('at 37')
+      expect((await (await fetch(`${server.url}/api/annotations`)).json()).data.annotations).toEqual([])
+      const image = Buffer.from(await (await fetch(`${server.url}/api/image`)).arrayBuffer())
+      expect(image.equals(makeFixturePng(37, 81))).toBe(true)
+    })
+
+    it('names the capture in the feedback', async () => {
+      await start({ captureSettings: desktop, recapture: vi.fn().mockResolvedValue(fakeCapture(37, 81)) })
+      await post('/api/recapture', { viewport: 'mobile' })
+      await post('/api/annotations', { annotations: [pin] })
+      await post('/api/feedback', {})
+      expect((await server.waitForDecision()).output).toContain('Captured at mobile (375×812), full page\n')
+    })
+
+    it('rejects invalid settings without capturing', async () => {
+      const recapture = vi.fn()
+      await start({ captureSettings: desktop, recapture })
+      const res = await post('/api/recapture', { viewport: '10x10' })
+      expect(res.status).toBe(400)
+      expect(recapture).not.toHaveBeenCalled()
+    })
+
+    it('refuses a second recapture while one is running', async () => {
+      let finish
+      const recapture = vi.fn().mockReturnValue(new Promise((resolve) => { finish = resolve }))
+      await start({ captureSettings: desktop, recapture })
+      const first = post('/api/recapture', { viewport: 'mobile' })
+      await vi.waitFor(() => expect(recapture).toHaveBeenCalled())
+      expect((await post('/api/recapture', { viewport: 'tablet' })).status).toBe(409)
+      finish(fakeCapture(37, 81))
+      expect((await first).status).toBe(200)
+    })
+
+    it('keeps the current capture and annotations when the capture fails', async () => {
+      await start({ captureSettings: desktop, recapture: vi.fn().mockRejectedValue(new Error('Anchor #x not found on the page')) })
+      await post('/api/annotations', { annotations: [pin] })
+      const res = await post('/api/recapture', { viewport: 'mobile', section: { anchor: '#x' } })
+      expect(res.status).toBe(502)
+      expect((await res.json()).error).toMatch(/#x not found/)
+      expect((await (await fetch(`${server.url}/api/meta`)).json()).data.width).toBe(40)
+      expect((await (await fetch(`${server.url}/api/annotations`)).json()).data.annotations).toEqual([pin])
+    })
+
+    it('is not offered for a local image', async () => {
+      await start()
+      expect((await post('/api/recapture', { viewport: 'mobile' })).status).toBe(404)
+    })
+  })
+
+  it('names the matched page element in feedback and approve-with-notes, and keeps the map off /api/meta', async () => {
+    const domMap = [{ tag: 'a', role: 'button', name: 'Start trial', media: '', selector: 'a.cta', box: { x: 0, y: 0, width: 20, height: 20 } }]
+    const annotations = [{ id: 'a1', type: 'pin', geometry: { x: 5, y: 5 }, text: 'hi', color: '#e11d48' }]
+    for (const route of ['/api/feedback', '/api/approve']) {
+      await start({ domMap })
+      const meta = await (await fetch(`${server.url}/api/meta`)).json()
+      expect(meta.data).not.toHaveProperty('domMap')
+      await fetch(`${server.url}/api/annotations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ annotations })
+      })
+      await fetch(`${server.url}${route}`, { method: 'POST' })
+      const decision = await server.waitForDecision()
+      expect(decision.output).toContain('Element: a[button] "Start trial" · a.cta')
+      server.stop()
+      server = null
+    }
+  })
+
   it('returns 500 and leaves the decision unresolved when /api/approve fails to flatten the image', async () => {
     await start()
     await fetch(`${server.url}/api/annotations`, {
@@ -192,6 +337,18 @@ describe('image annotator server', () => {
       body: JSON.stringify({ annotations: [{ id: 'a1', type: 'freehand', geometry: { points } }] })
     })
     expect(res.status).toBe(400)
+  })
+
+  it('rejects a POST /api/annotations payload whose geometry.points holds a missing or non-numeric point', async () => {
+    await start()
+    for (const points of [[null], [{ x: 1 }], [{ x: '1', y: 2 }], [{ x: 1, y: Number.MAX_VALUE * 2 }]]) {
+      const res = await fetch(`${server.url}/api/annotations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ annotations: [{ id: 'a1', type: 'freehand', geometry: { points } }] })
+      })
+      expect(res.status).toBe(400)
+    }
   })
 
   it('accepts a POST /api/annotations payload within both limits', async () => {

@@ -1,6 +1,6 @@
 import { isPointsGeometry, MAX_POINTS_PER_ANNOTATION } from './drawing.js'
 
-const VALID_TYPES = new Set(['box', 'arrow', 'freehand', 'highlighter', 'pin', 'comment'])
+const VALID_TYPES = new Set(['box', 'element', 'arrow', 'freehand', 'highlighter', 'pin', 'comment'])
 const MAX_ANNOTATIONS = 10000
 
 function isFiniteNumber(value) {
@@ -19,10 +19,10 @@ function validateGeometry(type, geometry, index) {
   if (!geometry || typeof geometry !== 'object') {
     throw new Error(`Annotation ${index + 1}: missing geometry.`)
   }
-  if (type === 'box') {
+  if (type === 'box' || type === 'element') {
     if (!isFiniteNumber(geometry.x) || !isFiniteNumber(geometry.y)
       || !isFiniteNumber(geometry.width) || !isFiniteNumber(geometry.height)) {
-      throw new Error(`Annotation ${index + 1}: box geometry must have numeric x/y/width/height.`)
+      throw new Error(`Annotation ${index + 1}: ${type} geometry must have numeric x/y/width/height.`)
     }
     return
   }

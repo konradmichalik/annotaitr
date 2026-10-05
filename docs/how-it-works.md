@@ -20,9 +20,56 @@ positioned close enough that the coarse label alone might not tell them
 apart. The path to the annotated screenshot is included, so the agent reads
 the image directly instead of relying on the text description alone.
 
+For a captured URL, the capture also records a map of the page's visible
+elements (box, tag, role, name from aria-label, alt, title or text, media
+file name, short selector), measured right after the screenshot in the same
+pixel space. Fixed-position elements are left out, because a full-page
+screenshot moves them away from where they measure. On submit, each mark is
+matched to the smallest element under a pin or arrow tip, or to the element
+a box, freehand or highlighter mark overlaps most. Landmarks such as `main`
+or `nav` and plain panel divs (a readable class or id, larger than 40 px)
+only count when nothing more specific is under or near the mark, so an
+empty spot in a card names the card rather than the page. An unnamed
+landmark or panel is named after its first visible heading, such as
+`div (heading "Pricing")`. The feedback gets an
+`Element:` line such as `Element: img "Team photo" ("team.jpg") · #hero img`.
+While annotating, the same match is visible before anything is submitted.
+The **Element** tool, offered only for a captured URL, outlines and names
+the element under the pointer like a DevTools inspector; a click selects
+that element as its own annotation, drawn as a tinted outline that stays on
+the element and reported as a `Selected element`. For every other tool, the
+comment box and the sidebar name the element each mark is matched to. The client fetches the map from
+`/api/elements` and runs its own copy of the matching, which a test keeps
+identical to the server's. Page text is capped and quoted, and the output
+labels it as page content. If collecting the map fails, the capture
+still works and the feedback simply has no element lines. Local images,
+clipboard images and recordings have no DOM, so their output is unchanged.
+
 Approving with annotations present becomes **Approve with Notes**: the
 target is accepted as-is, but the notes are passed along as context rather
 than discarded.
+
+### Copying and saving
+
+The menu in the sidebar header copies the annotated image (markup and
+legend baked in, as the agent gets it) to the clipboard or saves it as a
+PNG, and copies the feedback as Markdown, without the temp-file path that
+only means something to an agent. Both are rendered from the annotations
+on screen at that moment and decide nothing: the CLI keeps waiting. The same
+menu still opens the JSON export and import. Recordings offer only the JSON
+export, since they have no single image.
+
+### Capturing again
+
+For a URL, the viewport button next to the zoom controls captures the page
+again in place: the server reruns the capture with the new viewport,
+section and delay, swaps the screenshot and its element map, and the open
+tab reloads them, while the CLI keeps waiting for the decision. A section
+captures only the visible viewport, at the top of the page or scrolled to
+an anchor or offset, so
+fixed headers appear where the reviewer sees them and are kept in the
+element map. Annotations are discarded on a new capture, because their
+coordinates belong to the old layout.
 
 ### Videos and GIFs
 

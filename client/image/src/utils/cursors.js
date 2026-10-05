@@ -20,6 +20,8 @@ const HIGHLIGHTER_CURSOR = `url("data:image/svg+xml,${HIGHLIGHTER_CURSOR_SVG}") 
 /** The base (non-hover, non-dragging) cursor for the currently active tool. */
 export function cursorForTool(tool) {
   if (tool === 'select') { return 'grab' }
+  // Picking a page element is a click on something, not drawing.
+  if (tool === 'element') { return 'pointer' }
   if (tool === 'highlighter') { return HIGHLIGHTER_CURSOR }
   return 'crosshair'
 }

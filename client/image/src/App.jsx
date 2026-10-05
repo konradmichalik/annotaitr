@@ -4,9 +4,12 @@ import { annotationReducer, initialAnnotationState } from './state/annotationRed
 import { createAnnotationId } from '../../shared/utils/annotationId.js'
 import Toolbar from './components/Toolbar.jsx'
 import ZoomControls from './components/ZoomControls.jsx'
+import ViewportControl from './components/ViewportControl.jsx'
+import CaptureOverlay from './components/CaptureOverlay.jsx'
 import ImageCanvas from './components/ImageCanvas.jsx'
 import AnnotationPanel from './components/AnnotationPanel.jsx'
 import ExportModal from './components/ExportModal.jsx'
+import ExportMenu from './components/ExportMenu.jsx'
 import SettingsModal from './components/SettingsModal.jsx'
 import Timeline from './components/Timeline.jsx'
 import MediaSlot from './components/MediaSlot.jsx'
@@ -34,9 +37,22 @@ function getInitialSidebarCollapsed() {
   return getItem('img-annotator-sidebar-collapsed') === 'true'
 }
 
+/** Elements of a captured web page; empty for files, the clipboard and recordings. */
+function loadElements(setElements) {
+  return fetch('/api/elements')
+    .then((r) => (r.ok ? r.json() : null))
+    .then((r) => setElements(r?.data?.elements ?? []))
+    .catch(() => setElements([]))
+}
+
 export default function App() {
   const [state, dispatch] = useReducer(annotationReducer, initialAnnotationState)
   const [meta, setMeta] = useState(null)
+  // Elements of a captured web page (empty for files, the clipboard and
+  // recordings), so the canvas can outline and name what each mark hits.
+  const [elements, setElements] = useState([])
+  // What is being captured right now ("Tablet 768×1024"), or null.
+  const [recapturing, setRecapturing] = useState(null)
   const [imageUrl, setImageUrl] = useState(null)
   const [decision, setDecision] = useState(null)
   const [activeTool, setActiveTool] = useState('select')
@@ -96,6 +112,7 @@ export default function App() {
   useEffect(() => {
     fetch('/api/meta').then((r) => r.json()).then((r) => setMeta(r.data)).catch((err) => setErrorStatus('Error loading image metadata: ' + err.message))
     setImageUrl('/api/image')
+    loadElements(setElements)
     fetch('/api/annotations')
       .then((r) => r.json())
       .then((r) => dispatch({ type: 'SET_ALL', annotations: r.data.annotations }))
@@ -119,6 +136,34 @@ export default function App() {
     }, 500)
     return () => clearTimeout(timer)
   }, [state.annotations, meta, decision])
+
+  // Capture the URL again with new settings. The server discards the
+  // annotations, since their coordinates belong to the old layout, so the
+  // reviewer confirms that first. Resolves to an error message, or null.
+  const recapture = useCallback(async (request, label) => {
+    const count = state.annotations.length
+    const plural = count === 1 ? '' : 's'
+    if (count > 0 && !window.confirm(`Capturing again discards ${count} annotation${plural}. Continue?`)) {
+      return `Not captured again, ${count === 1 ? 'your annotation is' : `your ${count} annotations are`} kept.`
+    }
+    setRecapturing(label)
+    try {
+      const res = await fetch('/api/recapture', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request)
+      })
+      if (!res.ok) { return await readError(res) }
+      const body = await res.json()
+      dispatch({ type: 'SET_ALL', annotations: [] })
+      setMeta((current) => ({ ...current, width: body.data.width, height: body.data.height, capture: body.data.capture }))
+      setImageUrl(`/api/image?capture=${Date.now()}`)
+      await loadElements(setElements)
+      return null
+    } catch (error) {
+      return `Capture failed: ${error.message}`
+    } finally {
+      setRecapturing(null)
+    }
+  }, [state.annotations.length])
 
   const { takeTimes, range, clearRange } = video
   const addAnnotation = useCallback((partial) => {
@@ -276,6 +321,7 @@ export default function App() {
     if (video.spanComplete) { return 'Span marked. Pick a tool (or click "Pin") and click the frame to mark something in it, or click "Comment span" to comment without drawing.' }
     if (video.range.start !== null) { return 'Span started. Move to where it ends (play, scrub or use the arrows), then click "Set end here".' }
     if (isVideo) { return 'Pause on a frame and draw on it. Space plays, arrows step frames, I and O mark a span.' }
+    if (activeTool === 'element') { return 'Point at a page element to see what it is, then click to select it and add a comment.' }
     return 'Click a mark to select it, drag to move, or press Delete to remove it.'
   }
 
@@ -456,14 +502,21 @@ export default function App() {
               <Toolbar
                 activeTool={activeTool}
                 onSelectTool={setActiveTool}
+                elementTool={elements.length > 0}
                 colorMode={settings.colorMode}
                 fixedColor={settings.fixedColor}
                 onChangeColorMode={(mode) => updateSetting('colorMode', mode)}
                 onChangeFixedColor={(color) => updateSetting('fixedColor', color)}
               />
-              <ZoomControls zoom={zoom} onZoomBy={zoomBy} onZoomReset={zoomReset} onZoomFit={zoomFit} />
+              <div className="canvas-topbar-end">
+                {meta?.capture && (
+                  <ViewportControl capture={meta.capture} busy={!!recapturing} annotationCount={state.annotations.length} onApply={recapture} />
+                )}
+                <ZoomControls zoom={zoom} onZoomBy={zoomBy} onZoomReset={zoomReset} onZoomFit={zoomFit} />
+              </div>
             </div>
             {mediaError && <p className="media-error" role="alert">{mediaError}</p>}
+            {recapturing && <CaptureOverlay label={recapturing} />}
             {meta && (isVideo ? controller && playerState : imageUrl) && (
               <ImageCanvas
                 imageUrl={imageUrl}
@@ -478,6 +531,7 @@ export default function App() {
                 onBeforeInteract={isVideo ? beforeCanvasInteract : null}
                 describeTime={isVideo ? describeTime : null}
                 voiceNotes={!!meta.voiceNotes}
+                elements={elements}
                 zoom={zoom}
                 onZoomBy={zoomBy}
                 editingAnnotationId={editingAnnotationId}
@@ -530,25 +584,20 @@ export default function App() {
                   <line x1="8" y1="12" x2="16" y2="12" />
                 </svg>
               </button>
-              <button
-                type="button"
-                className="panel-icon-btn"
-                onClick={() => setShowExport(true)}
-                title="Export / Import"
-                aria-label="Export / Import"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
-              </button>
+              <ExportMenu
+                annotations={state.annotations}
+                target={meta?.targetLabel}
+                imageActions={!isVideo}
+                onOpenJson={() => setShowExport(true)}
+                onDone={showToast}
+              />
             </div>
             <AnnotationPanel
               annotations={video.ordered}
               onRemove={removeAnnotation}
               onEdit={editAnnotation}
               onEditGlobalComment={editGlobalComment}
+              elements={elements}
               timeLabelFor={isVideo ? formatTimes : null}
               autoEditId={autoEditId}
               onAutoEditConsumed={clearAutoEdit}

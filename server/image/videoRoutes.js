@@ -2,7 +2,7 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import express, { Router } from 'express'
-import { annotationsWithinLimits, MAX_ANNOTATIONS, MAX_POINTS_PER_ANNOTATION } from './routes.js'
+import { annotationsFromBody } from './routes.js'
 import { formatApprovalOutput } from './feedback.js'
 import { exportVideoFeedback, formatVideoApprovalWithNotes } from './videoFeedback.js'
 import { orderVideoAnnotations, planFrames, validateVideoAnnotations, MAX_FRAMES } from './timeline.js'
@@ -68,15 +68,8 @@ export function createVideoApiRouter({ video, origin, targetLabel, state, voiceN
   })
 
   router.post('/api/annotations', (req, res) => {
-    const { annotations } = req.body
-    if (!Array.isArray(annotations)) {
-      return res.status(400).json(failure('annotations must be an array'))
-    }
-    if (!annotationsWithinLimits(annotations)) {
-      return res.status(400).json(failure(
-        `Too many annotations or points (max ${MAX_ANNOTATIONS} annotations, ${MAX_POINTS_PER_ANNOTATION} points each)`
-      ))
-    }
+    const { annotations, error } = annotationsFromBody(req.body)
+    if (error) { return res.status(400).json(failure(error)) }
     const timeError = validateVideoAnnotations(annotations)
     if (timeError) { return res.status(400).json(failure(timeError)) }
     state.annotations = [...annotations]

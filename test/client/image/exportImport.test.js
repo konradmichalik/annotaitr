@@ -37,6 +37,13 @@ describe('serializeAnnotations / parseAnnotationsJson', () => {
     expect(() => parseAnnotationsJson('[{"id":"x","type":"box"}]')).toThrow(/geometry/)
   })
 
+  it('accepts a selected page element and rejects one without a numeric box', () => {
+    const element = { id: 'e1', type: 'element', color: '#e11d48', text: '', geometry: { x: 1, y: 2, width: 3, height: 4 } }
+    expect(parseAnnotationsJson(JSON.stringify([element]))).toEqual([element])
+    const broken = { ...element, geometry: { x: 1, y: 2 } }
+    expect(() => parseAnnotationsJson(JSON.stringify([broken]))).toThrow(/numeric x\/y\/width\/height/)
+  })
+
   it('rejects an unknown annotation type', () => {
     expect(() => parseAnnotationsJson('[{"id":"x","type":"triangle","geometry":{}}]')).toThrow(/unknown type/)
   })

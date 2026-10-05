@@ -10,7 +10,7 @@ import { isAnnotatableFile, supportedExtensions as markdownExtensions } from './
 import { buildMarkdownServer } from './server/markdown/adapter.js'
 import { formatApprovalOutput as formatMarkdownApproval } from './server/markdown/feedback.js'
 import { isImageFile, isVideoFile, isSupportedCaptureUrl, videoExtensions } from './server/image/capture.js'
-import { parseViewportSpec } from './server/image/config.js'
+import { parseViewportSpec, parseDelay, describeCapture, MAX_DELAY_MS } from './server/image/config.js'
 import { saveClipboardImage } from './server/image/clipboard.js'
 
 /**
@@ -87,6 +87,7 @@ Options:
   --origin <name>               Set caller origin (cli, claude-code, opencode, vibe)
   --as <image|markdown>         Skip detection, force a mode
   --viewport <preset|WxH>       Image mode only: desktop (default) | laptop | tablet | mobile | <W>x<H>
+  --delay <ms>                  Image mode only: wait this long after the page loads before capturing (0 to 10000)
   --feedback-notes <json|path>  Markdown mode only: AI notes to display as read-only annotations
 
 Markdown files supported:
@@ -146,6 +147,7 @@ export function parseArgs(argv) {
 
   let origin = 'cli'
   let viewportSpec = null
+  let delaySpec = null
   let feedbackNotes = null
   let modeOverride = null
   let viewportFlagGiven = false
@@ -170,6 +172,11 @@ export function parseArgs(argv) {
       }
       viewportSpec = args[++i]
       viewportFlagGiven = true
+    } else if (arg === '--delay') {
+      if (!args[i + 1]) {
+        return { error: '--delay requires a number of milliseconds' }
+      }
+      delaySpec = args[++i]
     } else if (arg === '--feedback-notes') {
       if (!args[i + 1]) {
         return { error: '--feedback-notes requires a JSON string or file path' }
@@ -203,7 +210,7 @@ export function parseArgs(argv) {
     }
   }
 
-  return { targets, origin, viewportSpec, feedbackNotes, modeOverride, viewportFlagGiven, feedbackNotesFlagGiven }
+  return { targets, origin, viewportSpec, delaySpec, feedbackNotes, modeOverride, viewportFlagGiven, feedbackNotesFlagGiven }
 }
 
 async function fileExists(path) {
@@ -283,7 +290,7 @@ async function resolveMarkdownTargets(targets) {
   return { absolutePaths }
 }
 
-async function resolveImageCapture(targets, viewportSpec, { clipboardPath, loadImageFromFile, captureUrl } = {}) {
+async function resolveImageCapture(targets, { viewportSpec, delaySpec }, { clipboardPath, loadImageFromFile, captureUrl } = {}) {
   if (clipboardPath) {
     return { capture: await loadImageFromFile(clipboardPath), targetLabel: 'clipboard image' }
   }
@@ -295,12 +302,20 @@ async function resolveImageCapture(targets, viewportSpec, { clipboardPath, loadI
     if (!viewport) {
       return { error: `Unknown viewport "${viewportSpec}". Use desktop, laptop, tablet, mobile, or WxH.` }
     }
-    process.stderr.write(`Capturing ${target} at ${viewport.width}x${viewport.height}...\n`)
-    return { capture: await captureUrl(target, viewport), targetLabel: target }
+    const delayMs = delaySpec === null ? 0 : parseDelay(delaySpec)
+    if (delayMs === null) {
+      return { error: `--delay must be a whole number of milliseconds from 0 to ${MAX_DELAY_MS}.` }
+    }
+    const settings = { viewport, delayMs, section: null }
+    process.stderr.write(`Capturing ${target} at ${describeCapture(settings)}...\n`)
+    return { capture: await captureUrl(target, viewport, settings), targetLabel: target, settings }
   }
 
   if (viewportSpec) {
     return { error: '--viewport only applies to a URL target, not a local image file.' }
+  }
+  if (delaySpec !== null) {
+    return { error: '--delay only applies to a URL target, not a local image file.' }
   }
 
   let imagePath
@@ -355,9 +370,13 @@ async function runMarkdown({ targets, origin, feedbackNotes }) {
   ))
 }
 
-async function runVideo({ target, origin, viewportSpec }) {
+async function runVideo({ target, origin, viewportSpec, delaySpec }) {
   if (viewportSpec) {
     fail('--viewport only applies to a URL target, not a video file.')
+    return
+  }
+  if (delaySpec !== null) {
+    fail('--delay only applies to a URL target, not a video file.')
     return
   }
   const { resolveVideoFile, buildVideoServer } = await loadVideoRuntime()
@@ -382,19 +401,25 @@ export function isVideoTarget(target) {
   return isVideoFile(target) && !isSupportedCaptureUrl(target)
 }
 
-async function runImage({ targets, origin, viewportSpec, clipboardPath }) {
+async function runImage({ targets, origin, viewportSpec, delaySpec = null, clipboardPath }) {
   if (targets.length === 1 && isVideoTarget(targets[0])) {
-    await runVideo({ target: targets[0], origin, viewportSpec })
+    await runVideo({ target: targets[0], origin, viewportSpec, delaySpec })
     return
   }
   const { loadImageFromFile, captureUrl, buildImageServer } = await loadImageRuntime()
-  const { capture, targetLabel, error } = await resolveImageCapture(targets, viewportSpec, { clipboardPath, loadImageFromFile, captureUrl })
+  const { capture, targetLabel, settings = null, error } = await resolveImageCapture(
+    targets, { viewportSpec, delaySpec }, { clipboardPath, loadImageFromFile, captureUrl }
+  )
   if (error) { fail(error); return }
 
   const server = withLifecycle(await buildImageServer({
     imageBuffer: capture.buffer,
     imageWidth: capture.width,
     imageHeight: capture.height,
+    domMap: capture.domMap ?? null,
+    captureSettings: settings,
+    // Only a URL can be captured again with other settings from the open tab.
+    recapture: settings ? (next) => captureUrl(targetLabel, next.viewport, next) : null,
     origin,
     targetLabel
   }))
@@ -462,7 +487,7 @@ async function runBareInvocation({ origin, viewportSpec }) {
 }
 
 async function main() {
-  const { help, targets, origin, viewportSpec, feedbackNotes, modeOverride, viewportFlagGiven, feedbackNotesFlagGiven, error } = parseArgs(process.argv)
+  const { help, targets, origin, viewportSpec, delaySpec, feedbackNotes, modeOverride, viewportFlagGiven, feedbackNotesFlagGiven, error } = parseArgs(process.argv)
 
   if (error) { fail(error); return }
   if (help) { printHelpAndExit(0); return }
@@ -490,6 +515,10 @@ async function main() {
     fail('--viewport only applies to image targets, not markdown files.')
     return
   }
+  if (mode === 'markdown' && delaySpec !== null) {
+    fail('--delay only applies to a URL target, not markdown files.')
+    return
+  }
   if (mode === 'image' && feedbackNotesFlagGiven) {
     fail('--feedback-notes only applies to markdown targets, not images.')
     return
@@ -498,7 +527,7 @@ async function main() {
   if (mode === 'markdown') {
     await runMarkdown({ targets, origin, feedbackNotes })
   } else if (mode === 'image') {
-    await runImage({ targets, origin, viewportSpec })
+    await runImage({ targets, origin, viewportSpec, delaySpec })
   } else {
     fail(`Unknown mode "${mode}". Valid: ${VALID_MODES.join(', ')}`)
   }

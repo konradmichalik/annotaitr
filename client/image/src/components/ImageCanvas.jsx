@@ -6,6 +6,7 @@ import {
 } from '../utils/drawing.js'
 import { resolveArrowStyle, strokeWidthOf, dashArrayFor, pickStyleFields } from '../utils/annotationStyles.js'
 import { cursorForTool } from '../utils/cursors.js'
+import { matchAnnotation, matchPoint, describeElements } from '../utils/elementMatch.js'
 import { ANNOTATION_COLORS } from '../utils/annotationColors.js'
 import { ACTION_ICONS } from '../utils/icons.jsx'
 import CommentPopover from './CommentPopover.jsx'
@@ -111,6 +112,18 @@ function PinShape({ geometry, color, number, selectionProps }) {
   )
 }
 
+// The light fill tells a selected page element apart from a hand-drawn box,
+// matching the server's rendering in server/image/render.js.
+function ElementShape({ geometry, color, selectionProps }) {
+  const { x, y, width, height } = geometry
+  return (
+    <>
+      {selectionProps && <rect x={x - 3} y={y - 3} width={width + 6} height={height + 6} fill="none" {...selectionProps} />}
+      <rect x={x} y={y} width={width} height={height} fill={color} fillOpacity={0.15} stroke={color} strokeWidth={3} />
+    </>
+  )
+}
+
 function AnnotationShape({ annotation, number, markerId, dashed = false, selected = false }) {
   const color = annotation.color || DEFAULT_COLOR
   const strokeWidth = strokeWidthOf(annotation)
@@ -121,6 +134,7 @@ function AnnotationShape({ annotation, number, markerId, dashed = false, selecte
   const selectionProps = selected ? { stroke: 'var(--primary)', strokeWidth: strokeWidth + 3, strokeOpacity: 0.35 } : null
   const { type, geometry } = annotation
 
+  if (type === 'element') { return <ElementShape geometry={geometry} color={color} selectionProps={selectionProps} /> }
   if (type === 'box') { return <BoxShape geometry={geometry} color={color} strokeWidth={strokeWidth} dash={dash} selectionProps={selectionProps} /> }
   if (type === 'arrow') { return <ArrowShape annotation={annotation} color={color} strokeWidth={strokeWidth} dash={dash} markerId={markerId} selectionProps={selectionProps} /> }
   if (type === 'freehand') { return <FreehandShape geometry={geometry} color={color} strokeWidth={strokeWidth} dash={dash} selectionProps={selectionProps} /> }
@@ -204,7 +218,7 @@ export default function ImageCanvas({
   // describeTime(annotation | null) names what an annotation is pinned to in
   // time, null meaning the one being drawn.
   media = null, numberFor = null, nextNumber = annotations.length + 1, onBeforeInteract = null, describeTime = null,
-  voiceNotes = false
+  voiceNotes = false, elements = []
 }) {
   const wrapperRef = useRef(null)
   // Set by the wheel handler just before onZoomBy fires, and consumed by the
@@ -259,6 +273,9 @@ export default function ImageCanvas({
   const [pending, setPending] = useState(null)
   const [selectedId, setSelectedId] = useState(null)
   const [hoveringAnnotation, setHoveringAnnotation] = useState(false)
+  // Where the pointer rests over the image, for outlining the page element a
+  // mark placed there would be matched to. Only tracked for a captured page.
+  const [hoverPoint, setHoverPoint] = useState(null)
   const [isGrabbing, setIsGrabbing] = useState(false)
   const moveState = useRef(null)
   const resizeState = useRef(null)
@@ -389,6 +406,9 @@ export default function ImageCanvas({
     if (pending) { return }
     event.preventDefault()
     onBeforeInteract?.()
+    // A drag takes over from here; the outline at the press point would
+    // otherwise stay behind while an existing mark is moved away from it.
+    setHoverPoint(null)
     const point = pointFromEvent(event, wrapperRef, imageWidth, imageHeight, zoom)
 
     // An existing annotation under the cursor always takes over, regardless
@@ -410,7 +430,7 @@ export default function ImageCanvas({
       return
     }
 
-    if (activeTool === 'pin') {
+    if (activeTool === 'pin' || activeTool === 'element') {
       setDragStart(point)
       return
     }
@@ -433,7 +453,9 @@ export default function ImageCanvas({
       return
     }
 
-    if (moveState.current) {
+    // A selected page element stays on its element: it can be picked and
+    // commented on, but not dragged off it.
+    if (moveState.current && moveState.current.type !== 'element') {
       const point = pointFromEvent(event, wrapperRef, imageWidth, imageHeight, zoom)
       const { id, type, startGeometry, startPoint } = moveState.current
       const dx = point.x - startPoint.x
@@ -462,15 +484,21 @@ export default function ImageCanvas({
 
     if (!pending) {
       const point = pointFromEvent(event, wrapperRef, imageWidth, imageHeight, zoom)
-      setHoveringAnnotation(!!findAnnotationAt(point, annotations))
+      const overAnnotation = !!findAnnotationAt(point, annotations)
+      setHoveringAnnotation(overAnnotation)
+      const outlines = elements.length > 0 && activeTool === 'element' && !overAnnotation
+      setHoverPoint(outlines ? point : null)
     }
-  }, [activeTool, strokePoints.length, dragStart, imageWidth, imageHeight, zoom, onUpdateAnnotation, pending, annotations])
+  }, [activeTool, strokePoints.length, dragStart, imageWidth, imageHeight, zoom, onUpdateAnnotation, pending, annotations, elements])
 
   // Wraps every `setPending` call that starts a brand-new annotation (as
   // opposed to editing an existing one) so the created-count increment can't
   // drift out of sync with it - see nextColor above for why the count exists.
   const createPending = useCallback((partial) => {
     setPending(partial)
+    // The pointer now rests on the new mark, so the hover outline would
+    // otherwise linger over it until the next mouse move.
+    setHoverPoint(null)
     createdCountRef.current += 1
   }, [])
 
@@ -479,7 +507,11 @@ export default function ImageCanvas({
   // handleMouseUp below so that function stays focused on the drag-in-
   // progress bookkeeping it owns (resize/move commit, then handing off here).
   const handleCreateAnnotation = useCallback((point) => {
-    if (activeTool === 'pin' && dragStart) {
+    if (activeTool === 'element' && dragStart) {
+      setDragStart(null)
+      const picked = matchPoint(elements, dragStart)
+      if (picked) { createPending({ type: 'element', geometry: { ...picked.box }, color: nextColor }) }
+    } else if (activeTool === 'pin' && dragStart) {
       setDragStart(null)
       createPending({ type: 'pin', geometry: dragStart, color: nextColor })
     } else if (activeTool === 'box' && dragStart) {
@@ -504,7 +536,7 @@ export default function ImageCanvas({
       // next mousedown happens to reset it.
       setStrokePoints([])
     }
-  }, [activeTool, dragStart, strokePoints, nextColor, createPending])
+  }, [activeTool, dragStart, strokePoints, nextColor, createPending, elements])
 
   const handleMouseUp = useCallback((event) => {
     if (pending) { return }
@@ -584,6 +616,12 @@ export default function ImageCanvas({
     livePreview = { type: activeTool, geometry: { points: strokePoints }, color: nextColor }
   }
 
+  // Only the Element tool outlines what is under the pointer; every tool
+  // names the matched element in the comment popover.
+  const hovered = !pending && hoverPoint ? matchPoint(elements, hoverPoint) : null
+  const highlighted = hovered ? [hovered] : []
+  const elementHint = describeElements(matchAnnotation(elements, pending))
+
   let cursor = cursorForTool(activeTool)
   if (hoveringAnnotation) { cursor = 'grab' }
   if (isGrabbing) { cursor = 'grabbing' }
@@ -595,6 +633,7 @@ export default function ImageCanvas({
       style={{ width: imageWidth * zoom, height: imageHeight * zoom, cursor }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
+      onMouseLeave={() => setHoverPoint(null)}
     >
       {media ?? <img src={imageUrl} alt={imageAlt} width={imageWidth * zoom} height={imageHeight * zoom} draggable={false} />}
       <svg
@@ -617,6 +656,12 @@ export default function ImageCanvas({
             </marker>
           ))}
         </defs>
+        {highlighted.map(({ selector, box }) => (
+          <rect
+            key={`element-${selector}-${box.x}-${box.y}`} className="element-highlight"
+            x={box.x} y={box.y} width={box.width} height={box.height} vectorEffect="non-scaling-stroke"
+          />
+        ))}
         {annotations.map((annotation, index) => (
           <AnnotationShape
             key={annotation.id} annotation={annotation} number={numberFor ? numberFor(annotation) : index + 1}
@@ -629,6 +674,15 @@ export default function ImageCanvas({
           <SelectionHandles annotation={selectedAnnotation} zoom={zoom} onHandleMouseDown={handleHandleMouseDown} />
         )}
       </svg>
+      {hovered && (
+        // Visual only: the same name is in the comment popover and the sidebar.
+        <span
+          className="element-highlight-label" aria-hidden="true"
+          style={{ left: hovered.box.x * zoom, top: Math.max(0, hovered.box.y * zoom - 24) }}
+        >
+          {describeElements(highlighted)}
+        </span>
+      )}
       {!pending && selectedAnnotation && (
         <SelectionToolbar
           point={toClientPoint(wrapperRef, annotationTopAnchor(selectedAnnotation), zoom)}
@@ -652,6 +706,7 @@ export default function ImageCanvas({
           isEditing={!!pending.id}
           timeBadge={describeTime ? describeTime(pending.id ? pending.before : null) : null}
           voiceNotes={voiceNotes}
+          elementHint={elementHint}
           onSubmit={handleCommentSubmit}
           onClose={handleCommentClose}
         />
