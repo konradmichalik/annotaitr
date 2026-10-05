@@ -48,7 +48,7 @@ function sniffImageType(buffer) {
   return 'png'
 }
 
-export function createApiRouter({ imageBuffer, imageWidth, imageHeight, origin, targetLabel, state, voiceNotes = false, resolveDecision }) {
+export function createApiRouter({ imageBuffer, imageWidth, imageHeight, origin, targetLabel, domMap = null, state, voiceNotes = false, resolveDecision }) {
   const router = Router()
 
   router.get('/api/image', (_req, res) => {
@@ -86,7 +86,7 @@ export function createApiRouter({ imageBuffer, imageWidth, imageHeight, origin, 
     try {
       const flattened = await flattenAnnotations(imageBuffer, state.annotations)
       const annotatedImagePath = await writeAnnotatedImage(flattened)
-      const output = formatApprovalWithNotesOutput(state.annotations, imageWidth, imageHeight, annotatedImagePath)
+      const output = formatApprovalWithNotesOutput(state.annotations, imageWidth, imageHeight, annotatedImagePath, domMap)
       res.json(success({ message: 'Approved with notes' }))
       setTimeout(
         () => resolveDecision({ approved: true, output, annotationCount: state.annotations.length }),
@@ -105,7 +105,7 @@ export function createApiRouter({ imageBuffer, imageWidth, imageHeight, origin, 
     try {
       const flattened = await flattenAnnotations(imageBuffer, state.annotations)
       const annotatedImagePath = await writeAnnotatedImage(flattened)
-      const output = exportFeedback(state.annotations, imageWidth, imageHeight, annotatedImagePath)
+      const output = exportFeedback(state.annotations, imageWidth, imageHeight, annotatedImagePath, domMap)
       res.json(success({ message: 'Feedback submitted' }))
       setTimeout(
         () => resolveDecision({ approved: false, output, annotationCount: state.annotations.length }),

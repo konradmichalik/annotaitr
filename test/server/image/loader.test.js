@@ -178,6 +178,33 @@ describe('captureUrl', () => {
     expect(result.height).toBe(3000)
   })
 
+  it('returns a DOM map of the captured page alongside the screenshot', async () => {
+    const playwright = await import('playwright')
+    const rawElement = {
+      x: 10, y: 20, width: 100, height: 50, tag: 'img', role: '', text: '', alt: 'Team photo', ariaLabel: '', title: '',
+      src: 'https://x.test/team.jpg?v=2', self: { tag: 'img', id: '', cls: '' }, ancestors: [{ tag: 'main', id: '', cls: '' }]
+    }
+    playwright.__mockPage.evaluate
+      .mockResolvedValueOnce({ width: 1920, height: 3000 })
+      .mockResolvedValueOnce([rawElement])
+    const { captureUrl } = await import('../../../server/image/loader.js')
+    const result = await captureUrl('http://localhost:3000', { width: 1920, height: 1080 })
+    expect(result.domMap).toEqual([
+      { tag: 'img', role: '', name: 'Team photo', media: 'team.jpg', selector: 'main img', box: { x: 10, y: 20, width: 100, height: 50 } }
+    ])
+  })
+
+  it('still captures the page with an empty DOM map when collecting it fails', async () => {
+    const playwright = await import('playwright')
+    playwright.__mockPage.evaluate
+      .mockResolvedValueOnce({ width: 1920, height: 3000 })
+      .mockRejectedValueOnce(new Error('Execution context was destroyed'))
+    const { captureUrl } = await import('../../../server/image/loader.js')
+    const result = await captureUrl('http://localhost:3000', { width: 1920, height: 1080 })
+    expect(result.buffer).toEqual(Buffer.from('fake-png-bytes'))
+    expect(result.domMap).toEqual([])
+  })
+
   it('closes the browser even when navigation fails', async () => {
     const playwright = await import('playwright')
     playwright.__mockPage.goto.mockRejectedValueOnce(new Error('net::ERR_CONNECTION_REFUSED'))

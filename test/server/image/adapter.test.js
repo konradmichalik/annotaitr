@@ -144,6 +144,26 @@ describe('image annotator server', () => {
     expect(decision.annotationCount).toBe(1)
   })
 
+  it('names the matched page element in feedback and approve-with-notes, and keeps the map off /api/meta', async () => {
+    const domMap = [{ tag: 'a', role: 'button', name: 'Start trial', media: '', selector: 'a.cta', box: { x: 0, y: 0, width: 20, height: 20 } }]
+    const annotations = [{ id: 'a1', type: 'pin', geometry: { x: 5, y: 5 }, text: 'hi', color: '#e11d48' }]
+    for (const route of ['/api/feedback', '/api/approve']) {
+      await start({ domMap })
+      const meta = await (await fetch(`${server.url}/api/meta`)).json()
+      expect(meta.data).not.toHaveProperty('domMap')
+      await fetch(`${server.url}/api/annotations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ annotations })
+      })
+      await fetch(`${server.url}${route}`, { method: 'POST' })
+      const decision = await server.waitForDecision()
+      expect(decision.output).toContain('Element: a[button] "Start trial" · a.cta')
+      server.stop()
+      server = null
+    }
+  })
+
   it('returns 500 and leaves the decision unresolved when /api/approve fails to flatten the image', async () => {
     await start()
     await fetch(`${server.url}/api/annotations`, {

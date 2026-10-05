@@ -395,6 +395,7 @@ async function runImage({ targets, origin, viewportSpec, clipboardPath }) {
     imageBuffer: capture.buffer,
     imageWidth: capture.width,
     imageHeight: capture.height,
+    domMap: capture.domMap ?? null,
     origin,
     targetLabel
   }))

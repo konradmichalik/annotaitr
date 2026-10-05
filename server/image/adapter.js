@@ -24,10 +24,11 @@ const bundleDir = existsSync(join(DIST_DIR, 'index.html')) ? DIST_DIR : DEV_DIR
  * @param {number} options.imageHeight
  * @param {string} [options.origin='cli']
  * @param {string} [options.targetLabel] - the URL or file path that was captured
+ * @param {Array|null} [options.domMap] - elements of a captured page (server/image/domMap.js), only for URL captures
  * @param {Function} [options.onReady] - (url, port) => void
  */
 export async function buildImageServer(options) {
-  const { imageBuffer, imageWidth, imageHeight, origin = 'cli', targetLabel = null, onReady = null } = options
+  const { imageBuffer, imageWidth, imageHeight, origin = 'cli', targetLabel = null, domMap = null, onReady = null } = options
 
   const state = { annotations: [] }
   const transcription = transcriptionConfig()
@@ -44,6 +45,7 @@ export async function buildImageServer(options) {
         imageHeight,
         origin,
         targetLabel,
+        domMap,
         state,
         voiceNotes,
         resolveDecision: safeResolve

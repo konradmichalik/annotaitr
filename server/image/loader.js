@@ -10,6 +10,7 @@ import { createCanvas, loadImage, Image } from '@napi-rs/canvas'
 import { chromium } from 'playwright'
 import { isImageFile, isSvgFile, isSupportedCaptureUrl } from './capture.js'
 import { config } from './config.js'
+import { collectRawElements, normalizeDomMap, CANDIDATES, PANEL_CANDIDATES, MIN_PANEL_SIDE, MAX_ELEMENTS, CONTAINERS } from './domMap.js'
 
 /**
  * Load and validate a local image file. Rejects unsupported extensions and
@@ -118,6 +119,26 @@ async function rasterizeSvg(source, filePath) {
 }
 
 /**
+ * Measured after the screenshot without scrolling, so boxes line up with the
+ * full-page image. The map is a bonus: a page that breaks the evaluate still
+ * gets captured, just without element lines in the feedback.
+ */
+async function collectDomMap(page) {
+  try {
+    const options = {
+      candidates: CANDIDATES,
+      fallbacks: PANEL_CANDIDATES,
+      minPanelSide: MIN_PANEL_SIDE,
+      limit: MAX_ELEMENTS,
+      containers: [...CONTAINERS, 'div']
+    }
+    return normalizeDomMap(await page.evaluate(collectRawElements, options))
+  } catch {
+    return []
+  }
+}
+
+/**
  * Capture a full-page screenshot of `url` at the given viewport size.
  * Redirects are followed by the browser itself; each hop is a real
  * navigation the browser re-validates against its own protocol rules, so no
@@ -147,7 +168,7 @@ export async function captureUrl(url, viewport) {
       )
     }
 
-    return { buffer, width: box.width, height: box.height }
+    return { buffer, width: box.width, height: box.height, domMap: await collectDomMap(page) }
   } finally {
     await browser.close()
   }
