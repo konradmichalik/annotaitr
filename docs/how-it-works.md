@@ -31,10 +31,12 @@ or `nav` and plain panel divs (a readable class or id, larger than 40 px)
 only count when nothing more specific is under or near the mark, so an
 empty spot in a card names the card rather than the page. The feedback gets an
 `Element:` line such as `Element: img "Team photo" ("team.jpg") · #hero img`.
-While annotating, the same match is visible before anything is submitted:
-with a drawing tool active, the element a mark at the pointer would be
-matched to is outlined and named on the screenshot, and the comment box and
-the sidebar name the element of each mark. The client fetches the map from
+While annotating, the same match is visible before anything is submitted.
+The **Element** tool, offered only for a captured URL, outlines and names
+the element under the pointer like a DevTools inspector; a click selects
+that element as its own annotation, drawn as a tinted outline that stays on
+the element and reported as a `Selected element`. For every other tool, the
+comment box and the sidebar name the element each mark is matched to. The client fetches the map from
 `/api/elements` and runs its own copy of the matching, which a test keeps
 identical to the server's. Page text is capped and quoted, and the output
 labels it as page content. If collecting the map fails, the capture

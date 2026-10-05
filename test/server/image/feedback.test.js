@@ -141,6 +141,14 @@ describe('element lines from a captured page', () => {
     expect(output.match(/Element:/g)).toBeNull()
   })
 
+  it('labels a selected element and names exactly that element', () => {
+    const banner = { tag: 'div', role: '', name: '', media: '', selector: 'div.banner', box: { x: 0, y: 0, width: 60, height: 60 } }
+    const selected = { type: 'element', color: '#e11d48', text: 'Too loud', geometry: { x: 0, y: 0, width: 40, height: 40 } }
+    const output = exportFeedback([selected], 100, 100, '/tmp/annotated.png', [banner, photo])
+    expect(output).toContain('### 1. Selected element: top left')
+    expect(output).toContain('Element: img "Team photo" ("team.jpg") · #hero img')
+  })
+
   it('produces exactly the old output without a map or with an empty one', () => {
     const before = exportFeedback([pin, box], 100, 100, '/tmp/annotated.png')
     expect(exportFeedback([pin, box], 100, 100, '/tmp/annotated.png', null)).toBe(before)

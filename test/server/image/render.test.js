@@ -19,6 +19,18 @@ describe('flattenAnnotations', () => {
     expect(Buffer.compare(result, source)).not.toBe(0)
   })
 
+  it('draws a selected element as an outline with a light fill inside it', async () => {
+    const source = makeFixturePng(40, 30, '#000000')
+    const element = { type: 'element', color: '#ff0000', geometry: { x: 5, y: 5, width: 30, height: 20 } }
+    const decoded = await loadImage(await flattenAnnotations(source, [element]))
+    const ctx = createCanvas(decoded.width, decoded.height).getContext('2d')
+    ctx.drawImage(decoded, 0, 0)
+    const [red, green, blue] = ctx.getImageData(20, 15, 1, 1).data
+    expect(red).toBeGreaterThan(0)
+    expect(red).toBeLessThan(255)
+    expect([green, blue]).toEqual([0, 0])
+  })
+
   it('handles an arrow annotation without throwing', async () => {
     const source = makeFixturePng(40, 30)
     const arrow = { type: 'arrow', color: '#ff0000', geometry: { x1: 0, y1: 0, x2: 39, y2: 29 } }

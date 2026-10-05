@@ -18,7 +18,7 @@ const LEGEND_BG = '#20242c'
 const LEGEND_HEADER_COLOR = '#f5f6fa'
 const LEGEND_TEXT_COLOR = '#b8bfcc'
 
-const TYPE_LABELS = { box: 'Box', arrow: 'Arrow', freehand: 'Freehand', highlighter: 'Highlight', pin: 'Pin', comment: 'General comment' }
+const TYPE_LABELS = { box: 'Box', element: 'Element', arrow: 'Arrow', freehand: 'Freehand', highlighter: 'Highlight', pin: 'Pin', comment: 'General comment' }
 
 function drawArrowhead(ctx, x1, y1, x2, y2, color, headLength, lineWidth) {
   const angle = Math.atan2(y2 - y1, x2 - x1)
@@ -77,6 +77,18 @@ function drawBox(ctx, geometry, number, color) {
   const { x, y, width, height } = geometry
   ctx.strokeRect(x, y, width, height)
   drawBadge(ctx, x, y, number, color)
+}
+
+// The light fill tells a selected page element apart from a hand-drawn box.
+const ELEMENT_FILL_ALPHA = 0.15
+
+function drawElement(ctx, geometry, number, color) {
+  const { x, y, width, height } = geometry
+  ctx.save()
+  ctx.globalAlpha = ELEMENT_FILL_ALPHA
+  ctx.fillRect(x, y, width, height)
+  ctx.restore()
+  drawBox(ctx, geometry, number, color)
 }
 
 function drawArrow(ctx, annotation, number, color) {
@@ -154,6 +166,7 @@ function drawAnnotation(ctx, annotation, number) {
   ctx.setLineDash(serverDashArray(annotation))
 
   if (annotation.type === 'box') { drawBox(ctx, annotation.geometry, number, color) }
+  else if (annotation.type === 'element') { drawElement(ctx, annotation.geometry, number, color) }
   else if (annotation.type === 'arrow') { drawArrow(ctx, annotation, number, color) }
   else if (annotation.type === 'freehand') { drawFreehand(ctx, annotation.geometry, number, color) }
   else if (annotation.type === 'highlighter') { drawHighlighter(ctx, annotation.geometry, number, color) }

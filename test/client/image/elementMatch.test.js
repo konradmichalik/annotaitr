@@ -39,6 +39,8 @@ const annotations = [
   { type: 'highlighter', geometry: { points: [{ x: 495, y: 113 }, { x: 615, y: 113 }] } },
   { type: 'highlighter', strokeWidth: 26, geometry: { points: [{ x: 495, y: 113 }, { x: 615, y: 113 }] } },
   { type: 'freehand', geometry: { points: [] } },
+  { type: 'element', geometry: { x: 1025, y: 1839, width: 590, height: 600 } },
+  { type: 'element', geometry: { x: 1245, y: 1967, width: 150, height: 60 } },
   { type: 'comment', geometry: null }
 ]
 

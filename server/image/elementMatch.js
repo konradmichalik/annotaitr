@@ -67,7 +67,7 @@ function matchRegion(map, region) {
 /** The rectangle a box or points-based mark covers; a highlighter stroke is widened by its own width. */
 function regionOf(annotation) {
   const { type, geometry } = annotation
-  if (type === 'box') { return geometry }
+  if (type === 'box' || type === 'element') { return geometry }
   const xs = geometry.points.map((p) => p.x)
   const ys = geometry.points.map((p) => p.y)
   const pad = type === 'highlighter' ? serverStrokeWidth(annotation) / 2 : 0
@@ -91,7 +91,7 @@ export function matchAnnotation(map, annotation) {
     const matches = arrowEnds(annotation).map((p) => matchPoint(map, p)).filter(Boolean)
     return [...new Set(matches)]
   }
-  if (annotation.type === 'box' || Array.isArray(annotation.geometry.points)) {
+  if (annotation.type === 'box' || annotation.type === 'element' || Array.isArray(annotation.geometry.points)) {
     return [matchRegion(map, regionOf(annotation))].filter(Boolean)
   }
   return []

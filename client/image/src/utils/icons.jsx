@@ -10,6 +10,14 @@ export const TOOL_ICONS = {
       <path d="M7.904 17.563a1.2 1.2 0 0 0 2.228 .308l2.09 -3.093l4.907 4.907a1.067 1.067 0 0 0 1.509 0l1.047 -1.047a1.067 1.067 0 0 0 0 -1.509l-4.907 -4.907l3.113 -2.09a1.2 1.2 0 0 0 -.309 -2.228l-13.582 -3.904l3.904 13.563" />
     </svg>
   ),
+  // Tabler "focus-2": a target over a frame, for picking a page element.
+  element: (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <path d="M11.5 12a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0" />
+      <path d="M5 12a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" />
+      <path d="M12 3l0 2" /><path d="M3 12l2 0" /><path d="M12 19l0 2" /><path d="M19 12l2 0" />
+    </svg>
+  ),
   box: (
     <svg {...ICON_PROPS} aria-hidden="true">
       <path d="M3 5a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14" />

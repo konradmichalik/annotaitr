@@ -56,6 +56,8 @@ spacing between two points rather than pointing at a single target.
   (footer gap) alone because that spacing is intentional". If a heading carries
   no handle, refer to that annotation by its number instead, and never invent
   one.
+- A `Selected element` heading means the user picked a whole page element
+  with the Element tool; its `Element:` line names that element.
 - For a captured web page, an annotation can carry an `Element:` line read
   from the page's DOM, such as
   `Element: img "Team photo" ("team.jpg") · #hero img`: tag and role, the

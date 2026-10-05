@@ -7,6 +7,11 @@ describe('describePosition', () => {
     expect(describePosition(pin, 100, 100)).toBe('top left (~10% from top, ~10% from left)')
   })
 
+  it('describes a selected element by the center of its box', () => {
+    const element = { type: 'element', geometry: { x: 40, y: 40, width: 20, height: 20 } }
+    expect(describePosition(element, 100, 100)).toBe('center (~50% from top, ~50% from left)')
+  })
+
   it('describes a pin dead center as "center"', () => {
     const pin = { type: 'pin', geometry: { x: 50, y: 50 } }
     expect(describePosition(pin, 100, 100)).toBe('center (~50% from top, ~50% from left)')

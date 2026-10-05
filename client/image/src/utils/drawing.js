@@ -29,10 +29,13 @@ export function boxFromPoints(p1, p2) {
  * A single representative point for an annotation, used both to anchor an
  * edit popover and to decide where a scroll-into-view should center.
  */
+// A selected page element covers the same rectangle a drawn box does.
+const isBoxLike = (type) => type === 'box' || type === 'element'
+
 export function annotationCentroid(annotation) {
   const { type, geometry } = annotation
   if (type === 'pin') { return { x: geometry.x, y: geometry.y } }
-  if (type === 'box') { return { x: geometry.x + geometry.width / 2, y: geometry.y + geometry.height / 2 } }
+  if (isBoxLike(type)) { return { x: geometry.x + geometry.width / 2, y: geometry.y + geometry.height / 2 } }
   if (type === 'arrow') { return { x: (geometry.x1 + geometry.x2) / 2, y: (geometry.y1 + geometry.y2) / 2 } }
   const points = geometry.points
   const sum = points.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 })
@@ -47,7 +50,7 @@ export function annotationCentroid(annotation) {
 export function annotationBottomAnchor(annotation) {
   const { type, geometry } = annotation
   if (type === 'pin') { return { x: geometry.x, y: geometry.y + 18 } }
-  if (type === 'box') { return { x: geometry.x + geometry.width / 2, y: geometry.y + geometry.height } }
+  if (isBoxLike(type)) { return { x: geometry.x + geometry.width / 2, y: geometry.y + geometry.height } }
   if (type === 'arrow') {
     return { x: (geometry.x1 + geometry.x2) / 2, y: Math.max(geometry.y1, geometry.y2) }
   }
@@ -64,7 +67,7 @@ export function annotationBottomAnchor(annotation) {
 export function annotationTopAnchor(annotation) {
   const { type, geometry } = annotation
   if (type === 'pin') { return { x: geometry.x, y: geometry.y - 14 } }
-  if (type === 'box') { return { x: geometry.x + geometry.width / 2, y: geometry.y } }
+  if (isBoxLike(type)) { return { x: geometry.x + geometry.width / 2, y: geometry.y } }
   if (type === 'arrow') {
     return { x: (geometry.x1 + geometry.x2) / 2, y: Math.min(geometry.y1, geometry.y2) }
   }
@@ -123,7 +126,7 @@ function hitTolerance(annotation) {
 /** Whether `point` falls on/inside `annotation`, for click-to-select hit-testing. */
 export function hitTestAnnotation(point, annotation) {
   const { type, geometry } = annotation
-  if (type === 'box') {
+  if (isBoxLike(type)) {
     return point.x >= geometry.x && point.x <= geometry.x + geometry.width
       && point.y >= geometry.y && point.y <= geometry.y + geometry.height
   }

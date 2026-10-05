@@ -24,6 +24,7 @@ const PAGE = `<!doctype html>
   <header class="bar top"><a href="#">Home</a></header>
   <main id="content">
     <img id="hero" src="/team.png?v=3" alt="Team photo" width="300" height="200">
+    <button type="button" id="contact" style="margin-top:20px">Contact us</button>
     <div class="spacer"></div>
     <section id="pricing"><a class="cta" href="#" role="button" style="display:inline-block;width:120px;height:40px;background:#f00;color:#f00">Start trial</a></section>
     <img src="${PIXEL}" width="50" height="50">
@@ -105,43 +106,53 @@ function startCli(args) {
   return { child, output, url }
 }
 
-test('the annotator outlines and names the element under the pointer, and the feedback names the same one', async ({ page }) => {
+async function canvasPoint(page, box) {
+  const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
+  const zoom = canvas.width / 800
+  return { x: canvas.x + (box.x + box.width / 2) * zoom, y: canvas.y + (box.y + box.height / 2) * zoom, zoom }
+}
+
+test('the Element tool outlines and picks a page element, other tools only name what they hit', async ({ page }) => {
   const { child, output, url } = startCli([baseUrl, '--viewport', '800x600'])
   try {
-    await page.goto(await url)
-    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Pin').click()
+    const appUrl = await url
+    await page.goto(appUrl)
+    const { elements } = (await (await page.request.get(`${appUrl}/api/elements`)).json()).data
+    const hero = elements.find((el) => el.name === 'Team photo')
+    const contact = elements.find((el) => el.name === 'Contact us')
+    const tools = page.getByRole('toolbar', { name: 'Annotation tools' })
 
-    const canvas = page.locator('.image-canvas-wrapper')
-    const box = await canvas.boundingBox()
-    const zoom = box.width / 800
-    // The hero image sits at 20,60 with a size of 300x200 in page pixels.
-    const spot = { x: box.x + 170 * zoom, y: box.y + 160 * zoom }
-    await page.mouse.move(spot.x, spot.y)
+    await tools.getByText('Element').click()
+    const heroSpot = await canvasPoint(page, hero.box)
+    await page.mouse.move(heroSpot.x, heroSpot.y)
     await expect(page.locator('.element-highlight')).toHaveCount(1)
     await expect(page.locator('.element-highlight-label')).toHaveText('img#hero "Team photo" (team.png)')
-
-    await page.mouse.click(spot.x, spot.y)
+    await page.mouse.click(heroSpot.x, heroSpot.y)
     await expect(page.locator('.comment-popover-element')).toHaveText('Element: img#hero "Team photo" (team.png)')
     await page.getByPlaceholder('Add a comment (optional)...').fill('Swap the photo')
     await page.getByRole('button', { name: 'Add', exact: true }).click()
-    await expect(page.locator('.panel-element')).toHaveText('img#hero "Team photo" (team.png)')
+    await expect(page.getByText('1. Element')).toBeVisible()
     await expect(page.locator('.element-highlight')).toHaveCount(0)
 
-    // Moving the mark away leaves no outline behind at the spot it came from.
-    await page.mouse.move(spot.x, spot.y)
+    // A selected element stays on its element when dragged.
     await page.mouse.down()
-    await page.mouse.move(spot.x + 200 * zoom, spot.y + 300 * zoom, { steps: 5 })
-    await expect(page.locator('.element-highlight')).toHaveCount(0)
-    await page.mouse.up()
-    await page.mouse.down()
-    await page.mouse.move(spot.x, spot.y, { steps: 5 })
+    await page.mouse.move(heroSpot.x + 150 * heroSpot.zoom, heroSpot.y + 250 * heroSpot.zoom, { steps: 5 })
     await page.mouse.up()
     await expect(page.locator('.panel-element')).toHaveText('img#hero "Team photo" (team.png)')
+
+    await tools.getByText('Pin').click()
+    const contactSpot = await canvasPoint(page, contact.box)
+    await page.mouse.move(contactSpot.x, contactSpot.y)
+    await expect(page.locator('.element-highlight')).toHaveCount(0)
+    await page.mouse.click(contactSpot.x, contactSpot.y)
+    await expect(page.locator('.comment-popover-element')).toHaveText('Element: button#contact "Contact us"')
+    await page.getByRole('button', { name: 'Add', exact: true }).click()
 
     await page.getByRole('button', { name: 'Feedback' }).click()
     await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
     expect(await new Promise((resolve) => child.on('exit', resolve))).toBe(0)
-    expect(output.stdout).toContain('Element: img "Team photo" ("team.png") · #hero')
+    expect(output.stdout).toMatch(/### 1\. \[#\w+\] Selected element: .*\nElement: img "Team photo" \("team.png"\) · #hero\n> Swap the photo/)
+    expect(output.stdout).toMatch(/### 2\. \[#\w+\] Comment pin: .*\nElement: button "Contact us" · #contact/)
   } finally {
     if (child.exitCode === null) { child.kill() }
   }

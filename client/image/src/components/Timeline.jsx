@@ -61,7 +61,7 @@ function RateSwitch({ rate, onChange }) {
 
 const DRAG_THRESHOLD_PX = 3
 
-const TYPE_LABELS = { box: 'Box', arrow: 'Arrow', freehand: 'Freehand', highlighter: 'Highlight', pin: 'Pin' }
+const TYPE_LABELS = { box: 'Box', element: 'Element', arrow: 'Arrow', freehand: 'Freehand', highlighter: 'Highlight', pin: 'Pin' }
 
 function typeLabel(marker) {
   if (marker.type !== 'comment') { return TYPE_LABELS[marker.type] ?? marker.type }

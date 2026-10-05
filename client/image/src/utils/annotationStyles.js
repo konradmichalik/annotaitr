@@ -75,6 +75,8 @@ export function dashArrayFor(dashStyle, strokeWidth) {
  */
 export const STYLE_FIELDS = {
   box: ['strokeWidth', 'dashStyle'],
+  // Tied to the element's own outline, so only its color is up for choice.
+  element: [],
   arrow: ['arrowStyle', 'strokeWidth', 'dashStyle'],
   freehand: ['strokeWidth', 'dashStyle'],
   highlighter: ['strokeWidth'],

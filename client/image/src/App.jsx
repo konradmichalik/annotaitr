@@ -283,6 +283,7 @@ export default function App() {
     if (video.spanComplete) { return 'Span marked. Pick a tool (or click "Pin") and click the frame to mark something in it, or click "Comment span" to comment without drawing.' }
     if (video.range.start !== null) { return 'Span started. Move to where it ends (play, scrub or use the arrows), then click "Set end here".' }
     if (isVideo) { return 'Pause on a frame and draw on it. Space plays, arrows step frames, I and O mark a span.' }
+    if (activeTool === 'element') { return 'Point at a page element to see what it is, then click to select it and add a comment.' }
     return 'Click a mark to select it, drag to move, or press Delete to remove it.'
   }
 
@@ -463,6 +464,7 @@ export default function App() {
               <Toolbar
                 activeTool={activeTool}
                 onSelectTool={setActiveTool}
+                elementTool={elements.length > 0}
                 colorMode={settings.colorMode}
                 fixedColor={settings.fixedColor}
                 onChangeColorMode={(mode) => updateSetting('colorMode', mode)}

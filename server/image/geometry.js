@@ -14,7 +14,7 @@ export function boundingPoint(annotation) {
   if (type === 'pin') {
     return { x: geometry.x, y: geometry.y }
   }
-  if (type === 'box') {
+  if (type === 'box' || type === 'element') {
     return { x: geometry.x + geometry.width / 2, y: geometry.y + geometry.height / 2 }
   }
   if (type === 'arrow') {

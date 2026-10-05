@@ -6,7 +6,7 @@ import {
 } from '../utils/drawing.js'
 import { resolveArrowStyle, strokeWidthOf, dashArrayFor, pickStyleFields } from '../utils/annotationStyles.js'
 import { cursorForTool } from '../utils/cursors.js'
-import { matchAnnotation, describeElements } from '../utils/elementMatch.js'
+import { matchAnnotation, matchPoint, describeElements } from '../utils/elementMatch.js'
 import { ANNOTATION_COLORS } from '../utils/annotationColors.js'
 import { ACTION_ICONS } from '../utils/icons.jsx'
 import CommentPopover from './CommentPopover.jsx'
@@ -112,6 +112,18 @@ function PinShape({ geometry, color, number, selectionProps }) {
   )
 }
 
+// The light fill tells a selected page element apart from a hand-drawn box,
+// matching the server's rendering in server/image/render.js.
+function ElementShape({ geometry, color, selectionProps }) {
+  const { x, y, width, height } = geometry
+  return (
+    <>
+      {selectionProps && <rect x={x - 3} y={y - 3} width={width + 6} height={height + 6} fill="none" {...selectionProps} />}
+      <rect x={x} y={y} width={width} height={height} fill={color} fillOpacity={0.15} stroke={color} strokeWidth={3} />
+    </>
+  )
+}
+
 function AnnotationShape({ annotation, number, markerId, dashed = false, selected = false }) {
   const color = annotation.color || DEFAULT_COLOR
   const strokeWidth = strokeWidthOf(annotation)
@@ -122,6 +134,7 @@ function AnnotationShape({ annotation, number, markerId, dashed = false, selecte
   const selectionProps = selected ? { stroke: 'var(--primary)', strokeWidth: strokeWidth + 3, strokeOpacity: 0.35 } : null
   const { type, geometry } = annotation
 
+  if (type === 'element') { return <ElementShape geometry={geometry} color={color} selectionProps={selectionProps} /> }
   if (type === 'box') { return <BoxShape geometry={geometry} color={color} strokeWidth={strokeWidth} dash={dash} selectionProps={selectionProps} /> }
   if (type === 'arrow') { return <ArrowShape annotation={annotation} color={color} strokeWidth={strokeWidth} dash={dash} markerId={markerId} selectionProps={selectionProps} /> }
   if (type === 'freehand') { return <FreehandShape geometry={geometry} color={color} strokeWidth={strokeWidth} dash={dash} selectionProps={selectionProps} /> }
@@ -417,7 +430,7 @@ export default function ImageCanvas({
       return
     }
 
-    if (activeTool === 'pin') {
+    if (activeTool === 'pin' || activeTool === 'element') {
       setDragStart(point)
       return
     }
@@ -440,7 +453,9 @@ export default function ImageCanvas({
       return
     }
 
-    if (moveState.current) {
+    // A selected page element stays on its element: it can be picked and
+    // commented on, but not dragged off it.
+    if (moveState.current && moveState.current.type !== 'element') {
       const point = pointFromEvent(event, wrapperRef, imageWidth, imageHeight, zoom)
       const { id, type, startGeometry, startPoint } = moveState.current
       const dx = point.x - startPoint.x
@@ -471,7 +486,7 @@ export default function ImageCanvas({
       const point = pointFromEvent(event, wrapperRef, imageWidth, imageHeight, zoom)
       const overAnnotation = !!findAnnotationAt(point, annotations)
       setHoveringAnnotation(overAnnotation)
-      const outlines = elements.length > 0 && activeTool !== 'select' && !overAnnotation
+      const outlines = elements.length > 0 && activeTool === 'element' && !overAnnotation
       setHoverPoint(outlines ? point : null)
     }
   }, [activeTool, strokePoints.length, dragStart, imageWidth, imageHeight, zoom, onUpdateAnnotation, pending, annotations, elements])
@@ -492,7 +507,11 @@ export default function ImageCanvas({
   // handleMouseUp below so that function stays focused on the drag-in-
   // progress bookkeeping it owns (resize/move commit, then handing off here).
   const handleCreateAnnotation = useCallback((point) => {
-    if (activeTool === 'pin' && dragStart) {
+    if (activeTool === 'element' && dragStart) {
+      setDragStart(null)
+      const picked = matchPoint(elements, dragStart)
+      if (picked) { createPending({ type: 'element', geometry: { ...picked.box }, color: nextColor }) }
+    } else if (activeTool === 'pin' && dragStart) {
       setDragStart(null)
       createPending({ type: 'pin', geometry: dragStart, color: nextColor })
     } else if (activeTool === 'box' && dragStart) {
@@ -517,7 +536,7 @@ export default function ImageCanvas({
       // next mousedown happens to reset it.
       setStrokePoints([])
     }
-  }, [activeTool, dragStart, strokePoints, nextColor, createPending])
+  }, [activeTool, dragStart, strokePoints, nextColor, createPending, elements])
 
   const handleMouseUp = useCallback((event) => {
     if (pending) { return }
@@ -597,11 +616,11 @@ export default function ImageCanvas({
     livePreview = { type: activeTool, geometry: { points: strokePoints }, color: nextColor }
   }
 
-  // While a mark is being drawn or commented on, outline what it will be
-  // matched to; otherwise what a mark at the pointer would be matched to.
-  const matchTarget = pending ?? livePreview ?? (hoverPoint && { type: 'pin', geometry: hoverPoint })
-  const highlighted = matchAnnotation(elements, matchTarget)
-  const elementHint = describeElements(highlighted)
+  // Only the Element tool outlines what is under the pointer; every tool
+  // names the matched element in the comment popover.
+  const hovered = !pending && hoverPoint ? matchPoint(elements, hoverPoint) : null
+  const highlighted = hovered ? [hovered] : []
+  const elementHint = describeElements(matchAnnotation(elements, pending))
 
   let cursor = cursorForTool(activeTool)
   if (hoveringAnnotation) { cursor = 'grab' }
@@ -655,13 +674,13 @@ export default function ImageCanvas({
           <SelectionHandles annotation={selectedAnnotation} zoom={zoom} onHandleMouseDown={handleHandleMouseDown} />
         )}
       </svg>
-      {!pending && elementHint && (
+      {hovered && (
         // Visual only: the same name is in the comment popover and the sidebar.
         <span
           className="element-highlight-label" aria-hidden="true"
-          style={{ left: highlighted[0].box.x * zoom, top: Math.max(0, highlighted[0].box.y * zoom - 24) }}
+          style={{ left: hovered.box.x * zoom, top: Math.max(0, hovered.box.y * zoom - 24) }}
         >
-          {elementHint}
+          {describeElements(highlighted)}
         </span>
       )}
       {!pending && selectedAnnotation && (

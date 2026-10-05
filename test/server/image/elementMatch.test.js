@@ -97,6 +97,11 @@ describe('matchAnnotation', () => {
     expect(matchAnnotation(map, arrow(150, 150, 160, 160, 'none'))).toEqual([photo])
   })
 
+  it('matches a selected element to the element whose box it carries', () => {
+    expect(matchAnnotation(map, { type: 'element', geometry: { ...photo.box } })).toEqual([photo])
+    expect(matchAnnotation(map, { type: 'element', geometry: { ...section.box } })).toEqual([section])
+  })
+
   it('matches nothing for a general comment or an empty map', () => {
     expect(matchAnnotation(map, { type: 'comment', geometry: null })).toEqual([])
     expect(matchAnnotation([], pin(150, 150))).toEqual([])
