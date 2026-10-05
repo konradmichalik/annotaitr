@@ -11,6 +11,10 @@ describe('exportFileName', () => {
     expect(exportFileName('/Users/me/Desktop/Screenshot 2026.png')).toBe('annotated-screenshot-2026.png')
   })
 
+  it('takes only the file name from a Windows path', () => {
+    expect(exportFileName('C:\\Users\\me\\Desktop\\shot.png')).toBe('annotated-shot.png')
+  })
+
   it('falls back to a plain name', () => {
     expect(exportFileName(null)).toBe('annotated.png')
     expect(exportFileName('clipboard image')).toBe('annotated-clipboard-image.png')

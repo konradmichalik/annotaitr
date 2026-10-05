@@ -9,7 +9,8 @@ function readableTarget(target) {
   } catch {
     // Not a URL: a file path or a label such as "clipboard image".
   }
-  return target.split('/').pop().replace(/\.[a-z0-9]+$/i, '')
+  // A file path as typed, so on Windows with backslashes.
+  return target.split(/[\\/]/).pop().replace(/\.[a-z0-9]+$/i, '')
 }
 
 /** A download name that says what was annotated, e.g. "annotated-typo3-org.png". */
