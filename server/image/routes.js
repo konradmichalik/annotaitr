@@ -91,7 +91,7 @@ function mountRecapture(router, { state, recapture }) {
 }
 
 /** The `annotations` of a request body if it is within the limits, else the error to answer with. */
-function annotationsFromBody(body) {
+export function annotationsFromBody(body) {
   const annotations = body?.annotations
   if (!Array.isArray(annotations)) { return { error: 'annotations must be an array' } }
   if (!annotationsWithinLimits(annotations)) {
