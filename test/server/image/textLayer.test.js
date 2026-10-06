@@ -88,3 +88,45 @@ describe('buildTextLayer words', () => {
     ])
   })
 })
+
+describe('buildTextLayer lines', () => {
+  const words = (page) => buildTextLayer(page).words.map((w) => w.text)
+
+  it('keeps a line together when a word sits a little higher or is set smaller or larger', () => {
+    expect(words({ runs: [run('one', 50, 300.4), run('two', 85, 300), run('three', 120, 300.4)] })).toEqual(['one', 'two', 'three'])
+    expect(words({
+      runs: [run('Hello', 50, 300), { str: 'BIG', fontSize: 28, box: { x: 110, y: 294, width: 40, height: 28 }, baseline: 316 }, run('world', 160, 300)]
+    })).toEqual(['Hello', 'BIG', 'world'])
+  })
+
+  it('drops a word drawn twice on top of itself, as fake bold does', () => {
+    expect(words({ runs: [run('Title', 50, 300), run('Title', 50.3, 300)] })).toEqual(['Title'])
+  })
+})
+
+describe('buildTextLayer reading order', () => {
+  const words = (page) => buildTextLayer(page).words.map((w) => w.text)
+
+  it('reads a column to its end before the next one', () => {
+    const runs = [0, 1, 2].flatMap((i) => [run(`L${i}`, 100, 300 + i * 24), run(`R${i}`, 900, 300 + i * 24)])
+    expect(words({ runs })).toEqual(['L0', 'L1', 'L2', 'R0', 'R1', 'R2'])
+  })
+
+  it('reads every paragraph of a column before the next column', () => {
+    // 80px apart: every line is a paragraph of its own.
+    const runs = [0, 1, 2].flatMap((i) => [run(`L${i}`, 100, 300 + i * 80), run(`R${i}`, 900, 300 + i * 80)])
+    expect(words({ runs })).toEqual(['L0', 'L1', 'L2', 'R0', 'R1', 'R2'])
+  })
+
+  it('reads a full-width heading before the columns under it and a full-width footer after them', () => {
+    // The test runs stand for single words, so a spanning run is one entry.
+    const heading = 'Heading across both columns'
+    const footer = 'Footer across both columns'
+    const runs = [
+      run(heading, 100, 100, { width: 1200 }),
+      run('L0', 100, 300), run('R0', 900, 300), run('L1', 100, 324), run('R1', 900, 324),
+      run(footer, 100, 600, { width: 1200 })
+    ]
+    expect(words({ runs })).toEqual([heading, 'L0', 'L1', 'R0', 'R1', footer])
+  })
+})

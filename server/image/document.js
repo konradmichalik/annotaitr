@@ -56,12 +56,12 @@ export async function openPdfDocument(pdfPath, { pageRanges = null } = {}) {
 export function createPageCache(render, capacity = PAGE_CACHE_SIZE, failureTtlMs = FAILURE_TTL_MS) {
   const entries = new Map()
   return {
-    get(page, signal = null) {
+    get(page, signal = null, options = {}) {
       let pending = entries.get(page)
       if (pending) {
         entries.delete(page)
       } else {
-        pending = render(page, signal).then((result) => result.buffer)
+        pending = render(page, signal, options).then((result) => result.buffer)
         // Only this render's own entry: a newer one for the page may have replaced it.
         const forget = () => { if (entries.get(page) === pending) { entries.delete(page) } }
         pending.catch((error) => (error.name === 'AbortError' ? forget() : setTimeout(forget, failureTtlMs).unref()))
@@ -77,15 +77,20 @@ const NO_TEXT = { elements: [], words: [] }
 
 /**
  * The text layer of each page (element map and words), read on first
- * request and kept. A page whose text cannot be read simply has none: the
- * text only names and selects what is on the page, it never fails the review.
+ * request and kept. A page whose text cannot be read has none for a while
+ * and is asked again later: the text only names and selects what is on the
+ * page, it never fails the review.
  */
-function createTextCache(document) {
+function createTextCache(document, failureTtlMs = FAILURE_TTL_MS) {
   const entries = new Map()
   return {
     get(page) {
       if (!entries.has(page)) {
-        entries.set(page, document.renderer.pageText(page, PAGE_LONG_SIDE).then(buildTextLayer, () => NO_TEXT))
+        const pending = document.renderer.pageText(page, PAGE_LONG_SIDE).then(buildTextLayer).catch(() => {
+          setTimeout(() => { if (entries.get(page) === pending) { entries.delete(page) } }, failureTtlMs).unref()
+          return NO_TEXT
+        })
+        entries.set(page, pending)
       }
       return entries.get(page)
     }
@@ -101,7 +106,9 @@ export async function elementsForPages(caches, pages) {
 export function createDocumentCaches(document) {
   return {
     text: createTextCache(document),
-    pages: createPageCache((page, signal) => document.renderer.render(page, PAGE_LONG_SIDE, { priority: PRIORITY.page, signal })),
+    pages: createPageCache((page, signal, { prefetch = false }) => document.renderer.render(
+      page, PAGE_LONG_SIDE, { priority: prefetch ? PRIORITY.prefetch : PRIORITY.page, signal }
+    )),
     thumbs: createPageCache((page, signal) => document.renderer.render(page, THUMB_LONG_SIDE, { priority: PRIORITY.thumb, signal }), Infinity)
   }
 }

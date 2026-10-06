@@ -53,7 +53,7 @@ export function useDocumentReview({ meta, annotations }) {
   const nextPage = isDocument ? stepPage(pages, current, 1) : null
   useEffect(() => {
     if (loadedPage === null || loadedPage !== current || nextPage === current) { return }
-    new Image().src = `/api/pages/${nextPage}/image`
+    new Image().src = `/api/pages/${nextPage}/image?prefetch=1`
   }, [loadedPage, current, nextPage])
 
   // Fetched for the page shown; an answer for a page already left behind is dropped.
@@ -83,7 +83,7 @@ export function useDocumentReview({ meta, annotations }) {
 
   return {
     isDocument, pages, current, currentPage, ordered, numberFor, counts, visible, nextNumber, imageUrl, loading, markLoaded,
-    elements: pageText.elements, words: pageText.words,
+    elements: pageText.elements, words: pageText.words, textLoaded: text.page === current,
     pageError: pageError?.page === current ? pageError.message : null,
     goTo, step, takePage, seekTo, reportImageError
   }

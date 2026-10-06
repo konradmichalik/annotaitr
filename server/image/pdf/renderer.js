@@ -6,8 +6,9 @@ const RENDER_TIMEOUT_MS = 10_000
 const OPEN_TIMEOUT_MS = 30_000
 
 // Which waiting job runs next: page sizes block opening the review, the
-// page on screen and its text come before thumbnails scrolled into view.
-export const PRIORITY = { size: 2, page: 1, thumb: 0 }
+// page on screen and its text come before thumbnails scrolled into view,
+// and a page fetched ahead never holds up any of them.
+export const PRIORITY = { size: 2, page: 1, thumb: 0, prefetch: -1 }
 
 const WORKER_URL = new URL('./renderWorker.js', import.meta.url)
 // Bounds the worker's JS heap. Decoded images live outside it, which is

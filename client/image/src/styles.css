@@ -2009,6 +2009,9 @@ button.voice-note:hover {
 .page-skeleton {
   position: absolute;
   inset: 0;
+
+  /* Held back briefly, so a page that arrives at once never flashes it. */
+  animation: page-skeleton-appear 0s linear 150ms both;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2025,8 +2028,13 @@ button.voice-note:hover {
   .page-skeleton {
     background: linear-gradient(100deg, var(--bg-card) 40%, var(--bg-secondary) 50%, var(--bg-card) 60%);
     background-size: 200% 100%;
-    animation: page-skeleton-shimmer 1.4s linear infinite;
+    animation: page-skeleton-appear 0s linear 150ms both, page-skeleton-shimmer 1.4s linear 150ms infinite;
   }
+}
+
+@keyframes page-skeleton-appear {
+  from { visibility: hidden; }
+  to { visibility: visible; }
 }
 
 @keyframes page-skeleton-shimmer {

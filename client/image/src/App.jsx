@@ -82,6 +82,16 @@ export default function App() {
   // A PDF's text layer is per page; a captured web page has one element map.
   const elements = isDocument ? doc.elements : capturedElements
   const words = isDocument ? doc.words : []
+  // While a page's text is still on its way the Element and Text tools stay
+  // offered, so the toolbar does not shift on every page; once it is known
+  // that a page has none (a scan), a tool that needs it falls back to Select.
+  const textPending = isDocument && !doc.textLoaded
+  const offersElementTool = elements.length > 0 || textPending
+  const offersTextTool = words.length > 0 || textPending
+  useEffect(() => {
+    const unavailable = (activeTool === 'element' && !offersElementTool) || (activeTool === 'text' && !offersTextTool)
+    if (unavailable) { setActiveTool('select') }
+  }, [activeTool, offersElementTool, offersTextTool])
   const mediaWidth = isVideo ? controller?.width : (isDocument ? doc.currentPage?.width : meta?.width)
   const mediaHeight = isVideo ? controller?.height : (isDocument ? doc.currentPage?.height : meta?.height)
   const subject = isVideo ? 'recording' : (isDocument ? 'document' : 'image')
@@ -562,8 +572,8 @@ export default function App() {
               <Toolbar
                 activeTool={activeTool}
                 onSelectTool={setActiveTool}
-                elementTool={elements.length > 0}
-                textTool={words.length > 0}
+                elementTool={offersElementTool}
+                textTool={offersTextTool}
                 colorMode={settings.colorMode}
                 fixedColor={settings.fixedColor}
                 onChangeColorMode={(mode) => updateSetting('colorMode', mode)}
@@ -573,7 +583,7 @@ export default function App() {
                 {meta?.capture && (
                   <ViewportControl capture={meta.capture} busy={!!recapturing} annotationCount={state.annotations.length} onApply={recapture} />
                 )}
-                {isDocument && <PageNav pages={doc.pages} current={doc.current} onStep={stepPage} />}
+                {isDocument && <PageNav pages={doc.pages} current={doc.current} pageCount={meta.pageCount} onStep={stepPage} />}
                 <ZoomControls zoom={zoom} onZoomBy={zoomBy} onZoomReset={zoomReset} onZoomFit={zoomFit} />
               </div>
             </div>

@@ -1,6 +1,7 @@
 import { isPointsGeometry, MAX_POINTS_PER_ANNOTATION } from './drawing.js'
+import { MAX_QUOTE_LENGTH, MAX_TEXT_RECTS } from './textSelection.js'
 
-const VALID_TYPES = new Set(['box', 'element', 'arrow', 'freehand', 'highlighter', 'pin', 'comment'])
+const VALID_TYPES = new Set(['box', 'element', 'text', 'arrow', 'freehand', 'highlighter', 'pin', 'comment'])
 const MAX_ANNOTATIONS = 10000
 
 function isFiniteNumber(value) {
@@ -26,8 +27,9 @@ function validateGeometry(type, geometry, index) {
       || !isFiniteNumber(geometry.width) || !isFiniteNumber(geometry.height)) {
       throw new Error(`Annotation ${index + 1}: ${type} geometry must have numeric x/y/width/height.`)
     }
-    if (type === 'text' && !(Array.isArray(geometry.rects) && geometry.rects.length > 0 && geometry.rects.every(isRect))) {
-      throw new Error(`Annotation ${index + 1}: text geometry must have a non-empty rects array of {x, y, width, height}.`)
+    if (type === 'text' && !(Array.isArray(geometry.rects) && geometry.rects.length > 0
+      && geometry.rects.length <= MAX_TEXT_RECTS && geometry.rects.every(isRect))) {
+      throw new Error(`Annotation ${index + 1}: text geometry must have 1 to ${MAX_TEXT_RECTS} rects of {x, y, width, height}.`)
     }
     return
   }
@@ -66,6 +68,10 @@ function validateAnnotation(ann, index) {
     throw new Error(`Annotation ${index + 1}: unknown type "${ann.type}".`)
   }
   validateGeometry(ann.type, ann.geometry, index)
+  // Mirrors server/image/pages.js, which refuses a text selection without its words.
+  if (ann.type === 'text' && !(typeof ann.quote === 'string' && ann.quote.length > 0 && ann.quote.length <= MAX_QUOTE_LENGTH)) {
+    throw new Error(`Annotation ${index + 1}: a text selection needs its selected text (at most ${MAX_QUOTE_LENGTH} characters).`)
+  }
   if (ann.text !== null && ann.text !== undefined && typeof ann.text !== 'string') {
     throw new Error(`Annotation ${index + 1}: text must be a string or null.`)
   }

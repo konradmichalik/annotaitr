@@ -120,3 +120,18 @@ describe('parseAnnotationsJson with PDF pages', () => {
     expect(() => parseAnnotationsJson(JSON.stringify([{ ...paged, page: '2' }]))).toThrow(/page/)
   })
 })
+
+describe('parseAnnotationsJson with text selections', () => {
+  const rects = [{ x: 1, y: 2, width: 30, height: 10 }]
+  const selection = { id: 't', type: 'text', page: 1, quote: 'North grew', geometry: { x: 1, y: 2, width: 30, height: 10, rects } }
+
+  it('keeps a text selection on import', () => {
+    expect(parseAnnotationsJson(serializeAnnotations([selection]))).toEqual([selection])
+  })
+
+  it('rejects a text selection the server would refuse', () => {
+    expect(() => parseAnnotationsJson(JSON.stringify([{ ...selection, quote: '' }]))).toThrow(/selected text/)
+    expect(() => parseAnnotationsJson(JSON.stringify([{ ...selection, quote: 'x'.repeat(5001) }]))).toThrow(/selected text/)
+    expect(() => parseAnnotationsJson(JSON.stringify([{ ...selection, geometry: { ...selection.geometry, rects: [] } }]))).toThrow(/rects/)
+  })
+})

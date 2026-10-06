@@ -14,12 +14,12 @@ function failure(error) { return { success: false, error } }
  * A rendered page from `cache`. A render shared with a request that was
  * abandoned is dropped with it, so this request asks once more on its own.
  */
-async function pageFor(cache, page, signal) {
+async function pageFor(cache, page, signal, options) {
   try {
-    return await cache.get(page, signal)
+    return await cache.get(page, signal, options)
   } catch (error) {
     if (error.name !== 'AbortError' || signal.aborted) { throw error }
-    return cache.get(page, signal)
+    return cache.get(page, signal, options)
   }
 }
 
@@ -31,7 +31,8 @@ function mountPageRoutes(router, { review, caches }) {
     const abandoned = new AbortController()
     res.on('close', () => { if (!res.writableEnded) { abandoned.abort() } })
     try {
-      res.type('png').send(await pageFor(cache, page, abandoned.signal))
+      // The client marks a page it fetches ahead of the reviewer.
+      res.type('png').send(await pageFor(cache, page, abandoned.signal, { prefetch: req.query.prefetch === '1' }))
     } catch (error) {
       if (abandoned.signal.aborted) { return }
       // The client shows this on the page instead of the image.

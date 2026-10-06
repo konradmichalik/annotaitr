@@ -165,3 +165,26 @@ describe('pageText', () => {
     }
   })
 })
+
+describe('pageText on rotated text', () => {
+  it('leaves out text that does not run left to right on screen', async () => {
+    const { PDFDocument, StandardFonts, degrees } = await import('pdf-lib')
+    const pdf = await PDFDocument.create()
+    const font = await pdf.embedFont(StandardFonts.Helvetica)
+    const page = pdf.addPage([960, 540])
+    page.drawText('Upright', { x: 60, y: 400, size: 30, font })
+    page.drawText('Sideways', { x: 600, y: 100, size: 30, font, rotate: degrees(90) })
+    const dir = await mkdtemp(join(tmpdir(), 'annotaitr-pdf-rotated-'))
+    const path = join(dir, 'rotated.pdf')
+    await writeFile(path, await pdf.save())
+    const renderer = await createPdfRenderer(path)
+    try {
+      const { runs } = await renderer.pageText(1, 2000)
+      expect(runs.map((r) => r.str)).toEqual(['Upright'])
+      expect(runs[0].baseline).toBeCloseTo((540 - 400) * 2000 / 960, 0)
+    } finally {
+      await renderer.close()
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+})

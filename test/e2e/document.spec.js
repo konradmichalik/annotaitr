@@ -37,7 +37,7 @@ test('a PDF is annotated page by page and the CLI prints per-page feedback with 
     await drawBox(page, [20, 20], [120, 80])
     await expect(strip.getByRole('button', { name: 'Page 1, 1 annotation' })).toBeVisible()
 
-    const nav = page.getByRole('toolbar', { name: 'Page navigation' })
+    const nav = page.getByRole('group', { name: 'Page navigation' })
     await expect(nav.getByRole('button', { name: 'Previous page' })).toBeDisabled()
     await nav.getByRole('button', { name: 'Next page' }).click()
     await expect(nav).toContainText('Page 2 / 3')
