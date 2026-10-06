@@ -243,6 +243,9 @@ export default function ImageCanvas({
   previousThreads = [], previousRound = null, showPrevious = false, openThreadHandle = null, onOpenThread = null, onCloseThread = null
 }) {
   const wrapperRef = useRef(null)
+  // A thread opened from the panel on another page mounts this canvas with its popover already due, before the wrapper exists to anchor it to.
+  const [wrapperMounted, setWrapperMounted] = useState(false)
+  useEffect(() => { setWrapperMounted(true) }, [])
   const previousClickRef = useRef(null)
   // Set by the wheel handler just before onZoomBy fires, and consumed by the
   // effect below once `zoom` actually changes - carries the point that
@@ -749,7 +752,7 @@ export default function ImageCanvas({
           onClose={() => setSelectedId(null)}
         />
       )}
-      {openThread && (
+      {openThread && wrapperMounted && (
         <ThreadPopover
           key={openThread.handle}
           thread={openThread} round={previousRound}

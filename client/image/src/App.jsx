@@ -110,6 +110,21 @@ export default function App() {
     threadOpenerRef.current?.focus()
     threadOpenerRef.current = null
   }, [])
+  // A thread opened from the panel seeks first, so the mark takes a render or two to arrive. Only a mark that
+  // was in view and then left (another page, playback past a span) closes its popover, otherwise it would
+  // come back on its own when the view returns.
+  const threadSeenRef = useRef(false)
+  const openThreadPlaced = !!openThreadHandle && previousThreads.some((t) => t.handle === openThreadHandle)
+  useEffect(() => {
+    if (!openThreadHandle) {
+      threadSeenRef.current = false
+    } else if (openThreadPlaced) {
+      threadSeenRef.current = true
+    } else if (threadSeenRef.current) {
+      threadSeenRef.current = false
+      closeThread()
+    }
+  }, [openThreadHandle, openThreadPlaced, closeThread])
   const openCanvasThread = useCallback((handle) => {
     setEntryThread(null)
     threadOpenerRef.current = null

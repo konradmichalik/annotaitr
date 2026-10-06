@@ -22,4 +22,12 @@ describe('ReplyList', () => {
     expect(html).toContain('Moved it')
     expect(html).toContain('dateTime="2026-10-06T12:00:00.000Z"')
   })
+
+  it('renders a reply with an invalid date without a time element', () => {
+    const html = renderToStaticMarkup(
+      <ReplyList display={display} replies={[{ id: 'r1', status: 'applied', text: 'Moved it', createdAt: 'nope' }]} />
+    )
+    expect(html).toContain('Moved it')
+    expect(html).not.toContain('<time')
+  })
 })

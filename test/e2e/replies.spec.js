@@ -250,6 +250,30 @@ test.describe('replies from the last round', () => {
     }
   })
 
+  test('does not reopen a PDF thread after leaving its page and coming back', async ({ page }) => {
+    const pdf = join(dir, 'deck.pdf')
+    await writeFile(pdf, await makePdf([{ size: 'slide', title: 'One' }, { size: 'slide', title: 'Two' }, { size: 'slide', title: 'Three' }]))
+    await firstRoundWithReply(pdf, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Too dense', color: '#bf616a', page: 2 })
+    const cli = startCli([pdf], env)
+    try {
+      await page.goto(await cli.url)
+      await page.getByRole('region', { name: /Round 1 replies/ }).getByRole('button', { name: /Too dense/ }).click()
+      await expect(page.getByRole('dialog')).toHaveCount(1)
+      const strip = page.getByRole('navigation', { name: 'Pages' })
+      // A page key is not a click, so nothing but the page change itself can close the popover.
+      await page.keyboard.press('PageDown')
+      await expect(strip.getByRole('button', { name: 'Page 3' })).toHaveAttribute('aria-current', 'page')
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await strip.getByRole('button', { name: /Page 2/ }).click()
+      await expect(page.locator('.previous-round').getByText('applied')).toBeVisible()
+      // A popover that was going to reappear would do so right after the canvas mounted, give it that long.
+      await page.waitForTimeout(500)
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+    } finally {
+      cli.child.kill()
+    }
+  })
+
   test('puts last round on the video timeline and opens the thread from its tick', async ({ page }) => {
     const first = startCli([WEBM_FIXTURE], env)
     await page.goto(await first.url)
