@@ -1,9 +1,9 @@
 import { isVisibleAt } from '../video/timeline.js'
 
-// Icon plus text, so a status never depends on colour alone.
 /** Visible names for the two sides of a thread. */
 export const AUTHOR_LABELS = { agent: 'Agent', human: 'You' }
 
+// Icon plus text, so a status never depends on colour alone.
 export const STATUS_DISPLAY = {
   applied: { icon: '✓', label: 'applied' },
   partial: { icon: '◐', label: 'partial' },

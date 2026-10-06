@@ -1707,6 +1707,15 @@ button.voice-note:hover {
   cursor: pointer;
 }
 
+/* display: flex drops the native marker, so the open state is drawn here and never animated. */
+.previous-round-panel summary::before {
+  content: "\25B8";
+}
+
+.previous-round-panel details[open] > summary::before {
+  content: "\25BE";
+}
+
 .previous-round-icon {
   display: inline-flex;
   color: var(--text-muted);
