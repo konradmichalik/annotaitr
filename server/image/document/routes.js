@@ -169,7 +169,8 @@ export function createDocumentApiRouter({ document, source, origin, targetLabel,
       pageCount: document.pageCount,
       pages: document.pages,
       source: source?.label ?? null,
-      sourceIsNewer: source?.newer ?? false
+      sourceIsNewer: source?.newer ?? false,
+      documentHash: document.hash
     }))
   })
 

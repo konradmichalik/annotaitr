@@ -96,7 +96,10 @@ render has a timeout, after which the worker is replaced. `/api/meta` lists
 the pages with their size in rendered pixels (longer side 2000px), which is
 also the space annotation geometry lives in. Pages and thumbnails are
 rendered on first request, thumbnails at their own small size, and only a
-few full pages are kept in memory.
+few full pages are kept in memory. `/api/meta` also carries a hash of the
+PDF's content: the client remembers the page shown for that hash in a
+cookie, so a reload (or reopening the same PDF) returns to it, while a
+regenerated PDF starts on its first page.
 
 Every annotation carries a `page`, a page comment is a comment with a
 `page`, a general comment has none. Annotations are numbered by page, in the

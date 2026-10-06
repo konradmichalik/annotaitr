@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { orderDocumentAnnotations, nextNumberOnPage, pageAnnotationCounts, stepPage, isPaged } from './documentPages.js'
+import { readLastPage, rememberLastPage } from './lastPage.js'
 import { readError } from '../utils/readError.js'
 
 const NO_PAGES = []
@@ -19,7 +20,10 @@ export function useDocumentReview({ meta, annotations }) {
   const [loadedPage, setLoadedPage] = useState(null)
   // The page's text layer: elements to outline and name, words to select.
   const [text, setText] = useState({ page: null, ...NO_TEXT })
-  const current = selected ?? pages[0]?.number ?? null
+  const hash = isDocument ? meta.documentHash : null
+  // A reload of the same PDF opens where the reviewer left off.
+  const restored = useMemo(() => (isDocument ? readLastPage(hash, pages) : null), [isDocument, hash, pages])
+  const current = selected ?? restored ?? pages[0]?.number ?? null
   const currentPage = pages.find((p) => p.number === current) ?? null
 
   const ordered = useMemo(
@@ -42,6 +46,10 @@ export function useDocumentReview({ meta, annotations }) {
   const seekTo = useCallback((annotation) => {
     if (isDocument && isPaged(annotation)) { goTo(annotation.page) }
   }, [isDocument, goTo])
+
+  useEffect(() => {
+    if (hash && current !== null) { rememberLastPage(hash, current) }
+  }, [hash, current])
 
   const imageUrl = isDocument && current ? `/api/pages/${current}/image` : null
   const loading = isDocument && loadedPage !== current && pageError?.page !== current

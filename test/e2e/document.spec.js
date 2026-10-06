@@ -128,3 +128,26 @@ test('text on a PDF page is selected word by word and quoted in the feedback', a
     await rm(dir, { recursive: true, force: true })
   }
 })
+
+test('a reload keeps the page shown, a regenerated PDF opens on its first page', async ({ page }) => {
+  const dir = await mkdtemp(join(tmpdir(), 'annotaitr-e2e-pdf-reload-'))
+  const pdfPath = join(dir, 'deck.pdf')
+  await writeFile(pdfPath, await makePdf([{ size: 'slide', title: 'One' }, { size: 'slide', title: 'Two' }, { size: 'slide', title: 'Three' }]))
+  const strip = page.getByRole('navigation', { name: 'Pages' })
+  let cli = startCli([pdfPath])
+  try {
+    await page.goto(await cli.url)
+    await strip.getByRole('button', { name: 'Page 3' }).click()
+    await page.reload()
+    await expect(strip.getByRole('button', { name: 'Page 3' })).toHaveAttribute('aria-current', 'page')
+    cli.child.kill()
+
+    await writeFile(pdfPath, await makePdf([{ size: 'slide', title: 'One' }, { size: 'slide', title: 'Two, fixed' }, { size: 'slide', title: 'Three' }]))
+    cli = startCli([pdfPath])
+    await page.goto(await cli.url)
+    await expect(strip.getByRole('button', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page')
+  } finally {
+    cli.child.kill()
+    await rm(dir, { recursive: true, force: true })
+  }
+})

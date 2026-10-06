@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+import { createReadStream } from 'node:fs'
 import { stat } from 'node:fs/promises'
 import { createPdfRenderer, PRIORITY } from './pdf/renderer.js'
 import { buildTextLayer } from './pdf/textLayer.js'
@@ -18,6 +20,14 @@ function pixelSize({ width, height }, longSide) {
   return { width: Math.round(width * scale), height: Math.round(height * scale) }
 }
 
+// Identifies the PDF's content, not its path: the client remembers the last
+// page per hash, so a regenerated PDF opens on its first page again.
+async function contentHash(path) {
+  const hash = createHash('sha256')
+  for await (const chunk of createReadStream(path)) { hash.update(chunk) }
+  return hash.digest('hex').slice(0, 16)
+}
+
 /**
  * Open a PDF for review before the browser opens: parse it in the render
  * worker, pick the session's pages and size each one in the pixels its
@@ -28,6 +38,7 @@ export async function openPdfDocument(pdfPath, { pageRanges = null } = {}) {
   if (size > config.maxPdfBytes) {
     throw new Error(`PDF too large: ${pdfPath} (${size} bytes, max ${config.maxPdfBytes})`)
   }
+  const hash = await contentHash(pdfPath)
   const renderer = await createPdfRenderer(pdfPath)
   try {
     const { pages, error } = selectPages(pageRanges, renderer.pageCount)
@@ -36,6 +47,7 @@ export async function openPdfDocument(pdfPath, { pageRanges = null } = {}) {
     const sizes = await Promise.all(pages.map((number) => renderer.pageSize(number)))
     return {
       path: pdfPath,
+      hash,
       renderer,
       pageCount: renderer.pageCount,
       pages: pages.map((number, i) => ({ number, ...pixelSize(sizes[i], PAGE_LONG_SIDE) }))
