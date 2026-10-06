@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { matchAnnotation, formatElementLine } from '../../../../server/image/common/elementMatch.js'
+import { matchAnnotation, formatElementLine, describeMatch } from '../../../../server/image/common/elementMatch.js'
 
 const el = (selector, x, y, width, height, extra = {}) => ({
   tag: 'div', role: '', name: '', media: '', selector, box: { x, y, width, height }, ...extra
@@ -118,6 +118,11 @@ describe('matchAnnotation', () => {
 })
 
 describe('formatElementLine', () => {
+  it('describes matched elements without the line prefix, for the session file', () => {
+    expect(describeMatch([button])).toBe('a[button] "Start trial" · #hero a.cta')
+    expect(describeMatch([])).toBeNull()
+  })
+
   it('renders tag, role, quoted name, media file and selector', () => {
     expect(formatElementLine([photo])).toBe('Element: img "Team photo" ("team.jpg") · #hero img')
     expect(formatElementLine([button])).toBe('Element: a[button] "Start trial" · #hero a.cta')

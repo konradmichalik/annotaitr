@@ -195,9 +195,10 @@ describe('document annotator server', () => {
       ]
     })
     expect((await post('/api/feedback', {})).status).toBe(200)
-    const { output, approved, annotationCount } = await decided
+    const { output, approved, annotationCount, annotations } = await decided
     expect(approved).toBe(false)
     expect(annotationCount).toBe(4)
+    expect(annotations.map((a) => a.id)).toEqual(['a', 'b', 'c', 'g'])
     expect(output).toMatch(/^4 annotations on 2 of 3 pages\.\n\nSource: deck\.pptx \(rendered as deck\.pdf\)\n/)
     expect(output).toMatch(/## Page 1\nAnnotated page: .*page-01\.png\n\n### 1\. Boxed area/)
     expect(output).toMatch(/## Page 3\nAnnotated page: .*page-03\.png\n\n### 2\. Boxed area[^\n]*\nText: text "Three"\n> note b\n\n### 3\. Page comment\n> Too dense/)
@@ -231,7 +232,9 @@ describe('document annotator server', () => {
   it('approves without notes when nothing was annotated', async () => {
     const { decided } = await start()
     expect((await post('/api/approve', {})).status).toBe(200)
-    expect((await decided).output).toBe('APPROVED: No changes requested.\n')
+    const decision = await decided
+    expect(decision.output).toBe('APPROVED: No changes requested.\n')
+    expect(decision.annotations).toEqual([])
   })
 
   it('renders one page with its markup for copying, numbered as in the feedback', async () => {

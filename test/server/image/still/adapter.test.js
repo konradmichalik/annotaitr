@@ -46,6 +46,25 @@ describe('image annotator server', () => {
     return server
   }
 
+  it('carries the submitted annotations and the DOM map in the decision', async () => {
+    const domMap = [{ tag: 'button', name: 'Buy', selector: '#buy', box: { x: 0, y: 0, width: 20, height: 10 } }]
+    await start({ domMap })
+    const annotation = { id: 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d', type: 'pin', geometry: { x: 5, y: 5 }, text: 'Fix' }
+    await fetch(`${server.url}/api/annotations`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ annotations: [annotation] })
+    })
+    await fetch(`${server.url}/api/feedback`, { method: 'POST' })
+    const decision = await server.waitForDecision()
+    expect(decision.annotations).toEqual([annotation])
+    expect(decision.domMap).toEqual(domMap)
+  })
+
+  it('carries an empty annotation list on a plain approve', async () => {
+    await start()
+    await fetch(`${server.url}/api/approve`, { method: 'POST' })
+    expect((await server.waitForDecision()).annotations).toEqual([])
+  })
+
   it('serves the source image as PNG', async () => {
     await start()
     const res = await fetch(`${server.url}/api/image`)

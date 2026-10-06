@@ -108,7 +108,7 @@ function mountDecisionRoutes(router, { review, state, caches, document, resolveD
       const output = approved ? formatDocumentApprovalWithNotes(ctx) : exportDocumentFeedback(ctx)
       state.decided = true
       res.json(success({ message: approved ? 'Approved with notes' : 'Feedback submitted' }))
-      setTimeout(() => resolveDecision({ approved, output, annotationCount: ctx.ordered.length }), 100)
+      setTimeout(() => resolveDecision({ approved, output, annotationCount: ctx.ordered.length, annotations: ctx.ordered }), 100)
     } catch (error) {
       console.error(error)
       res.status(500).json(failure(error.message))
@@ -121,7 +121,7 @@ function mountDecisionRoutes(router, { review, state, caches, document, resolveD
     if (state.annotations.length === 0) {
       state.decided = true
       res.json(success({ message: 'Approved' }))
-      setTimeout(() => resolveDecision({ approved: true, output: formatApprovalOutput() }), 100)
+      setTimeout(() => resolveDecision({ approved: true, output: formatApprovalOutput(), annotations: [] }), 100)
       return
     }
     await decide(res, { approved: true })

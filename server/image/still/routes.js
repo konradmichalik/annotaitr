@@ -133,7 +133,7 @@ export function createApiRouter({ origin, targetLabel, state, voiceNotes = false
   router.post('/api/approve', async (_req, res) => {
     if (state.annotations.length === 0) {
       res.json(success({ message: 'Approved' }))
-      setTimeout(() => resolveDecision({ approved: true, output: formatApprovalOutput() }), 100)
+      setTimeout(() => resolveDecision({ approved: true, output: formatApprovalOutput(), annotations: [], domMap: state.capture.domMap }), 100)
       return
     }
     try {
@@ -141,7 +141,9 @@ export function createApiRouter({ origin, targetLabel, state, voiceNotes = false
       const output = formatApprovalWithNotesOutput(state.annotations, width, height, annotatedImagePath, domMap, note)
       res.json(success({ message: 'Approved with notes' }))
       setTimeout(
-        () => resolveDecision({ approved: true, output, annotationCount: state.annotations.length }),
+        () => resolveDecision({
+          approved: true, output, annotationCount: state.annotations.length, annotations: state.annotations, domMap: state.capture.domMap
+        }),
         100
       )
     } catch (error) {
@@ -159,7 +161,9 @@ export function createApiRouter({ origin, targetLabel, state, voiceNotes = false
       const output = exportFeedback(state.annotations, width, height, annotatedImagePath, domMap, note)
       res.json(success({ message: 'Feedback submitted' }))
       setTimeout(
-        () => resolveDecision({ approved: false, output, annotationCount: state.annotations.length }),
+        () => resolveDecision({
+          approved: false, output, annotationCount: state.annotations.length, annotations: state.annotations, domMap: state.capture.domMap
+        }),
         100
       )
     } catch (error) {
