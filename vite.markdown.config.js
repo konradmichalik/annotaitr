@@ -26,7 +26,7 @@ const katexWoff2Only = {
 
 export default defineConfig({
   root: './client/markdown',
-  plugins: [react(), viteSingleFile(), katexWoff2Only, themeInitPlugin('md-annotator-settings')],
+  plugins: [react(), viteSingleFile(), katexWoff2Only, themeInitPlugin()],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version)
   },

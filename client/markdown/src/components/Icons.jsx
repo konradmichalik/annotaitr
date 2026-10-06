@@ -6,12 +6,6 @@ export const TrashIcon = () => (
   </svg>
 )
 
-export const CloseIcon = () => (
-  <svg {...props}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-  </svg>
-)
-
 export const PencilIcon = () => (
   <svg {...props}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" />

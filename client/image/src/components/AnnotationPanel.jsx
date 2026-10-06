@@ -5,7 +5,7 @@ import { matchAnnotation, describeElements } from '../utils/elementMatch.js'
 const TYPE_LABELS = { box: 'Box', element: 'Element', text: 'Text', arrow: 'Arrow', freehand: 'Freehand', highlighter: 'Highlight', pin: 'Pin' }
 
 /** A general comment about the whole image (no geometry, no canvas presence): edited inline right here, not via the canvas popover. */
-function GlobalCommentItem({ annotation, title = 'General comment', timeLabel = null, isEditing, onStartEdit, onSave, onCancel, onRemove }) {
+function GlobalCommentItem({ annotation, title = 'General', timeLabel = null, isEditing, onStartEdit, onSave, onCancel, onRemove }) {
   const [text, setText] = useState(annotation.text || '')
   const textareaRef = useRef(null)
 
@@ -27,11 +27,8 @@ function GlobalCommentItem({ annotation, title = 'General comment', timeLabel = 
   return (
     <li className="panel-item panel-global-comment">
       <div className="panel-item-header">
-        <span className="panel-item-title">
-          <span className="panel-item-icon">{ACTION_ICONS.addComment}</span>
-          {title}
-          {timeLabel && <span className="panel-time-chip">{timeLabel}</span>}
-        </span>
+        <span className="panel-type-badge global">{title}</span>
+        {timeLabel && <span className="panel-time-chip">{timeLabel}</span>}
         <div className="panel-item-actions">
           {!isEditing && (
             <button
@@ -79,17 +76,18 @@ function GlobalCommentItem({ annotation, title = 'General comment', timeLabel = 
   )
 }
 
-function ShapeItem({ annotation, number, timeLabel, elementHint = null, onEdit, onRemove }) {
+function ShapeItem({ annotation, number, timeLabel, elementHint = null, selected, onEdit, onRemove }) {
+  const activate = () => onEdit(annotation.id)
   return (
-    <li className="panel-item" onClick={() => onEdit(annotation.id)}>
+    <li className={`panel-item${selected ? ' selected' : ''}`} onClick={activate}>
       <div className="panel-item-header">
-        <span className="panel-item-title">
-          <span className="panel-item-icon" style={{ color: annotation.color }}>
-            {TOOL_ICONS[annotation.type]}
+        <button type="button" className="panel-item-select" aria-pressed={selected} onClick={(event) => { event.stopPropagation(); activate() }}>
+          <span className="panel-type-badge shape">
+            <span className="panel-type-icon" style={{ color: annotation.color }}>{TOOL_ICONS[annotation.type]}</span>
+            {number}. {TYPE_LABELS[annotation.type] || annotation.type}
           </span>
-          {number}. {TYPE_LABELS[annotation.type] || annotation.type}
-          {timeLabel && <span className="panel-time-chip">{timeLabel}</span>}
-        </span>
+        </button>
+        {timeLabel && <span className="panel-time-chip">{timeLabel}</span>}
         <div className="panel-item-actions">
           <button
             type="button"
@@ -121,7 +119,7 @@ function ShapeItem({ annotation, number, timeLabel, elementHint = null, onEdit, 
 
 function commentTitle(annotation, number) {
   if (Number.isInteger(annotation.page)) { return `${number}. Page comment` }
-  if (typeof annotation.time !== 'number') { return `${number}. General comment` }
+  if (typeof annotation.time !== 'number') { return `${number}. General` }
   return `${number}. ${typeof annotation.endTime === 'number' ? 'Span comment' : 'Comment'}`
 }
 
@@ -136,7 +134,7 @@ function commentTitle(annotation, number) {
  */
 export default function AnnotationPanel({
   annotations, onRemove, onEdit, onEditGlobalComment, timeLabelFor = null, autoEditId = null, onAutoEditConsumed = null,
-  elements = [], subject = 'image'
+  elements = [], subject = 'image', selectedId = null
 }) {
   const [editingGlobalId, setEditingGlobalId] = useState(null)
 
@@ -152,7 +150,12 @@ export default function AnnotationPanel({
   }
 
   if (annotations.length === 0) {
-    return <p className="panel-empty">No annotations yet. Pick a tool above and mark up the {subject}.</p>
+    return (
+      <div className="panel-empty">
+        <p>No annotations yet. Pick a tool above and mark up the {subject}.</p>
+        <p className="panel-empty-hint">Use + to add a general comment.</p>
+      </div>
+    )
   }
 
   const renderComment = (annotation, extra = {}) => (
@@ -176,7 +179,7 @@ export default function AnnotationPanel({
           : (
             <ShapeItem
               key={annotation.id} annotation={annotation} number={index + 1}
-              timeLabel={timeLabelFor(annotation)} onEdit={onEdit} onRemove={onRemove}
+              timeLabel={timeLabelFor(annotation)} selected={annotation.id === selectedId} onEdit={onEdit} onRemove={onRemove}
               elementHint={annotation.quote ? `"${annotation.quote}"` : null}
             />
           )))}
@@ -193,7 +196,8 @@ export default function AnnotationPanel({
         // including general comments.
         <ShapeItem
           key={annotation.id} annotation={annotation} number={annotations.indexOf(annotation) + 1}
-          elementHint={describeElements(matchAnnotation(elements, annotation))} onEdit={onEdit} onRemove={onRemove}
+          elementHint={describeElements(matchAnnotation(elements, annotation))} selected={annotation.id === selectedId}
+          onEdit={onEdit} onRemove={onRemove}
         />
       ))}
     </ul>

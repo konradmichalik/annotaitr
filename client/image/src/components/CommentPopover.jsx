@@ -5,11 +5,11 @@ import { ARROW_STYLE_ICONS, TOOL_ICONS } from '../utils/icons.jsx'
 import {
   ARROW_STYLES, resolveArrowStyle, STYLE_FIELDS, presetsFor, strokeWidthOf, DASH_STYLES
 } from '../utils/annotationStyles.js'
-import { useDropdown } from '../hooks/useDropdown.js'
-import { useOutsideClick } from '../hooks/useOutsideClick.js'
+import { useDropdown } from '../../../shared/hooks/useDropdown.js'
+import { useOutsideClick } from '../../../shared/hooks/useOutsideClick.js'
 import VoiceNoteButton from './VoiceNoteButton.jsx'
 
-const POPOVER_WIDTH = 280
+const POPOVER_WIDTH = 320
 const POPOVER_HEIGHT_ESTIMATE = 150
 const GAP = 12
 

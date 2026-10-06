@@ -33,11 +33,9 @@ export async function runMarkdown({ targets, origin, feedbackNotes }) {
   if (error) { fail(error); return }
 
   const server = withLifecycle(await buildMarkdownServer({ filePaths: absolutePaths, origin, feedbackNotes }))
-  const url = `http://localhost:${server.port}`
-
-  process.stderr.write(`Server running at ${url}\n`)
+  process.stderr.write(`Server running at ${server.url}\n`)
   process.stderr.write(`Annotating: ${absolutePaths.join(', ')}\n`)
-  await openBrowser(url)
+  await openBrowser(server.url)
 
   const decision = await server.waitForDecision()
   await handleOutcome(server, decision, () => (

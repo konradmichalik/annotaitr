@@ -31,6 +31,7 @@ import { useServerConnection } from '../../shared/hooks/useServerConnection.js'
 import { useResizablePanel } from '../../shared/hooks/useResizablePanel.js'
 import { UpdateBanner } from '../../shared/components/UpdateBanner.jsx'
 import { Logo } from '../../shared/components/Logo.jsx'
+import { DoneScreen, DoneAutoClose } from '../../shared/components/DoneScreen.jsx'
 import { getItem, setItem } from '../../shared/utils/storage.js'
 
 const ORIGIN_LABELS = {
@@ -397,37 +398,24 @@ export default function App() {
   if (serverGone && !decision) {
     return (
       <div className="app-shell">
-        <div className="done-screen">
-          <div className="done-card">
-            <div className="done-icon done-icon--disconnected">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="1" y1="1" x2="23" y2="23" />
-                <path d="M16.72 11.06A10.94 10.94 0 0119 12.55" />
-                <path d="M5 12.55a10.94 10.94 0 015.17-2.39" />
-                <path d="M10.71 5.05A16 16 0 0122.56 9" />
-                <path d="M1.42 9a15.91 15.91 0 014.7-2.88" />
-                <path d="M8.53 16.11a6 6 0 016.95 0" />
-                <line x1="12" y1="20" x2="12.01" y2="20" />
-              </svg>
+        <DoneScreen
+          variant="disconnected"
+          title="Server Disconnected"
+          message="The server is no longer available. Your annotations have not been submitted."
+        >
+          {reconnectState === 'reconnecting' && <p className="done-hint">Attempting to reconnect...</p>}
+          {reconnectState === 'failed' && <p className="done-hint">Could not reconnect to the server.</p>}
+          {annotationCount > 0 && (
+            <div className="done-actions">
+              <p className="done-backup-info">
+                {annotationCount} annotation{annotationCount === 1 ? '' : 's'} not yet submitted.
+              </p>
+              <button type="button" onClick={() => setShowExport(true)} className="btn btn-feedback">
+                Export Annotations
+              </button>
             </div>
-            <h1 className="done-title">Server Disconnected</h1>
-            <p className="done-message">
-              The server is no longer available. Your annotations have not been submitted.
-            </p>
-            {reconnectState === 'reconnecting' && <p className="done-hint">Attempting to reconnect...</p>}
-            {reconnectState === 'failed' && <p className="done-hint">Could not reconnect to the server.</p>}
-            {annotationCount > 0 && (
-              <div className="done-actions">
-                <p className="done-backup-info">
-                  {annotationCount} annotation{annotationCount === 1 ? '' : 's'} not yet submitted.
-                </p>
-                <button type="button" onClick={() => setShowExport(true)} className="btn btn-feedback">
-                  Export Annotations
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+          )}
+        </DoneScreen>
         {showExport && (
           <ExportModal
             annotations={state.annotations}
@@ -443,63 +431,30 @@ export default function App() {
   if (decision) {
     return (
       <div className="app-shell">
-        <div className="done-screen">
-          <div className="done-card">
-            <div className={`done-icon done-icon--${decision}`}>
-              {decision === 'approved' ? (
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              ) : (
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
-              )}
-            </div>
-            <h1 className="done-title">
-              {decision === 'approved'
-                ? (annotationCount > 0 ? 'Approved with Notes' : 'Approved')
-                : 'Feedback Submitted'}
-            </h1>
-            <p className="done-message">
-              {decision === 'approved'
-                ? (annotationCount > 0
-                  ? `Approved as-is. ${annotationCount} annotation${annotationCount === 1 ? '' : 's'} passed along as notes.`
-                  : `No changes requested. The ${subject} was approved as-is.`)
-                : `${annotationCount} annotation${annotationCount === 1 ? '' : 's'} ${ORIGIN_LABELS[origin] ? `sent to ${ORIGIN_LABELS[origin]}` : 'submitted'}.`}
-            </p>
-            <p className="done-hint">
-              {decision === 'feedback' && ORIGIN_LABELS[origin]
-                ? `${ORIGIN_LABELS[origin]} is processing your feedback.`
-                : 'You can close this tab.'}
-            </p>
-            <div className="done-autoclose">
-              {autoCloseState.phase === 'counting' && (
-                <p className="done-countdown">
-                  This tab will close in <span className="done-countdown-number">{autoCloseState.remaining}</span> second{autoCloseState.remaining !== 1 ? 's' : ''}...
-                </p>
-              )}
-              {autoCloseState.phase === 'closeFailed' && (
-                <p className="done-hint">Could not close this tab automatically. Please close it manually.</p>
-              )}
-              {autoCloseState.phase === 'prompt' && (
-                <label className="done-autoclose-prompt">
-                  <input
-                    type="checkbox"
-                    checked={false}
-                    onChange={() => {
-                      updateSetting('autoCloseDelay', '3')
-                      enableAndStart()
-                    }}
-                  />
-                  <span>Auto-close this tab after 3 seconds</span>
-                </label>
-              )}
-            </div>
-          </div>
-          <Logo className="app-logo done-logo" />
-        </div>
+        <DoneScreen
+          variant={decision}
+          title={decision === 'approved'
+            ? (annotationCount > 0 ? 'Approved with Notes' : 'Approved')
+            : 'Feedback Submitted'}
+          message={decision === 'approved'
+            ? (annotationCount > 0
+              ? `Approved as-is. ${annotationCount} annotation${annotationCount === 1 ? '' : 's'} passed along as notes.`
+              : `No changes requested. The ${subject} was approved as-is.`)
+            : `${annotationCount} annotation${annotationCount === 1 ? '' : 's'} ${ORIGIN_LABELS[origin] ? `sent to ${ORIGIN_LABELS[origin]}` : 'submitted'}.`}
+        >
+          <p className="done-hint">
+            {decision === 'feedback' && ORIGIN_LABELS[origin]
+              ? `${ORIGIN_LABELS[origin]} is processing your feedback.`
+              : 'You can close this tab.'}
+          </p>
+          <DoneAutoClose
+            state={autoCloseState}
+            onEnable={() => {
+              updateSetting('autoCloseDelay', '3')
+              enableAndStart()
+            }}
+          />
+        </DoneScreen>
       </div>
     )
   }
@@ -513,7 +468,7 @@ export default function App() {
           {ORIGIN_LABELS[origin] && (
             <span className="origin-badge">{ORIGIN_LABELS[origin]}</span>
           )}
-          {meta?.targetLabel && <span className="app-target">{meta.targetLabel}</span>}
+          {meta?.targetLabel && <span className="app-target" title={meta.targetLabel}>{meta.targetLabel}</span>}
         </div>
         <div className="header-right">
           <button
@@ -567,7 +522,7 @@ export default function App() {
       <main className="app-body">
         {isDocument && <PageStrip pages={doc.pages} current={doc.current} counts={doc.counts} onSelect={goToPage} />}
         <div className="app-stage">
-          <div className="app-main">
+          <div className="app-main canvas-surface">
             <div className="canvas-topbar">
               <Toolbar
                 activeTool={activeTool}
@@ -644,7 +599,7 @@ export default function App() {
             )}
         </div>
         {!sidebarCollapsed && (
-          <div className="panel-resize-handle" onMouseDown={handlePanelResize} />
+          <div className="panel-splitter" onMouseDown={handlePanelResize} />
         )}
         {!sidebarCollapsed && (
           <aside className="app-sidebar" style={{ width: panelWidth }}>
@@ -699,6 +654,7 @@ export default function App() {
               subject={subject}
               autoEditId={autoEditId}
               onAutoEditConsumed={clearAutoEdit}
+              selectedId={editingAnnotationId}
             />
           </aside>
         )}

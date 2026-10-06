@@ -62,6 +62,7 @@ npm run lint:fix
 
 - ESLint (`eslint.config.js`) covers JS and JSX, Stylelint (`stylelint.config.js`, standard config) covers CSS
 - CI runs `npm run lint:js` and `npm run lint:css` as separate jobs
+- Both clients render the same chrome (header, workspace toolbar, panel, popovers, modals, done screen) from `client/shared`: design tokens and shared rules live in `client/shared/styles/` (`common.css` imports one file per area), a client's own `styles.css` keeps only rules specific to that mode
 - The image server and client share no modules on purpose, so some logic (for example `annotationStyles.js`) is duplicated by design
 - `playwright`, `@napi-rs/canvas` and `pdfjs-dist` are optional dependencies and must be imported dynamically. pdf.js only runs inside the render worker (`server/image/document/pdf/`)
 

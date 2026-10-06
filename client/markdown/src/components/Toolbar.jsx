@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { CommentPopover } from './CommentPopover.jsx'
 import { QuickLabelPicker } from './QuickLabelPicker.jsx'
-import { TrashIcon, CloseIcon, PencilIcon, CommentIcon, PlusIcon, ExternalLinkIcon, FileIcon, TagIcon } from './Icons.jsx'
+import { CloseIcon } from '../../../shared/components/CloseIcon.jsx'
+import { TrashIcon, PencilIcon, CommentIcon, PlusIcon, ExternalLinkIcon, FileIcon, TagIcon } from './Icons.jsx'
 
 const OpenLinkButton = ({ linkUrl, onOpenLink }) => {
   const isInternal = !!onOpenLink
@@ -199,6 +200,7 @@ export function Toolbar({ highlightElement, onAnnotate, onClose, onDelete, onQui
           anchorEl={highlightElement}
           initialText={initialText}
           placeholder={insertionMode ? 'Text to insert...' : 'Add a comment...'}
+          submitLabel={editAnnotation ? 'Save' : 'Add'}
           onSubmit={handlePopoverSubmit}
           onClose={handlePopoverClose}
         />
