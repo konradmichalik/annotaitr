@@ -5,7 +5,7 @@
  */
 
 export const PRESET_LABELS = { desktop: 'Desktop', laptop: 'Laptop', tablet: 'Tablet', mobile: 'Phone' }
-// Mirrors ROTATABLE_PRESETS in server/image/config.js.
+// Mirrors ROTATABLE_PRESETS in server/image/common/config.js.
 export const ROTATABLE_PRESETS = new Set(['tablet', 'mobile'])
 
 const matches = (preset, width, height) => preset?.width === width && preset?.height === height

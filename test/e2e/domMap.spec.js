@@ -3,8 +3,8 @@ import { createServer } from 'node:http'
 import { test, expect } from '@playwright/test'
 import { startCli } from '../helpers/cli.js'
 import { createCanvas, loadImage } from '@napi-rs/canvas'
-import { captureUrl } from '../../server/image/loader.js'
-import { matchAnnotation } from '../../server/image/elementMatch.js'
+import { captureUrl } from '../../server/image/still/loader.js'
+import { matchAnnotation } from '../../server/image/common/elementMatch.js'
 
 const PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
 

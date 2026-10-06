@@ -4,7 +4,7 @@
 
 annotaitr is a plugin and CLI for Claude Code, OpenCode and Mistral Vibe. It opens an image, a captured web page, a video, a PDF or Markdown/plain-text files in a browser UI for annotation. The user's feedback is printed to stdout for the calling agent to apply. Requires Node.js 22.13 or newer.
 
-The mode (`image` or `markdown`) is auto-detected from the CLI target by `detectMode()` in `index.js`, or forced with `--as`.
+The mode (`image` or `markdown`) is auto-detected from the CLI target by `detectMode()` in `cli/detect.js`, or forced with `--as`.
 
 Flow: CLI (`index.js`) starts an Express server, opens the browser and blocks until the user submits a decision. Each client is a React SPA built as one single-file HTML bundle (vite-plugin-singlefile).
 
@@ -15,9 +15,11 @@ Stdout is the contract with the calling agent:
 
 ## Structure
 
-- `index.js`: CLI entry, argument parsing, mode detection, stdout output
+- `index.js`: CLI entry, dispatches to a mode runner
+- `cli/`: argument parsing (`args.js`), mode detection (`detect.js`), help text, one runner per target kind (`markdown.js`, `image.js`, `video.js`, `document.js`) and the stdout output on a decision (`outcome.js`)
 - `server/core/`: mode-agnostic Express bootstrap, config (`ANNOTAITR_*` environment variables), browser opening, signal handling
-- `server/markdown/`, `server/image/`: mode-specific API routes, feedback formatting, file and image loading
+- `server/markdown/`: markdown mode API routes, feedback formatting and file loading
+- `server/image/`: image mode, split into `common/` (rendering, feedback basics, element matching, transcription, config) and one folder per target kind: `still/` (image file, URL capture, clipboard), `video/` and `document/` (PDF)
 - `client/markdown/`, `client/image/`: the two React SPAs with separate Vite roots
 - `client/shared/`: components, hooks and utils used by both clients
 - `apps/claude-code/`: Claude Code plugin (`.claude-plugin/plugin.json`, slash commands `md`, `image`, `review`)
@@ -62,7 +64,7 @@ npm run lint:fix
 - CI runs `npm run lint:js` and `npm run lint:css` as separate jobs
 - Both clients render the same chrome (header, workspace toolbar, panel, popovers, modals, done screen) from `client/shared`: design tokens and shared rules live in `client/shared/styles/` (`common.css` imports one file per area), a client's own `styles.css` keeps only rules specific to that mode
 - The image server and client share no modules on purpose, so some logic (for example `annotationStyles.js`) is duplicated by design
-- `playwright`, `@napi-rs/canvas` and `pdfjs-dist` are optional dependencies and must be imported dynamically. pdf.js only runs inside the render worker (`server/image/pdf/`)
+- `playwright`, `@napi-rs/canvas` and `pdfjs-dist` are optional dependencies and must be imported dynamically. pdf.js only runs inside the render worker (`server/image/document/pdf/`)
 
 ## Git workflow
 

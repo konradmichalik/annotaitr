@@ -94,7 +94,7 @@ the agent contract it becomes load-bearing. Port the image-mode helper to
 markdown mode as part of S1.
 
 The `id` already survives the POST into the formatters unmodified
-(`server/markdown/routes.js`, `server/image/routes.js`), so nothing has
+(`server/markdown/routes.js`, `server/image/still/routes.js`), so nothing has
 to be threaded through.
 
 **The handle is deliberately not written into the JSON export**, which draft 1
@@ -112,7 +112,7 @@ emitted as a bare `> text` line with no number and no label
 thread" is therefore false for them as the output stands. They need a real
 heading format, not a splice, and that change belongs in S1 rather than being
 discovered in S2. Image mode does not have this gap: it numbers general
-comments already (`server/image/feedback.js`).
+comments already (`server/image/common/feedback.js`).
 
 This is the enabling change for everything below, and it is small enough to
 ship on its own: even with no other work, an agent can write "fixed
@@ -325,7 +325,7 @@ different shape.
   pin/box and put the thread inside the existing comment popover.
 - **The number cannot be replaced by the handle.** Image annotation numbers are
   baked into the output image pixels by the render legend, and
-  `findNearbyAnnotationNumbers()` (`server/image/feedback.js`) is
+  `findNearbyAnnotationNumbers()` (`server/image/common/feedback.js`) is
   index-based. Number and handle have to coexist permanently, and a ghost
   overlay from an earlier round must render its handle, because its old number
   means nothing against a re-numbered current round.
@@ -440,7 +440,7 @@ and whether the answer changes once S1.5 has real numbers.
   most likely to be underestimated. The `--session` family of flags, by
   contrast, drops into the existing loop. There is also no persistence path in
   the codebase today: the only writes are write-once temp artifacts that are
-  never read back (`server/image/output.js`, `server/image/clipboard.js`),
+  never read back (`server/image/still/output.js`, `server/image/still/clipboard.js`),
   so the session file is a new module including discovery, staleness and
   cleanup.
 

@@ -1,6 +1,6 @@
 /**
  * Page-axis helpers for reviewing a PDF. isPaged and
- * orderDocumentAnnotations mirror server/image/pages.js (client and server
+ * orderDocumentAnnotations mirror server/image/document/pages.js (client and server
  * share no modules, so the duplication is deliberate): the numbers shown
  * here must match the numbers in the agent's feedback.
  */

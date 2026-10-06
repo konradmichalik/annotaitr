@@ -3,7 +3,8 @@ import { join, resolve as resolvePath } from 'node:path'
 import { mkdtemp, mkdir, writeFile, rm, symlink, utimes } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { parseArgs, detectMode, isVideoTarget, isPdfTarget } from '../index.js'
+import { parseArgs, captureFlagError } from '../cli/args.js'
+import { detectMode, isVideoTarget, isPdfTarget } from '../cli/detect.js'
 
 // For CLI runs that must be rejected up front: if one ever starts a server
 // instead, it opens no browser and fails on the timeout rather than hanging.
@@ -20,7 +21,6 @@ describe('parseArgs', () => {
       delaySpec: null,
       feedbackNotes: null,
       modeOverride: null,
-      viewportFlagGiven: false,
       feedbackNotesFlagGiven: false,
       sourceSpec: null,
       pageRanges: null
@@ -40,7 +40,6 @@ describe('parseArgs', () => {
     expect(result.targets).toEqual(['http://x'])
     expect(result.origin).toBe('claude-code')
     expect(result.viewportSpec).toBe('mobile')
-    expect(result.viewportFlagGiven).toBe(true)
   })
 
   it('parses --as to force a mode', () => {
@@ -105,8 +104,26 @@ describe('parseArgs', () => {
     expect(parseArgs([...BASE, 'deck.pdf', '--pages', '--source', 'deck.pptx']).error).toMatch(/--pages requires/)
   })
 
+  it('does not take the next flag as the value of --viewport or --delay', () => {
+    expect(parseArgs([...BASE, '--viewport', '--delay', '500', 'http://x']).error).toMatch(/--viewport requires/)
+    expect(parseArgs([...BASE, 'http://x', '--delay', '--viewport', 'mobile']).error).toMatch(/--delay requires/)
+  })
+
   it('errors on a malformed --pages range', () => {
     expect(parseArgs([...BASE, '--pages', '5-2', 'deck.pdf']).error).toMatch(/--pages: "5-2"/)
+  })
+})
+
+describe('captureFlagError', () => {
+  it('names the flag and the target kind', () => {
+    expect(captureFlagError('a PDF', { viewportSpec: 'mobile', delaySpec: null }))
+      .toBe('--viewport only applies to a URL target, not a PDF.')
+    expect(captureFlagError('a PDF', { viewportSpec: null, delaySpec: '0' }))
+      .toBe('--delay only applies to a URL target, not a PDF.')
+  })
+
+  it('accepts a target without either flag', () => {
+    expect(captureFlagError('a PDF', { viewportSpec: null, delaySpec: null })).toBeNull()
   })
 })
 

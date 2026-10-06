@@ -1,5 +1,5 @@
 /**
- * Client twin of server/image/elementMatch.js (client and server share no
+ * Client twin of server/image/common/elementMatch.js (client and server share no
  * modules, so this duplication is deliberate). The server's copy decides
  * what the agent gets; this one shows the reviewer the same match while
  * drawing. test/client/image/elementMatch.test.js runs both on the same
@@ -10,9 +10,9 @@ import { resolveArrowStyle, strokeWidthOf } from './annotationStyles.js'
 
 const POINT_REACH = 24
 const MIN_OVERLAP = 0.25
-// server/image/domMap.js CONTAINERS
+// server/image/common/domMap.js CONTAINERS
 const CONTAINERS = new Set(['nav', 'header', 'footer', 'main', 'section', 'article', 'aside', 'form'])
-// server/image/annotationStyles.js draws a highlighter 18/16 as wide as the
+// server/image/common/annotationStyles.js draws a highlighter 18/16 as wide as the
 // client, and the server pads the match region by half of that width.
 const SERVER_HIGHLIGHTER_SCALE = 18 / 16
 
