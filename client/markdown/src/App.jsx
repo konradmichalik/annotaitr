@@ -1,28 +1,31 @@
-/* global __APP_VERSION__ */
-import { useState, useEffect, useRef, useCallback, useReducer, useMemo } from 'react'
-import { parseMarkdownToBlocks } from './utils/parser.js'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Viewer } from './components/Viewer/Viewer.jsx'
 import { SourceView } from './components/Viewer/SourceView.jsx'
 import { AnnotationPanel } from './components/AnnotationPanel.jsx'
 import { TableOfContents } from './components/TableOfContents.jsx'
 import { ExportModal } from './components/ExportModal.jsx'
 import { FeedbackNotesModal } from './components/FeedbackNotesModal.jsx'
+import { AppHeader } from './components/AppHeader.jsx'
+import { DisconnectedScreen, SubmittedScreen } from './components/DoneScreens.jsx'
+import { HashMismatchBanner, DraftBanner } from './components/ReviewBanners.jsx'
+import { CanvasTopbar } from './components/CanvasTopbar.jsx'
 import { validateAnnotationImport } from './utils/export.js'
 import { getTextStats } from './utils/textStats.js'
 import { createAnnotationId } from '../../shared/utils/annotationId.js'
 import { UpdateBanner } from '../../shared/components/UpdateBanner.jsx'
 import { FileTabsBar } from './components/FileTabsBar.jsx'
 import { initialAnnotationState } from './state/annotationReducer.js'
-import { filesReducer } from './state/filesReducer.js'
 import { useAutoClose } from '../../shared/hooks/useAutoClose.js'
 import { useResizablePanel } from '../../shared/hooks/useResizablePanel.js'
 import { useServerConnection } from '../../shared/hooks/useServerConnection.js'
 import { useAnnotationDraft } from './hooks/useAnnotationDraft.js'
 import { useSettings } from './hooks/useSettings.js'
 import { useCrossFileSearch } from './hooks/useCrossFileSearch.js'
+import { useHighlightSync } from './hooks/useHighlightSync.js'
+import { useReviewFiles } from './hooks/useReviewFiles.js'
+import { useReviewShortcuts } from './hooks/useReviewShortcuts.js'
+import { useShiftHeld } from './hooks/useShiftHeld.js'
 import { SettingsModal } from './components/SettingsModal.jsx'
-import { Logo } from '../../shared/components/Logo.jsx'
-import { DoneScreen, DoneAutoClose } from '../../shared/components/DoneScreen.jsx'
 import { getItem, setItem } from '../../shared/utils/storage.js'
 import 'katex/dist/katex.min.css'
 import './styles.css'
@@ -44,15 +47,7 @@ function FileStats({ content }) {
   )
 }
 
-const ORIGIN_LABELS = {
-  'claude-code': 'Claude Code',
-  'opencode': 'OpenCode',
-  'vibe': 'Mistral Vibe',
-}
-
 export default function App() {
-  const [files, filesDispatch] = useReducer(filesReducer, [])
-  const [activeFileIndex, setActiveFileIndex] = useState(0)
   const [selectedAnnotationId, setSelectedAnnotationId] = useState(null)
   const [status, setStatus] = useState('Loading...')
   const [submitted, setSubmitted] = useState(false)
@@ -65,18 +60,13 @@ export default function App() {
   const [notesModalOpen, setNotesModalOpen] = useState(false)
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
   const [toast, setToast] = useState(null)
-  const [origin, setOrigin] = useState('cli')
-  const [serverConfig, setServerConfig] = useState({})
   const [pinpointMode, setPinpointMode] = useState(() => settings.defaultMode === 'pinpoint')
   const [viewMode, setViewMode] = useState('preview') // 'preview' | 'source'
-  const [shiftHeld, setShiftHeld] = useState(false)
+  const shiftHeld = useShiftHeld()
   const viewerRef = useRef(null)
-  const prevLastActionRef = useRef(null)
   const toastTimerRef = useRef(null)
   const notesShownRef = useRef(false)
   const errorTimerRef = useRef(null)
-  const filesRef = useRef(files)
-  filesRef.current = files
 
   const setErrorStatus = useCallback((msg) => {
     setStatus(msg)
@@ -98,6 +88,17 @@ export default function App() {
     setToast(message)
     toastTimerRef.current = setTimeout(() => setToast(null), 2500)
   }, [])
+
+  const {
+    files,
+    filesDispatch,
+    activeFileIndex,
+    setActiveFileIndex,
+    origin,
+    serverConfig,
+    openFile,
+    reloadActiveFile,
+  } = useReviewFiles({ viewerRef, setStatus, setErrorStatus })
 
   // Derived state from active file
   const activeFile = files[activeFileIndex] || null
@@ -134,7 +135,7 @@ export default function App() {
     if (fileIndex !== activeFileIndex) {
       setActiveFileIndex(fileIndex)
     }
-  }, [activeFileIndex])
+  }, [activeFileIndex, setActiveFileIndex])
 
   const crossFileSearchProps = useMemo(() => {
     if (!isMultiFile) { return null }
@@ -154,49 +155,17 @@ export default function App() {
   // Dispatch annotation actions to active file
   const annDispatch = useCallback((annAction) => {
     filesDispatch({ type: 'ANN', fileIndex: activeFileIndex, annAction })
-  }, [activeFileIndex])
+  }, [activeFileIndex, filesDispatch])
 
-  // Handle DOM highlight side effects based on reducer lastAction
-  // Element annotations (image/diagram) have no web-highlighter DOM, so skip them
-  useEffect(() => {
-    const { lastAction } = activeAnnState
-    if (!lastAction || lastAction === prevLastActionRef.current) {return}
-    prevLastActionRef.current = lastAction
+  const clearSelection = useCallback(() => setSelectedAnnotationId(null), [])
 
-    const hasNoHighlighter = (ann) =>
-      ann?.targetType === 'image' || ann?.targetType === 'diagram' ||
-      ann?.targetType === 'global'
-
-    if (lastAction.type === 'delete') {
-      if (!hasNoHighlighter(lastAction.annotation)) {
-        viewerRef.current?.removeHighlight(lastAction.annotation.id)
-      }
-    } else if (lastAction.type === 'edit') {
-      if (!hasNoHighlighter(lastAction.updated)) {
-        viewerRef.current?.updateHighlightType(lastAction.updated.id, lastAction.updated.type)
-      }
-    } else if (lastAction.type === 'undo') {
-      const { entry } = lastAction
-      if (hasNoHighlighter(entry.annotation)) {/* no-op for element annotations */}
-      else if (entry.action === 'add') {
-        viewerRef.current?.removeHighlight(entry.annotation.id)
-      } else if (entry.action === 'delete') {
-        viewerRef.current?.restoreHighlight(entry.annotation)
-      } else if (entry.action === 'edit') {
-        viewerRef.current?.updateHighlightType(entry.annotation.id, entry.annotation.type)
-      }
-    } else if (lastAction.type === 'redo') {
-      const { entry } = lastAction
-      if (hasNoHighlighter(entry.annotation)) {/* no-op for element annotations */}
-      else if (entry.action === 'add') {
-        viewerRef.current?.restoreHighlight(entry.annotation)
-      } else if (entry.action === 'delete') {
-        viewerRef.current?.removeHighlight(entry.annotation.id)
-      } else if (entry.action === 'edit') {
-        viewerRef.current?.updateHighlightType(entry.updated.id, entry.updated.type)
-      }
-    }
-  }, [activeAnnState])
+  useHighlightSync({
+    viewerRef,
+    annState: activeAnnState,
+    activeFileIndex,
+    viewMode: effectiveViewMode,
+    onFileChange: clearSelection,
+  })
 
   useEffect(() => {
     setItem('md-annotator-sidebar-collapsed', sidebarCollapsed)
@@ -205,31 +174,6 @@ export default function App() {
   useEffect(() => {
     setItem('md-annotator-toc-collapsed', tocCollapsed)
   }, [tocCollapsed])
-
-  // Hold Shift to temporarily toggle pinpoint mode
-  // (Alt is reserved for insertion mode)
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key !== 'Shift' || e.repeat) {return}
-      const tag = document.activeElement?.tagName?.toLowerCase()
-      if (tag === 'textarea' || tag === 'input') {return}
-      if (document.querySelector('.annotation-toolbar, .comment-popover')) {return}
-      setShiftHeld(true)
-    }
-    const handleKeyUp = (e) => {
-      if (e.key !== 'Shift') {return}
-      setShiftHeld(false)
-    }
-    const handleBlur = () => setShiftHeld(false)
-    document.addEventListener('keydown', handleKeyDown)
-    document.addEventListener('keyup', handleKeyUp)
-    window.addEventListener('blur', handleBlur)
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-      document.removeEventListener('keyup', handleKeyUp)
-      window.removeEventListener('blur', handleBlur)
-    }
-  }, [])
 
   const effectivePinpointMode = shiftHeld ? !pinpointMode : pinpointMode
 
@@ -240,76 +184,6 @@ export default function App() {
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed(prev => !prev)
   }, [])
-
-  const loadFiles = useCallback(async () => {
-    try {
-      setStatus('Loading...')
-
-      // Try multi-file endpoint first
-      const res = await fetch('/api/files')
-      const json = await res.json()
-
-      if (json.success) {
-        const loadedFiles = json.data.files.map(f => ({
-          index: f.index,
-          path: f.path,
-          content: f.content,
-          blocks: parseMarkdownToBlocks(f.content, { allowFrontmatter: !f.isPlainText }),
-          contentHash: f.contentHash,
-          hashMismatch: f.hashMismatch || false,
-          isPlainText: f.isPlainText || false
-        }))
-        filesDispatch({ type: 'INIT_FILES', files: loadedFiles })
-        setOrigin(json.data.origin || 'cli')
-        if (json.data.config) { setServerConfig(json.data.config) }
-        setStatus('Select text to annotate, then Approve or Submit Feedback.')
-        return loadedFiles
-      } else {
-        setErrorStatus('Error: ' + json.error)
-      }
-    } catch (err) {
-      setErrorStatus('Error: ' + err.message)
-    }
-    return null
-  }, [setErrorStatus])
-
-  const loadAnnotations = useCallback(async (loadedFiles) => {
-    for (let i = 0; i < loadedFiles.length; i++) {
-      try {
-        const res = await fetch(`/api/annotations?fileIndex=${i}`)
-        const json = await res.json()
-        if (json.success && json.data.annotations.length > 0) {
-          if (json.data.contentHash === loadedFiles[i].contentHash) {
-            filesDispatch({
-              type: 'ANN',
-              fileIndex: i,
-              annAction: { type: 'RESTORE', annotations: json.data.annotations }
-            })
-            // Restore highlights only for initial active file
-            if (i === 0) {
-              setTimeout(() => {
-                viewerRef.current?.restoreHighlights(json.data.annotations)
-              }, 100)
-            }
-          } else {
-            filesDispatch({
-              type: 'UPDATE_FILE',
-              fileIndex: i,
-              updates: { hashMismatch: true }
-            })
-          }
-        }
-      } catch (_err) {
-        // Silent failure - persistence is best-effort
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    loadFiles().then(loaded => {
-      if (loaded) {loadAnnotations(loaded)}
-    })
-  }, [loadFiles, loadAnnotations])
 
   // Show feedback notes modal once after annotations are loaded
   useEffect(() => {
@@ -322,28 +196,6 @@ export default function App() {
       setNotesModalOpen(true)
     }
   }, [files])
-
-  // Restore highlights when switching files or view mode (Viewer/SourceView remounts via key)
-  const prevFileIndexRef = useRef(0)
-  const prevViewModeRef = useRef(effectiveViewMode)
-  useEffect(() => {
-    const fileChanged = prevFileIndexRef.current !== activeFileIndex
-    const viewChanged = prevViewModeRef.current !== effectiveViewMode
-    if (!fileChanged && !viewChanged) {return}
-    prevFileIndexRef.current = activeFileIndex
-    prevViewModeRef.current = effectiveViewMode
-    if (fileChanged) {
-      prevLastActionRef.current = null
-      setSelectedAnnotationId(null)
-    }
-
-    if (annotations.length > 0) {
-      const timer = setTimeout(() => {
-        viewerRef.current?.restoreHighlights(annotations)
-      }, 100)
-      return () => clearTimeout(timer)
-    }
-  }, [activeFileIndex, annotations, effectiveViewMode])
 
   // Auto-save annotations to server (debounced, scoped to active file)
   useEffect(() => {
@@ -494,93 +346,17 @@ export default function App() {
     if (index === activeFileIndex) {return}
     setActiveFileIndex(index)
     filesDispatch({ type: 'MARK_REVIEWED', fileIndex: index })
-  }, [activeFileIndex, filesDispatch])
+  }, [activeFileIndex, setActiveFileIndex, filesDispatch])
 
-  const handleOpenFile = useCallback(async (relativePath) => {
-    const currentFiles = filesRef.current
-    const pathOnly = relativePath.split(/[?#]/)[0]
-
-    // Resolve relative path against current file's directory for deduplication
-    const dir = filePath.replace(/[^/]*$/, '')
-    const segments = (dir + pathOnly.replace(/^\.\//, '')).split('/')
-    const resolved = []
-    for (const seg of segments) {
-      if (seg === '..') { resolved.pop() }
-      else if (seg && seg !== '.') { resolved.push(seg) }
+  const handleOpenSearch = useCallback(() => {
+    if (crossFileSearchProps) {
+      crossFileSearchState.openSearch()
+    } else {
+      viewerRef.current?.openSearch()
     }
-    const resolvedPath = resolved.join('/')
+  }, [crossFileSearchProps, crossFileSearchState])
 
-    const existingIndex = currentFiles.findIndex(f =>
-      f.path.replace(/^\.\//, '') === resolvedPath
-    )
-    if (existingIndex !== -1) {
-      setActiveFileIndex(existingIndex)
-      return
-    }
-
-    try {
-      const params = new URLSearchParams({ path: pathOnly, relativeTo: filePath })
-      const res = await fetch(`/api/file/open?${params}`)
-      const json = await res.json()
-      if (json.success) {
-        // A directory link resolves to its index document, so dedupe on the real path
-        const openIndex = filesRef.current.findIndex(f => f.path === json.data.path)
-        if (openIndex !== -1) {
-          setActiveFileIndex(openIndex)
-          return
-        }
-        const newFile = {
-          index: json.data.index,
-          path: json.data.path,
-          content: json.data.content,
-          blocks: parseMarkdownToBlocks(json.data.content, { allowFrontmatter: !json.data.isPlainText }),
-          contentHash: json.data.contentHash,
-          hashMismatch: false,
-          isPlainText: json.data.isPlainText || false
-        }
-        filesDispatch({ type: 'ADD_FILE', file: newFile })
-        setActiveFileIndex(filesRef.current.length)
-      } else {
-        setErrorStatus(`Could not open file: ${json.error}`)
-      }
-    } catch (err) {
-      setErrorStatus(`Error opening file: ${err.message}`)
-    }
-  }, [filePath, setErrorStatus])
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      const tag = document.activeElement?.tagName?.toLowerCase()
-      if (tag === 'textarea' || tag === 'input') {return}
-
-      const isMod = e.metaKey || e.ctrlKey
-
-      if (isMod && e.key === 'f') {
-        e.preventDefault()
-        if (crossFileSearchProps) {
-          crossFileSearchState.openSearch()
-        } else {
-          viewerRef.current?.openSearch()
-        }
-        return
-      }
-      if (isMod && !e.shiftKey && e.key === 'z') {
-        e.preventDefault()
-        handleUndo()
-      }
-      if (isMod && e.shiftKey && e.key === 'z') {
-        e.preventDefault()
-        handleRedo()
-      }
-      if (e.ctrlKey && !e.metaKey && e.key === 'y') {
-        e.preventDefault()
-        handleRedo()
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [handleUndo, handleRedo, crossFileSearchProps, crossFileSearchState])
+  useReviewShortcuts({ onSearch: handleOpenSearch, onUndo: handleUndo, onRedo: handleRedo })
 
   const collectAnnotatedFiles = () => files.map(f => ({
     path: f.path,
@@ -630,40 +406,27 @@ export default function App() {
   const { width: panelWidth, handleMouseDown: handlePanelResize } = useResizablePanel('md-annotator-panel-width', 300, 1)
   const { width: tocWidth, handleMouseDown: handleTocResize } = useResizablePanel('md-annotator-toc-width', 220, -1)
 
+  const exportModal = (
+    <ExportModal
+      isOpen={exportModalOpen}
+      onClose={() => setExportModalOpen(false)}
+      annotations={annotations}
+      blocks={blocks}
+      filePath={filePath}
+      contentHash={activeFile?.contentHash}
+      onToast={showToast}
+    />
+  )
+
   if (serverGone && !submitted) {
     return (
       <div className="app-shell">
-        <DoneScreen
-          variant="disconnected"
-          title="Server Disconnected"
-          message="The server is no longer available. Your annotations have not been submitted."
-        >
-          {reconnectState === 'reconnecting' && (
-            <p className="done-hint">Attempting to reconnect...</p>
-          )}
-          {reconnectState === 'failed' && (
-            <p className="done-hint">Could not reconnect to the server.</p>
-          )}
-          {annotations.length > 0 && (
-            <div className="done-actions">
-              <p className="done-backup-info">
-                {annotations.length} annotation{annotations.length !== 1 ? 's' : ''} in this file not yet submitted.
-              </p>
-              <button onClick={() => setExportModalOpen(true)} className="btn btn-feedback">
-                Export Annotations
-              </button>
-            </div>
-          )}
-        </DoneScreen>
-        <ExportModal
-          isOpen={exportModalOpen}
-          onClose={() => setExportModalOpen(false)}
-          annotations={annotations}
-          blocks={blocks}
-          filePath={filePath}
-          contentHash={activeFile?.contentHash}
-          onToast={showToast}
+        <DisconnectedScreen
+          reconnectState={reconnectState}
+          annotationCount={annotations.length}
+          onExport={() => setExportModalOpen(true)}
         />
+        {exportModal}
         {toast && <div className="toast">{toast}</div>}
       </div>
     )
@@ -672,150 +435,42 @@ export default function App() {
   if (submitted) {
     return (
       <div className="app-shell">
-        <DoneScreen
-          variant={decision}
-          title={decision === 'approved'
-            ? (approvedNoteCount > 0 ? 'Approved with Notes' : 'Approved')
-            : 'Feedback Submitted'}
-          message={decision === 'approved'
-            ? (approvedNoteCount > 0
-              ? `Approved as-is. ${approvedNoteCount} annotation${approvedNoteCount !== 1 ? 's' : ''} passed along as notes.`
-              : 'No changes requested. The file was approved as-is.')
-            : `${totalAnnotationCount} annotation${totalAnnotationCount !== 1 ? 's' : ''} ${ORIGIN_LABELS[origin] ? `sent to ${ORIGIN_LABELS[origin]}` : 'submitted'}.`}
-        >
-          {decision === 'feedback' && ORIGIN_LABELS[origin]
-            ? <p className="done-hint">{ORIGIN_LABELS[origin]} is processing your feedback. A new browser tab will open with the next iteration.</p>
-            : <p className="done-hint">You can close this tab.</p>}
-          <DoneAutoClose
-            state={autoCloseState}
-            onEnable={() => {
-              updateSetting('autoCloseDelay', '3')
-              enableAndStart()
-            }}
-          />
-        </DoneScreen>
+        <SubmittedScreen
+          decision={decision}
+          approvedNoteCount={approvedNoteCount}
+          totalAnnotationCount={totalAnnotationCount}
+          origin={origin}
+          autoCloseState={autoCloseState}
+          onEnableAutoClose={() => {
+            updateSetting('autoCloseDelay', '3')
+            enableAndStart()
+          }}
+        />
       </div>
     )
-  }
-
-  const handleReloadFile = async () => {
-    try {
-      const res = await fetch('/api/files')
-      const json = await res.json()
-      if (json.success) {
-        const updated = json.data.files.find(f => f.path === activeFile?.path)
-        if (updated) {
-          filesDispatch({
-            type: 'UPDATE_FILE',
-            fileIndex: activeFileIndex,
-            updates: {
-              content: updated.content,
-              blocks: parseMarkdownToBlocks(updated.content, { allowFrontmatter: !updated.isPlainText }),
-              contentHash: updated.contentHash,
-              hashMismatch: false,
-              annState: { ...initialAnnotationState }
-            }
-          })
-          viewerRef.current?.clearAllHighlights()
-        }
-      }
-    } catch (err) {
-      setErrorStatus('Error reloading: ' + err.message)
-    }
   }
 
   const hasAnyHashMismatch = files.some(f => f.hashMismatch)
 
   return (
     <div className="app-shell">
-      {hasAnyHashMismatch && (
-        <div className="hash-mismatch-banner">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
-          <span>File has changed since annotations were saved. Annotations may be outdated.</span>
-          <button onClick={handleReloadFile} className="btn btn-sm">Reload</button>
-        </div>
-      )}
+      {hasAnyHashMismatch && <HashMismatchBanner onReload={reloadActiveFile} />}
       {draftBanner && (
-        <div className="draft-banner">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-          </svg>
-          <span>Found {draftBanner.count} unsaved annotation{draftBanner.count !== 1 ? 's' : ''} from {draftBanner.timeAgo}.</span>
-          <button onClick={handleRestoreDraft} className="btn btn-sm">Restore</button>
-          <button onClick={dismissDraft} className="btn btn-sm btn-muted">Dismiss</button>
-        </div>
+        <DraftBanner draft={draftBanner} onRestore={handleRestoreDraft} onDismiss={dismissDraft} />
       )}
-      <header className="app-header">
-        <div className="header-left">
-          {!isPlainTextFile && (
-            <button
-              onClick={toggleToc}
-              className="btn btn-icon"
-              title={tocCollapsed ? 'Show table of contents' : 'Hide table of contents'}
-              aria-label={tocCollapsed ? 'Show table of contents' : 'Hide table of contents'}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2"/>
-                <line x1="9" y1="3" x2="9" y2="21"/>
-              </svg>
-            </button>
-          )}
-          <Logo className="app-logo" />
-          <span className="version-badge">v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '?'}</span>
-          {ORIGIN_LABELS[origin] && (
-            <span className="origin-badge">{ORIGIN_LABELS[origin]}</span>
-          )}
-          <span className="app-target" title={filePath}>{filePath}</span>
-        </div>
-        <div className="header-right">
-          <button
-            onClick={handleSubmitFeedback}
-            className="btn btn-feedback"
-            disabled={totalAnnotationCount === 0}
-            title={totalAnnotationCount === 0 ? 'Add annotations first' : `Submit ${totalAnnotationCount} annotation(s)`}
-          >
-            Feedback
-            {totalAnnotationCount > 0 && <span className="btn-badge">{totalAnnotationCount}</span>}
-          </button>
-          <button
-            onClick={handleApprove}
-            className="btn btn-approve"
-            title={totalAnnotationCount > 0
-              ? `Approve as-is and pass ${totalAnnotationCount} annotation(s) along as notes`
-              : 'Approve file as-is'}
-          >
-            {totalAnnotationCount > 0 ? 'Approve with Notes' : 'Approve'}
-          </button>
-          <button
-            onClick={() => setSettingsModalOpen(true)}
-            className="btn btn-icon"
-            title="Settings"
-            aria-label="Settings"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-            </svg>
-          </button>
-          <button
-            onClick={toggleSidebar}
-            className="btn btn-icon"
-            title={sidebarCollapsed ? 'Show annotations' : 'Hide annotations'}
-            aria-label={sidebarCollapsed ? 'Show annotations' : 'Hide annotations'}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2"/>
-              <line x1="15" y1="3" x2="15" y2="21"/>
-            </svg>
-          </button>
-        </div>
-      </header>
+      <AppHeader
+        isPlainTextFile={isPlainTextFile}
+        tocCollapsed={tocCollapsed}
+        onToggleToc={toggleToc}
+        origin={origin}
+        filePath={filePath}
+        totalAnnotationCount={totalAnnotationCount}
+        onSubmitFeedback={handleSubmitFeedback}
+        onApprove={handleApprove}
+        onOpenSettings={() => setSettingsModalOpen(true)}
+        sidebarCollapsed={sidebarCollapsed}
+        onToggleSidebar={toggleSidebar}
+      />
 
       <FileTabsBar
         files={files}
@@ -841,69 +496,14 @@ export default function App() {
           </>
         )}
         <div className="viewer-wrapper canvas-surface">
-          <div className="canvas-topbar">
-            <div
-              className={`toolbar${shiftHeld ? ' toolbar--temp' : ''}`}
-              role="toolbar"
-              aria-label="Annotation mode"
-            >
-              <button
-                type="button"
-                className={!effectivePinpointMode ? 'active' : ''}
-                aria-pressed={!effectivePinpointMode}
-                onClick={() => setPinpointMode(shiftHeld)}
-                title="Selection mode: select text to annotate (hold Shift to toggle)"
-              >
-                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12M3 10h8M3 15h10" />
-                </svg>
-                Select
-              </button>
-              <button
-                type="button"
-                className={effectivePinpointMode ? 'active' : ''}
-                aria-pressed={effectivePinpointMode}
-                onClick={() => setPinpointMode(!shiftHeld)}
-                title="Pinpoint mode: click a block to annotate (hold Shift to toggle)"
-              >
-                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                  <circle cx="12" cy="12" r="3" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
-                </svg>
-                Pinpoint
-              </button>
-            </div>
-            {!isPlainTextFile && (
-              <div className="toolbar" role="toolbar" aria-label="View">
-                <button
-                  type="button"
-                  className={viewMode === 'preview' ? 'active' : ''}
-                  aria-pressed={viewMode === 'preview'}
-                  onClick={() => setViewMode('preview')}
-                  title="Rendered preview"
-                  aria-label="Rendered preview"
-                >
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  className={viewMode === 'source' ? 'active' : ''}
-                  aria-pressed={viewMode === 'source'}
-                  onClick={() => setViewMode('source')}
-                  title="Markdown source"
-                  aria-label="Markdown source"
-                >
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                    <polyline strokeLinecap="round" strokeLinejoin="round" points="16 18 22 12 16 6" />
-                    <polyline strokeLinecap="round" strokeLinejoin="round" points="8 6 2 12 8 18" />
-                  </svg>
-                </button>
-              </div>
-            )}
-          </div>
+          <CanvasTopbar
+            shiftHeld={shiftHeld}
+            pinpointMode={effectivePinpointMode}
+            onPinpointModeChange={setPinpointMode}
+            showViewToggle={!isPlainTextFile}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+          />
           {effectiveViewMode === 'preview' ? (
             <Viewer
               key={activeFile?.path || 'empty'}
@@ -914,7 +514,7 @@ export default function App() {
               onEditAnnotation={handleEditAnnotation}
               onDeleteAnnotation={handleDeleteAnnotation}
               onSelectAnnotation={handleSelectAnnotation}
-              onOpenFile={handleOpenFile}
+              onOpenFile={openFile}
               pinpointMode={effectivePinpointMode}
               plantumlServerUrl={serverConfig.plantumlServerUrl}
               krokiServerUrl={serverConfig.krokiServerUrl}
@@ -962,15 +562,7 @@ export default function App() {
         )}
       </footer>
 
-      <ExportModal
-        isOpen={exportModalOpen}
-        onClose={() => setExportModalOpen(false)}
-        annotations={annotations}
-        blocks={blocks}
-        filePath={filePath}
-        contentHash={activeFile?.contentHash}
-        onToast={showToast}
-      />
+      {exportModal}
 
       <FeedbackNotesModal
         isOpen={notesModalOpen}
