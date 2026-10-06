@@ -30,8 +30,8 @@ detection:
   pages, so even exporting every slide to PNG by hand only allows one slide per
   session.
 - **The server state holds one image.** `buildImageServer()`
-  (`server/image/adapter.js`) keeps exactly one `capture` (`buffer`, `width`,
-  `height`, `domMap`), and `exportFeedback()` (`server/image/feedback.js`)
+  (`server/image/still/adapter.js`) keeps exactly one `capture` (`buffer`, `width`,
+  `height`, `domMap`), and `exportFeedback()` (`server/image/common/feedback.js`)
   formats one image's annotations against one width/height and one annotated
   screenshot path.
 
@@ -107,7 +107,7 @@ new kind of detection result:
   `Unknown mode` error, and `--as` does not suppress it.
 
 `isPdfFile()` and `isOfficeDocument()` live next to `isImageFile()` /
-`isVideoFile()` in `server/image/capture.js`. `buildDetectionError()` lists
+`isVideoFile()` in `server/image/common/fileTypes.js`. `buildDetectionError()` lists
 `.pdf` with the image and video extensions. `--as markdown` on a PDF fails as
 it does for any non-markdown file today. With more than one target, an
 office document gets the generic multi-target error, not the hint.
@@ -178,8 +178,8 @@ is the supported path.
   for a PDF).
 
 **Rendering happens on the server**, not in the browser. `flattenAnnotations()`
-(`server/image/render.js`) needs every page as a buffer on the server anyway,
-SVG rasterisation in `server/image/loader.js` already works this way, and it
+(`server/image/common/render.js`) needs every page as a buffer on the server anyway,
+SVG rasterisation in `server/image/still/loader.js` already works this way, and it
 keeps the client bundle free of pdf.js. 7.1 covers the client-side
 alternative.
 
@@ -245,7 +245,7 @@ Details:
   to thumbnails too, since a hostile page that takes 16 s at 2000px still
   took 2 s at 200px.
 - **Page limit.** `MAX_PAGES = 200` per session, analogous to
-  `MAX_FRAMES = 50` in `server/image/timeline.js`. A larger document exits `1`
+  `MAX_FRAMES = 50` in `server/image/video/timeline.js`. A larger document exits `1`
   with a hint to use `--pages`.
 - **Fonts and CMaps are required.** Without `standardFontDataUrl`, a PDF using
   non-embedded standard fonts (Helvetica, Times) logs "Ensure that the
@@ -270,7 +270,7 @@ resource exhaustion (time per page); it is not a security sandbox.
 ### 3.5 Text layer as an element map
 
 For a captured URL, image mode records a map of visible elements and matches
-every mark to one (`server/image/domMap.js`, `server/image/elementMatch.js`),
+every mark to one (`server/image/common/domMap.js`, `server/image/common/elementMatch.js`),
 producing lines such as `Element: img "Team photo" ("team.jpg") · #hero img`.
 PDFs have an equivalent: `page.getTextContent()` returns every text run with
 its position.
@@ -317,7 +317,7 @@ Text: heading "Revenue by region"
 Carried over from the DOM map: text and link targets are capped and quoted, a
 failure to build the map never fails the session, it just drops the element
 lines. The notice that precedes element lines (`ELEMENT_NOTICE` in
-`server/image/feedback.js`) talks about "the captured page"; document feedback
+`server/image/common/feedback.js`) talks about "the captured page"; document feedback
 gets its own wording that names the PDF's text as untrusted document content.
 Scanned PDFs have no text layer, so their feedback looks like a local image's
 today. No OCR.
@@ -356,9 +356,9 @@ accepts any existing path, file or directory, because the source can be a
 
 ### 3.7 Server state, API and client
 
-A new `buildDocumentServer()` in `server/image/documentAdapter.js`, next to
+A new `buildDocumentServer()` in `server/image/document/adapter.js`, next to
 `buildVideoServer()`, mounting `createDocumentApiRouter()` from
-`server/image/documentRoutes.js`. The image client bundle switches UI on the
+`server/image/document/routes.js`. The image client bundle switches UI on the
 `kind` in `/api/meta`, as it does for video.
 
 ```js
@@ -389,7 +389,7 @@ const state = {
 **Annotations carry `page`**, the document counterpart of the video mode's
 `time`: a 1-based integer inside the session's page set, validated like
 `validateVideoAnnotations()` does for `time`. The existing limits
-(`annotationsWithinLimits()` in `server/image/routes.js`) apply unchanged.
+(`annotationsWithinLimits()` in `server/image/still/routes.js`) apply unchanged.
 Geometry stays in the page's own pixels, so `describePosition()` and the
 nearby-annotation logic work per page without changes.
 
@@ -426,7 +426,7 @@ touched pages, in the style the video output uses:
 ```
 
 **Overview with mixed page sizes.** `composeContactSheet()`
-(`server/image/render.js`) assumes all tiles share one size: it takes width
+(`server/image/common/render.js`) assumes all tiles share one size: it takes width
 and height from the first tile and draws every other tile into that cell.
 Video frames satisfy this, PDF pages do not (an A4 report with a landscape
 table page, a deck with an appended portrait handout). The function is

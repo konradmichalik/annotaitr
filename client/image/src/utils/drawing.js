@@ -3,7 +3,7 @@ import { strokeWidthOf, resolveArrowStyle, DEFAULT_STROKE_WIDTH } from './annota
 // A freehand/highlighter mark's geometry.points array is capped at this length,
 // both while it's being drawn (ImageCanvas.jsx's point collector) and on import
 // (exportImport.js) - an unbounded array bogs down validation and, worse,
-// rendering (one SVG polyline built from every point). server/image/routes.js
+// rendering (one SVG polyline built from every point). server/image/still/routes.js
 // enforces the same number on POST /api/annotations (duplicated there - client
 // and server share no modules, same as annotationStyles.js's own constants).
 export const MAX_POINTS_PER_ANNOTATION = 5000

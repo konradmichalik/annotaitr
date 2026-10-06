@@ -114,7 +114,7 @@ function PinShape({ geometry, color, number, selectionProps }) {
 }
 
 // The light fill tells a selected page element apart from a hand-drawn box,
-// matching the server's rendering in server/image/render.js.
+// matching the server's rendering in server/image/common/render.js.
 function ElementShape({ geometry, color, selectionProps }) {
   const { x, y, width, height } = geometry
   return (
@@ -126,7 +126,7 @@ function ElementShape({ geometry, color, selectionProps }) {
 }
 
 // Painted like a marker over the selected lines, matching the server's
-// rendering in server/image/render.js.
+// rendering in server/image/common/render.js.
 function TextShape({ geometry, color, number, selectionProps }) {
   const [first] = geometry.rects
   return (

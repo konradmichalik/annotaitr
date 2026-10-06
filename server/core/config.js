@@ -1,6 +1,6 @@
 /**
  * Centralized configuration shared by both annotator modes, from environment
- * variables. Mode-specific settings live in server/image/config.js and
+ * variables. Mode-specific settings live in server/image/common/config.js and
  * server/markdown/config.js instead.
  */
 

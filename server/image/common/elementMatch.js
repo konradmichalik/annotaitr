@@ -1,24 +1,15 @@
 /**
- * Client twin of server/image/common/elementMatch.js (client and server share no
- * modules, so this duplication is deliberate). The server's copy decides
- * what the agent gets; this one shows the reviewer the same match while
- * drawing. test/client/image/elementMatch.test.js runs both on the same
- * cases, so a change to one that is not made to the other fails there.
+ * Match image-mode annotations to the elements of a captured page's DOM map
+ * (server/image/common/domMap.js). Both live in the same pixel space: a capture
+ * runs at deviceScaleFactor 1, so one screenshot pixel is one CSS pixel.
  */
 
-import { resolveArrowStyle, strokeWidthOf } from './annotationStyles.js'
+import { resolveArrowStyle, serverStrokeWidth } from './annotationStyles.js'
+import { CONTAINERS } from './domMap.js'
 
+// How far a pin or arrow tip may land outside an element and still name it.
 const POINT_REACH = 24
 const MIN_OVERLAP = 0.25
-// server/image/common/domMap.js CONTAINERS
-const CONTAINERS = new Set(['nav', 'header', 'footer', 'main', 'section', 'article', 'aside', 'form'])
-// server/image/common/annotationStyles.js draws a highlighter 18/16 as wide as the
-// client, and the server pads the match region by half of that width.
-const SERVER_HIGHLIGHTER_SCALE = 18 / 16
-
-export function serverHighlighterWidth(annotation) {
-  return strokeWidthOf(annotation) * SERVER_HIGHLIGHTER_SCALE
-}
 
 const area = ({ width, height }) => width * height
 
@@ -40,10 +31,16 @@ function overlap(a, b) {
   return shared / (area(a) + area(b) - shared)
 }
 
+// On a tie the later element wins: in document order that is the inner one.
+// Panel divs are collected after everything else (server/image/common/domMap.js),
+// so any tie that can pit one against a specific element ranks containers last first.
 function smallest(elements) {
   return elements.reduce((best, el) => (best && area(best.box) < area(el.box) ? best : el), null)
 }
 
+// A landmark encloses almost every point in its area, named or not, and so
+// does a plain panel div, so they only win when nothing more specific is
+// under or near the point. A div with a role or a name is a widget instead.
 const isContainer = (el) => CONTAINERS.has(el.tag) || (el.tag === 'div' && !el.role && !el.name)
 
 function nearest(elements, p) {
@@ -54,8 +51,7 @@ function nearest(elements, p) {
   return near[0]?.el ?? null
 }
 
-/** The element a single point names; also what the hover outline shows. */
-export function matchPoint(map, p) {
+function matchPoint(map, p) {
   const specific = map.filter((el) => !isContainer(el))
   const enclosing = map.filter((el) => contains(el.box, p))
   return smallest(enclosing.filter((el) => !isContainer(el))) ?? nearest(specific, p) ?? smallest(enclosing)
@@ -71,12 +67,13 @@ function matchRegion(map, region) {
   return matchPoint(map, { x: region.x + region.width / 2, y: region.y + region.height / 2 })
 }
 
+/** The rectangle a box or points-based mark covers; a highlighter stroke is widened by its own width. */
 function regionOf(annotation) {
   const { type, geometry } = annotation
   if (type === 'box' || type === 'element') { return geometry }
   const xs = geometry.points.map((p) => p.x)
   const ys = geometry.points.map((p) => p.y)
-  const pad = type === 'highlighter' ? serverHighlighterWidth(annotation) / 2 : 0
+  const pad = type === 'highlighter' ? serverStrokeWidth(annotation) / 2 : 0
   const x = Math.min(...xs) - pad
   const y = Math.min(...ys) - pad
   return { x, y, width: Math.max(...xs) + pad - x, height: Math.max(...ys) + pad - y }
@@ -103,15 +100,19 @@ export function matchAnnotation(map, annotation) {
   return []
 }
 
-/** A short on-screen name: the element's own selector token, its role, name and media file. */
-export function elementLabel({ tag, role, name, media, heading, selector }) {
-  const own = selector.split(' ').at(-1) || tag
-  const base = own.startsWith('#') ? `${tag}${own}` : own
-  const roleTag = role && role !== tag ? `${base}[${role}]` : base
-  return `${roleTag}${name ? ` "${name}"` : ''}${media ? ` (${media})` : ''}${heading ? ` (heading "${heading}")` : ''}`
+function describeElement({ tag, role, name, media, heading, selector }) {
+  const roleTag = role && role !== tag ? `${tag}[${role}]` : tag
+  // Page text is untrusted: JSON quoting escapes quotes and backslashes, and
+  // dropping backticks keeps it from opening a code span in the agent's view.
+  const quote = (text) => JSON.stringify(text.replace(/`/g, ''))
+  const quoted = name ? ` ${quote(name)}` : ''
+  const file = media ? ` (${quote(media)})` : ''
+  const titled = heading ? ` (heading ${quote(heading)})` : ''
+  return `${roleTag}${quoted}${file}${titled} · ${selector}`
 }
 
-/** On-screen names for matched elements, joined like the feedback's `Element:` line, or null without a match. */
-export function describeElements(matches) {
-  return matches.length > 0 ? matches.map(elementLabel).join(' → ') : null
+/** One `Element:` line for the matched elements, or null when nothing matched. */
+export function formatElementLine(elements) {
+  if (!elements || elements.length === 0) { return null }
+  return `Element: ${elements.map(describeElement).join(' → ')}`
 }

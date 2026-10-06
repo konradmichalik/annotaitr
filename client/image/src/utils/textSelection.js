@@ -1,12 +1,12 @@
 /**
  * Selecting text on a PDF page: the page's words come in reading order
- * (server/image/pdf/textLayer.js), so a drag from one word to another
+ * (server/image/document/pdf/textLayer.js), so a drag from one word to another
  * selects every word in between, like text selection in a browser.
  */
 
 // How far from a word a press may land and still start a selection on it.
 const REACH = 1.5
-// Mirror server/image/pages.js (client and server share no modules), which
+// Mirror server/image/document/pages.js (client and server share no modules), which
 // refuses a longer selection.
 export const MAX_QUOTE_LENGTH = 5000
 export const MAX_TEXT_RECTS = 500

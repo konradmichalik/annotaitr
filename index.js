@@ -10,14 +10,14 @@ import { withLifecycle } from './server/core/lifecycle.js'
 import { isAnnotatableFile, supportedExtensions as markdownExtensions } from './server/markdown/file.js'
 import { buildMarkdownServer } from './server/markdown/adapter.js'
 import { formatApprovalOutput as formatMarkdownApproval } from './server/markdown/feedback.js'
-import { isImageFile, isVideoFile, isPdfFile, isOfficeDocument, isSupportedCaptureUrl, videoExtensions } from './server/image/capture.js'
-import { parsePageRanges } from './server/image/pages.js'
-import { isSourceNewer, siblingPdf, pdfPathFor } from './server/image/source.js'
-import { parseViewportSpec, parseDelay, describeCapture, MAX_DELAY_MS } from './server/image/config.js'
-import { saveClipboardImage } from './server/image/clipboard.js'
+import { isImageFile, isVideoFile, isPdfFile, isOfficeDocument, isSupportedCaptureUrl, videoExtensions } from './server/image/common/fileTypes.js'
+import { parsePageRanges } from './server/image/document/pages.js'
+import { isSourceNewer, siblingPdf, pdfPathFor } from './server/image/document/source.js'
+import { parseViewportSpec, parseDelay, describeCapture, MAX_DELAY_MS } from './server/image/common/config.js'
+import { saveClipboardImage } from './server/image/still/clipboard.js'
 
 /**
- * Image mode's real work (server/image/loader.js, server/image/adapter.js)
+ * Image mode's real work (server/image/still/loader.js, server/image/still/adapter.js)
  * pulls in playwright and @napi-rs/canvas — both optionalDependencies. Load
  * them dynamically, only once image mode is confirmed, so a markdown-only
  * install never needs them and a missing install gets an actionable error
@@ -26,8 +26,8 @@ import { saveClipboardImage } from './server/image/clipboard.js'
 async function loadImageRuntime() {
   try {
     const [loader, adapter] = await Promise.all([
-      import('./server/image/loader.js'),
-      import('./server/image/adapter.js')
+      import('./server/image/still/loader.js'),
+      import('./server/image/still/adapter.js')
     ])
     return { loadImageFromFile: loader.loadImageFromFile, captureUrl: loader.captureUrl, buildImageServer: adapter.buildImageServer }
   } catch (error) {
@@ -49,8 +49,8 @@ async function loadImageRuntime() {
 async function loadVideoRuntime() {
   try {
     const [video, adapter] = await Promise.all([
-      import('./server/image/video.js'),
-      import('./server/image/videoAdapter.js')
+      import('./server/image/video/resolve.js'),
+      import('./server/image/video/adapter.js')
     ])
     return { resolveVideoFile: video.resolveVideoFile, buildVideoServer: adapter.buildVideoServer }
   } catch (error) {
@@ -71,8 +71,8 @@ async function loadDocumentRuntime() {
   try {
     createRequire(import.meta.url).resolve('pdfjs-dist/package.json')
     const [document, adapter] = await Promise.all([
-      import('./server/image/document.js'),
-      import('./server/image/documentAdapter.js')
+      import('./server/image/document/pdfDocument.js'),
+      import('./server/image/document/adapter.js')
     ])
     return { openPdfDocument: document.openPdfDocument, buildDocumentServer: adapter.buildDocumentServer }
   } catch (error) {

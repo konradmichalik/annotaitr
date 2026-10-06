@@ -17,7 +17,8 @@ Stdout is the contract with the calling agent:
 
 - `index.js`: CLI entry, argument parsing, mode detection, stdout output
 - `server/core/`: mode-agnostic Express bootstrap, config (`ANNOTAITR_*` environment variables), browser opening, signal handling
-- `server/markdown/`, `server/image/`: mode-specific API routes, feedback formatting, file and image loading
+- `server/markdown/`: markdown mode API routes, feedback formatting and file loading
+- `server/image/`: image mode, split into `common/` (rendering, feedback basics, element matching, transcription, config) and one folder per target kind: `still/` (image file, URL capture, clipboard), `video/` and `document/` (PDF)
 - `client/markdown/`, `client/image/`: the two React SPAs with separate Vite roots
 - `client/shared/`: components, hooks and utils used by both clients
 - `apps/claude-code/`: Claude Code plugin (`.claude-plugin/plugin.json`, slash commands `md`, `image`, `review`)
@@ -61,7 +62,7 @@ npm run lint:fix
 - ESLint (`eslint.config.js`) covers JS and JSX, Stylelint (`stylelint.config.js`, standard config) covers CSS
 - CI runs `npm run lint:js` and `npm run lint:css` as separate jobs
 - The image server and client share no modules on purpose, so some logic (for example `annotationStyles.js`) is duplicated by design
-- `playwright`, `@napi-rs/canvas` and `pdfjs-dist` are optional dependencies and must be imported dynamically. pdf.js only runs inside the render worker (`server/image/pdf/`)
+- `playwright`, `@napi-rs/canvas` and `pdfjs-dist` are optional dependencies and must be imported dynamically. pdf.js only runs inside the render worker (`server/image/document/pdf/`)
 
 ## Git workflow
 

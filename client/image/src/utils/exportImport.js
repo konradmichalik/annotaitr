@@ -68,7 +68,7 @@ function validateAnnotation(ann, index) {
     throw new Error(`Annotation ${index + 1}: unknown type "${ann.type}".`)
   }
   validateGeometry(ann.type, ann.geometry, index)
-  // Mirrors server/image/pages.js, which refuses a text selection without its words.
+  // Mirrors server/image/document/pages.js, which refuses a text selection without its words.
   if (ann.type === 'text' && !(typeof ann.quote === 'string' && ann.quote.length > 0 && ann.quote.length <= MAX_QUOTE_LENGTH)) {
     throw new Error(`Annotation ${index + 1}: a text selection needs its selected text (at most ${MAX_QUOTE_LENGTH} characters).`)
   }

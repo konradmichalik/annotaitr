@@ -1,6 +1,6 @@
 /**
  * Time-axis helpers for annotating a video or GIF. formatTimecode and
- * orderVideoAnnotations mirror server/image/timeline.js (client and server
+ * orderVideoAnnotations mirror server/image/video/timeline.js (client and server
  * share no modules, so the duplication is deliberate): the numbers shown
  * here must match the numbers in the agent's feedback.
  */

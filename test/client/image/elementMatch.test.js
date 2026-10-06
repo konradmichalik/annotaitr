@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { matchAnnotation as clientMatch, elementLabel, serverHighlighterWidth } from '../../../client/image/src/utils/elementMatch.js'
-import { matchAnnotation as serverMatch } from '../../../server/image/elementMatch.js'
-import { serverStrokeWidth } from '../../../server/image/annotationStyles.js'
-import { CONTAINERS } from '../../../server/image/domMap.js'
+import { matchAnnotation as serverMatch } from '../../../server/image/common/elementMatch.js'
+import { serverStrokeWidth } from '../../../server/image/common/annotationStyles.js'
+import { CONTAINERS } from '../../../server/image/common/domMap.js'
 
 const el = (selector, x, y, width, height, extra = {}) => ({
   tag: 'div', role: '', name: '', media: '', selector, box: { x, y, width, height }, ...extra
