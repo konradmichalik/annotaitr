@@ -9,8 +9,21 @@ import { CHAT_IMAGE_HINT, fail, printHelpAndExit } from './cli/help.js'
 import { convertHint } from './cli/document.js'
 import { runImage, runBareInvocation } from './cli/image.js'
 import { runMarkdown } from './cli/markdown.js'
+import { runReply } from './cli/reply.js'
 
 async function main() {
+  // A subcommand, not a target: it must not reach the target parser, which rejects its flags.
+  if (process.argv[2] === 'reply') {
+    const { output, error } = await runReply(process.argv.slice(3))
+    if (error) {
+      process.stderr.write(`Error: ${error}\n`)
+      process.exit(1)
+      return
+    }
+    process.stdout.write(output)
+    return
+  }
+
   const {
     help, targets, origin, viewportSpec, delaySpec, feedbackNotes, modeOverride, feedbackNotesFlagGiven,
     sourceSpec, pageRanges, error
