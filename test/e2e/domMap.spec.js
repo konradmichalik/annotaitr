@@ -1,8 +1,7 @@
 // test/e2e/domMap.spec.js
 import { createServer } from 'node:http'
-import { spawn } from 'node:child_process'
-import { join } from 'node:path'
 import { test, expect } from '@playwright/test'
+import { startCli } from '../helpers/cli.js'
 import { createCanvas, loadImage } from '@napi-rs/canvas'
 import { captureUrl } from '../../server/image/loader.js'
 import { matchAnnotation } from '../../server/image/elementMatch.js'
@@ -98,25 +97,6 @@ test('a section capture shows only the viewport at the anchor, and the map uses 
   expect(capture.domMap.find((el) => el.name === 'Team photo')).toBeUndefined()
 })
 
-function startCli(args) {
-  const child = spawn('node', [join(process.cwd(), 'index.js'), ...args], {
-    cwd: process.cwd(),
-    env: { ...process.env, ANNOTAITR_PORT: '0', ANNOTAITR_NO_OPEN: '1' }
-  })
-  const output = { stdout: '' }
-  child.stdout.on('data', (chunk) => { output.stdout += chunk.toString() })
-  const url = new Promise((resolve, reject) => {
-    let stderr = ''
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk.toString()
-      const match = stderr.match(/Server running at (http:\/\/\S+)/)
-      if (match) { resolve(match[1]) }
-    })
-    child.on('exit', (code) => reject(new Error(`CLI exited early with code ${code}: ${stderr}`)))
-  })
-  return { child, output, url }
-}
-
 async function canvasPoint(page, box) {
   const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
   const zoom = canvas.width / 800
@@ -124,7 +104,7 @@ async function canvasPoint(page, box) {
 }
 
 test('the Element tool outlines and picks a page element, other tools only name what they hit', async ({ page }) => {
-  const { child, output, url } = startCli([baseUrl, '--viewport', '800x600'])
+  const { child, stdout, url } = startCli([baseUrl, '--viewport', '800x600'])
   try {
     const appUrl = await url
     await page.goto(appUrl)
@@ -162,15 +142,15 @@ test('the Element tool outlines and picks a page element, other tools only name 
     await page.getByRole('button', { name: 'Feedback' }).click()
     await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
     expect(await new Promise((resolve) => child.on('exit', resolve))).toBe(0)
-    expect(output.stdout).toMatch(/### 1\. \[#\w+\] Selected element: .*\nElement: img "Team photo" \("team.png"\) · #hero\n> Swap the photo/)
-    expect(output.stdout).toMatch(/### 2\. \[#\w+\] Comment pin: .*\nElement: button "Contact us" · #contact/)
+    expect(stdout()).toMatch(/### 1\. \[#\w+\] Selected element: .*\nElement: img "Team photo" \("team.png"\) · #hero\n> Swap the photo/)
+    expect(stdout()).toMatch(/### 2\. \[#\w+\] Comment pin: .*\nElement: button "Contact us" · #contact/)
   } finally {
     if (child.exitCode === null) { child.kill() }
   }
 })
 
 test('the viewport picker captures the page again in place, after confirming that annotations go', async ({ page }) => {
-  const { child, output, url } = startCli([baseUrl, '--viewport', '800x600', '--delay', '200'])
+  const { child, stdout, url } = startCli([baseUrl, '--viewport', '800x600', '--delay', '200'])
   try {
     const appUrl = await url
     await page.goto(appUrl)
@@ -233,7 +213,7 @@ test('the viewport picker captures the page again in place, after confirming tha
     await page.getByRole('button', { name: 'Feedback' }).click()
     await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
     expect(await new Promise((resolve) => child.on('exit', resolve))).toBe(0)
-    expect(output.stdout).toContain('Captured at mobile landscape (812×375), section #pricing, after 200 ms\n')
+    expect(stdout()).toContain('Captured at mobile landscape (812×375), section #pricing, after 200 ms\n')
   } finally {
     if (child.exitCode === null) { child.kill() }
   }

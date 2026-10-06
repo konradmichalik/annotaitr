@@ -48,12 +48,20 @@ export async function isSourceNewer(sourcePath, pdfPath, { maxFiles = MAX_FILES 
   return { newer: source > (await stat(pdfPath)).mtimeMs }
 }
 
+/**
+ * The document path without the trailing slash shell completion adds to a
+ * package directory, and the PDF of the same name next to it.
+ */
+export function pdfPathFor(documentPath) {
+  const document = documentPath.replace(/[/\\]+$/, '')
+  return { document, pdf: join(dirname(document), `${basename(document, extname(document))}.pdf`) }
+}
+
 /** A PDF next to the document with the same name and not older than it, or null. */
 export async function siblingPdf(documentPath) {
-  const trimmed = documentPath.replace(/[/\\]+$/, '')
-  const pdfPath = join(dirname(trimmed), `${basename(trimmed, extname(trimmed))}.pdf`)
+  const { document, pdf: pdfPath } = pdfPathFor(documentPath)
   try {
-    const result = await isSourceNewer(trimmed, pdfPath)
+    const result = await isSourceNewer(document, pdfPath)
     return result.newer === false ? pdfPath : null
   } catch {
     return null

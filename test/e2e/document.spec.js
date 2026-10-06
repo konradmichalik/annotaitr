@@ -1,30 +1,10 @@
 // test/e2e/document.spec.js
-import { spawn } from 'node:child_process'
 import { writeFile, rm, mkdtemp, readdir, utimes } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { test, expect } from '@playwright/test'
+import { startCli } from '../helpers/cli.js'
 import { makePdf } from '../helpers/pdfFixtures.js'
-
-function startCli(args) {
-  const child = spawn('node', [join(process.cwd(), 'index.js'), ...args], {
-    cwd: process.cwd(),
-    env: { ...process.env, ANNOTAITR_PORT: '0', ANNOTAITR_NO_OPEN: '1' }
-  })
-  let stdout = ''
-  child.stdout.on('data', (chunk) => { stdout += chunk.toString() })
-  const url = new Promise((resolve, reject) => {
-    let stderr = ''
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk.toString()
-      const match = stderr.match(/Server running at (http:\/\/\S+)/)
-      if (match) { resolve(match[1]) }
-    })
-    child.on('exit', (code) => reject(new Error(`CLI exited early with code ${code}: ${stderr}`)))
-  })
-  const exited = new Promise((resolve) => child.on('exit', resolve))
-  return { child, url, exited, stdout: () => stdout }
-}
 
 async function drawBox(page, from, to) {
   await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Box').click()

@@ -105,13 +105,13 @@ export function createDocumentApiRouter({ document, source, origin, targetLabel,
   async function decide(res, { approved }) {
     state.deciding = true
     try {
-      const { ordered, plan } = context(state.annotations, null)
-      const files = await writeDocumentOutput(plan, (page) => caches.pages.get(page), document.pageCount)
-      const ctx = context(state.annotations, files)
+      const base = context(state.annotations, null)
+      const files = await writeDocumentOutput(base.plan, (page) => caches.pages.get(page), document.pageCount)
+      const ctx = { ...base, files }
       const output = approved ? formatDocumentApprovalWithNotes(ctx) : exportDocumentFeedback(ctx)
       state.decided = true
       res.json(success({ message: approved ? 'Approved with notes' : 'Feedback submitted' }))
-      setTimeout(() => resolveDecision({ approved, output, annotationCount: ordered.length }), 100)
+      setTimeout(() => resolveDecision({ approved, output, annotationCount: ctx.ordered.length }), 100)
     } catch (error) {
       console.error(error)
       res.status(500).json(failure(error.message))

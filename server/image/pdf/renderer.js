@@ -58,33 +58,32 @@ export async function createPdfRenderer(pdfPath, { timeoutMs = RENDER_TIMEOUT_MS
     return stale?.worker.terminate()
   }
 
-  function request(page, longSide) {
+  async function request(page, longSide) {
+    const worker = await liveWorker()
+    const id = nextId++
     return new Promise((resolve, reject) => {
-      liveWorker().then((worker) => {
-        const id = nextId++
-        const settle = (fn, value) => {
-          clearTimeout(timer)
-          worker.off('message', onMessage)
-          worker.off('error', onError)
-          fn(value)
-        }
-        const onMessage = (message) => {
-          if (message.id !== id) { return }
-          if (message.error) { settle(reject, new Error(`Page ${page}: ${message.error.message}`)) }
-          else { settle(resolve, { ...message.result, buffer: Buffer.from(message.result.buffer) }) }
-        }
-        const onError = (error) => {
-          discardWorker()
-          settle(reject, error)
-        }
-        const timer = setTimeout(() => {
-          discardWorker()
-          settle(reject, new Error(`Page ${page} took longer than ${timeoutMs} ms to render`))
-        }, timeoutMs)
-        worker.on('message', onMessage)
-        worker.on('error', onError)
-        worker.postMessage({ id, page, longSide })
-      }, reject)
+      const settle = (fn, value) => {
+        clearTimeout(timer)
+        worker.off('message', onMessage)
+        worker.off('error', onError)
+        fn(value)
+      }
+      const onMessage = (message) => {
+        if (message.id !== id) { return }
+        if (message.error) { settle(reject, new Error(`Page ${page}: ${message.error.message}`)) }
+        else { settle(resolve, { ...message.result, buffer: Buffer.from(message.result.buffer) }) }
+      }
+      const onError = (error) => {
+        discardWorker()
+        settle(reject, error)
+      }
+      const timer = setTimeout(() => {
+        discardWorker()
+        settle(reject, new Error(`Page ${page} took longer than ${timeoutMs} ms to render`))
+      }, timeoutMs)
+      worker.on('message', onMessage)
+      worker.on('error', onError)
+      worker.postMessage({ id, page, longSide })
     })
   }
 

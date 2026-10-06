@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { resolve as resolvePath, basename, dirname, extname, join } from 'node:path'
+import { resolve as resolvePath, basename } from 'node:path'
 import { readFileSync, realpathSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { access, constants } from 'node:fs/promises'
@@ -12,7 +12,7 @@ import { buildMarkdownServer } from './server/markdown/adapter.js'
 import { formatApprovalOutput as formatMarkdownApproval } from './server/markdown/feedback.js'
 import { isImageFile, isVideoFile, isPdfFile, isOfficeDocument, isSupportedCaptureUrl, videoExtensions } from './server/image/capture.js'
 import { parsePageRanges } from './server/image/pages.js'
-import { isSourceNewer, siblingPdf } from './server/image/source.js'
+import { isSourceNewer, siblingPdf, pdfPathFor } from './server/image/source.js'
 import { parseViewportSpec, parseDelay, describeCapture, MAX_DELAY_MS } from './server/image/config.js'
 import { saveClipboardImage } from './server/image/clipboard.js'
 
@@ -467,8 +467,7 @@ function shellArg(value) {
  * a person running the CLI by hand alike, so it carries the next command.
  */
 async function convertHint(target) {
-  const trimmed = target.replace(/[/\\]+$/, '')
-  const pdfPath = join(dirname(trimmed), `${basename(trimmed, extname(trimmed))}.pdf`)
+  const { document: trimmed, pdf: pdfPath } = pdfPathFor(target)
   const command = `annotaitr ${shellArg(pdfPath)} --source ${shellArg(trimmed)}`
   const name = basename(trimmed)
   const next = (await siblingPdf(resolvePath(trimmed)))

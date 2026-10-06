@@ -1,9 +1,9 @@
 // test/e2e/voice.spec.js
-import { spawn } from 'node:child_process'
 import { writeFile, rm, mkdtemp, chmod } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, delimiter } from 'node:path'
 import { test, expect } from '@playwright/test'
+import { startCli } from '../helpers/cli.js'
 import { createCanvas } from '@napi-rs/canvas'
 
 // Chromium's fake capture device hangs on macOS, so the microphone is a
@@ -42,33 +42,13 @@ async function setUpFakeTranscription(dir) {
   }
 }
 
-function startCli(target, env) {
-  const child = spawn('node', [join(process.cwd(), 'index.js'), target], {
-    cwd: process.cwd(),
-    env: { ...process.env, ANNOTAITR_PORT: '0', ANNOTAITR_NO_OPEN: '1', ...env }
-  })
-  let stdout = ''
-  child.stdout.on('data', (chunk) => { stdout += chunk.toString() })
-  const url = new Promise((resolve, reject) => {
-    let stderr = ''
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk.toString()
-      const match = stderr.match(/Server running at (http:\/\/\S+)/)
-      if (match) { resolve(match[1]) }
-    })
-    child.on('exit', (code) => reject(new Error(`CLI exited early with code ${code}: ${stderr}`)))
-  })
-  const exited = new Promise((resolve) => child.on('exit', resolve))
-  return { child, url, exited, stdout: () => stdout }
-}
-
 test('a voice note is recorded, transcribed into the comment field and submitted', async ({ page }) => {
   const dir = await mkdtemp(join(tmpdir(), 'annotaitr-e2e-voice-'))
   const imagePath = join(dir, 'shot.png')
   const canvas = createCanvas(200, 150)
   canvas.getContext('2d').fillRect(0, 0, 200, 150)
   await writeFile(imagePath, canvas.toBuffer('image/png'))
-  const cli = startCli(imagePath, await setUpFakeTranscription(dir))
+  const cli = startCli([imagePath], await setUpFakeTranscription(dir))
 
   try {
     await page.addInitScript(fakeMicrophone)
@@ -102,7 +82,7 @@ test('closing the comment box while microphone access is pending leaves the micr
   const dir = await mkdtemp(join(tmpdir(), 'annotaitr-e2e-voice-close-'))
   const imagePath = join(dir, 'shot.png')
   await writeFile(imagePath, createCanvas(200, 150).toBuffer('image/png'))
-  const cli = startCli(imagePath, await setUpFakeTranscription(dir))
+  const cli = startCli([imagePath], await setUpFakeTranscription(dir))
 
   try {
     // Access is granted only after the box is already closed.
@@ -136,7 +116,7 @@ test('without whisper.cpp the annotator offers no voice note', async ({ page }) 
   const dir = await mkdtemp(join(tmpdir(), 'annotaitr-e2e-novoice-'))
   const imagePath = join(dir, 'shot.png')
   await writeFile(imagePath, createCanvas(200, 150).toBuffer('image/png'))
-  const cli = startCli(imagePath, { ANNOTAITR_WHISPER_MODEL: '' })
+  const cli = startCli([imagePath], { ANNOTAITR_WHISPER_MODEL: '' })
 
   try {
     await page.goto(await cli.url)

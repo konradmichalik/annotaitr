@@ -4,18 +4,12 @@
  * its page UI from the `kind` in /api/meta.
  */
 
-import { existsSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
 import { startAnnotatorServer } from '../core/server.js'
+import { imageBundleDir as bundleDir } from './bundle.js'
 import { createDocumentApiRouter } from './documentRoutes.js'
 import { createDocumentCaches } from './document.js'
 import { transcriptionConfig, detectTranscription, createTranscriptionRouter } from './transcribe.js'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const DIST_DIR = join(__dirname, '..', '..', 'client', 'dist', 'image')
-const DEV_DIR = join(__dirname, '..', '..', 'client', 'image')
-const bundleDir = existsSync(join(DIST_DIR, 'index.html')) ? DIST_DIR : DEV_DIR
 
 /**
  * @param {Object} options
