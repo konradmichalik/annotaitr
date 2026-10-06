@@ -104,6 +104,11 @@ describe('parseArgs', () => {
     expect(parseArgs([...BASE, 'deck.pdf', '--pages', '--source', 'deck.pptx']).error).toMatch(/--pages requires/)
   })
 
+  it('does not take the next flag as the value of --viewport or --delay', () => {
+    expect(parseArgs([...BASE, '--viewport', '--delay', '500', 'http://x']).error).toMatch(/--viewport requires/)
+    expect(parseArgs([...BASE, 'http://x', '--delay', '--viewport', 'mobile']).error).toMatch(/--delay requires/)
+  })
+
   it('errors on a malformed --pages range', () => {
     expect(parseArgs([...BASE, '--pages', '5-2', 'deck.pdf']).error).toMatch(/--pages: "5-2"/)
   })

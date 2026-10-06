@@ -35,8 +35,8 @@ const VALUE_OPTIONS = {
     missing: AS_ERROR,
     parse: (value) => (VALID_MODES.includes(value) ? { value } : { error: AS_ERROR })
   },
-  '--viewport': { key: 'viewportSpec', missing: '--viewport requires a preset (desktop, laptop, tablet, mobile) or WxH' },
-  '--delay': { key: 'delaySpec', missing: '--delay requires a number of milliseconds' },
+  '--viewport': { key: 'viewportSpec', noFlagValue: true, missing: '--viewport requires a preset (desktop, laptop, tablet, mobile) or WxH' },
+  '--delay': { key: 'delaySpec', noFlagValue: true, missing: '--delay requires a number of milliseconds' },
   '--feedback-notes': {
     key: 'feedbackNotes',
     missing: '--feedback-notes requires a JSON string or file path',
