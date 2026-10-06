@@ -6,6 +6,7 @@
  */
 
 import { readFile, stat } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import { createCanvas, loadImage, Image } from '@napi-rs/canvas'
 import { chromium } from 'playwright'
 import { isImageFile, isSvgFile, isSupportedCaptureUrl } from '../common/fileTypes.js'
@@ -171,6 +172,28 @@ function assertWithinLimits(buffer, box) {
 }
 
 /**
+ * The playwright npm package installs without a browser build, so a fresh
+ * install reaches this point with no Chromium. Playwright's own message
+ * suggests a bare `npx playwright install`, which downloads every browser.
+ * The version is pinned because each playwright release expects its own
+ * Chromium revision, and an unpinned npx would fetch the latest one.
+ */
+async function launchChromium() {
+  try {
+    return await chromium.launch({ headless: true })
+  } catch (error) {
+    if (/Executable doesn't exist/.test(error.message)) {
+      const { version } = createRequire(import.meta.url)('playwright/package.json')
+      throw new Error(
+        'Web page capture needs a Chromium build for playwright. ' +
+        `Install it with: npx playwright@${version} install chromium`
+      )
+    }
+    throw error
+  }
+}
+
+/**
  * Capture a screenshot of `url` at the given viewport size: the full page,
  * or with a `section` only the visible viewport after scrolling to an
  * anchor or a pixel offset. `delayMs` waits after load (and the scroll)
@@ -184,7 +207,7 @@ export async function captureUrl(url, viewport, { delayMs = 0, section = null } 
     throw new Error(`Unsupported URL: ${url}. Only http:// and https:// are accepted.`)
   }
 
-  const browser = await chromium.launch({ headless: true })
+  const browser = await launchChromium()
   try {
     const page = await browser.newPage({ viewport })
     await page.goto(url, { timeout: config.captureTimeoutMs, waitUntil: 'load' })
