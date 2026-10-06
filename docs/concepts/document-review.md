@@ -389,7 +389,7 @@ const state = {
 **Annotations carry `page`**, the document counterpart of the video mode's
 `time`: a 1-based integer inside the session's page set, validated like
 `validateVideoAnnotations()` does for `time`. The existing limits
-(`annotationsWithinLimits()` in `server/image/still/routes.js`) apply unchanged.
+(`annotationsWithinLimits()` in `server/image/common/annotationLimits.js`) apply unchanged.
 Geometry stays in the page's own pixels, so `describePosition()` and the
 nearby-annotation logic work per page without changes.
 

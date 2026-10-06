@@ -1,18 +1,11 @@
 import { Router } from 'express'
+import { success, failure } from '../core/http.js'
 import { relative, resolve, dirname, isAbsolute } from 'node:path'
 import { createHash } from 'node:crypto'
 import { readAnnotatableFile, isAnnotatableFile, isPathInside, isPlainTextFile, resolveAnnotatablePath } from './file.js'
 import { exportFeedback, exportMultiFileFeedback } from './feedback.js'
 import { listWorkspaceFiles } from './workspace.js'
 import { config } from './config.js'
-
-function success(data) {
-  return { success: true, data }
-}
-
-function failure(error) {
-  return { success: false, error }
-}
 
 export function createApiRouter(filePaths, resolveDecision, origin = 'cli', stores = []) {
   const router = Router()

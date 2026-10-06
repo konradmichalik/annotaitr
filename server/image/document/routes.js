@@ -1,14 +1,12 @@
 import { Router } from 'express'
-import { annotationsFromBody } from '../still/routes.js'
+import { success, failure } from '../../core/http.js'
+import { annotationsFromBody } from '../common/annotationLimits.js'
 import { flattenAnnotations } from '../common/render.js'
 import { formatApprovalOutput } from '../common/feedback.js'
 import { exportDocumentFeedback, formatDocumentApprovalWithNotes } from './feedback.js'
 import { orderDocumentAnnotations, planDocumentPages, validateDocumentAnnotations } from './pages.js'
 import { writeDocumentOutput } from './output.js'
 import { elementsForPages } from './pdfDocument.js'
-
-function success(data) { return { success: true, data } }
-function failure(error) { return { success: false, error } }
 
 /**
  * A rendered page from `cache`. A render shared with a request that was

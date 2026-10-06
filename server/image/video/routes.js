@@ -2,16 +2,14 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import express, { Router } from 'express'
-import { annotationsFromBody } from '../still/routes.js'
+import { success, failure } from '../../core/http.js'
+import { annotationsFromBody } from '../common/annotationLimits.js'
 import { formatApprovalOutput } from '../common/feedback.js'
 import { exportVideoFeedback, formatVideoApprovalWithNotes } from './feedback.js'
 import { orderVideoAnnotations, planFrames, validateVideoAnnotations, MAX_FRAMES } from './timeline.js'
 import { writeVideoOutput } from './output.js'
 import { pngSize } from '../common/render.js'
 import { config } from '../common/config.js'
-
-function success(data) { return { success: true, data } }
-function failure(error) { return { success: false, error } }
 
 // A 4K PNG frame stays well below this, and nothing else uses the raw parser.
 const FRAME_UPLOAD_LIMIT = '40mb'
