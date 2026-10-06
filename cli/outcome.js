@@ -1,5 +1,6 @@
 import { openBrowser } from '../server/core/browser.js'
 import { withLifecycle } from '../server/core/lifecycle.js'
+import { recordSession } from './session.js'
 
 export async function handleOutcome(server, decision, buildOutput) {
   if (decision.aborted) {
@@ -37,11 +38,13 @@ export async function handleOutcome(server, decision, buildOutput) {
  * Open the browser on a started image, video or document server, block until
  * the user decides and print the output the server rendered for the decision.
  */
-export async function serveUntilDecision(started) {
+export async function serveUntilDecision(started, opened = null) {
   const server = withLifecycle(started)
   process.stderr.write(`Server running at ${server.url}\n`)
   await openBrowser(server.url)
 
   const decision = await server.waitForDecision()
-  await handleOutcome(server, decision, () => decision.output)
+  const decided = !decision.aborted && !decision.disconnected
+  const line = opened && decided ? await recordSession(opened, decision) : ''
+  await handleOutcome(server, decision, () => decision.output + line)
 }

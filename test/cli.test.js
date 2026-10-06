@@ -23,7 +23,9 @@ describe('parseArgs', () => {
       modeOverride: null,
       feedbackNotesFlagGiven: false,
       sourceSpec: null,
-      pageRanges: null
+      pageRanges: null,
+      sessionId: null,
+      newSession: false
     })
   })
 
@@ -50,6 +52,21 @@ describe('parseArgs', () => {
     const result = parseArgs([...BASE, '--feedback-notes', '[{"text":"hi"}]', 'README.md'])
     expect(result.feedbackNotes).toEqual([{ text: 'hi' }])
     expect(result.feedbackNotesFlagGiven).toBe(true)
+  })
+
+  it('parses --session and --new-session', () => {
+    expect(parseArgs([...BASE, '--session', '2f8c1a9e04b7', 'a.png']).sessionId).toBe('2f8c1a9e04b7')
+    expect(parseArgs([...BASE, '--new-session', 'a.png'])).toMatchObject({ newSession: true, targets: ['a.png'] })
+  })
+
+  it('rejects a malformed session id before anything reads it', () => {
+    expect(parseArgs([...BASE, '--session', '../x', 'a.png']).error).toMatch(/--session expects the 12-character id/)
+    expect(parseArgs([...BASE, '--session']).error).toMatch(/--session requires/)
+  })
+
+  it('rejects --session together with --new-session', () => {
+    expect(parseArgs([...BASE, '--session', '2f8c1a9e04b7', '--new-session', 'a.png']).error)
+      .toBe('--session and --new-session cannot be combined')
   })
 
   it('reports --help', () => {
@@ -111,6 +128,14 @@ describe('parseArgs', () => {
 
   it('errors on a malformed --pages range', () => {
     expect(parseArgs([...BASE, '--pages', '5-2', 'deck.pdf']).error).toMatch(/--pages: "5-2"/)
+  })
+})
+
+describe('session flags', () => {
+  it('rejects session flags for markdown targets', () => {
+    const result = spawnSync('node', ['index.js', '--new-session', 'README.md'], NO_SERVER)
+    expect(result.status).toBe(1)
+    expect(result.stderr.toString()).toMatch(/--session and --new-session only apply to image targets/)
   })
 })
 
@@ -390,5 +415,15 @@ describe('bin invocation through a symlink', () => {
     const result = spawnSync('node', [linkPath, '--help'])
     expect(result.stderr.toString()).toMatch(/Usage:/)
     expect(result.status).toBe(0)
+  })
+})
+
+describe('help text', () => {
+  it('documents the session flags, the reply subcommand and the session dir', () => {
+    const { stderr } = spawnSync('node', ['index.js', '--help'], { encoding: 'utf-8' })
+    expect(stderr).toContain('annotaitr reply --session <id> --to <handle> --status <status> --text <text>')
+    expect(stderr).toContain('--session <id>')
+    expect(stderr).toContain('--new-session')
+    expect(stderr).toContain('ANNOTAITR_SESSION_DIR')
   })
 })

@@ -153,7 +153,7 @@ export function createVideoApiRouter({ video, origin, targetLabel, state, voiceN
       state.rawDir = null
       state.decided = true
       res.json(success({ message: approved ? 'Approved with notes' : 'Feedback submitted' }))
-      setTimeout(() => resolveDecision({ approved, output, annotationCount: ready.ordered.length }), 100)
+      setTimeout(() => resolveDecision({ approved, output, annotationCount: ready.ordered.length, annotations: ready.ordered }), 100)
     } catch (error) {
       console.error(error)
       res.status(500).json(failure(error.message))
@@ -165,7 +165,7 @@ export function createVideoApiRouter({ video, origin, targetLabel, state, voiceN
   router.post('/api/approve', rejectWhileDeciding, async (_req, res) => {
     if (state.annotations.length === 0) {
       res.json(success({ message: 'Approved' }))
-      setTimeout(() => resolveDecision({ approved: true, output: formatApprovalOutput() }), 100)
+      setTimeout(() => resolveDecision({ approved: true, output: formatApprovalOutput(), annotations: [] }), 100)
       return
     }
     await decide(res, { approved: true })

@@ -16,8 +16,8 @@ Stdout is the contract with the calling agent:
 ## Structure
 
 - `index.js`: CLI entry, dispatches to a mode runner
-- `cli/`: argument parsing (`args.js`), mode detection (`detect.js`), help text, one runner per target kind (`markdown.js`, `image.js`, `video.js`, `document.js`) and the stdout output on a decision (`outcome.js`)
-- `server/core/`: mode-agnostic Express bootstrap, config (`ANNOTAITR_*` environment variables), browser opening, signal handling
+- `cli/`: argument parsing (`args.js`), mode detection (`detect.js`), help text, one runner per target kind (`markdown.js`, `image.js`, `video.js`, `document.js`), the stdout output on a decision (`outcome.js`), review session handling (`session.js`) and the `reply` subcommand (`reply.js`)
+- `server/core/`: mode-agnostic Express bootstrap, config (`ANNOTAITR_*` environment variables), browser opening, signal handling and review sessions (`session/`: session files and agent replies)
 - `server/markdown/`: markdown mode API routes, feedback formatting and file loading
 - `server/image/`: image mode, split into `common/` (rendering, feedback basics, element matching, transcription, config) and one folder per target kind: `still/` (image file, URL capture, clipboard), `video/` and `document/` (PDF)
 - `client/markdown/`, `client/image/`: the two React SPAs with separate Vite roots. The image client keeps video-only and PDF-only code in `src/video/` and `src/document/`, everything shared across target kinds stays in `components/`, `hooks/` and `utils/`

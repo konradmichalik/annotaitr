@@ -111,8 +111,14 @@ function describeElement({ tag, role, name, media, heading, selector }) {
   return `${roleTag}${quoted}${file}${titled} · ${selector}`
 }
 
+/** The matched elements as text, or null when nothing matched. */
+export function describeMatch(elements) {
+  if (!elements || elements.length === 0) { return null }
+  return elements.map(describeElement).join(' → ')
+}
+
 /** One `Element:` line for the matched elements, or null when nothing matched. */
 export function formatElementLine(elements) {
-  if (!elements || elements.length === 0) { return null }
-  return `Element: ${elements.map(describeElement).join(' → ')}`
+  const described = describeMatch(elements)
+  return described ? `Element: ${described}` : null
 }

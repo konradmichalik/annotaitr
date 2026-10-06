@@ -6,6 +6,7 @@ import { captureFlagError } from './args.js'
 import { fileExists, isPdfTarget, isVideoTarget } from './detect.js'
 import { fail, printHelpAndExit } from './help.js'
 import { serveUntilDecision } from './outcome.js'
+import { openSession } from './session.js'
 import { runVideo } from './video.js'
 import { runDocument } from './document.js'
 
@@ -76,15 +77,25 @@ async function resolveImageCapture(targets, { viewportSpec, delaySpec }, { clipb
   return { capture: await loadImageFromFile(imagePath), targetLabel: target ?? 'clipboard image' }
 }
 
-export async function runImage({ targets, origin, viewportSpec, delaySpec = null, clipboardPath, sourceSpec = null, pageRanges = null }) {
+function imageSessionTarget(target, clipboardPath) {
+  if (clipboardPath || !target) { return { identity: null, target: { kind: 'clipboard', label: 'clipboard image' } } }
+  if (isSupportedCaptureUrl(target)) { return { identity: new URL(target).href, target: { kind: 'url', label: target } } }
+  return { identity: resolvePath(target), target: { kind: 'file', label: target } }
+}
+
+export async function runImage({
+  targets, origin, viewportSpec, delaySpec = null, clipboardPath, sourceSpec = null, pageRanges = null, session = {}
+}) {
   if (targets.length === 1 && isPdfTarget(targets[0])) {
-    await runDocument({ target: targets[0], origin, viewportSpec, delaySpec, sourceSpec, pageRanges })
+    await runDocument({ target: targets[0], origin, viewportSpec, delaySpec, sourceSpec, pageRanges, session })
     return
   }
   if (targets.length === 1 && isVideoTarget(targets[0])) {
-    await runVideo({ target: targets[0], origin, viewportSpec, delaySpec })
+    await runVideo({ target: targets[0], origin, viewportSpec, delaySpec, session })
     return
   }
+  const opened = await openSession({ ...imageSessionTarget(targets[0], clipboardPath), ...session })
+  if (opened.error) { fail(opened.error); return }
   const { loadImageFromFile, captureUrl, buildImageServer } = await loadImageRuntime()
   const { capture, targetLabel, settings = null, error } = await resolveImageCapture(
     targets, { viewportSpec, delaySpec }, { clipboardPath, loadImageFromFile, captureUrl }
@@ -101,7 +112,7 @@ export async function runImage({ targets, origin, viewportSpec, delaySpec = null
     recapture: settings ? (next) => captureUrl(targetLabel, next.viewport, next) : null,
     origin,
     targetLabel
-  }))
+  }), opened)
 }
 
 /**
@@ -110,7 +121,7 @@ export async function runImage({ targets, origin, viewportSpec, delaySpec = null
  * a missing/unreadable clipboard here is not an error — it's the same "tell
  * me what to do" signal a bare invocation on any other platform gets.
  */
-export async function runBareInvocation({ origin, viewportSpec }) {
+export async function runBareInvocation({ origin, viewportSpec, session = {} }) {
   if (process.platform !== 'darwin') {
     printHelpAndExit(0)
     return
@@ -124,5 +135,5 @@ export async function runBareInvocation({ origin, viewportSpec }) {
     return
   }
 
-  await runImage({ targets: [], origin, viewportSpec, clipboardPath })
+  await runImage({ targets: [], origin, viewportSpec, clipboardPath, session })
 }

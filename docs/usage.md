@@ -274,6 +274,49 @@ ANNOTAITR_FEEDBACK_NOTES='[{"text":"Rewrote intro","line":5}]' annotaitr README.
 
 </details>
 
+## Review sessions
+
+Image mode remembers each review round in a session, so an agent can answer
+every mark and the next round can show those answers. Every decision with at
+least one mark ends with a line naming the session:
+
+```
+Session: 2f8c1a9e04b7 (round 1). Reply per mark with: annotaitr reply --session 2f8c1a9e04b7 --to <handle> --status applied|partial|declined|deferred|question --text "…"
+```
+
+The agent answers one mark per call, quoting the handle from the feedback
+(`[#a3f19c2e]`, with or without `#`):
+
+```bash
+annotaitr reply --session 2f8c1a9e04b7 --to a3f19c2e --status applied --text "Moved the button below the form"
+```
+
+| Status | Meaning | The text states |
+|--------|---------|-----------------|
+| `applied` | Done as asked | what was changed |
+| `partial` | Partially done | what is left |
+| `declined` | Deliberately not done | why |
+| `deferred` | Out of scope for this round | when or under what condition |
+| `question` | Needs a decision first | the question (ask it in chat as well) |
+
+`reply` checks the session, the handle, the status and the text (required,
+at most 4000 characters) before writing, and exits `1` with the reason when
+one of them is wrong.
+
+Opening the same image file, URL, video or PDF again within 24 hours
+continues its session and starts the next round; a line on stderr says so.
+`--new-session` starts over, `--session <id>` continues a specific session,
+which is the only way to continue one for a clipboard image. `--session` and
+`--new-session` apply to image mode only.
+
+Sessions are JSON files in `<tmpdir>/annotaitr-sessions` (or
+`ANNOTAITR_SESSION_DIR`), readable by the current user only, and deleted
+after 7 days. They hold the review comments, so a session is only written
+into a folder owned by the current user and closed to others (`chmod 700`);
+an existing `ANNOTAITR_SESSION_DIR` must meet that too. If a session cannot be
+saved, a warning goes to stderr and the decision is printed as usual. Several
+`reply` calls may run at the same time, each waits for the others.
+
 ## Environment variables
 
 | Variable | Applies to | Description |
@@ -283,6 +326,7 @@ ANNOTAITR_FEEDBACK_NOTES='[{"text":"Rewrote intro","line":5}]' annotaitr README.
 | `ANNOTAITR_BROWSER` | both | Custom browser application |
 | `ANNOTAITR_TIMEOUT` | both | Heartbeat timeout in ms (default `30000`, range `5000`-`300000`) |
 | `ANNOTAITR_NO_OPEN` | both | Skip opening a browser tab automatically |
+| `ANNOTAITR_SESSION_DIR` | image | Folder for [review sessions](#review-sessions) (default `<tmpdir>/annotaitr-sessions`) |
 | `ANNOTAITR_CAPTURE_TIMEOUT` | image | Page-load timeout in ms for URL capture |
 | `ANNOTAITR_WHISPER_MODEL` | image | Path to a whisper.cpp ggml model; enables [voice notes](#voice-notes) |
 | `ANNOTAITR_WHISPER_BIN` | image | whisper.cpp binary (default `whisper-cli` on `PATH`) |
@@ -313,8 +357,8 @@ goes to stderr, the decision goes to stdout on exit:
 
 | Exit code | Meaning |
 |-----------|---------|
-| `0` | Approved, or feedback submitted: stdout carries the formatted decision. Also a hint printed instead of opening the annotator (`PASTED CHAT IMAGE:`, `CONVERT TO PDF FIRST:`) |
-| `1` | An error (bad arguments, unsupported target), the browser tab was closed with no decision, or the process was interrupted (`Ctrl+C`) |
+| `0` | Approved, or feedback submitted: stdout carries the formatted decision. Also a hint printed instead of opening the annotator (`PASTED CHAT IMAGE:`, `CONVERT TO PDF FIRST:`). `annotaitr reply` exits `0` once the reply is saved |
+| `1` | An error (bad arguments, unsupported target), the browser tab was closed with no decision, or the process was interrupted (`Ctrl+C`), or `annotaitr reply` rejected its arguments |
 
 `md-annotator` works as an alias for the same binary, for existing scripts
 and shell aliases.

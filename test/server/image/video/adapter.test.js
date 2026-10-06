@@ -152,6 +152,7 @@ describe('video annotator server', () => {
     const decision = await server.waitForDecision()
     expect(decision.approved).toBe(false)
     expect(decision.annotationCount).toBe(3)
+    expect(decision.annotations.map((a) => a.id)).toEqual(['a', 'b', 'g'])
     expect(decision.output).toContain('3 annotations on the recording clip.webm (00:12.000, 40x30).')
 
     const overview = decision.output.match(/Overview: (\S+)/)[1]
@@ -211,5 +212,6 @@ describe('video annotator server', () => {
     await post('/api/approve', {})
     const decision = await server.waitForDecision()
     expect(decision.output).toBe('APPROVED: No changes requested.\n')
+    expect(decision.annotations).toEqual([])
   })
 })

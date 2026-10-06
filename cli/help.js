@@ -10,6 +10,7 @@ Markdown/plain-text files in the browser
 
 Usage:
   annotaitr [options] [target ...]
+  annotaitr reply --session <id> --to <handle> --status <status> --text <text>
 
 Which mode runs is auto-detected from the target:
   - no target                  reads an image from the clipboard (macOS only)
@@ -32,6 +33,8 @@ Options:
   --feedback-notes <json|path>  Markdown mode only: AI notes to display as read-only annotations
   --source <path>               PDF only: the file the PDF was rendered from, named in the feedback
   --pages <range>               PDF only: review only these pages, e.g. 1-5,8,12-
+  --session <id>                Image mode only: continue this review session (the id printed after "Session:")
+  --new-session                 Image mode only: start a new review session instead of continuing the last one
 
 Markdown files supported:
   Markdown (.md, .markdown, .mdown, .mkd) renders as formatted markdown.
@@ -47,6 +50,7 @@ Environment:
   ANNOTAITR_BROWSER          Custom browser app name
   ANNOTAITR_TIMEOUT          Heartbeat timeout in ms (default: 30000, range: 5000-300000)
   ANNOTAITR_NO_OPEN          Skip opening a browser tab automatically
+  ANNOTAITR_SESSION_DIR      Image mode: folder for review sessions (default: <tmpdir>/annotaitr-sessions)
   ANNOTAITR_CAPTURE_TIMEOUT  Image mode: page-load timeout in ms for URL capture
   ANNOTAITR_WHISPER_MODEL    Image mode: whisper.cpp model path, enables voice notes
   ANNOTAITR_WHISPER_BIN      Image mode: whisper.cpp binary (default: whisper-cli)

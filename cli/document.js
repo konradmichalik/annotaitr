@@ -5,6 +5,7 @@ import { captureFlagError } from './args.js'
 import { fileExists } from './detect.js'
 import { fail } from './help.js'
 import { serveUntilDecision } from './outcome.js'
+import { openSession } from './session.js'
 
 /**
  * A PDF needs no playwright either, but pdf.js (loaded inside the render
@@ -49,7 +50,7 @@ export async function convertHint(target) {
   return `CONVERT TO PDF FIRST: ${trimmed}\nannotaitr reviews documents as PDF. ${next}\n  ${command}\n`
 }
 
-export async function runDocument({ target, origin, viewportSpec, delaySpec, sourceSpec, pageRanges }) {
+export async function runDocument({ target, origin, viewportSpec, delaySpec, sourceSpec, pageRanges, session = {} }) {
   const flagError = captureFlagError('a PDF', { viewportSpec, delaySpec })
   if (flagError) { fail(flagError); return }
   const pdfPath = resolvePath(target)
@@ -62,6 +63,9 @@ export async function runDocument({ target, origin, viewportSpec, delaySpec, sou
     fail(`Source not found: ${sourcePath}`)
     return
   }
+
+  const opened = await openSession({ identity: pdfPath, target: { kind: 'document', label: basename(pdfPath) }, ...session })
+  if (opened.error) { fail(opened.error); return }
 
   const { openPdfDocument, buildDocumentServer } = await loadDocumentRuntime()
   let document
@@ -79,5 +83,5 @@ export async function runDocument({ target, origin, viewportSpec, delaySpec, sou
   }
   if (freshness.skipped) { process.stderr.write(`Note: ${freshness.skipped}.\n`) }
 
-  await serveUntilDecision(await buildDocumentServer({ document, source, origin, targetLabel: basename(pdfPath) }))
+  await serveUntilDecision(await buildDocumentServer({ document, source, origin, targetLabel: basename(pdfPath) }), opened)
 }
