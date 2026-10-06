@@ -17,6 +17,7 @@ import PageStrip from './document/PageStrip.jsx'
 import PageNav from './document/PageNav.jsx'
 import PageImage from './document/PageImage.jsx'
 import { usePreviousRound } from './threads/usePreviousRound.js'
+import PreviousRoundPanel from './threads/PreviousRoundPanel.jsx'
 import { placedThreads } from './threads/threadView.js'
 import { ACTION_ICONS } from './utils/icons.jsx'
 import { useSettings } from './hooks/useSettings.js'
@@ -90,6 +91,11 @@ export default function App() {
   const previous = usePreviousRound({ ready: isStill })
   const previousThreads = isStill ? placedThreads(previous.threads, { kind: 'still' }) : []
   const closeThread = useCallback(() => setOpenThreadHandle(null), [])
+  // Hiding the layer closes the open thread too, so showing it again does not bring the popover back.
+  const togglePrevious = useCallback(() => {
+    setShowPrevious((prev) => !prev)
+    setOpenThreadHandle(null)
+  }, [])
   // A PDF's text layer is per page; a captured web page has one element map.
   const elements = isDocument ? doc.elements : capturedElements
   const words = isDocument ? doc.words : []
@@ -230,6 +236,11 @@ export default function App() {
   }, [addComment, range, clearRange])
 
   const seekTo = isDocument ? doc.seekTo : video.seekTo
+  const showThread = useCallback((thread) => {
+    seekTo(thread.annotation)
+    setShowPrevious(true)
+    setOpenThreadHandle(thread.handle)
+  }, [seekTo])
   const editAnnotation = useCallback((id) => {
     const annotation = state.annotations.find((a) => a.id === id)
     if (annotation) { seekTo(annotation) }
@@ -552,7 +563,7 @@ export default function App() {
                 {previousThreads.length > 0 && (
                   <button
                     type="button"
-                    onClick={() => setShowPrevious((prev) => !prev)}
+                    onClick={togglePrevious}
                     className="btn btn-icon"
                     aria-pressed={showPrevious}
                     aria-label="Previous round"
@@ -672,6 +683,7 @@ export default function App() {
                 onDone={showToast}
               />
             </div>
+            <PreviousRoundPanel round={previous.round} threads={isStill ? previous.threads : []} onShow={showThread} />
             <AnnotationPanel
               annotations={review.ordered}
               onRemove={removeAnnotation}

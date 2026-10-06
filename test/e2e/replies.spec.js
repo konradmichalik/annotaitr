@@ -100,4 +100,54 @@ test.describe('replies from the last round', () => {
       cli.child.kill()
     }
   })
+
+  test('lists the replies in the panel and opens a thread from the keyboard', async ({ page }) => {
+    await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Button too close', color: '#bf616a' }, 'question', 'Left or right aligned?')
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      const section = page.getByRole('region', { name: /Round 1 replies/ })
+      const entry = section.getByRole('button', { name: /1\..*question/ })
+      await entry.focus()
+      await page.keyboard.press('Enter')
+      await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' }).getByText('Left or right aligned?')).toBeVisible()
+    } finally {
+      cli.child.kill()
+    }
+  })
+
+  test('lists a mark outside a smaller image as no longer in the target', async ({ page }) => {
+    await firstRoundWithReply(image, env, { id: UUID, type: 'pin', geometry: { x: 380, y: 280 }, text: 'Corner', color: '#bf616a' })
+    await writeFile(image, makeFixturePng(200, 150))
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      const section = page.getByRole('region', { name: /Round 1 replies/ })
+      await expect(section.getByText('No longer in the target')).toBeVisible()
+      await expect(section.getByText('The mark lies outside the current image')).toBeVisible()
+      await section.getByRole('button', { name: /1\./ }).click()
+      await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' }).getByText('Corner')).toBeVisible()
+    } finally {
+      cli.child.kill()
+    }
+  })
+
+  test('does not reopen a thread after the previous round was hidden and shown again', async ({ page }) => {
+    await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Button too close', color: '#bf616a' })
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      await page.getByRole('region', { name: /Round 1 replies/ }).getByRole('button', { name: /1\./ }).click()
+      const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
+      await expect(dialog).toBeVisible()
+      const toggle = page.getByRole('button', { name: 'Previous round' })
+      await toggle.click()
+      await expect(dialog).toBeHidden()
+      await toggle.click()
+      await expect(page.locator('.previous-round')).toBeVisible()
+      await expect(dialog).toHaveCount(0)
+    } finally {
+      cli.child.kill()
+    }
+  })
 })
