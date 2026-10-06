@@ -1,5 +1,5 @@
 ---
-description: Open a target in the browser-based annotator, auto-detecting whether it's an image or a Markdown/plain-text file
+description: Open a target in the browser-based annotator, auto-detecting whether it's an image, a video, a PDF or a Markdown/plain-text file
 allowed-tools: Bash(annotaitr *), Read, Edit
 args: target
 ---
@@ -27,6 +27,13 @@ image can be opened at a time: if several chips were given, ask which one. If
 no source line exists, ask the user to save the image or copy it to the
 clipboard.
 
+If the output above starts with `CONVERT TO PDF FIRST:`, the target is an
+office document, which annotaitr only reviews as PDF. Render it to PDF with
+the tooling that created it (the `pptx` skill's LibreOffice conversion, the
+Keynote AppleScript export, Marp's or Slidev's PDF export), then run the
+command the hint prints with the Bash tool and `run_in_background: true`.
+If you cannot render it, ask the user to export a PDF.
+
 Use this command when you don't know in advance whether `$ARGUMENTS` is an
 image target or a markdown target — `annotaitr` auto-detects it (see `--help`
 for the exact rules) and the output above will be in one of two shapes:
@@ -49,6 +56,13 @@ the image.
 `Overview:` path near the top. Read the overview first, then each
 annotation's `Frame:` (the frame it was drawn on, markup baked in) and, for a
 span (`from <start> to <end>`), its `Strip:` of frames across the span.
+
+**PDF feedback**: recognizable by a `Source:` line and `## Page N` sections.
+Edit the file named in `Source:`, never the PDF; a `Warning:` under it means
+the source changed after the export. Read each page's `Annotated page:` image
+like an annotated screenshot. Numbers run across the document. Page N equals
+slide N only if no slides are hidden or skipped. After the changes,
+regenerate the PDF and re-open it with the same `--source`.
 
 **Markdown feedback** — a `# Annotation Feedback` document (or `APPROVED:` /
 `APPROVED WITH NOTES:` with no such document) with one block per annotation,

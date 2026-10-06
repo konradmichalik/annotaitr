@@ -2,7 +2,7 @@
 
 # <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-dark.svg"><source media="(prefers-color-scheme: light)" srcset="docs/images/logo.svg"><img alt="annotaitr" src="docs/images/logo.svg" width="300"></picture>
 
-An AI coding agent plugin that opens images, captured web pages, videos, GIFs, or Markdown files in a browser-based annotator.
+An AI coding agent plugin that opens images, captured web pages, videos, GIFs, PDFs, or Markdown files in a browser-based annotator.
 
 [![Test](https://github.com/konradmichalik/annotaitr/actions/workflows/test.yml/badge.svg)](https://github.com/konradmichalik/annotaitr/actions/workflows/test.yml)
 [![License](https://img.shields.io/github/license/konradmichalik/annotaitr)](LICENSE)
@@ -34,6 +34,7 @@ Which mode runs is auto-detected from the target: see Usage below and
 - **Annotated screenshot export**: submitting bakes the markup into a copy of the image and passes its path to the agent; the annotator can also copy that image or the feedback as Markdown, or save the image, for a ticket or a colleague
 - **Voice notes**: speak a comment instead of typing it, transcribed locally with whisper.cpp when it is installed
 - **Videos and GIFs**: annotate screen recordings on a timeline, as single moments or spans; the agent gets each annotated frame as a PNG plus a strip per span and an overview
+- **PDFs**: review a generated slide deck or document page by page; the agent gets one annotated image per page, feedback grouped by page and the source file to edit
 
 **Markdown and plain-text review:**
 
@@ -55,7 +56,8 @@ Which mode runs is auto-detected from the target: see Usage below and
 
 > [!IMPORTANT]
 > Requires Node.js 22.13+ and npm. Image mode additionally needs `playwright`
-> and `@napi-rs/canvas`, both `optionalDependencies` installed by default. A
+> and `@napi-rs/canvas`, PDFs need `pdfjs-dist`, all `optionalDependencies`
+> installed by default. A
 > markdown-only install can skip them and gets an actionable error if image
 > mode is ever invoked without them.
 
@@ -141,6 +143,7 @@ annotaitr README.md               # markdown
 annotaitr ./mockup.png            # image, local file
 annotaitr http://localhost:3000   # image, capture
 annotaitr ./bug-recording.mov     # image, video on a timeline
+annotaitr ./deck.pdf --source ./deck.pptx   # image, PDF page by page
 ```
 
 Full flag and environment variable reference: [docs/usage.md](docs/usage.md).

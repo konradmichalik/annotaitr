@@ -88,6 +88,24 @@ and an overview of the whole recording, and prints feedback that points at
 those files. Agents read images, not video, so the frames are the
 deliverable.
 
+### PDFs
+
+A PDF is image mode on a list of pages. The server parses it with pdf.js in
+a worker thread, so a slow or hostile page never stalls the server: every
+render has a timeout, after which the worker is replaced. `/api/meta` lists
+the pages with their size in rendered pixels (longer side 2000px), which is
+also the space annotation geometry lives in. Pages and thumbnails are
+rendered on first request, thumbnails at their own small size, and only a
+few full pages are kept in memory.
+
+Every annotation carries a `page`, a page comment is a comment with a
+`page`, a general comment has none. Annotations are numbered by page, in the
+order they were made within a page, with general comments last. On submit
+the server bakes each annotated page's marks into its own image, lays the
+annotated pages out in an overview and prints feedback grouped by page. With
+`--source`, the feedback names the file the agent edits and warns when that
+file is newer than the PDF.
+
 ## Markdown mode
 
 Once a file is open in the browser:
