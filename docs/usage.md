@@ -43,6 +43,22 @@ needs an extension the forced mode supports.
 annotaitr --as image ./mockup.png
 ```
 
+## Web page capture
+
+A URL target is captured with playwright's Chromium. The `playwright`
+package comes with the install, its browser build does not, and the first
+capture fails with the install command until it is there:
+
+```bash
+npx playwright install chromium
+```
+
+Each playwright release expects its own Chromium revision. Outside a
+project, `npx` fetches the latest playwright, so the error and the installer
+script (which checks for the build) name the exact version instead, e.g.
+`npx playwright@1.63.0 install chromium`. Local images,
+videos, GIFs and PDFs need no browser build.
+
 ## SVG files
 
 An `.svg` target is rendered to a PNG before the annotator opens, so it is

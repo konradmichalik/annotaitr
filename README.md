@@ -59,7 +59,9 @@ Which mode runs is auto-detected from the target: see Usage below and
 > and `@napi-rs/canvas`, PDFs need `pdfjs-dist`, all `optionalDependencies`
 > installed by default. A
 > markdown-only install can skip them and gets an actionable error if image
-> mode is ever invoked without them.
+> mode is ever invoked without them. Web page capture also needs a Chromium
+> build for playwright, which npm does not download:
+> `npx playwright install chromium`.
 
 Upgrading from `md-annotator`? See [docs/migration.md](docs/migration.md).
 
