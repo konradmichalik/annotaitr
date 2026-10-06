@@ -3,6 +3,7 @@ import { orderDocumentAnnotations, nextNumberOnPage, pageAnnotationCounts, stepP
 import { readError } from '../utils/readError.js'
 
 const NO_PAGES = []
+const NO_TEXT = { elements: [], words: [] }
 
 /**
  * Everything the annotation UI needs to know about pages of a PDF: which
@@ -16,6 +17,8 @@ export function useDocumentReview({ meta, annotations }) {
   const [selected, setSelected] = useState(null)
   const [pageError, setPageError] = useState(null)
   const [loadedPage, setLoadedPage] = useState(null)
+  // The page's text layer: elements to outline and name, words to select.
+  const [text, setText] = useState({ page: null, ...NO_TEXT })
   const current = selected ?? pages[0]?.number ?? null
   const currentPage = pages.find((p) => p.number === current) ?? null
 
@@ -53,6 +56,18 @@ export function useDocumentReview({ meta, annotations }) {
     new Image().src = `/api/pages/${nextPage}/image`
   }, [loadedPage, current, nextPage])
 
+  // Fetched for the page shown; an answer for a page already left behind is dropped.
+  useEffect(() => {
+    if (!isDocument || current === null) { return }
+    let wanted = true
+    fetch(`/api/pages/${current}/elements`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => { if (wanted) { setText({ page: current, ...NO_TEXT, ...r?.data }) } })
+      .catch(() => {})
+    return () => { wanted = false }
+  }, [isDocument, current])
+  const pageText = text.page === current ? text : NO_TEXT
+
   // An <img> only learns that loading failed, so ask again for the reason.
   const reportImageError = useCallback(async () => {
     const page = current
@@ -68,6 +83,7 @@ export function useDocumentReview({ meta, annotations }) {
 
   return {
     isDocument, pages, current, currentPage, ordered, numberFor, counts, visible, nextNumber, imageUrl, loading, markLoaded,
+    elements: pageText.elements, words: pageText.words,
     pageError: pageError?.page === current ? pageError.message : null,
     goTo, step, takePage, seekTo, reportImageError
   }

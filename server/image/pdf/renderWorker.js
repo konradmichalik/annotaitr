@@ -33,7 +33,7 @@ function openDocument(data) {
   }).promise
 }
 
-async function pageSize(doc, number) {
+async function pageSize(doc, { page: number }) {
   const { width, height } = (await doc.getPage(number)).getViewport({ scale: 1 })
   return { width, height }
 }
@@ -104,13 +104,14 @@ async function renderPage(doc, { page: number, longSide }) {
   return { buffer: canvas.toBuffer('image/png'), width: canvas.width, height: canvas.height }
 }
 
+const HANDLERS = { size: pageSize, text: pageText, render: renderPage }
+
 try {
   const doc = await openDocument(workerData.data)
   parentPort.on('message', async (request) => {
     try {
       // The canvas buffer is not transferable, so it is copied: tens of kilobytes per page.
-      const handler = request.size ? pageSize : (request.text ? pageText : renderPage)
-      const result = await handler(doc, request.size ? request.page : request)
+      const result = await HANDLERS[request.kind](doc, request)
       parentPort.postMessage({ id: request.id, result })
     } catch (error) {
       parentPort.postMessage({ id: request.id, error: describeError(error) })

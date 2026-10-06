@@ -2,8 +2,12 @@ import { Worker } from 'node:worker_threads'
 import { readFile } from 'node:fs/promises'
 import { basename } from 'node:path'
 
-export const RENDER_TIMEOUT_MS = 10_000
-export const OPEN_TIMEOUT_MS = 30_000
+const RENDER_TIMEOUT_MS = 10_000
+const OPEN_TIMEOUT_MS = 30_000
+
+// Which waiting job runs next: page sizes block opening the review, the
+// page on screen and its text come before thumbnails scrolled into view.
+export const PRIORITY = { size: 2, page: 1, thumb: 0 }
 
 const WORKER_URL = new URL('./renderWorker.js', import.meta.url)
 // Bounds the worker's JS heap. Decoded images live outside it, which is
@@ -167,17 +171,17 @@ export async function createPdfRenderer(pdfPath, { timeoutMs = RENDER_TIMEOUT_MS
     /** `{ width, height }` of a page in PDF points, without rendering it. */
     pageSize(page) {
       if (!checkPage(page)) { return Promise.reject(new Error(`Page ${page} is not in this document`)) }
-      return enqueue(() => call({ page, size: true }, `Page ${page}`), { priority: 2 })
+      return enqueue(() => call({ kind: 'size', page }, `Page ${page}`), { priority: PRIORITY.size })
     },
     /** `{ runs, links }` of a page, boxes in the pixels of the page rendered at `longSide`. */
     pageText(page, longSide) {
       if (!checkPage(page)) { return Promise.reject(new Error(`Page ${page} is not in this document`)) }
-      return enqueue(() => call({ page, longSide, text: true }, `Page ${page}`), { priority: 1 })
+      return enqueue(() => call({ kind: 'text', page, longSide }, `Page ${page}`), { priority: PRIORITY.page })
     },
     /** `{ buffer, width, height }` of the page as PNG, its longer side `longSide` pixels. */
-    async render(page, longSide, { priority = 0, signal = null } = {}) {
+    async render(page, longSide, { priority = PRIORITY.thumb, signal = null } = {}) {
       if (!checkPage(page)) { throw new Error(`Page ${page} is not in this document`) }
-      const result = await enqueue(() => call({ page, longSide }, `Page ${page}`), { priority, signal })
+      const result = await enqueue(() => call({ kind: 'render', page, longSide }, `Page ${page}`), { priority, signal })
       return { ...result, buffer: Buffer.from(result.buffer) }
     },
     async close() {

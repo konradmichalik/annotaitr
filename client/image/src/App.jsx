@@ -56,9 +56,7 @@ export default function App() {
   const [meta, setMeta] = useState(null)
   // Elements of a captured web page (empty for files, the clipboard and
   // recordings), so the canvas can outline and name what each mark hits.
-  const [elements, setElements] = useState([])
-  // A PDF page's words in reading order, for selecting text.
-  const [words, setWords] = useState([])
+  const [capturedElements, setElements] = useState([])
   // What is being captured right now ("Tablet 768×1024"), or null.
   const [recapturing, setRecapturing] = useState(null)
   const [imageUrl, setImageUrl] = useState(null)
@@ -81,6 +79,9 @@ export default function App() {
   // Ordering, numbering and what the canvas shows follow the time axis of a
   // recording or the page axis of a PDF; a still image passes straight through.
   const review = isDocument ? doc : video
+  // A PDF's text layer is per page; a captured web page has one element map.
+  const elements = isDocument ? doc.elements : capturedElements
+  const words = isDocument ? doc.words : []
   const mediaWidth = isVideo ? controller?.width : (isDocument ? doc.currentPage?.width : meta?.width)
   const mediaHeight = isVideo ? controller?.height : (isDocument ? doc.currentPage?.height : meta?.height)
   const subject = isVideo ? 'recording' : (isDocument ? 'document' : 'image')
@@ -349,25 +350,6 @@ export default function App() {
     const fit = Math.min(availableWidth / mediaWidth, availableHeight / mediaHeight)
     setZoom(Math.round(Math.max(0.1, Math.min(3, fit)) * 100) / 100)
   }, [mediaWidth, mediaHeight])
-
-  // A PDF's text layer belongs to one page, so it is fetched for the page
-  // shown; an answer for a page already left behind is dropped.
-  const pageShownForElements = isDocument ? doc.current : null
-  useEffect(() => {
-    if (pageShownForElements === null) { return }
-    let current = true
-    setElements([])
-    setWords([])
-    fetch(`/api/pages/${pageShownForElements}/elements`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((r) => {
-        if (!current) { return }
-        setElements(r?.data?.elements ?? [])
-        setWords(r?.data?.words ?? [])
-      })
-      .catch(() => {})
-    return () => { current = false }
-  }, [pageShownForElements])
 
   // A page is rendered larger than most screens, so a document opens fitted,
   // and again whenever the page size changes (portrait after landscape).

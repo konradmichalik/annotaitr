@@ -1,5 +1,5 @@
 import { stat } from 'node:fs/promises'
-import { createPdfRenderer } from './pdf/renderer.js'
+import { createPdfRenderer, PRIORITY } from './pdf/renderer.js'
 import { buildTextLayer } from './pdf/textLayer.js'
 import { selectPages } from './pages.js'
 import { config } from './config.js'
@@ -12,9 +12,6 @@ const PAGE_CACHE_SIZE = 6
 // A failed render is answered from the cache for a moment, so asking why an
 // image did not load does not queue the same slow page again.
 const FAILURE_TTL_MS = 5000
-// The page on screen goes before thumbnails scrolled into view.
-const PAGE_PRIORITY = 1
-const THUMB_PRIORITY = 0
 
 function pixelSize({ width, height }, longSide) {
   const scale = longSide / Math.max(width, height)
@@ -104,7 +101,7 @@ export async function elementsForPages(caches, pages) {
 export function createDocumentCaches(document) {
   return {
     text: createTextCache(document),
-    pages: createPageCache((page, signal) => document.renderer.render(page, PAGE_LONG_SIDE, { priority: PAGE_PRIORITY, signal })),
-    thumbs: createPageCache((page, signal) => document.renderer.render(page, THUMB_LONG_SIDE, { priority: THUMB_PRIORITY, signal }), Infinity)
+    pages: createPageCache((page, signal) => document.renderer.render(page, PAGE_LONG_SIDE, { priority: PRIORITY.page, signal })),
+    thumbs: createPageCache((page, signal) => document.renderer.render(page, THUMB_LONG_SIDE, { priority: PRIORITY.thumb, signal }), Infinity)
   }
 }
