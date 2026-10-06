@@ -14,6 +14,8 @@ import SettingsModal from './components/SettingsModal.jsx'
 import Timeline from './components/Timeline.jsx'
 import MediaSlot from './components/MediaSlot.jsx'
 import PageStrip from './components/PageStrip.jsx'
+import PageNav from './components/PageNav.jsx'
+import PageImage from './components/PageImage.jsx'
 import { useSettings } from './hooks/useSettings.js'
 import { useMediaPlayer } from './hooks/useMediaPlayer.js'
 import { useVideoReview } from './hooks/useVideoReview.js'
@@ -384,9 +386,10 @@ export default function App() {
     if (isVideo) { return <MediaSlot element={controller.element} label={`Recording ${meta.targetLabel ?? ''}`.trim()} /> }
     if (!isDocument) { return null }
     return (
-      <img
+      <PageImage
         src={doc.imageUrl} alt={`Page ${doc.current} of ${meta.targetLabel ?? 'the document'}`}
-        width={mediaWidth * zoom} height={mediaHeight * zoom} draggable={false} onError={doc.reportImageError}
+        width={mediaWidth * zoom} height={mediaHeight * zoom} loadingLabel={`Loading page ${doc.current}`}
+        loading={doc.loading} onLoad={doc.markLoaded} onError={doc.reportImageError}
       />
     )
   }
@@ -579,6 +582,7 @@ export default function App() {
                 {meta?.capture && (
                   <ViewportControl capture={meta.capture} busy={!!recapturing} annotationCount={state.annotations.length} onApply={recapture} />
                 )}
+                {isDocument && <PageNav pages={doc.pages} current={doc.current} onStep={stepPage} />}
                 <ZoomControls zoom={zoom} onZoomBy={zoomBy} onZoomReset={zoomReset} onZoomFit={zoomFit} />
               </div>
             </div>

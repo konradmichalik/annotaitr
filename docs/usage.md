@@ -105,8 +105,10 @@ submission exports at most 50 distinct frames.
 
 ## PDFs
 
-A PDF opens with a strip of page thumbnails on the left. Draw on the page
-shown with the usual tools: each annotation belongs to its page. The
+A PDF opens with a strip of page thumbnails on the left and previous/next
+buttons next to the zoom controls. Draw on the page shown with the usual
+tools: each annotation belongs to its page. A page shows a placeholder while
+it is rendered, and the next page is rendered ahead in the background. The
 button next to **Add general comment** adds a comment about the page shown
 without drawing, for notes like "this slide is too dense".
 

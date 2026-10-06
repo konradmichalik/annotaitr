@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { orderDocumentAnnotations, nextNumberOnPage, pageAnnotationCounts, stepPage, isPaged } from '../utils/documentPages.js'
 import { readError } from '../utils/readError.js'
 
@@ -15,6 +15,7 @@ export function useDocumentReview({ meta, annotations }) {
   const pages = isDocument ? meta.pages : NO_PAGES
   const [selected, setSelected] = useState(null)
   const [pageError, setPageError] = useState(null)
+  const [loadedPage, setLoadedPage] = useState(null)
   const current = selected ?? pages[0]?.number ?? null
   const currentPage = pages.find((p) => p.number === current) ?? null
 
@@ -40,6 +41,17 @@ export function useDocumentReview({ meta, annotations }) {
   }, [isDocument, goTo])
 
   const imageUrl = isDocument && current ? `/api/pages/${current}/image` : null
+  const loading = isDocument && loadedPage !== current && pageError?.page !== current
+  const markLoaded = useCallback(() => setLoadedPage(current), [current])
+
+  // Once the page shown has arrived, the next one is fetched in the
+  // background, so reading forward finds it already rendered on the server
+  // and in the browser cache.
+  const nextPage = isDocument ? stepPage(pages, current, 1) : null
+  useEffect(() => {
+    if (loadedPage === null || loadedPage !== current || nextPage === current) { return }
+    new Image().src = `/api/pages/${nextPage}/image`
+  }, [loadedPage, current, nextPage])
 
   // An <img> only learns that loading failed, so ask again for the reason.
   const reportImageError = useCallback(async () => {
@@ -55,7 +67,7 @@ export function useDocumentReview({ meta, annotations }) {
   }, [current])
 
   return {
-    isDocument, pages, current, currentPage, ordered, numberFor, counts, visible, nextNumber, imageUrl,
+    isDocument, pages, current, currentPage, ordered, numberFor, counts, visible, nextNumber, imageUrl, loading, markLoaded,
     pageError: pageError?.page === current ? pageError.message : null,
     goTo, step, takePage, seekTo, reportImageError
   }

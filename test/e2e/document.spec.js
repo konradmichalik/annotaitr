@@ -37,9 +37,17 @@ test('a PDF is annotated page by page and the CLI prints per-page feedback with 
     await drawBox(page, [20, 20], [120, 80])
     await expect(strip.getByRole('button', { name: 'Page 1, 1 annotation' })).toBeVisible()
 
+    const nav = page.getByRole('toolbar', { name: 'Page navigation' })
+    await expect(nav.getByRole('button', { name: 'Previous page' })).toBeDisabled()
+    await nav.getByRole('button', { name: 'Next page' }).click()
+    await expect(nav).toContainText('Page 2 / 3')
+    await nav.getByRole('button', { name: 'Previous page' }).click()
+    await expect(nav).toContainText('Page 1 / 3')
+
     await page.keyboard.press('End')
     await expect(strip.getByRole('button', { name: 'Page 3' })).toHaveAttribute('aria-current', 'page')
     await expect(page.locator('.app-status')).toContainText('Page 3 of 3')
+    await expect(nav.getByRole('button', { name: 'Next page' })).toBeDisabled()
     await drawBox(page, [40, 40], [140, 100])
 
     await strip.getByRole('button', { name: 'Page 2' }).click()
