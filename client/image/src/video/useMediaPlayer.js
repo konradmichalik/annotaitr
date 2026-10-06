@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { loadVideoController, loadGifController } from '../utils/mediaControllers.js'
+import { loadVideoController, loadGifController } from './mediaControllers.js'
 import { getItem, setItem } from '../../../shared/utils/storage.js'
 
 const MUTED_KEY = 'img-annotator-muted'

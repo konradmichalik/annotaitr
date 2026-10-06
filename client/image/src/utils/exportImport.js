@@ -1,5 +1,5 @@
 import { isPointsGeometry, MAX_POINTS_PER_ANNOTATION } from './drawing.js'
-import { MAX_QUOTE_LENGTH, MAX_TEXT_RECTS } from './textSelection.js'
+import { MAX_QUOTE_LENGTH, MAX_TEXT_RECTS } from '../document/textSelection.js'
 
 const VALID_TYPES = new Set(['box', 'element', 'text', 'arrow', 'freehand', 'highlighter', 'pin', 'comment'])
 const MAX_ANNOTATIONS = 10000

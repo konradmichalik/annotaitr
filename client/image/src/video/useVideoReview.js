@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { orderVideoAnnotations, isVisibleAt, isTimed, isSpan } from '../utils/timeline.js'
+import { orderVideoAnnotations, isVisibleAt, isTimed, isSpan } from './timeline.js'
 
 const EMPTY_RANGE = { start: null, end: null }
 const FALLBACK_FRAME_DURATION = 1 / 30

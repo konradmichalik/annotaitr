@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { orderDocumentAnnotations, nextNumberOnPage, pageAnnotationCounts, stepPage, isPaged } from '../utils/documentPages.js'
+import { orderDocumentAnnotations, nextNumberOnPage, pageAnnotationCounts, stepPage, isPaged } from './documentPages.js'
 import { readError } from '../utils/readError.js'
 
 const NO_PAGES = []

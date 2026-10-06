@@ -7,7 +7,7 @@ import {
 import { resolveArrowStyle, strokeWidthOf, dashArrayFor, pickStyleFields } from '../utils/annotationStyles.js'
 import { cursorForTool } from '../utils/cursors.js'
 import { matchAnnotation, matchPoint, describeElements } from '../utils/elementMatch.js'
-import { wordIndexAt, selectWords } from '../utils/textSelection.js'
+import { wordIndexAt, selectWords } from '../document/textSelection.js'
 import { ANNOTATION_COLORS } from '../utils/annotationColors.js'
 import { ACTION_ICONS } from '../utils/icons.jsx'
 import CommentPopover from './CommentPopover.jsx'

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { GifWriter } from 'omggif'
-import { createGifTimeline, MAX_GIF_FRAMES } from '../../../client/image/src/utils/gifTimeline.js'
+import { createGifTimeline, MAX_GIF_FRAMES } from '../../../client/image/src/video/gifTimeline.js'
 
 const RED = 0
 const GREEN = 1
