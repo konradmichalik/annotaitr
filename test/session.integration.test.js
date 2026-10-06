@@ -20,6 +20,15 @@ async function reviewRound(image, env) {
   return { code: await cli.exited, stdout: cli.stdout() }
 }
 
+async function threadsOfNextRound(image, env) {
+  const cli = startCli([image], env)
+  const url = await cli.url
+  const body = await (await fetch(`${url}/api/threads`)).json()
+  cli.child.kill()
+  await cli.exited
+  return body.data
+}
+
 describe('a review session across rounds', () => {
   let dir
   let image
@@ -46,6 +55,20 @@ describe('a review session across rounds', () => {
 
     const second = await reviewRound(image, env)
     expect(second.stdout).toContain(`Session: ${sessionId} (round 2)`)
+  }, 30_000)
+
+  it('serves last round with its reply, exactly when the image is unchanged and as a ghost after an edit', async () => {
+    const first = await reviewRound(image, env)
+    const sessionId = first.stdout.match(/Session: ([0-9a-f]{12})/)[1]
+    spawnSync('node', ['index.js', 'reply', '--session', sessionId, '--to', 'a3f19c2e', '--status', 'applied', '--text', 'Spacing fixed'], {
+      env: { ...process.env, ...env }, encoding: 'utf-8'
+    })
+
+    const unchanged = await threadsOfNextRound(image, env)
+    expect(unchanged).toMatchObject({ sessionId, round: 1, threads: [{ handle: 'a3f19c2e', anchor: 'exact', replies: [{ status: 'applied' }] }] })
+
+    await writeFile(image, makeFixturePng(40, 30, '#aa0000'))
+    expect((await threadsOfNextRound(image, env)).threads[0].anchor).toBe('ghost')
   }, 30_000)
 
   it('opens sessions for videos and PDFs too, refusing an unknown named one before loading anything', async () => {

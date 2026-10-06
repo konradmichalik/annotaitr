@@ -8,6 +8,7 @@ import { startAnnotatorServer } from '../../core/server.js'
 import { imageBundleDir as bundleDir } from '../common/bundle.js'
 import { createDocumentApiRouter } from './routes.js'
 import { createDocumentCaches } from './pdfDocument.js'
+import { createThreadsRouter } from '../common/threadsRoute.js'
 import { transcriptionConfig, detectTranscription, createTranscriptionRouter } from '../common/transcribe.js'
 
 
@@ -17,9 +18,10 @@ import { transcriptionConfig, detectTranscription, createTranscriptionRouter } f
  * @param {{ label: string, newer: boolean }|null} [options.source] - the file the PDF was rendered from (--source)
  * @param {string} [options.origin='cli']
  * @param {string} [options.targetLabel] - the PDF's file name, shown in the UI and named in the feedback
+ * @param {Object|null} [options.session] - the opened review session (cli/session.js), serves last round at /api/threads
  * @param {Function} [options.onReady] - (url, port) => void
  */
-export async function buildDocumentServer({ document, source = null, origin = 'cli', targetLabel = null, onReady = null }) {
+export async function buildDocumentServer({ document, source = null, origin = 'cli', targetLabel = null, session = null, onReady = null }) {
   const state = { annotations: [], deciding: false, decided: false }
   const caches = createDocumentCaches(document)
 
@@ -32,6 +34,10 @@ export async function buildDocumentServer({ document, source = null, origin = 'c
     onReady,
     mountRoutes(app, { safeResolve }) {
       app.use(createDocumentApiRouter({ document, source, origin, targetLabel, state, caches, voiceNotes, resolveDecision: safeResolve }))
+      app.use(createThreadsRouter({
+        session,
+        current: () => ({ kind: 'document', fingerprint: session?.fingerprint ?? null, pages: document.pages.map((p) => p.number) })
+      }))
       app.use(createTranscriptionRouter({ available: voiceNotes, config: transcription }))
     }
   })

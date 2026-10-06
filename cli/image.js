@@ -2,6 +2,7 @@ import { resolve as resolvePath } from 'node:path'
 import { isSupportedCaptureUrl } from '../server/image/common/fileTypes.js'
 import { parseViewportSpec, parseDelay, describeCapture, MAX_DELAY_MS } from '../server/image/common/config.js'
 import { saveClipboardImage } from '../server/image/still/clipboard.js'
+import { hashFile } from '../server/image/common/fingerprint.js'
 import { captureFlagError } from './args.js'
 import { fileExists, isPdfTarget, isVideoTarget } from './detect.js'
 import { fail, printHelpAndExit } from './help.js'
@@ -37,7 +38,7 @@ async function loadImageRuntime() {
 
 async function resolveImageCapture(targets, { viewportSpec, delaySpec }, { clipboardPath, loadImageFromFile, captureUrl } = {}) {
   if (clipboardPath) {
-    return { capture: await loadImageFromFile(clipboardPath), targetLabel: 'clipboard image' }
+    return { capture: await loadImageFromFile(clipboardPath), targetLabel: 'clipboard image', imagePath: clipboardPath }
   }
 
   const [target] = targets
@@ -74,7 +75,7 @@ async function resolveImageCapture(targets, { viewportSpec, delaySpec }, { clipb
     }
   }
 
-  return { capture: await loadImageFromFile(imagePath), targetLabel: target ?? 'clipboard image' }
+  return { capture: await loadImageFromFile(imagePath), targetLabel: target ?? 'clipboard image', imagePath }
 }
 
 function imageSessionTarget(target, clipboardPath) {
@@ -97,10 +98,13 @@ export async function runImage({
   const opened = await openSession({ ...imageSessionTarget(targets[0], clipboardPath), ...session })
   if (opened.error) { fail(opened.error); return }
   const { loadImageFromFile, captureUrl, buildImageServer } = await loadImageRuntime()
-  const { capture, targetLabel, settings = null, error } = await resolveImageCapture(
+  const { capture, targetLabel, settings = null, imagePath = null, error } = await resolveImageCapture(
     targets, { viewportSpec, delaySpec }, { clipboardPath, loadImageFromFile, captureUrl }
   )
   if (error) { fail(error); return }
+
+  const fingerprint = imagePath ? await hashFile(imagePath) : null
+  const reviewed = { ...opened, fingerprint }
 
   await serveUntilDecision(await buildImageServer({
     imageBuffer: capture.buffer,
@@ -111,8 +115,9 @@ export async function runImage({
     // Only a URL can be captured again with other settings from the open tab.
     recapture: settings ? (next) => captureUrl(targetLabel, next.viewport, next) : null,
     origin,
-    targetLabel
-  }), opened)
+    targetLabel,
+    session: reviewed
+  }), reviewed)
 }
 
 /**
