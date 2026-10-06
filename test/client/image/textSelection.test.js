@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { wordIndexAt, selectWords, MAX_QUOTE_LENGTH } from '../../../client/image/src/utils/textSelection.js'
+import { wordIndexAt, selectWords, MAX_QUOTE_LENGTH } from '../../../client/image/src/document/textSelection.js'
 
 const word = (text, x, y, line) => ({ text, line, box: { x, y, width: 40, height: 20 } })
 const words = [

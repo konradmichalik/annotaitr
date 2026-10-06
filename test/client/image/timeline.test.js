@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatTimecode, orderVideoAnnotations, isVisibleAt, layoutMarkerLanes, dragMarkerTimes, formatTimes } from '../../../client/image/src/utils/timeline.js'
+import { formatTimecode, orderVideoAnnotations, isVisibleAt, layoutMarkerLanes, dragMarkerTimes, formatTimes } from '../../../client/image/src/video/timeline.js'
 
 describe('formatTimecode', () => {
   it('matches the server format', () => {

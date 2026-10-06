@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { formatTimecode } from '../utils/timeline.js'
+import { formatTimecode } from './timeline.js'
 import { TOOL_ICONS, ACTION_ICONS, PLAYER_ICONS } from '../utils/icons.jsx'
 
 // Long enough that passing over the group on the way elsewhere opens nothing.

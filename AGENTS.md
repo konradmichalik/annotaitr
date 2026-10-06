@@ -20,7 +20,7 @@ Stdout is the contract with the calling agent:
 - `server/core/`: mode-agnostic Express bootstrap, config (`ANNOTAITR_*` environment variables), browser opening, signal handling
 - `server/markdown/`: markdown mode API routes, feedback formatting and file loading
 - `server/image/`: image mode, split into `common/` (rendering, feedback basics, element matching, transcription, config) and one folder per target kind: `still/` (image file, URL capture, clipboard), `video/` and `document/` (PDF)
-- `client/markdown/`, `client/image/`: the two React SPAs with separate Vite roots
+- `client/markdown/`, `client/image/`: the two React SPAs with separate Vite roots. The image client keeps video-only and PDF-only code in `src/video/` and `src/document/`, everything shared across target kinds stays in `components/`, `hooks/` and `utils/`
 - `client/shared/`: components, hooks and utils used by both clients
 - `apps/claude-code/`: Claude Code plugin (`.claude-plugin/plugin.json`, slash commands `md`, `image`, `review`)
 - `apps/opencode/`: OpenCode plugin (`index.ts`, bundled with tsup)

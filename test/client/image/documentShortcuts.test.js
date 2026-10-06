@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { pageStepFor } from '../../../client/image/src/hooks/useDocumentShortcuts.js'
+import { pageStepFor } from '../../../client/image/src/document/useDocumentShortcuts.js'
 
 function keyOn(target, key, init = {}) {
   const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init })

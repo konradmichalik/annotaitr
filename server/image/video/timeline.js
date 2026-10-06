@@ -1,7 +1,7 @@
 /**
  * Pure time-axis helpers for annotating a video or GIF: timecode formatting,
  * annotation ordering and the plan of which frames the client has to grab.
- * client/image/src/utils/timeline.js mirrors the ordering and formatting
+ * client/image/src/video/timeline.js mirrors the ordering and formatting
  * (client and server share no modules, so the duplication is deliberate).
  */
 

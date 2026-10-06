@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { formatTimecode, formatTimes, isSpan, layoutMarkerLanes, dragMarkerTimes, MARKER_SIZE_PX } from '../utils/timeline.js'
+import { formatTimecode, formatTimes, isSpan, layoutMarkerLanes, dragMarkerTimes, MARKER_SIZE_PX } from './timeline.js'
 import { TOOL_ICONS, ACTION_ICONS, PLAYER_ICONS } from '../utils/icons.jsx'
 import SpanControls from './SpanControls.jsx'
 

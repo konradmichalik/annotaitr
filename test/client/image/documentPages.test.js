@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   orderDocumentAnnotations, nextNumberOnPage, pageAnnotationCounts, stepPage, pageLabel
-} from '../../../client/image/src/utils/documentPages.js'
+} from '../../../client/image/src/document/documentPages.js'
 
 const box = (id, page) => ({ id, type: 'box', page })
 const comment = (id, page) => ({ id, type: 'comment', ...(page ? { page } : {}) })
