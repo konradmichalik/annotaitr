@@ -751,6 +751,7 @@ export default function ImageCanvas({
       )}
       {openThread && (
         <ThreadPopover
+          key={openThread.handle}
           thread={openThread} round={previousRound}
           anchorPoint={toClientPoint(wrapperRef, annotationBottomAnchor(openThread.annotation), zoom)}
           onClose={onCloseThread}

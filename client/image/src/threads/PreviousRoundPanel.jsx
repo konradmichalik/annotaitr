@@ -1,8 +1,5 @@
 import StatusChip from '../../../shared/components/StatusChip.jsx'
-import { STATUS_DISPLAY, threadStatus, orphanThreads } from './threadView.js'
-
-// Orphans and general comments have no mark, so their popover hangs off the panel entry.
-const hasMark = (thread) => thread.anchor !== 'orphan' && thread.annotation.type !== 'comment'
+import { STATUS_DISPLAY, threadStatus, orphanThreads, hasMark } from './threadView.js'
 
 function ThreadEntry({ thread, onActivate }) {
   return (

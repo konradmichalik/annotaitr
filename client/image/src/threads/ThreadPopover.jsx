@@ -50,7 +50,8 @@ export function ThreadPopoverContent({ thread, round }) {
 export default function ThreadPopover({ thread, round, anchorPoint, onClose }) {
   const popoverRef = useRef(null)
   useOutsideClick(popoverRef, onClose)
-  useModalDismiss(true, onClose, popoverRef)
+  // The owner puts focus back on whatever opened the visible popover; a restore of its own would return to the one before a switch.
+  useModalDismiss(true, onClose, popoverRef, { restoreFocus: false })
 
   return createPortal(
     <div

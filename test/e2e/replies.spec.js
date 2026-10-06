@@ -7,6 +7,9 @@ import { spawnSync } from 'node:child_process'
 import { test, expect } from '@playwright/test'
 import { startCli } from '../helpers/cli.js'
 import { makeFixturePng } from '../helpers/fixtureImage.js'
+import { makePdf } from '../helpers/pdfFixtures.js'
+
+const WEBM_FIXTURE = join(process.cwd(), 'test', 'fixtures', 'clip.webm')
 
 const UUID = 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d'
 
@@ -188,6 +191,102 @@ test.describe('replies from the last round', () => {
       await open(section.getByRole('button', { name: /Inside/ }))
       await expect(dialogs).toHaveCount(1)
       await expect(dialogs.getByText('Inside')).toBeVisible()
+      // Entry A, then entry B: Escape returns focus to B, the one that opened the visible popover.
+      await page.keyboard.press('Escape')
+      await expect(dialogs).toHaveCount(0)
+      await open(section.getByRole('button', { name: /Corner/ }))
+      await open(section.getByRole('button', { name: /Inside/ }))
+      await expect(dialogs.getByText('Inside')).toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(dialogs).toHaveCount(0)
+      await expect(section.getByRole('button', { name: /Inside/ })).toBeFocused()
+    } finally {
+      cli.child.kill()
+    }
+  })
+
+  test('hiding the previous round closes a popover opened from the panel', async ({ page }) => {
+    const cli0 = startCli([image], env)
+    const url0 = await cli0.url
+    const post = (path, body) => fetch(`${url0}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const ID2 = 'b4a29d3f-2c5e-4a8b-8d4f-3e6a9b2c7d5e'
+    await post('/api/annotations', { annotations: [
+      { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Inside', color: '#bf616a' },
+      { id: ID2, type: 'pin', geometry: { x: 380, y: 280 }, text: 'Corner', color: '#bf616a' }
+    ] })
+    await post('/api/feedback', {})
+    const sessionId = (await cli0.exited, cli0.stdout()).match(/Session: ([0-9a-f]{12})/)[1]
+    spawnSync('node', ['index.js', 'reply', '--session', sessionId, '--to', ID2.slice(0, 8), '--status', 'applied', '--text', 'Done'], { env: { ...process.env, ...env }, encoding: 'utf-8' })
+    await writeFile(image, makeFixturePng(200, 150))
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      await page.getByRole('region', { name: /Round 1 replies/ }).getByRole('button', { name: /Corner/ }).click()
+      await expect(page.getByRole('dialog')).toHaveCount(1)
+      // A mouse press on the toggle is an outside click, so activate it from the keyboard.
+      await page.getByRole('button', { name: 'Previous round' }).focus()
+      await page.keyboard.press('Enter')
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+    } finally {
+      cli.child.kill()
+    }
+  })
+
+  test('marks a PDF page that carries last round replies and opens its mark', async ({ page }) => {
+    const pdf = join(dir, 'deck.pdf')
+    await writeFile(pdf, await makePdf([{ size: 'slide', title: 'One' }, { size: 'slide', title: 'Two' }]))
+    await firstRoundWithReply(pdf, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Too dense', color: '#bf616a', page: 2 })
+    const cli = startCli([pdf], env)
+    try {
+      await page.goto(await cli.url)
+      const strip = page.getByRole('navigation', { name: 'Pages' })
+      await expect(strip.getByRole('button', { name: /Page 2.*1 from last round/ })).toBeVisible()
+      await expect(strip.getByRole('button', { name: 'Page 1' })).toBeVisible()
+      await expect(page.locator('.previous-round')).toHaveCount(0)
+      await strip.getByRole('button', { name: /Page 2/ }).click()
+      await expect(page.locator('.previous-round').getByText('applied')).toBeVisible()
+    } finally {
+      cli.child.kill()
+    }
+  })
+
+  test('puts last round on the video timeline and opens the thread from its tick', async ({ page }) => {
+    const first = startCli([WEBM_FIXTURE], env)
+    await page.goto(await first.url)
+    await expect(page.locator('.timeline-time')).toContainText('/ 00:02.000')
+    await page.keyboard.press('Shift+ArrowRight')
+    await expect(page.locator('.timeline-time')).toContainText('00:01.000 /')
+    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Box').click()
+    const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
+    await page.mouse.move(canvas.x + 20, canvas.y + 20)
+    await page.mouse.down()
+    await page.mouse.move(canvas.x + 80, canvas.y + 60)
+    await page.mouse.up()
+    await page.getByPlaceholder('Add a comment (optional)...').fill('Box on the first second')
+    await page.getByRole('button', { name: 'Add', exact: true }).click()
+    const saved = async () => (await (await fetch(`${await first.url}/api/annotations`)).json()).data.annotations
+    await expect.poll(async () => (await saved()).length).toBe(1)
+    const id = (await saved())[0].id
+    await page.getByRole('button', { name: 'Feedback' }).click()
+    await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible({ timeout: 20_000 })
+    const sessionId = (await first.exited, first.stdout()).match(/Session: ([0-9a-f]{12})/)[1]
+    spawnSync('node', ['index.js', 'reply', '--session', sessionId, '--to', id.slice(0, 8), '--status', 'applied', '--text', 'Moved the button'], {
+      env: { ...process.env, ...env }, encoding: 'utf-8'
+    })
+
+    const cli = startCli([WEBM_FIXTURE], env)
+    try {
+      await page.goto(await cli.url)
+      await expect(page.locator('.timeline-time')).toContainText('/ 00:02.000')
+      const tick = page.getByRole('button', { name: /Round 1 mark 1, applied/ })
+      await expect(tick).toHaveClass(/timeline-marker--previous/)
+      await expect(page.locator('.previous-round')).toHaveCount(0)
+      await tick.click()
+      await expect(page.locator('.timeline-time')).toContainText('00:01.000 /')
+      await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' }).getByText('Moved the button')).toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await expect(tick).toBeFocused()
     } finally {
       cli.child.kill()
     }

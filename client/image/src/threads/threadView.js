@@ -25,6 +25,9 @@ export function placedThreads(threads, view) {
   return threads.filter((t) => t.anchor !== 'orphan' && t.annotation.type !== 'comment' && inView(t.annotation, view))
 }
 
+// Orphans and general comments have no mark, so their popover hangs off the panel entry or the timeline tick.
+export const hasMark = (thread) => thread.anchor !== 'orphan' && thread.annotation.type !== 'comment'
+
 export function orphanThreads(threads) {
   return threads.filter((t) => t.anchor === 'orphan')
 }

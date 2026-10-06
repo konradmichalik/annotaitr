@@ -1717,3 +1717,52 @@ button.voice-note:hover {
   font-size: 0.75rem;
   color: var(--text-muted);
 }
+
+/* Last round's ticks sit above the current markers, read-only and quieter. */
+.timeline-markers--previous {
+  margin-bottom: 4px;
+}
+
+.timeline-marker--previous {
+  min-width: 0;
+  height: 18px;
+  padding: 0 7px;
+  border-color: var(--bg-card);
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 600;
+  line-height: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.timeline-marker--previous.timeline-marker--ghost {
+  border: 2px dashed var(--bg-card);
+  background: var(--text-muted);
+}
+
+.timeline-marker--previous:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  opacity: 1;
+}
+
+.page-strip-previous {
+  position: absolute;
+  right: 0.25rem;
+  bottom: 0.25rem;
+  width: 0.625rem;
+  height: 0.625rem;
+  border: 2px solid var(--bg-card);
+  border-radius: 9999px;
+  background: var(--text);
+}
+
+@media (forced-colors: active) {
+  .timeline-marker--previous,
+  .page-strip-previous {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+  }
+}

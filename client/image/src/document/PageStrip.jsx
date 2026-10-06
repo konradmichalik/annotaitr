@@ -7,7 +7,7 @@ const THUMB_WIDTH = 112
  * how many annotations it carries. Thumbnails load lazily, so a long
  * document only renders the ones scrolled into view.
  */
-export default function PageStrip({ pages, current, counts, onSelect }) {
+export default function PageStrip({ pages, current, counts, previousCounts, onSelect }) {
   const currentRef = useRef(null)
 
   useEffect(() => {
@@ -20,7 +20,12 @@ export default function PageStrip({ pages, current, counts, onSelect }) {
         {pages.map(({ number, width, height }) => {
           const count = counts.get(number) ?? 0
           const isCurrent = number === current
-          const label = count > 0 ? `Page ${number}, ${count} annotation${count === 1 ? '' : 's'}` : `Page ${number}`
+          const previous = previousCounts?.get(number) ?? 0
+          const label = [
+            `Page ${number}`,
+            count > 0 && `${count} annotation${count === 1 ? '' : 's'}`,
+            previous > 0 && `${previous} from last round`
+          ].filter(Boolean).join(', ')
           return (
             <li key={number}>
               <button
@@ -43,6 +48,7 @@ export default function PageStrip({ pages, current, counts, onSelect }) {
                 />
                 <span className="page-strip-number" aria-hidden="true">{number}</span>
                 {count > 0 && <span className="page-strip-badge" aria-hidden="true">{count}</span>}
+                {previous > 0 && <span className="page-strip-previous" aria-hidden="true" />}
               </button>
             </li>
           )

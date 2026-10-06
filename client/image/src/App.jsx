@@ -19,7 +19,7 @@ import PageImage from './document/PageImage.jsx'
 import { usePreviousRound } from './threads/usePreviousRound.js'
 import PreviousRoundPanel from './threads/PreviousRoundPanel.jsx'
 import ThreadPopover from './threads/ThreadPopover.jsx'
-import { placedThreads } from './threads/threadView.js'
+import { placedThreads, threadPageCounts, hasMark } from './threads/threadView.js'
 import { ACTION_ICONS } from './utils/icons.jsx'
 import { useSettings } from './hooks/useSettings.js'
 import { useMediaPlayer } from './video/useMediaPlayer.js'
@@ -92,8 +92,18 @@ export default function App() {
   const review = isDocument ? doc : video
   // Videos and PDFs draw last round in their own views, a still image has a single one.
   const isStill = !!meta && !isVideo && !isDocument
-  const previous = usePreviousRound({ ready: isStill })
-  const previousThreads = isStill ? placedThreads(previous.threads, { kind: 'still' }) : []
+  // A video is asked only once its duration is known, so marks past the end arrive as orphans.
+  const previous = usePreviousRound({
+    ready: isStill || isDocument || (isVideo && !!controller),
+    duration: isVideo ? controller?.duration : undefined
+  })
+  const previousView = isVideo
+    ? { kind: 'video', time: playerState?.currentTime ?? 0, tolerance: (playerState?.frameDuration ?? 1 / 30) / 2 }
+    : (isDocument ? { kind: 'document', page: doc.current } : { kind: 'still' })
+  const previousThreads = placedThreads(previous.threads, previousView)
+  const markedThreads = placedThreads(previous.threads, { kind: 'still' })
+  const previousPageCounts = isDocument && showPrevious ? threadPageCounts(markedThreads) : undefined
+  const timelineThreads = isVideo && showPrevious ? previous.threads.filter((t) => t.anchor !== 'orphan' && typeof t.annotation.time === 'number') : []
   const closeThread = useCallback(() => {
     setOpenThreadHandle(null)
     setEntryThread(null)
@@ -109,6 +119,7 @@ export default function App() {
   const togglePrevious = useCallback(() => {
     setShowPrevious((prev) => !prev)
     setOpenThreadHandle(null)
+    setEntryThread(null)
   }, [])
   // A PDF's text layer is per page; a captured web page has one element map.
   const elements = isDocument ? doc.elements : capturedElements
@@ -262,6 +273,13 @@ export default function App() {
     threadOpenerRef.current = opener
     setEntryThread({ thread, anchorPoint })
   }, [])
+  // A tick on the timeline is a thread's only entry on a video: with a mark the canvas shows it, a general comment hangs off the tick.
+  const showTimelineThread = useCallback((thread, opener) => {
+    if (hasMark(thread)) { return showThread(thread, opener) }
+    seekTo(thread.annotation)
+    const rect = opener.getBoundingClientRect()
+    showEntryThread(thread, { x: rect.left + rect.width / 2, y: rect.top }, opener)
+  }, [showThread, showEntryThread, seekTo])
   const editAnnotation = useCallback((id) => {
     const annotation = state.annotations.find((a) => a.id === id)
     if (annotation) { seekTo(annotation) }
@@ -562,7 +580,7 @@ export default function App() {
       </header>
 
       <main className="app-body">
-        {isDocument && <PageStrip pages={doc.pages} current={doc.current} counts={doc.counts} onSelect={goToPage} />}
+        {isDocument && <PageStrip pages={doc.pages} current={doc.current} counts={doc.counts} previousCounts={previousPageCounts} onSelect={goToPage} />}
         <div className="app-stage">
           <div className="app-main canvas-surface">
             <div className="canvas-topbar">
@@ -581,7 +599,7 @@ export default function App() {
                   <ViewportControl capture={meta.capture} busy={!!recapturing} annotationCount={state.annotations.length} onApply={recapture} />
                 )}
                 {isDocument && <PageNav pages={doc.pages} current={doc.current} pageCount={meta.pageCount} onStep={stepPage} />}
-                {previousThreads.length > 0 && (
+                {markedThreads.length > 0 && (
                   <button
                     type="button"
                     onClick={togglePrevious}
@@ -655,6 +673,9 @@ export default function App() {
               onChangeMarkerTimes={changeMarkerTimes}
               activeTool={activeTool}
               onPickTool={setActiveTool}
+              previousThreads={timelineThreads}
+              previousRound={previous.round}
+              onShowThread={showTimelineThread}
               />
             )}
         </div>
@@ -704,9 +725,9 @@ export default function App() {
                 onDone={showToast}
               />
             </div>
-            <PreviousRoundPanel round={previous.round} threads={isStill ? previous.threads : []} onShow={showThread} onShowDetached={showEntryThread} />
+            <PreviousRoundPanel round={previous.round} threads={previous.threads} onShow={showThread} onShowDetached={showEntryThread} />
             {entryThread && (
-              <ThreadPopover thread={entryThread.thread} round={previous.round} anchorPoint={entryThread.anchorPoint} onClose={closeThread} />
+              <ThreadPopover key={entryThread.thread.handle} thread={entryThread.thread} round={previous.round} anchorPoint={entryThread.anchorPoint} onClose={closeThread} />
             )}
             <AnnotationPanel
               annotations={review.ordered}
