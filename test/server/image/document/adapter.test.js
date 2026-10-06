@@ -47,6 +47,19 @@ describe('openPdfDocument', () => {
     }
   })
 
+  it('hashes the PDF content, so a changed PDF gets a new hash', async () => {
+    const otherPath = join(dir, 'other.pdf')
+    await writeFile(otherPath, await makePdf([{ size: 'slide', title: 'Changed' }]))
+    const [a, b, c] = await Promise.all([openPdfDocument(pdfPath), openPdfDocument(pdfPath), openPdfDocument(otherPath)])
+    try {
+      expect(a.hash).toMatch(/^[0-9a-f]{16}$/)
+      expect(b.hash).toBe(a.hash)
+      expect(c.hash).not.toBe(a.hash)
+    } finally {
+      await Promise.all([a, b, c].map((d) => d.renderer.close()))
+    }
+  })
+
   it('rejects a selection beyond the document', async () => {
     await expect(openPdfDocument(pdfPath, { pageRanges: [{ from: 5, to: 5 }] })).rejects.toThrow(/page 5.*3 pages/)
   })
@@ -154,7 +167,7 @@ describe('document annotator server', () => {
     expect(body.data).toEqual({
       kind: 'document', origin: 'cli', targetLabel: 'deck.pdf', voiceNotes: false, pageCount: 3,
       pages: [{ number: 1, width: 2000, height: 1125 }, { number: 2, width: 1413, height: 2000 }, { number: 3, width: 2000, height: 1125 }],
-      source: 'deck.pptx', sourceIsNewer: true
+      source: 'deck.pptx', sourceIsNewer: true, documentHash: expect.stringMatching(/^[0-9a-f]{16}$/)
     })
   })
 
