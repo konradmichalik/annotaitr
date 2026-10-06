@@ -166,6 +166,15 @@ within one round and in the agent's report on it. Linking a mark to the agent's
 reply in the next round is the subject of
 [the inline replies concept](concepts/inline-agent-replies.md).
 
+Image mode already does this. Each decision with marks is written to a session
+file, and the feedback ends with a `Session:` line. The agent answers each
+handle with `annotaitr reply --status ...` (see [review
+sessions](usage.md#review-sessions)). Reopening the same target within 24 hours
+starts the next round and shows the previous round's marks, with the agent's
+replies, in a separate layer that a "Previous round" toggle hides. Marks whose
+position no longer matches, for example after a page was re-captured, are drawn
+as ghosts. Markdown mode has no sessions yet.
+
 A heartbeat request from the browser tab, polled every few seconds, detects
 a closed tab and resolves the decision as disconnected rather than hanging
 the CLI forever. Interrupting the process (`Ctrl+C`) resolves it as

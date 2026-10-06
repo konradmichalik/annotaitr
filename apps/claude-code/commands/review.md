@@ -88,6 +88,16 @@ annotation it answers; image mode has no feedback notes. If a heading carries
 no handle, refer to that annotation by its number and quoted text instead, and
 never invent one.
 
+If the image, video or PDF feedback ends with a `Session:` line, answer each
+mark after applying the changes: run one `annotaitr reply --session <id> --to
+<handle> --status <status> --text "..."` per handle, with the handle quoted
+from the feedback and `<status>` one of `applied`, `partial`, `declined`,
+`deferred` or `question`. The text says what changed, what is left, why you
+declined, when you will do it, or the question. Replies can run in parallel. A
+`question` reply only records the question, so ask a blocking one in chat too.
+Re-open the target afterwards so the reviewer sees the replies. Markdown
+feedback has no session yet.
+
 In both shapes: if the output shows `APPROVED:`, the target was approved with
 no changes needed — confirm and stop. If it shows `APPROVED WITH NOTES:`, it
 was approved as-is but carries annotations; do **not** make changes, read the

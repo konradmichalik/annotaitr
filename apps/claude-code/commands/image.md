@@ -154,6 +154,23 @@ but left annotations. Do **not** make changes. Read the notes, acknowledge
 them, and stop. They are context for your understanding, not change
 requests.
 
+### Reply per mark
+
+If the feedback ends with a `Session:` line, answer every mark once the
+changes are applied. Run one `annotaitr reply` per handle, quoting the handle
+from the feedback:
+
+```bash
+annotaitr reply --session <id> --to a3f19c2e --status applied --text "Moved the button below the form"
+```
+
+`--status` is `applied`, `partial`, `declined`, `deferred` or `question`. The
+text says what changed, what is left, why you declined, when you will do it, or
+what you need to know. Replies are independent, so run them in parallel. A
+`question` reply only records the question: if the answer blocks you, ask it in
+chat too. Then re-open the target as below, so the reviewer sees the replies
+next to their marks.
+
 ## Re-review loop
 
 After applying all changes, re-open the annotator on the same target (a URL

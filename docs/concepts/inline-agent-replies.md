@@ -336,10 +336,10 @@ different shape.
   visible ghost the reviewer can judge.
 - Element-level re-anchoring would need the capture step to record DOM
   metadata (a selector or stable attribute per marked region) alongside the
-  screenshot. That does not exist today and is out of scope here. Draft 1
-  deferred to a `web-annotation.md`; no such document exists in this repo, so
-  the dependency is stated inline instead of pointing at a file that was never
-  written.
+  screenshot. Captures now carry a DOM map (`server/image/common/domMap.js`)
+  that feedback uses to name the element under a mark, but it is not stored
+  with the session and nothing re-anchors a mark to an element yet. Draft 1
+  deferred this to a `web-annotation.md`; no such document exists in this repo.
 
 ### 3.6 Outgoing feedback becomes thread-aware
 
@@ -382,9 +382,9 @@ Net effect: two concepts (replies, and "approve with notes") instead of four.
 | ----- | ------- | ------------------ |
 | S1 **(shipped)** | 8-char handles in both modes' feedback output; a heading format for markdown global comments so they can carry one; `createAnnotationId()` moved to `client/shared/utils/` and adopted by markdown mode; the five agent-facing files in `apps/*` told what a handle is | Yes. Agents can reference marks in chat immediately |
 | **S1.5** | **Measure. Run 5 to 10 real reviews and count how often the agent quotes a handle correctly and picks a defensible status** | **No. This is the gate on everything below** |
-| S2 | Session file, `annotaitr reply` subcommand, agent replies with status, markdown inline rendering, anchoring ladder steps 0 to 2, orphan group | Yes |
+| S2 **(core shipped for image mode)** | Session file, `annotaitr reply` subcommand, agent replies with status. Still open: markdown inline rendering, anchoring ladder steps 0 to 2 for markdown, orphan group in markdown | Yes |
 | S3 | Human replies flow back out; thread-aware feedback formatter; approval gate | Yes |
-| S4 | Image-mode parity incl. ghost overlays | Yes |
+| S4 **(image mode shipped)** | Image-mode parity incl. ghost overlays: last round's marks and replies on the canvas, in the panel, on the video timeline and the PDF page strip | Yes |
 
 There is no trailing documentation stage. Draft 1 parked the `apps/*` updates in
 S5, which would have left S1 inert: an agent that is never told what
