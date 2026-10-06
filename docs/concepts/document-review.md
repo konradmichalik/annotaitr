@@ -20,7 +20,7 @@ agent that has just generated a slide deck through a skill (PPTX via
 markdown) and now needs human feedback on it. Today that stops at mode
 detection:
 
-- **No document extension is recognised.** `detectMode()` (`index.js`) knows
+- **No document extension is recognised.** `detectMode()` (`cli/detect.js`) knows
   markdown/plain-text, `http(s)` URLs, image files and video files. A `.pdf`
   falls through to `buildDetectionError()` and exits `1` with "Unsupported
   target".
@@ -172,7 +172,7 @@ is the supported path.
   npm installs optional dependencies by default, so a normal install gets it;
   it is only missing after `npm install --omit=optional` or a failed optional
   install. That case gets the same kind of actionable error image mode already
-  gives: `loadImageRuntime()` (`index.js`) currently names only `playwright`
+  gives: `loadImageRuntime()` (`cli/image.js`) currently names only `playwright`
   and `@napi-rs/canvas`, so the PDF path loads its own runtime and names
   `pdfjs-dist` and `@napi-rs/canvas` in its message (Playwright is not needed
   for a PDF).
