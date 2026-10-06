@@ -25,6 +25,9 @@ function boundsOf(geometry) {
 }
 
 function orphanReason(annotation, current) {
+  // A damaged round can leave geometry the client would draw as NaN, whatever the kind.
+  const bounds = boundsOf(annotation.geometry)
+  if (!bounds) { return 'The mark could not be read from the last round' }
   if (current.kind === 'document' && typeof annotation.page === 'number' && !current.pages.includes(annotation.page)) {
     return `Page ${annotation.page} is not part of this review`
   }
@@ -32,8 +35,6 @@ function orphanReason(annotation, current) {
     return 'The mark is past the end of the recording'
   }
   if (!STILL_KINDS.has(current.kind)) { return null }
-  const bounds = boundsOf(annotation.geometry)
-  if (!bounds) { return 'The mark could not be read from the last round' }
   const outside = bounds.left >= current.width || bounds.top >= current.height || bounds.right <= 0 || bounds.bottom <= 0
   return outside ? 'The mark lies outside the current image' : null
 }

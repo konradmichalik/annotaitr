@@ -97,4 +97,16 @@ describe('anchorThreads', () => {
       expect(anchors(previous([thread(box(1, 1, { time: 12 }))]), withoutDuration)[0].anchor).toBe('ghost')
     })
   })
+
+  it('orphans a document mark whose geometry cannot be read', () => {
+    const current = { kind: 'document', fingerprint: 'sha256:a', pages: [1, 2] }
+    expect(anchors(previous([thread({ type: 'box', page: 1, geometry: {} })]), current))
+      .toEqual([{ anchor: 'orphan', reason: 'The mark could not be read from the last round' }])
+  })
+
+  it('orphans a video mark whose geometry cannot be read', () => {
+    const current = { kind: 'video', fingerprint: 'sha256:a', duration: 60 }
+    expect(anchors(previous([thread({ type: 'box', time: 5, geometry: {} })]), current))
+      .toEqual([{ anchor: 'orphan', reason: 'The mark could not be read from the last round' }])
+  })
 })
