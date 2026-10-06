@@ -2,6 +2,7 @@ import { resolve as resolvePath, basename } from 'node:path'
 import { captureFlagError } from './args.js'
 import { fail } from './help.js'
 import { serveUntilDecision } from './outcome.js'
+import { openSession } from './session.js'
 
 /**
  * A video needs no playwright (the browser plays it and grabs frames), only
@@ -25,7 +26,7 @@ async function loadVideoRuntime() {
   }
 }
 
-export async function runVideo({ target, origin, viewportSpec, delaySpec }) {
+export async function runVideo({ target, origin, viewportSpec, delaySpec, session = {} }) {
   const flagError = captureFlagError('a video file', { viewportSpec, delaySpec })
   if (flagError) { fail(flagError); return }
   const { resolveVideoFile, buildVideoServer } = await loadVideoRuntime()
@@ -37,5 +38,7 @@ export async function runVideo({ target, origin, viewportSpec, delaySpec }) {
     return
   }
 
-  await serveUntilDecision(await buildVideoServer({ video, origin, targetLabel: basename(target) }))
+  const opened = await openSession({ identity: resolvePath(target), target: { kind: 'video', label: basename(target) }, ...session })
+  if (opened.error) { fail(opened.error); return }
+  await serveUntilDecision(await buildVideoServer({ video, origin, targetLabel: basename(target) }), opened)
 }

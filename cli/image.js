@@ -6,6 +6,8 @@ import { captureFlagError } from './args.js'
 import { fileExists, isPdfTarget, isVideoTarget } from './detect.js'
 import { fail, printHelpAndExit } from './help.js'
 import { serveUntilDecision } from './outcome.js'
+import { openSession } from './session.js'
+import { urlIdentity } from '../server/core/session/identity.js'
 import { runVideo } from './video.js'
 import { runDocument } from './document.js'
 
@@ -76,17 +78,25 @@ async function resolveImageCapture(targets, { viewportSpec, delaySpec }, { clipb
   return { capture: await loadImageFromFile(imagePath), targetLabel: target ?? 'clipboard image' }
 }
 
+function imageSessionTarget(target, clipboardPath) {
+  if (clipboardPath || !target) { return { identity: null, target: { kind: 'clipboard', label: 'clipboard image' } } }
+  if (isSupportedCaptureUrl(target)) { return { identity: urlIdentity(target), target: { kind: 'url', label: target } } }
+  return { identity: resolvePath(target), target: { kind: 'file', label: target } }
+}
+
 export async function runImage({
   targets, origin, viewportSpec, delaySpec = null, clipboardPath, sourceSpec = null, pageRanges = null, session = {}
 }) {
   if (targets.length === 1 && isPdfTarget(targets[0])) {
-    await runDocument({ target: targets[0], origin, viewportSpec, delaySpec, sourceSpec, pageRanges })
+    await runDocument({ target: targets[0], origin, viewportSpec, delaySpec, sourceSpec, pageRanges, session })
     return
   }
   if (targets.length === 1 && isVideoTarget(targets[0])) {
-    await runVideo({ target: targets[0], origin, viewportSpec, delaySpec })
+    await runVideo({ target: targets[0], origin, viewportSpec, delaySpec, session })
     return
   }
+  const opened = await openSession({ ...imageSessionTarget(targets[0], clipboardPath), ...session })
+  if (opened.error) { fail(opened.error); return }
   const { loadImageFromFile, captureUrl, buildImageServer } = await loadImageRuntime()
   const { capture, targetLabel, settings = null, error } = await resolveImageCapture(
     targets, { viewportSpec, delaySpec }, { clipboardPath, loadImageFromFile, captureUrl }
@@ -103,7 +113,7 @@ export async function runImage({
     recapture: settings ? (next) => captureUrl(targetLabel, next.viewport, next) : null,
     origin,
     targetLabel
-  }))
+  }), opened)
 }
 
 /**
