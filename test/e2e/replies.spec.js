@@ -111,6 +111,9 @@ test.describe('replies from the last round', () => {
       await entry.focus()
       await page.keyboard.press('Enter')
       await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' }).getByText('Left or right aligned?')).toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await expect(entry).toBeFocused()
     } finally {
       cli.child.kill()
     }
@@ -125,8 +128,12 @@ test.describe('replies from the last round', () => {
       const section = page.getByRole('region', { name: /Round 1 replies/ })
       await expect(section.getByText('No longer in the target')).toBeVisible()
       await expect(section.getByText('The mark lies outside the current image')).toBeVisible()
-      await section.getByRole('button', { name: /1\./ }).click()
+      const entry = section.getByRole('button', { name: /1\./ })
+      await entry.click()
       await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' }).getByText('Corner')).toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await expect(entry).toBeFocused()
     } finally {
       cli.child.kill()
     }
@@ -146,6 +153,41 @@ test.describe('replies from the last round', () => {
       await toggle.click()
       await expect(page.locator('.previous-round')).toBeVisible()
       await expect(dialog).toHaveCount(0)
+    } finally {
+      cli.child.kill()
+    }
+  })
+
+  test('keeps a single thread popover open when switching between canvas and panel', async ({ page }) => {
+    const cli0 = startCli([image], env)
+    const url0 = await cli0.url
+    const post = (path, body) => fetch(`${url0}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const ID2 = 'b4a29d3f-2c5e-4a8b-8d4f-3e6a9b2c7d5e'
+    await post('/api/annotations', { annotations: [
+      { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Inside', color: '#bf616a' },
+      { id: ID2, type: 'pin', geometry: { x: 380, y: 280 }, text: 'Corner', color: '#bf616a' }
+    ] })
+    await post('/api/feedback', {})
+    const sessionId = (await cli0.exited, cli0.stdout()).match(/Session: ([0-9a-f]{12})/)[1]
+    for (const id of [UUID, ID2]) {
+      spawnSync('node', ['index.js', 'reply', '--session', sessionId, '--to', id.slice(0, 8), '--status', 'applied', '--text', 'Done'], { env: { ...process.env, ...env }, encoding: 'utf-8' })
+    }
+    await writeFile(image, makeFixturePng(200, 150))
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      const section = page.getByRole('region', { name: /Round 1 replies/ })
+      const dialogs = page.getByRole('dialog')
+      // Keyboard activation, since a mouse press outside would close the other popover on its own.
+      const open = async (entry) => { await entry.focus(); await page.keyboard.press('Enter') }
+      await open(section.getByRole('button', { name: /Inside/ }))
+      await expect(dialogs).toHaveCount(1)
+      await open(section.getByRole('button', { name: /Corner/ }))
+      await expect(dialogs).toHaveCount(1)
+      await expect(dialogs.getByText('Corner')).toBeVisible()
+      await open(section.getByRole('button', { name: /Inside/ }))
+      await expect(dialogs).toHaveCount(1)
+      await expect(dialogs.getByText('Inside')).toBeVisible()
     } finally {
       cli.child.kill()
     }

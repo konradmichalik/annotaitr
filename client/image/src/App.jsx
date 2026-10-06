@@ -18,6 +18,7 @@ import PageNav from './document/PageNav.jsx'
 import PageImage from './document/PageImage.jsx'
 import { usePreviousRound } from './threads/usePreviousRound.js'
 import PreviousRoundPanel from './threads/PreviousRoundPanel.jsx'
+import ThreadPopover from './threads/ThreadPopover.jsx'
 import { placedThreads } from './threads/threadView.js'
 import { ACTION_ICONS } from './utils/icons.jsx'
 import { useSettings } from './hooks/useSettings.js'
@@ -69,6 +70,9 @@ export default function App() {
   const [activeTool, setActiveTool] = useState('select')
   const [showPrevious, setShowPrevious] = useState(true)
   const [openThreadHandle, setOpenThreadHandle] = useState(null)
+  // A thread without a mark (orphan, general comment) opens anchored at its panel entry instead of on the canvas.
+  const [entryThread, setEntryThread] = useState(null)
+  const threadOpenerRef = useRef(null)
   const [showExport, setShowExport] = useState(false)
   const [editingAnnotationId, setEditingAnnotationId] = useState(null)
   const [zoom, setZoom] = useState(1)
@@ -90,7 +94,17 @@ export default function App() {
   const isStill = !!meta && !isVideo && !isDocument
   const previous = usePreviousRound({ ready: isStill })
   const previousThreads = isStill ? placedThreads(previous.threads, { kind: 'still' }) : []
-  const closeThread = useCallback(() => setOpenThreadHandle(null), [])
+  const closeThread = useCallback(() => {
+    setOpenThreadHandle(null)
+    setEntryThread(null)
+    threadOpenerRef.current?.focus()
+    threadOpenerRef.current = null
+  }, [])
+  const openCanvasThread = useCallback((handle) => {
+    setEntryThread(null)
+    threadOpenerRef.current = null
+    setOpenThreadHandle(handle)
+  }, [])
   // Hiding the layer closes the open thread too, so showing it again does not bring the popover back.
   const togglePrevious = useCallback(() => {
     setShowPrevious((prev) => !prev)
@@ -236,11 +250,18 @@ export default function App() {
   }, [addComment, range, clearRange])
 
   const seekTo = isDocument ? doc.seekTo : video.seekTo
-  const showThread = useCallback((thread) => {
+  const showThread = useCallback((thread, opener) => {
     seekTo(thread.annotation)
     setShowPrevious(true)
+    setEntryThread(null)
+    threadOpenerRef.current = opener
     setOpenThreadHandle(thread.handle)
   }, [seekTo])
+  const showEntryThread = useCallback((thread, anchorPoint, opener) => {
+    setOpenThreadHandle(null)
+    threadOpenerRef.current = opener
+    setEntryThread({ thread, anchorPoint })
+  }, [])
   const editAnnotation = useCallback((id) => {
     const annotation = state.annotations.find((a) => a.id === id)
     if (annotation) { seekTo(annotation) }
@@ -611,7 +632,7 @@ export default function App() {
                 previousRound={previous.round}
                 showPrevious={showPrevious}
                 openThreadHandle={openThreadHandle}
-                onOpenThread={setOpenThreadHandle}
+                onOpenThread={openCanvasThread}
                 onCloseThread={closeThread}
               />
             )}
@@ -683,7 +704,10 @@ export default function App() {
                 onDone={showToast}
               />
             </div>
-            <PreviousRoundPanel round={previous.round} threads={isStill ? previous.threads : []} onShow={showThread} />
+            <PreviousRoundPanel round={previous.round} threads={isStill ? previous.threads : []} onShow={showThread} onShowDetached={showEntryThread} />
+            {entryThread && (
+              <ThreadPopover thread={entryThread.thread} round={previous.round} anchorPoint={entryThread.anchorPoint} onClose={closeThread} />
+            )}
             <AnnotationPanel
               annotations={review.ordered}
               onRemove={removeAnnotation}

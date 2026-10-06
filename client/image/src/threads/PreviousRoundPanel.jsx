@@ -1,6 +1,4 @@
-import { useState } from 'react'
 import StatusChip from '../../../shared/components/StatusChip.jsx'
-import ThreadPopover from './ThreadPopover.jsx'
 import { STATUS_DISPLAY, threadStatus, orphanThreads } from './threadView.js'
 
 // Orphans and general comments have no mark, so their popover hangs off the panel entry.
@@ -19,8 +17,7 @@ function ThreadEntry({ thread, onActivate }) {
   )
 }
 
-export default function PreviousRoundPanel({ round, threads, onShow }) {
-  const [detached, setDetached] = useState(null)
+export default function PreviousRoundPanel({ round, threads, onShow, onShowDetached }) {
   if (threads.length === 0) { return null }
 
   const orphans = orphanThreads(threads)
@@ -28,12 +25,11 @@ export default function PreviousRoundPanel({ round, threads, onShow }) {
 
   const activate = (thread, button) => {
     if (hasMark(thread)) {
-      setDetached(null)
-      onShow(thread)
+      onShow(thread, button)
       return
     }
     const rect = button.getBoundingClientRect()
-    setDetached({ thread, anchorPoint: { x: rect.left + rect.width / 2, y: rect.bottom } })
+    onShowDetached(thread, { x: rect.left + rect.width / 2, y: rect.bottom }, button)
   }
 
   return (
@@ -54,13 +50,6 @@ export default function PreviousRoundPanel({ round, threads, onShow }) {
           </>
         )}
       </details>
-      {detached && (
-        <ThreadPopover
-          thread={detached.thread} round={round}
-          anchorPoint={detached.anchorPoint}
-          onClose={() => setDetached(null)}
-        />
-      )}
     </section>
   )
 }
