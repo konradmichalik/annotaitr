@@ -1,24 +1,11 @@
-import { useEffect, useRef } from 'react'
-import { CloseIcon } from './Icons.jsx'
+import { useRef } from 'react'
+import { CloseIcon } from '../../../shared/components/CloseIcon.jsx'
+import { useModalDismiss } from '../../../shared/hooks/useModalDismiss.js'
 
 export function FeedbackNotesModal({ isOpen, onClose, notesGroups, totalFiles }) {
   const dialogRef = useRef(null)
-  const prevFocusedRef = useRef(null)
 
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape') {onClose()}
-    }
-    if (isOpen) {
-      prevFocusedRef.current = document.activeElement
-      document.addEventListener('keydown', handleEscape)
-      dialogRef.current?.focus()
-      return () => {
-        document.removeEventListener('keydown', handleEscape)
-        prevFocusedRef.current?.focus?.()
-      }
-    }
-  }, [isOpen, onClose])
+  useModalDismiss(isOpen, onClose, dialogRef)
 
   if (!isOpen) {return null}
 

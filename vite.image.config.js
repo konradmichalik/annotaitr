@@ -8,7 +8,7 @@ const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
 
 export default defineConfig({
   root: './client/image',
-  plugins: [react(), viteSingleFile(), themeInitPlugin('img-annotator-settings')],
+  plugins: [react(), viteSingleFile(), themeInitPlugin()],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version)
   },

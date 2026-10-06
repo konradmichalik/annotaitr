@@ -10,15 +10,15 @@
  * bundle would run too late. `transformIndexHtml` runs for both `vite build`
  * and `vite dev`, so this applies in both.
  *
- * The two apps' cookie names differ, so the plugin is instantiated once per
- * app with its own name (see vite.image.config.js / vite.markdown.config.js).
- * The cookie itself is written by that app's own `useSettings.js`, via
- * client/shared/utils/storage.js.
+ * Both apps read the theme from the cookie that
+ * client/shared/hooks/useSettings.js writes for the settings they share.
  */
-export function themeInitPlugin(cookieName) {
+const SHARED_COOKIE = 'annotaitr-settings'
+
+export function themeInitPlugin() {
   const script = `
     (function() {
-      var m = document.cookie.match(/(?:^|; )${cookieName}=([^;]*)/);
+      var m = document.cookie.match(/(?:^|; )${SHARED_COOKIE}=([^;]*)/);
       var theme = 'auto';
       try { theme = (m && JSON.parse(decodeURIComponent(m[1])).theme) || 'auto'; } catch (e) {}
       var dark = theme === 'dark' || (theme === 'auto' && matchMedia('(prefers-color-scheme:dark)').matches);

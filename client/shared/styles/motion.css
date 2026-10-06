@@ -1,0 +1,31 @@
+/* Animations, applied only when the reader has not asked for reduced motion. */
+
+@media (prefers-reduced-motion: no-preference) {
+  .modal-backdrop {
+    animation: fade-in 0.15s ease-out;
+  }
+
+  .modal {
+    animation: modal-in 0.2s ease-out;
+  }
+
+  .annotation-toolbar {
+    animation: toolbar-in 0.15s ease-out;
+  }
+
+  .dropdown-menu {
+    animation: dropdown-in 0.12s ease-out;
+  }
+
+  .panel-menu-list {
+    animation: dropdown-in 0.12s ease-out;
+  }
+
+  .comment-popover {
+    animation: popover-in 0.15s ease-out;
+  }
+
+  .update-banner {
+    animation: banner-in 0.3s ease-out;
+  }
+}

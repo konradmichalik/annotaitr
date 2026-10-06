@@ -5,12 +5,7 @@ import { FileReferenceText } from './FileReferenceText.jsx'
 import { TextareaBackdrop } from './TextareaBackdrop.jsx'
 import { getLabelColors } from '../utils/quickLabels.js'
 import { LabelIcon } from './LabelIcon.jsx'
-
-const MoreIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
-  </svg>
-)
+import { PanelMenu } from '../../../shared/components/PanelMenu.jsx'
 
 const MAX_IMPORT_SIZE = 5 * 1024 * 1024 // 5 MB
 
@@ -20,14 +15,6 @@ const flashElement = (el) => {
   el.classList.remove('flash-highlight')
   void el.offsetWidth
   el.classList.add('flash-highlight')
-}
-
-const handleActivateKey = (e, handler) => {
-  if (e.target !== e.currentTarget) {return}
-  if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault()
-    handler()
-  }
 }
 
 export function AnnotationPanel({
@@ -44,9 +31,7 @@ export function AnnotationPanel({
   width
 }) {
   const fileInputRef = useRef(null)
-  const menuRef = useRef(null)
   const [notesCollapsed, setNotesCollapsed] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
   const [editingGlobalId, setEditingGlobalId] = useState(null)
   const [editingGlobalText, setEditingGlobalText] = useState('')
   const [globalCursorPos, setGlobalCursorPos] = useState(0)
@@ -75,15 +60,6 @@ export function AnnotationPanel({
     )
   }, [userAnnotations])
 
-  const handleImportClick = () => {
-    setMenuOpen(false)
-    fileInputRef.current?.click()
-  }
-
-  const handleExportClick = () => {
-    setMenuOpen(false)
-    onExport()
-  }
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0]
@@ -109,17 +85,6 @@ export function AnnotationPanel({
     }
     reader.readAsText(file)
   }
-
-  useEffect(() => {
-    if (!menuOpen) {return}
-    const handleClickOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setMenuOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [menuOpen])
 
   useEffect(() => {
     if (editingGlobalId && globalEditRef.current) {
@@ -175,25 +140,10 @@ export function AnnotationPanel({
 
   const hasAnnotations = userAnnotations.length > 0
 
-  const moreMenu = (
-    <div className="panel-menu" ref={menuRef}>
-      <button className="panel-icon-btn" onClick={() => setMenuOpen(prev => !prev)} title="More actions">
-        <MoreIcon />
-      </button>
-      {menuOpen && (
-        <div className="panel-menu-dropdown">
-          {hasAnnotations && (
-            <button className="panel-menu-item" onClick={handleExportClick}>
-              Export
-            </button>
-          )}
-          <button className="panel-menu-item" onClick={handleImportClick}>
-            Import
-          </button>
-        </div>
-      )}
-    </div>
-  )
+  const menuItems = [
+    { id: 'export', label: 'Export annotations', disabled: !hasAnnotations, onClick: onExport },
+    { id: 'import', label: 'Import annotations (JSON)', onClick: () => fileInputRef.current?.click() }
+  ]
 
   return (
     <aside ref={panelRef} className="annotation-panel" style={width ? { width: `${width}px` } : undefined}>
@@ -208,7 +158,7 @@ export function AnnotationPanel({
             <line x1="8" y1="12" x2="16" y2="12"/>
           </svg>
         </button>
-        {moreMenu}
+        <PanelMenu items={menuItems} />
       </div>
       {globalComments.length > 0 && (
         <div className="panel-global-section">
@@ -217,17 +167,21 @@ export function AnnotationPanel({
               key={ann.id}
               data-annotation-id={ann.id}
               className={`panel-global-comment${ann.id === selectedAnnotationId ? ' selected' : ''}`}
-              role="button"
-              tabIndex={0}
               onClick={() => onSelect(ann.id)}
-              onKeyDown={(e) => handleActivateKey(e, () => onSelect(ann.id))}
             >
               <div className="panel-item-header">
-                <span className="panel-type-badge global">General</span>
+                <button
+                  type="button"
+                  className="panel-item-select"
+                  aria-pressed={ann.id === selectedAnnotationId}
+                  onClick={(e) => { e.stopPropagation(); onSelect(ann.id) }}
+                >
+                  <span className="panel-type-badge global">General</span>
+                </button>
                 <div className="panel-item-actions">
                   <button
+                    type="button"
                     className="panel-edit-btn"
-                    style={{ opacity: 1 }}
                     onClick={(e) => {
                       e.stopPropagation()
                       handleGlobalEditStart(ann)
@@ -240,8 +194,8 @@ export function AnnotationPanel({
                     </svg>
                   </button>
                   <button
+                    type="button"
                     className="panel-delete-btn"
-                    style={{ opacity: 1 }}
                     onClick={(e) => {
                       e.stopPropagation()
                       onDelete(ann.id)
@@ -295,23 +249,35 @@ export function AnnotationPanel({
                       onSelect={applyGlobalAutocomplete}
                     />
                   )}
-                  <button
-                    className="panel-global-save-btn"
-                    type="button"
-                    onMouseDown={(e) => {
-                      e.preventDefault()
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleGlobalEditSave(ann.id)
-                    }}
-                  >
-                    Save
-                  </button>
+                  <div className="panel-global-edit-actions">
+                    <button
+                      className="comment-popover-cancel-btn"
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setEditingGlobalId(null)
+                        setEditingGlobalText('')
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="panel-global-save-btn"
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleGlobalEditSave(ann.id)
+                      }}
+                    >
+                      Save
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <p className="panel-comment-text">
-                  {ann.text ? <FileReferenceText text={ann.text} /> : <span style={{ opacity: 0.5, fontStyle: 'italic' }}>Click edit to add comment...</span>}
+                  {ann.text ? <FileReferenceText text={ann.text} /> : <span className="panel-comment-empty">Click edit to add comment...</span>}
                 </p>
               )}
             </div>
@@ -356,15 +322,19 @@ export function AnnotationPanel({
             key={ann.id}
             data-annotation-id={ann.id}
             className={`panel-item${ann.id === selectedAnnotationId ? ' selected' : ''} panel-item-${ann.type.toLowerCase()}`}
-            role="button"
-            tabIndex={0}
             onClick={handleItemClick}
-            onKeyDown={(e) => handleActivateKey(e, handleItemClick)}
           >
             <div className="panel-item-header">
-              <span className={`panel-type-badge ${badgeClass}`}>
-                {badgeLabel}
-              </span>
+              <button
+                type="button"
+                className="panel-item-select"
+                aria-pressed={ann.id === selectedAnnotationId}
+                onClick={(e) => { e.stopPropagation(); handleItemClick() }}
+              >
+                <span className={`panel-type-badge ${badgeClass}`}>
+                  {badgeLabel}
+                </span>
+              </button>
               {ann.label && (
                 <span
                   className="panel-label-pill"
@@ -472,13 +442,17 @@ export function AnnotationPanel({
                   key={ann.id}
                   data-annotation-id={ann.id}
                   className={`panel-note-item${ann.id === selectedAnnotationId ? ' selected' : ''}`}
-                  role="button"
-                  tabIndex={0}
                   onClick={handleNoteClick}
-                  onKeyDown={(e) => handleActivateKey(e, handleNoteClick)}
                 >
                   <div className="panel-item-header">
-                    <span className="panel-type-badge notes">Note</span>
+                    <button
+                      type="button"
+                      className="panel-item-select"
+                      aria-pressed={ann.id === selectedAnnotationId}
+                      onClick={(e) => { e.stopPropagation(); handleNoteClick() }}
+                    >
+                      <span className="panel-type-badge notes">Note</span>
+                    </button>
                   </div>
                   <p className="panel-comment-text">{ann.text}</p>
                   {ann.originalText && (

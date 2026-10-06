@@ -1,68 +1,23 @@
-import { useState, useCallback, useEffect } from 'react'
-import { getItem, setItem } from '../../../shared/utils/storage.js'
-
-const COOKIE_KEY = 'md-annotator-settings'
+import { useEffect } from 'react'
+import { useSettings as useStoredSettings, SHARED_DEFAULTS } from '../../../shared/hooks/useSettings.js'
 
 const DEFAULTS = {
-  theme: 'auto',
+  ...SHARED_DEFAULTS,
   contentWidth: 900,
   fontSize: 15,
   defaultMode: 'select',
-  autoCloseDelay: 'off',
   autoSaveDrafts: true,
 }
 
-function loadSettings() {
-  const raw = getItem(COOKIE_KEY)
-  if (!raw) {return { ...DEFAULTS }}
-  try {
-    const parsed = JSON.parse(raw)
-    return { ...DEFAULTS, ...parsed }
-  } catch {
-    return { ...DEFAULTS }
-  }
-}
-
-function persistSettings(settings) {
-  setItem(COOKIE_KEY, JSON.stringify(settings))
-}
-
 export function useSettings() {
-  const [settings, setSettings] = useState(loadSettings)
+  const stored = useStoredSettings('md-annotator-settings', DEFAULTS)
+  const { contentWidth, fontSize } = stored.settings
 
-  const updateSetting = useCallback((key, value) => {
-    setSettings(prev => {
-      const next = { ...prev, [key]: value }
-      persistSettings(next)
-      return next
-    })
-  }, [])
-
-  const resetSettings = useCallback(() => {
-    setSettings({ ...DEFAULTS })
-    persistSettings({ ...DEFAULTS })
-  }, [])
-
-  // Apply CSS custom properties when settings change
   useEffect(() => {
     const root = document.documentElement
-    root.style.setProperty('--content-max-width', `${settings.contentWidth}px`)
-    root.style.setProperty('--base-font-size', `${settings.fontSize}px`)
-  }, [settings.contentWidth, settings.fontSize])
+    root.style.setProperty('--content-max-width', `${contentWidth}px`)
+    root.style.setProperty('--base-font-size', `${fontSize}px`)
+  }, [contentWidth, fontSize])
 
-  // Apply theme
-  useEffect(() => {
-    const root = document.documentElement
-    if (settings.theme === 'dark' || settings.theme === 'light') {
-      root.setAttribute('data-theme', settings.theme)
-      return
-    }
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    root.setAttribute('data-theme', mq.matches ? 'dark' : 'light')
-    const onChange = () => root.setAttribute('data-theme', mq.matches ? 'dark' : 'light')
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [settings.theme])
-
-  return { settings, updateSetting, resetSettings }
+  return stored
 }

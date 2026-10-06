@@ -1,5 +1,5 @@
 import { ANNOTATION_COLORS } from '../utils/annotationColors.js'
-import { useDropdown } from '../hooks/useDropdown.js'
+import { useDropdown } from '../../../shared/hooks/useDropdown.js'
 
 const ROTATE_GRADIENT = `conic-gradient(${ANNOTATION_COLORS.map((c) => c.hex).join(', ')}, ${ANNOTATION_COLORS[0].hex})`
 

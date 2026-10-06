@@ -245,7 +245,7 @@ test('the export menu copies the annotated image and the feedback, and saves the
     await page.getByPlaceholder('Add a comment (optional)...').fill('Swap the photo')
     await page.getByRole('button', { name: 'Add', exact: true }).click()
 
-    const menu = page.getByRole('button', { name: 'Export', exact: true })
+    const menu = page.getByRole('button', { name: 'More actions', exact: true })
     await menu.click()
     await expect(page.getByRole('menuitem', { name: 'Copy annotated image' })).toBeFocused()
     await page.keyboard.press('ArrowDown')

@@ -1,5 +1,5 @@
 import { useState, useId, useRef, useEffect } from 'react'
-import { useDropdown } from '../hooks/useDropdown.js'
+import { useDropdown } from '../../../shared/hooks/useDropdown.js'
 import { VIEWPORT_ICONS, SECTION_ICONS, CAPTURE_ICONS } from '../utils/icons.jsx'
 import {
   PRESET_LABELS, ROTATABLE_PRESETS, captureParts, formLabel, formFromCapture, presetSize, requestFromForm
