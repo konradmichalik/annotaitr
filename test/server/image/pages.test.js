@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  parsePageRanges, selectPages, orderDocumentAnnotations, validateDocumentAnnotations, MAX_PAGES
+  parsePageRanges, selectPages, orderDocumentAnnotations, validateDocumentAnnotations, planDocumentPages, MAX_PAGES
 } from '../../../server/image/pages.js'
 
 const box = (id, page) => ({ id, type: 'box', geometry: { x: 1, y: 1, width: 5, height: 5 }, page })
@@ -65,5 +65,15 @@ describe('validateDocumentAnnotations', () => {
   it('rejects a page outside the session', () => {
     expect(validateDocumentAnnotations([box('a', 3)], pages)).toMatch(/not part of this review/)
     expect(validateDocumentAnnotations([comment('a', 1.5)], pages)).toMatch(/not part of this review/)
+  })
+})
+
+describe('planDocumentPages', () => {
+  it('groups numbered annotations by page in document order and leaves document comments out', () => {
+    const ordered = orderDocumentAnnotations([box('a', 3), comment('g'), box('b', 1), comment('c', 3)])
+    expect(planDocumentPages(ordered)).toEqual([
+      { page: 1, entries: [{ annotation: ordered[0], number: 1 }] },
+      { page: 3, entries: [{ annotation: ordered[1], number: 2 }, { annotation: ordered[2], number: 3 }] }
+    ])
   })
 })

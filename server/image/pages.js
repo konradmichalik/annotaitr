@@ -68,3 +68,18 @@ export function validateDocumentAnnotations(annotations, pageNumbers) {
   }
   return null
 }
+
+/**
+ * The pages to export, in document order, each with its annotations and the
+ * numbers they carry in the feedback. `ordered` comes from
+ * orderDocumentAnnotations(), so a number is its position there.
+ */
+export function planDocumentPages(ordered) {
+  const pages = new Map()
+  ordered.forEach((annotation, index) => {
+    if (!isPaged(annotation)) { return }
+    if (!pages.has(annotation.page)) { pages.set(annotation.page, []) }
+    pages.get(annotation.page).push({ annotation, number: index + 1 })
+  })
+  return [...pages].map(([page, entries]) => ({ page, entries }))
+}
