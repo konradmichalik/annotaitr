@@ -4,7 +4,7 @@ import { useOutsideClick } from '../../../shared/hooks/useOutsideClick.js'
 import { useModalDismiss } from '../../../shared/hooks/useModalDismiss.js'
 import { TOOL_ICONS } from '../utils/icons.jsx'
 import ReplyList from '../../../shared/components/ReplyList.jsx'
-import { STATUS_DISPLAY } from './threadView.js'
+import { STATUS_DISPLAY, AUTHOR_LABELS } from './threadView.js'
 
 const POPOVER_WIDTH = 320
 const POPOVER_HEIGHT_ESTIMATE = 150
@@ -37,11 +37,12 @@ export function ThreadPopoverContent({ thread, round }) {
           <span className="comment-popover-element-name">{thread.element}</span>
         </p>
       )}
-      <h3 className="thread-popover-heading">Your comment</h3>
-      <p className="thread-popover-text">{thread.annotation.text}</p>
-      <h3 className="thread-popover-heading">Replies</h3>
+      <blockquote className="thread-popover-quote">
+        <span className="thread-popover-author">{AUTHOR_LABELS.human}</span>
+        <p className="thread-popover-text">{thread.annotation.text}</p>
+      </blockquote>
       {thread.replies.length > 0
-        ? <ReplyList replies={thread.replies} display={STATUS_DISPLAY} />
+        ? <ReplyList replies={thread.replies} display={STATUS_DISPLAY} labels={AUTHOR_LABELS} />
         : <p className="thread-popover-empty">No reply from the agent yet.</p>}
     </>
   )

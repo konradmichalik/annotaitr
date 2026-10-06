@@ -411,6 +411,32 @@
   flex-direction: column;
   gap: 0.25rem;
   align-items: flex-start;
+  padding-left: 0.625rem;
+  border-left: 3px solid var(--border);
+}
+
+/* Agent replies are indented behind a rule in the status colour, so they read as an answer to the quote above them. */
+.reply-list-item:has(.status-chip--applied) {
+  border-left-color: var(--success);
+}
+
+.reply-list-item:has(.status-chip--partial),
+.reply-list-item:has(.status-chip--deferred) {
+  border-left-color: var(--comment-border);
+}
+
+.reply-list-item:has(.status-chip--declined) {
+  border-left-color: var(--danger);
+}
+
+.reply-list-item:has(.status-chip--question) {
+  border-left-color: var(--warning);
+}
+
+.reply-list-author {
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
 }
 
 .reply-list-text {

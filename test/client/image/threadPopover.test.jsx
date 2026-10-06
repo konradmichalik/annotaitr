@@ -31,4 +31,16 @@ describe('ThreadPopoverContent', () => {
     expect(html).toContain('status-chip--applied')
     expect(html).not.toContain('No reply from the agent yet.')
   })
+
+  it('sets the reviewer comment under "You" and the replies under "Agent"', () => {
+    const html = render({ ...base, replies: [{ status: 'applied', text: 'Done', createdAt: 0 }] })
+    const you = html.indexOf('>You<')
+    const agent = html.indexOf('>Agent<')
+    expect(you).toBeGreaterThan(-1)
+    expect(agent).toBeGreaterThan(you)
+    expect(html.indexOf('Make it bigger')).toBeGreaterThan(you)
+    expect(html.indexOf('Make it bigger')).toBeLessThan(agent)
+    expect(html).not.toContain('Your comment')
+    expect(html).not.toContain('>Replies<')
+  })
 })

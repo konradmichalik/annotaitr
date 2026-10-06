@@ -23,6 +23,25 @@ describe('ReplyList', () => {
     expect(html).toContain('dateTime="2026-10-06T12:00:00.000Z"')
   })
 
+  it('labels each reply by its author through the labels prop', () => {
+    const labels = { agent: 'Agent', human: 'You' }
+    const html = renderToStaticMarkup(
+      <ReplyList display={display} labels={labels} replies={[
+        { status: 'applied', text: 'Done', author: 'agent', createdAt: 0 },
+        { status: 'applied', text: 'Thanks', author: 'human', createdAt: 0 }
+      ]} />
+    )
+    expect(html).toContain('reply-list-author">Agent<')
+    expect(html).toContain('reply-list-author">You<')
+  })
+
+  it('treats a reply without an author as the agent', () => {
+    const html = renderToStaticMarkup(
+      <ReplyList display={display} labels={{ agent: 'Agent', human: 'You' }} replies={[{ status: 'applied', text: 'Done', createdAt: 0 }]} />
+    )
+    expect(html).toContain('reply-list-author">Agent<')
+  })
+
   it('renders a reply with an invalid date without a time element', () => {
     const html = renderToStaticMarkup(
       <ReplyList display={display} replies={[{ id: 'r1', status: 'applied', text: 'Moved it', createdAt: 'nope' }]} />

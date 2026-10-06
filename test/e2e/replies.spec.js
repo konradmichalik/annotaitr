@@ -111,12 +111,31 @@ test.describe('replies from the last round', () => {
       await page.goto(await cli.url)
       const section = page.getByRole('region', { name: /Round 1 replies/ })
       const entry = section.getByRole('button', { name: /1\..*question/ })
+      await expect(entry.locator('.previous-round-entry-reply')).toHaveText('Agent: Left or right aligned?')
       await entry.focus()
       await page.keyboard.press('Enter')
       await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' }).getByText('Left or right aligned?')).toBeVisible()
       await page.keyboard.press('Escape')
       await expect(page.getByRole('dialog')).toHaveCount(0)
       await expect(entry).toBeFocused()
+    } finally {
+      cli.child.kill()
+    }
+  })
+
+  test('shows no agent preview for a thread without a reply', async ({ page }) => {
+    const cli0 = startCli([image], env)
+    const url0 = await cli0.url
+    const post = (path, body) => fetch(`${url0}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    await post('/api/annotations', { annotations: [{ id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Unanswered', color: '#bf616a' }] })
+    await post('/api/feedback', {})
+    await cli0.exited
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      const section = page.getByRole('region', { name: /Round 1 replies/ })
+      await expect(section.getByRole('button', { name: /1\..*no reply/ })).toBeVisible()
+      await expect(section.locator('.previous-round-entry-reply')).toHaveCount(0)
     } finally {
       cli.child.kill()
     }

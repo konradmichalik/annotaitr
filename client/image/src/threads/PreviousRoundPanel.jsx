@@ -1,13 +1,18 @@
 import StatusChip from '../../../shared/components/StatusChip.jsx'
-import { STATUS_DISPLAY, threadStatus, orphanThreads, hasMark } from './threadView.js'
+import { ACTION_ICONS } from '../utils/icons.jsx'
+import { STATUS_DISPLAY, AUTHOR_LABELS, threadStatus, orphanThreads, hasMark } from './threadView.js'
 
 function ThreadEntry({ thread, onActivate }) {
+  const lastReply = thread.replies.at(-1)
   return (
     <li>
       <button type="button" className="previous-round-entry" onClick={(event) => onActivate(thread, event.currentTarget)}>
         <span className="previous-round-entry-number">{thread.number}.</span>
         <StatusChip status={threadStatus(thread)} display={STATUS_DISPLAY} />
         <span className="previous-round-entry-text">{thread.annotation.text}</span>
+        {lastReply && (
+          <span className="previous-round-entry-reply">{AUTHOR_LABELS.agent}: {lastReply.text}</span>
+        )}
         {thread.anchor === 'orphan' && thread.reason && <span className="previous-round-entry-reason">{thread.reason}</span>}
       </button>
     </li>
@@ -32,7 +37,10 @@ export default function PreviousRoundPanel({ round, threads, onShow, onShowDetac
   return (
     <section className="previous-round-panel" aria-labelledby="previous-round-summary">
       <details open>
-        <summary id="previous-round-summary">Round {round} replies ({threads.length})</summary>
+        <summary id="previous-round-summary">
+          <span className="previous-round-icon">{ACTION_ICONS.history}</span>
+          Round {round} replies ({threads.length})
+        </summary>
         {placed.length > 0 && (
           <ul className="previous-round-list">
             {placed.map((t) => <ThreadEntry key={t.handle} thread={t} onActivate={activate} />)}
