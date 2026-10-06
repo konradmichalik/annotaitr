@@ -84,6 +84,20 @@ npm uninstall -g md-annotator 2>/dev/null || true
 npm install -g annotaitr@latest
 echo "Installed annotaitr CLI globally (md-annotator still works as an alias)"
 
+# The playwright package installs without a browser build. Only web page
+# capture needs one, so point at it instead of downloading ~150 MB unasked.
+# The version is pinned because each playwright release expects its own
+# Chromium revision, and an unpinned npx would fetch the latest one.
+PLAYWRIGHT_DIR="$(npm root -g)/annotaitr"
+PLAYWRIGHT_VERSION="$(cd "$PLAYWRIGHT_DIR" 2>/dev/null && node -p "require('playwright/package.json').version" 2>/dev/null || true)"
+CHROMIUM_PATH="$(cd "$PLAYWRIGHT_DIR" 2>/dev/null && node -p "require('playwright').chromium.executablePath()" 2>/dev/null || true)"
+if [ -n "$CHROMIUM_PATH" ] && [ -x "$CHROMIUM_PATH" ]; then
+  echo "Found Chromium for web page capture"
+else
+  echo "Web page capture needs a Chromium build. Install it with:"
+  echo "  npx playwright${PLAYWRIGHT_VERSION:+@$PLAYWRIGHT_VERSION} install chromium"
+fi
+
 if command -v claude &> /dev/null; then
   # The marketplace was renamed from md-annotator to annotaitr. Drop the old
   # registration first so `claude plugin marketplace add` below doesn't just
