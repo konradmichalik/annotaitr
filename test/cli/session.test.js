@@ -29,7 +29,7 @@ describe('review sessions in the CLI', () => {
   it('records the decision and returns the line for the agent', async () => {
     const opened = await open()
     const line = await recordSession(opened, { annotations: [pin] }, { now: 2000, dir, log })
-    expect(line).toMatch(new RegExp(`^Session: ${opened.sessionId} \\(round 1\\)`))
+    expect(line).toMatch(new RegExp(`^\\nSession: ${opened.sessionId} \\(round 1\\)`))
     const { session } = await readSession(opened.sessionId, dir)
     expect(session).toMatchObject({ round: 1, writtenAt: 2000, target, threads: [{ handle: 'a3f19c2e', number: 1, annotation: pin }] })
   })

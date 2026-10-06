@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtemp, rm, writeFile, stat, utimes, readdir } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile, stat, utimes, readdir, mkdir, chmod } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -70,6 +70,31 @@ describe('session store', () => {
     await utimes(join(dir, 'aaaaaaaaaaaa.json'), old, old)
     expect(await pruneSessions(now, dir)).toBe(1)
     expect(await readdir(dir)).toEqual([`${ID}.json`])
+  })
+
+  it('reports a session with the right schema but the wrong shape', async () => {
+    for (const broken of [{ threads: undefined }, { round: 'x' }, { writtenAt: undefined }]) {
+      await writeSession(session(broken), dir)
+      expect((await readSession(ID, dir)).error).toMatch(/malformed/)
+    }
+  })
+
+  it('refuses to write into a folder other users can open, which could swap or read sessions', async () => {
+    await mkdir(dir, { mode: 0o755 })
+    await chmod(dir, 0o755)
+    await expect(writeSession(session(), dir)).rejects.toThrow(/closed to others/)
+  })
+
+  it('treats pruning as best effort when an old session cannot be removed', async () => {
+    await writeSession(session(), dir)
+    const old = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000)
+    await utimes(join(dir, `${ID}.json`), old, old)
+    await chmod(dir, 0o555)
+    try {
+      expect(await pruneSessions(Date.now(), dir)).toBe(0)
+    } finally {
+      await chmod(dir, 0o700)
+    }
   })
 
   it('prunes nothing when the folder does not exist yet', async () => {

@@ -40,7 +40,7 @@ describe('sessionLine', () => {
 
   it('tells the agent how to reply per mark', () => {
     expect(sessionLine(at(buildThreads([pin])))).toBe(
-      'Session: 2f8c1a9e04b7 (round 1). Reply per mark with: annotaitr reply --session 2f8c1a9e04b7 ' +
+      '\nSession: 2f8c1a9e04b7 (round 1). Reply per mark with: annotaitr reply --session 2f8c1a9e04b7 ' +
       '--to <handle> --status applied|partial|declined|deferred|question --text "…"\n'
     )
   })

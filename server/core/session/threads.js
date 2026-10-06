@@ -21,6 +21,7 @@ export function nextSession(previous, { sessionId, target, threads, now }) {
 export function sessionLine(session) {
   if (!session.threads.some((t) => t.handle)) { return '' }
   const id = session.sessionId
-  return `Session: ${id} (round ${session.round}). Reply per mark with: annotaitr reply --session ${id} ` +
+  // A blank line first, so the agent cannot read it as part of the last mark's comment.
+  return `\nSession: ${id} (round ${session.round}). Reply per mark with: annotaitr reply --session ${id} ` +
     `--to <handle> --status ${REPLY_STATUSES.join('|')} --text "…"\n`
 }

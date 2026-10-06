@@ -53,6 +53,22 @@ describe('runReply', () => {
     expect(session.threads[0].replies).toMatchObject([{ author: 'agent', status: 'applied', text: 'Moved the button', createdAt: 7 }])
   })
 
+  it('keeps both replies when two agents answer at the same time', async () => {
+    const second = 'b7210e44-1b4d-4f7a-9c3e-2d5f8a1b6c4d'
+    const threads = buildThreads([
+      { id: UUID, type: 'pin', geometry: { x: 1, y: 1 }, text: 'Fix' },
+      { id: second, type: 'pin', geometry: { x: 2, y: 2 }, text: 'Also' }
+    ])
+    await writeSession(nextSession(null, { sessionId: ID, target: { kind: 'file', label: 'a.png' }, threads, now: 1 }), dir)
+    const results = await Promise.all([
+      runReply(ARGS, { dir }),
+      runReply([...ARGS.slice(0, 2), '--to', 'b7210e44', ...ARGS.slice(4)], { dir })
+    ])
+    expect(results.every((r) => r.output)).toBe(true)
+    const { session } = await readSession(ID, dir)
+    expect(session.threads.map((t) => t.replies.length)).toEqual([1, 1])
+  })
+
   it('fails on a session that does not exist', async () => {
     const result = await runReply(['--session', 'aaaaaaaaaaaa', ...ARGS.slice(2)], { dir })
     expect(result.error).toBe(`No review session aaaaaaaaaaaa in ${dir}`)

@@ -1,5 +1,5 @@
 import { isSessionId } from '../server/core/session/identity.js'
-import { readSession, writeSession, sessionDir } from '../server/core/session/store.js'
+import { updateSession, sessionDir } from '../server/core/session/store.js'
 import { addReply } from '../server/core/session/reply.js'
 
 const REPLY_OPTIONS = { '--session': 'sessionId', '--to': 'to', '--status': 'status', '--text': 'text' }
@@ -25,11 +25,8 @@ export function parseReplyArgs(args) {
 export async function runReply(args, { now = Date.now(), dir = sessionDir() } = {}) {
   const parsed = parseReplyArgs(args)
   if (parsed.error) { return { error: `${parsed.error}\n${REPLY_USAGE}` } }
-  const read = await readSession(parsed.sessionId, dir)
-  if (read.missing) { return { error: `No review session ${parsed.sessionId} in ${dir}` } }
-  if (read.error) { return { error: read.error } }
-  const result = addReply(read.session, { ...parsed, now })
+  const result = await updateSession(parsed.sessionId, dir, (session) => addReply(session, { ...parsed, now }))
+  if (result.missing) { return { error: `No review session ${parsed.sessionId} in ${dir}` } }
   if (result.error) { return { error: result.error } }
-  await writeSession(result.session, dir)
   return { output: `Recorded ${parsed.status} reply to #${result.thread.handle} in session ${parsed.sessionId} (round ${result.session.round}).\n` }
 }

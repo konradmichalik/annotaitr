@@ -4,13 +4,16 @@
  */
 
 import { tmpdir } from 'node:os'
+import { randomBytes } from 'node:crypto'
 import { join } from 'node:path'
-import { mkdir, readFile, writeFile, rename, readdir, stat, rm } from 'node:fs/promises'
+import { mkdir, readFile, writeFile, rename, readdir, stat, lstat, rm, open } from 'node:fs/promises'
 import { isSessionId } from './identity.js'
 
 export const SCHEMA_VERSION = 1
 export const RESUME_WINDOW_MS = 24 * 60 * 60 * 1000
 export const RETENTION_MS = 7 * 24 * 60 * 60 * 1000
+const LOCK_WAIT_MS = 3000
+const LOCK_STALE_MS = 10_000
 
 // Read on every call rather than at import, so a test or a wrapper can set it late.
 export function sessionDir() {
@@ -40,20 +43,78 @@ export async function readSession(sessionId, dir = sessionDir()) {
   if (session?.schemaVersion !== SCHEMA_VERSION) {
     return { error: `Session ${sessionId} has schema version ${session?.schemaVersion}, this build reads ${SCHEMA_VERSION}` }
   }
+  if (!Array.isArray(session.threads) || !Number.isInteger(session.round) || !Number.isFinite(session.writtenAt)) {
+    return { error: `Session ${sessionId} is malformed` }
+  }
   return { session }
+}
+
+// On Linux tmpdir() is the shared /tmp: a folder another user created first
+// could let them swap session files or plant a symlink under our temp name.
+async function assertPrivateDir(dir) {
+  const info = await lstat(dir)
+  const foreign = typeof process.getuid === 'function' && info.uid !== process.getuid()
+  if (!info.isDirectory() || foreign || (info.mode & 0o077) !== 0) {
+    throw new Error(`${dir} must be a folder owned by you and closed to others (chmod 700)`)
+  }
 }
 
 export async function writeSession(session, dir = sessionDir()) {
   const target = sessionPath(dir, session.sessionId)
   await mkdir(dir, { recursive: true, mode: 0o700 })
+  await assertPrivateDir(dir)
   // A reader must never see half a file, so the content lands under a temp name first.
-  const temp = `${target}.${process.pid}.tmp`
-  await writeFile(temp, JSON.stringify(session, null, 2), { mode: 0o600 })
+  const temp = `${target}.${randomBytes(6).toString('hex')}.tmp`
+  await writeFile(temp, JSON.stringify(session, null, 2), { mode: 0o600, flag: 'wx' })
   await rename(temp, target)
   return target
 }
 
-// os.tmpdir() is not reliably cleaned on macOS, so old sessions are removed here.
+async function acquireLock(lock) {
+  const deadline = Date.now() + LOCK_WAIT_MS
+  for (;;) {
+    try {
+      await (await open(lock, 'wx', 0o600)).close()
+      return
+    } catch (error) {
+      if (error.code !== 'EEXIST') { throw error }
+    }
+    const info = await stat(lock).catch(() => null)
+    if (info && Date.now() - info.mtimeMs > LOCK_STALE_MS) {
+      await rm(lock, { force: true })
+    } else if (Date.now() > deadline) {
+      throw new Error(`Session is busy (${lock}), try again`)
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    }
+  }
+}
+
+/**
+ * Read, change and write a session under a lock file. Agents often run
+ * several `reply` calls in parallel, and without the lock the last write
+ * would silently drop the others. `update(session)` returns `{ session }`
+ * to save it or `{ error }` to leave the file alone.
+ */
+export async function updateSession(sessionId, dir, update) {
+  const read = await readSession(sessionId, dir)
+  if (!read.session) { return read }
+  const lock = `${sessionPath(dir, sessionId)}.lock`
+  await acquireLock(lock)
+  try {
+    const fresh = await readSession(sessionId, dir)
+    if (!fresh.session) { return fresh }
+    const result = update(fresh.session)
+    if (result.error) { return result }
+    await writeSession(result.session, dir)
+    return result
+  } finally {
+    await rm(lock, { force: true })
+  }
+}
+
+// os.tmpdir() is not reliably cleaned on macOS, so old sessions are removed
+// here. Best effort: a file we may not delete must never stop a review.
 export async function pruneSessions(now, dir = sessionDir()) {
   let names
   try {
@@ -66,8 +127,8 @@ export async function pruneSessions(now, dir = sessionDir()) {
     const path = join(dir, name)
     const info = await stat(path).catch(() => null)
     if (info && now - info.mtimeMs > RETENTION_MS) {
-      await rm(path, { force: true })
-      removed++
+      const gone = await rm(path, { force: true }).then(() => true, () => false)
+      if (gone) { removed++ }
     }
   }
   return removed

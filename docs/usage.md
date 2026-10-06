@@ -295,10 +295,11 @@ which is the only way to continue one for a clipboard image. `--session` and
 
 Sessions are JSON files in `<tmpdir>/annotaitr-sessions` (or
 `ANNOTAITR_SESSION_DIR`), readable by the current user only, and deleted
-after 7 days. They hold the review comments, so point
-`ANNOTAITR_SESSION_DIR` somewhere private if the temp folder is shared. If a
-session cannot be saved, a warning goes to stderr and the decision is printed
-as usual.
+after 7 days. They hold the review comments, so a session is only written
+into a folder owned by the current user and closed to others (`chmod 700`);
+an existing `ANNOTAITR_SESSION_DIR` must meet that too. If a session cannot be
+saved, a warning goes to stderr and the decision is printed as usual. Several
+`reply` calls may run at the same time, each waits for the others.
 
 ## Environment variables
 
