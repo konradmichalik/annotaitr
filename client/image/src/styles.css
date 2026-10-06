@@ -1776,9 +1776,11 @@ button.voice-note:hover {
   opacity: 0.8;
 }
 
+/* The dashed border marks a ghost, so it needs no fading: the opacity would pull the text below 4.5:1. */
 .timeline-marker--previous.timeline-marker--ghost {
   border: 2px dashed var(--bg-card);
   background: var(--text-muted);
+  opacity: 1;
 }
 
 .timeline-marker--previous:focus-visible {
