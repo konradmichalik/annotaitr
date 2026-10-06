@@ -16,6 +16,9 @@ import MediaSlot from './video/MediaSlot.jsx'
 import PageStrip from './document/PageStrip.jsx'
 import PageNav from './document/PageNav.jsx'
 import PageImage from './document/PageImage.jsx'
+import { usePreviousRound } from './threads/usePreviousRound.js'
+import { placedThreads } from './threads/threadView.js'
+import { ACTION_ICONS } from './utils/icons.jsx'
 import { useSettings } from './hooks/useSettings.js'
 import { useMediaPlayer } from './video/useMediaPlayer.js'
 import { useVideoReview } from './video/useVideoReview.js'
@@ -63,6 +66,8 @@ export default function App() {
   const [imageUrl, setImageUrl] = useState(null)
   const [decision, setDecision] = useState(null)
   const [activeTool, setActiveTool] = useState('select')
+  const [showPrevious, setShowPrevious] = useState(true)
+  const [openThreadHandle, setOpenThreadHandle] = useState(null)
   const [showExport, setShowExport] = useState(false)
   const [editingAnnotationId, setEditingAnnotationId] = useState(null)
   const [zoom, setZoom] = useState(1)
@@ -80,6 +85,11 @@ export default function App() {
   // Ordering, numbering and what the canvas shows follow the time axis of a
   // recording or the page axis of a PDF; a still image passes straight through.
   const review = isDocument ? doc : video
+  // Videos and PDFs draw last round in their own views, a still image has a single one.
+  const isStill = !!meta && !isVideo && !isDocument
+  const previous = usePreviousRound({ ready: isStill })
+  const previousThreads = isStill ? placedThreads(previous.threads, { kind: 'still' }) : []
+  const closeThread = useCallback(() => setOpenThreadHandle(null), [])
   // A PDF's text layer is per page; a captured web page has one element map.
   const elements = isDocument ? doc.elements : capturedElements
   const words = isDocument ? doc.words : []
@@ -539,6 +549,18 @@ export default function App() {
                   <ViewportControl capture={meta.capture} busy={!!recapturing} annotationCount={state.annotations.length} onApply={recapture} />
                 )}
                 {isDocument && <PageNav pages={doc.pages} current={doc.current} pageCount={meta.pageCount} onStep={stepPage} />}
+                {previousThreads.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPrevious((prev) => !prev)}
+                    className="btn btn-icon"
+                    aria-pressed={showPrevious}
+                    aria-label="Previous round"
+                    title="Show or hide last round's marks and replies"
+                  >
+                    {ACTION_ICONS.history}
+                  </button>
+                )}
                 <ZoomControls zoom={zoom} onZoomBy={zoomBy} onZoomReset={zoomReset} onZoomFit={zoomFit} />
               </div>
             </div>
@@ -574,6 +596,12 @@ export default function App() {
                 onRedo={redo}
                 colorMode={settings.colorMode}
                 fixedColor={settings.fixedColor}
+                previousThreads={previousThreads}
+                previousRound={previous.round}
+                showPrevious={showPrevious}
+                openThreadHandle={openThreadHandle}
+                onOpenThread={setOpenThreadHandle}
+                onCloseThread={closeThread}
               />
             )}
           </div>

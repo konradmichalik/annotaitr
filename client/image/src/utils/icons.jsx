@@ -97,6 +97,13 @@ export const ACTION_ICONS = {
     </svg>
   ),
   // Tabler "message": a text-only comment, as opposed to a drawn mark.
+  // Tabler "history": the previous round.
+  history: (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <path d="M12 8l0 4l2 2" />
+      <path d="M3.05 11a9 9 0 1 1 .5 4m-.55 5v-5h5" />
+    </svg>
+  ),
   comment: (
     <svg {...ICON_PROPS} aria-hidden="true">
       <path d="M8 9h8" /><path d="M8 13h6" />
