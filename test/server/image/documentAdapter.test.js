@@ -200,7 +200,8 @@ describe('document annotator server', () => {
     expect(annotationCount).toBe(4)
     expect(output).toMatch(/^4 annotations on 2 of 3 pages\.\n\nSource: deck\.pptx \(rendered as deck\.pdf\)\n/)
     expect(output).toMatch(/## Page 1\nAnnotated page: .*page-01\.png\n\n### 1\. Boxed area/)
-    expect(output).toMatch(/## Page 3\nAnnotated page: .*page-03\.png\n\n### 2\. Boxed area[^\n]*\n> note b\n\n### 3\. Page comment\n> Too dense/)
+    expect(output).toMatch(/## Page 3\nAnnotated page: .*page-03\.png\n\n### 2\. Boxed area[^\n]*\nText: text "Three"\n> note b\n\n### 3\. Page comment\n> Too dense/)
+    expect(output).toContain('Text lines are read from the PDF')
     expect(output).toMatch(/## General\n### 4\. General comment about the whole document/)
 
     const overview = output.match(/Overview: (.*)\n/)[1]
@@ -210,6 +211,21 @@ describe('document annotator server', () => {
     expect(annotated.width).toBe(2000)
     expect(annotated.height).toBeGreaterThan(1125)
     await rm(dirname(overview), { recursive: true, force: true })
+  })
+
+  it('serves the text of a page as elements and names the text a mark covers', async () => {
+    const textPdf = join(dir, 'text.pdf')
+    await writeFile(textPdf, await makePdf([{ title: 'Revenue by region', body: ['North grew 12%', 'South stayed flat'] }]))
+    const document = await openPdfDocument(textPdf)
+    server = await buildDocumentServer({ document, targetLabel: 'text.pdf' })
+    const { elements } = (await (await fetch(`${server.url}/api/pages/1/elements`)).json()).data
+    expect(elements.map((e) => [e.tag, e.name])).toEqual([['heading', 'Revenue by region'], ['text', 'North grew 12% South stayed flat']])
+    expect((await fetch(`${server.url}/api/pages/2/elements`)).status).toBe(404)
+
+    const heading = elements[0].box
+    const pin = { id: 'p', type: 'pin', geometry: { x: heading.x + 10, y: heading.y + 10 }, text: 'Shorter', page: 1 }
+    const body = await (await post('/api/feedback-text', { annotations: [pin] })).json()
+    expect(body.data.text).toContain('Text: heading "Revenue by region"\n> Shorter')
   })
 
   it('approves without notes when nothing was annotated', async () => {

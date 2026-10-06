@@ -346,6 +346,20 @@ export default function App() {
     setZoom(Math.round(Math.max(0.1, Math.min(3, fit)) * 100) / 100)
   }, [mediaWidth, mediaHeight])
 
+  // A PDF's text layer belongs to one page, so it is fetched for the page
+  // shown; an answer for a page already left behind is dropped.
+  const pageShownForElements = isDocument ? doc.current : null
+  useEffect(() => {
+    if (pageShownForElements === null) { return }
+    let current = true
+    setElements([])
+    fetch(`/api/pages/${pageShownForElements}/elements`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => { if (current) { setElements(r?.data?.elements ?? []) } })
+      .catch(() => {})
+    return () => { current = false }
+  }, [pageShownForElements])
+
   // A page is rendered larger than most screens, so a document opens fitted,
   // and again whenever the page size changes (portrait after landscape).
   useEffect(() => {
@@ -361,8 +375,8 @@ export default function App() {
     if (video.spanComplete) { return 'Span marked. Pick a tool (or click "Pin") and click the frame to mark something in it, or click "Comment span" to comment without drawing.' }
     if (video.range.start !== null) { return 'Span started. Move to where it ends (play, scrub or use the arrows), then click "Set end here".' }
     if (isVideo) { return 'Pause on a frame and draw on it. Space plays, arrows step frames, I and O mark a span.' }
+    if (activeTool === 'element') { return `Point at ${isDocument ? 'a text block or link' : 'a page element'} to see what it is, then click to select it and add a comment.` }
     if (isDocument) { return 'Draw on the page. PageUp/PageDown or [ and ] switch pages, Home and End jump to the first and last.' }
-    if (activeTool === 'element') { return 'Point at a page element to see what it is, then click to select it and add a comment.' }
     return 'Click a mark to select it, drag to move, or press Delete to remove it.'
   }
 

@@ -130,12 +130,14 @@ export async function createPdfRenderer(pdfPath, { timeoutMs = RENDER_TIMEOUT_MS
   }
 
   async function liveWorker() {
-    current ??= startWorker(data, pdfPath)
+    const starting = (current ??= startWorker(data, pdfPath))
     try {
-      const meta = await withTimeout(current.ready, openTimeoutMs, `Opening ${basename(pdfPath)} took longer than ${openTimeoutMs} ms`)
-      return { worker: current.worker, meta }
+      const meta = await withTimeout(starting.ready, openTimeoutMs, `Opening ${basename(pdfPath)} took longer than ${openTimeoutMs} ms`)
+      // close() may have discarded this worker while it was starting.
+      if (current !== starting) { throw new Error('The PDF renderer is closed') }
+      return { worker: starting.worker, meta }
     } catch (error) {
-      await discardWorker()
+      if (current === starting) { await discardWorker() }
       throw error
     }
   }
@@ -166,6 +168,11 @@ export async function createPdfRenderer(pdfPath, { timeoutMs = RENDER_TIMEOUT_MS
     pageSize(page) {
       if (!checkPage(page)) { return Promise.reject(new Error(`Page ${page} is not in this document`)) }
       return enqueue(() => call({ page, size: true }, `Page ${page}`), { priority: 2 })
+    },
+    /** `{ runs, links }` of a page, boxes in the pixels of the page rendered at `longSide`. */
+    pageText(page, longSide) {
+      if (!checkPage(page)) { return Promise.reject(new Error(`Page ${page} is not in this document`)) }
+      return enqueue(() => call({ page, longSide, text: true }, `Page ${page}`), { priority: 1 })
     },
     /** `{ buffer, width, height }` of the page as PNG, its longer side `longSide` pixels. */
     async render(page, longSide, { priority = 0, signal = null } = {}) {

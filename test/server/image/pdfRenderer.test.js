@@ -99,10 +99,10 @@ describe('createPdfRenderer', () => {
       const first = renderer.render(1, 200).then(() => order.push('first'))
       const thumb = renderer.render(2, 200, { priority: 0 }).then(() => order.push('thumb'))
       const page = renderer.render(3, 200, { priority: 1 }).then(() => order.push('page'))
-      const gone = renderer.render(2, 200, { priority: 1, signal: abandoned.signal })
+      const gone = renderer.render(2, 200, { priority: 1, signal: abandoned.signal }).catch((error) => error)
       abandoned.abort()
       await Promise.all([first, thumb, page])
-      await expect(gone).rejects.toMatchObject({ name: 'AbortError' })
+      expect(await gone).toMatchObject({ name: 'AbortError' })
       expect(order).toEqual(['first', 'page', 'thumb'])
     } finally {
       await renderer.close()
@@ -111,9 +111,9 @@ describe('createPdfRenderer', () => {
 
   it('rejects pending and later renders once closed', async () => {
     const renderer = await createPdfRenderer(heavyPath)
-    const pending = renderer.render(1, 2000)
+    const pending = renderer.render(1, 2000).catch((error) => error)
     await renderer.close()
-    await expect(pending).rejects.toThrow()
+    expect(await pending).toBeInstanceOf(Error)
     await expect(renderer.render(2, 200)).rejects.toThrow(/closed/)
   })
 
@@ -121,6 +121,41 @@ describe('createPdfRenderer', () => {
     const renderer = await createPdfRenderer(pdfPath)
     try {
       await expect(renderer.render(4, 200)).rejects.toThrow(/Page 4/)
+    } finally {
+      await renderer.close()
+    }
+  })
+})
+
+describe('pageText', () => {
+  let dir, pdfPath
+
+  beforeAll(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'annotaitr-pdf-text-'))
+    pdfPath = join(dir, 'text.pdf')
+    await writeFile(pdfPath, await makePdf([
+      { size: 'slide', title: 'Revenue by region', body: ['• North grew 12%', 'South stayed flat'], link: 'https://example.com/q3' },
+      { size: 'slide' }
+    ]))
+  })
+
+  afterAll(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  it('reports text runs and links in the pixels of the rendered page', async () => {
+    const renderer = await createPdfRenderer(pdfPath)
+    try {
+      const { runs, links } = await renderer.pageText(1, 2000)
+      const title = runs.find((r) => r.str === 'Revenue by region')
+      // 40pt at 2000/960 px per point; the title sits 90pt below the top edge.
+      expect(title.fontSize).toBeCloseTo(40 * 2000 / 960, 1)
+      expect(title.box.x).toBeCloseTo(60 * 2000 / 960, 0)
+      expect(title.box.y + title.box.height).toBeGreaterThan(90 * 2000 / 960)
+      expect(title.box.y).toBeLessThan(90 * 2000 / 960)
+      expect(links).toEqual([{ url: 'https://example.com/q3', box: expect.objectContaining({ x: expect.any(Number) }) }])
+
+      expect(await renderer.pageText(2, 2000)).toEqual({ runs: [], links: [] })
     } finally {
       await renderer.close()
     }

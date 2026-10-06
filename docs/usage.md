@@ -128,6 +128,13 @@ points at one image per annotated page (markup and legend baked in) plus
 `overview.png` with the annotated pages side by side. Untouched pages are
 not written.
 
+The PDF's text layer works like the element map of a captured web page:
+hovering with the **Element** tool outlines a text block, heading or link,
+clicking selects it, and the feedback names the text under every mark, e.g.
+`Text: heading "Revenue by region"`. Text blocks are rebuilt from where the
+text sits on the page, since a PDF has no DOM. A scanned PDF has no text
+layer, so it gets no `Text:` lines and no Element tool.
+
 Office formats are not converted. `annotaitr deck.pptx` prints a
 `CONVERT TO PDF FIRST:` hint with the command to run once the PDF exists,
 and exits `0` so a slash command passes it on to the agent. Export the PDF

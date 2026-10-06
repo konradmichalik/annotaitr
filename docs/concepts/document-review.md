@@ -1,6 +1,6 @@
 # Concept: Document review (PDF)
 
-Status: draft 4 / for discussion
+Status: draft 4 / S1 and S2 implemented
 Scope: image mode
 Related: [How it works](../how-it-works.md) → "Image mode", "Videos and GIFs";
 [Usage](../usage.md) → "Mode detection"

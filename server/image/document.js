@@ -1,5 +1,6 @@
 import { stat } from 'node:fs/promises'
 import { createPdfRenderer } from './pdf/renderer.js'
+import { buildTextElements } from './pdf/textLayer.js'
 import { selectPages } from './pages.js'
 import { config } from './config.js'
 
@@ -75,9 +76,32 @@ export function createPageCache(render, capacity = PAGE_CACHE_SIZE, failureTtlMs
   }
 }
 
-/** The full-size pages (a few at a time) and the thumbnails (all of them, they are small) of a document. */
+/**
+ * The text-layer element map of each page, read on first request and kept.
+ * A page whose text cannot be read simply has no elements: the map only
+ * names what a mark points at, it never fails the review.
+ */
+function createElementCache(document) {
+  const entries = new Map()
+  return {
+    get(page) {
+      if (!entries.has(page)) {
+        entries.set(page, document.renderer.pageText(page, PAGE_LONG_SIDE).then(buildTextElements, () => []))
+      }
+      return entries.get(page)
+    }
+  }
+}
+
+/** All element maps of `pages`, keyed by page number. */
+export async function elementsForPages(caches, pages) {
+  return new Map(await Promise.all(pages.map(async (page) => [page, await caches.elements.get(page)])))
+}
+
+/** The full-size pages (a few at a time), the thumbnails and element maps (all of them, they are small) of a document. */
 export function createDocumentCaches(document) {
   return {
+    elements: createElementCache(document),
     pages: createPageCache((page, signal) => document.renderer.render(page, PAGE_LONG_SIDE, { priority: PAGE_PRIORITY, signal })),
     thumbs: createPageCache((page, signal) => document.renderer.render(page, THUMB_LONG_SIDE, { priority: THUMB_PRIORITY, signal }), Infinity)
   }

@@ -106,6 +106,14 @@ annotated pages out in an overview and prints feedback grouped by page. With
 `--source`, the feedback names the file the agent edits and warns when that
 file is newer than the PDF.
 
+The text layer stands in for the DOM map of a captured page. The worker
+reports every text run with its position and font size and every link
+annotation; the server merges runs into lines and lines into blocks (same
+column, no paragraph gap, similar font size), calls a block a heading when
+its font is clearly larger than the page's body text, and serves the result
+per page in the shape the shared element matcher already consumes. The
+feedback quotes the matched text as untrusted document content.
+
 ## Markdown mode
 
 Once a file is open in the browser:

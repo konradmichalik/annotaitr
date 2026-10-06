@@ -1,4 +1,4 @@
-import { PDFDocument, PDFNumber, PDFOperator, StandardFonts, popGraphicsState, pushGraphicsState } from 'pdf-lib'
+import { PDFDocument, PDFNumber, PDFOperator, PDFString, StandardFonts, popGraphicsState, pushGraphicsState } from 'pdf-lib'
 
 /**
  * PDFs for tests, generated in-memory so no binary fixture file needs to
@@ -12,15 +12,33 @@ const PAGE_SIZES = {
   landscape: [842, 595]
 }
 
-/** One page per entry; each page carries its title as text. */
+/** A link annotation over a rectangle in PDF points. */
+function addLink(doc, page, url, rect) {
+  const link = doc.context.obj({
+    Type: 'Annot', Subtype: 'Link', Rect: rect, Border: [0, 0, 0],
+    A: { Type: 'Action', S: 'URI', URI: PDFString.of(url) }
+  })
+  page.node.addAnnot(doc.context.register(link))
+}
+
+/**
+ * One page per entry; each page carries its title in a large font, then its
+ * `body` lines in a smaller one, and optionally a `link` under the body.
+ */
 export async function makePdf(pages = [{ size: 'slide', title: 'Revenue by region' }]) {
   const doc = await PDFDocument.create()
   const font = await doc.embedFont(StandardFonts.Helvetica)
-  for (const { size = 'slide', title = '' } of pages) {
+  for (const { size = 'slide', title = '', body = [], link = null } of pages) {
     const [width, height] = PAGE_SIZES[size]
     const page = doc.addPage([width, height])
     if (title) {
       page.drawText(title, { x: 60, y: height - 90, size: 40, font })
+    }
+    body.forEach((line, i) => page.drawText(line, { x: 60, y: height - 160 - i * 28, size: 22, font }))
+    if (link) {
+      const y = height - 160 - body.length * 28 - 20
+      page.drawText(link, { x: 60, y, size: 16, font })
+      addLink(doc, page, link, [60, y - 4, 60 + font.widthOfTextAtSize(link, 16), y + 16])
     }
   }
   return Buffer.from(await doc.save())

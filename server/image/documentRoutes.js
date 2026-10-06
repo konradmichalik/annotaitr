@@ -5,6 +5,7 @@ import { formatApprovalOutput } from './feedback.js'
 import { exportDocumentFeedback, formatDocumentApprovalWithNotes } from './documentFeedback.js'
 import { orderDocumentAnnotations, planDocumentPages, validateDocumentAnnotations } from './pages.js'
 import { writeDocumentOutput } from './documentOutput.js'
+import { elementsForPages } from './document.js'
 
 function success(data) { return { success: true, data } }
 function failure(error) { return { success: false, error } }
@@ -39,6 +40,13 @@ function mountPageRoutes(router, { review, caches }) {
   }
   router.get('/api/pages/:page/image', servePage(caches.pages))
   router.get('/api/pages/:page/thumb', servePage(caches.thumbs))
+
+  // Lets the client outline the text under the pointer and offer the Element tool.
+  router.get('/api/pages/:page/elements', async (req, res) => {
+    const page = Number(req.params.page)
+    if (!review.pageNumbers.has(page)) { return res.status(404).json(failure(`Page ${req.params.page} is not part of this review`)) }
+    res.json(success({ elements: await caches.elements.get(page) }))
+  })
 }
 
 function mountAnnotationRoutes(router, { review, state }) {
@@ -74,11 +82,11 @@ function mountExportRoutes(router, { review, caches }) {
     }
   })
 
-  router.post('/api/feedback-text', (req, res) => {
+  router.post('/api/feedback-text', async (req, res) => {
     const { annotations, error } = review.checked(req.body)
     if (error) { return res.status(400).json(failure(error)) }
     try {
-      res.json(success({ text: exportDocumentFeedback(review.context(annotations, null)) }))
+      res.json(success({ text: exportDocumentFeedback(await review.withElements(review.context(annotations, null))) }))
     } catch (formatError) {
       res.status(400).json(failure(`Could not describe these annotations: ${formatError.message}`))
     }
@@ -94,7 +102,7 @@ function mountDecisionRoutes(router, { review, state, caches, document, resolveD
   async function decide(res, { approved }) {
     state.deciding = true
     try {
-      const base = review.context(state.annotations, null)
+      const base = await review.withElements(review.context(state.annotations, null))
       const files = await writeDocumentOutput(base.plan, (page) => caches.pages.get(page), document.pageCount)
       const ctx = { ...base, files }
       const output = approved ? formatDocumentApprovalWithNotes(ctx) : exportDocumentFeedback(ctx)
@@ -147,7 +155,11 @@ export function createDocumentApiRouter({ document, source, origin, targetLabel,
     },
     context(annotations, files) {
       const ordered = orderDocumentAnnotations(annotations)
-      return { ordered, plan: planDocumentPages(ordered), document: docInfo, source, files }
+      return { ordered, plan: planDocumentPages(ordered), document: docInfo, source, files, elements: new Map() }
+    },
+    /** The context with the element maps of its annotated pages, for the `Text:` lines. */
+    async withElements(ctx) {
+      return { ...ctx, elements: await elementsForPages(caches, ctx.plan.map((p) => p.page)) }
     }
   }
 
@@ -161,7 +173,7 @@ export function createDocumentApiRouter({ document, source, origin, targetLabel,
     }))
   })
 
-  // The text layer as element map follows later; until then a PDF has none.
+  // The client asks this of every image target; a PDF's element maps are per page.
   router.get('/api/elements', (_req, res) => {
     res.json(success({ elements: [] }))
   })
