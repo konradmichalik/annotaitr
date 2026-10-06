@@ -270,6 +270,24 @@ describe('captureUrl', () => {
     expect(playwright.chromium.launch).not.toHaveBeenCalled()
   })
 
+  it('names the install command when the Chromium build is missing', async () => {
+    const playwright = await import('playwright')
+    playwright.chromium.launch.mockRejectedValueOnce(
+      new Error("browserType.launch: Executable doesn't exist at /cache/ms-playwright/chromium/chrome")
+    )
+    const { captureUrl } = await import('../../../../server/image/still/loader.js')
+    await expect(captureUrl('http://localhost:3000', { width: 1920, height: 1080 })).rejects.toThrow(
+      /npx playwright@\d+\.\d+\.\d+ install chromium/
+    )
+  })
+
+  it('passes any other launch error through unchanged', async () => {
+    const playwright = await import('playwright')
+    playwright.chromium.launch.mockRejectedValueOnce(new Error('spawn EACCES'))
+    const { captureUrl } = await import('../../../../server/image/still/loader.js')
+    await expect(captureUrl('http://localhost:3000', { width: 1920, height: 1080 })).rejects.toThrow(/^spawn EACCES$/)
+  })
+
   it('rejects a screenshot over the byte-size cap and still closes the browser', async () => {
     const playwright = await import('playwright')
     playwright.__mockPage.screenshot.mockResolvedValueOnce(Buffer.alloc(16 * 1024 * 1024, 1))
