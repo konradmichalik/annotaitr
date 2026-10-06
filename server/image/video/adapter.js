@@ -37,7 +37,7 @@ export async function buildVideoServer({ video, origin = 'cli', targetLabel = nu
       app.use(createVideoApiRouter({ video, origin, targetLabel, state, voiceNotes, resolveDecision: safeResolve }))
       app.use(createThreadsRouter({
         session,
-        current: (req) => ({ kind: 'video', fingerprint: session?.fingerprint ?? null, duration: videoDuration(req) })
+        current: (req) => ({ duration: videoDuration(req) })
       }))
       app.use(createTranscriptionRouter({ available: voiceNotes, config: transcription }))
     }

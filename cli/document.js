@@ -5,7 +5,7 @@ import { captureFlagError } from './args.js'
 import { fileExists } from './detect.js'
 import { fail } from './help.js'
 import { serveUntilDecision } from './outcome.js'
-import { hashFile } from '../server/image/common/fingerprint.js'
+import { fingerprintInBackground } from '../server/image/common/fingerprint.js'
 import { openSession } from './session.js'
 
 /**
@@ -77,7 +77,7 @@ export async function runDocument({ target, origin, viewportSpec, delaySpec, sou
     return
   }
 
-  const reviewed = { ...opened, fingerprint: await hashFile(pdfPath) }
+  const reviewed = { ...opened, fingerprint: fingerprintInBackground(pdfPath) }
 
   const freshness = sourcePath ? await isSourceNewer(sourcePath, pdfPath) : { newer: false }
   const source = sourcePath ? { label: basename(sourcePath), newer: freshness.newer === true } : null

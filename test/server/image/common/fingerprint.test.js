@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
-import { hashFile } from '../../../../server/image/common/fingerprint.js'
+import { hashFile, fingerprintInBackground } from '../../../../server/image/common/fingerprint.js'
 
 describe('hashFile', () => {
   let dir
@@ -18,6 +18,12 @@ describe('hashFile', () => {
     expect(a).toBe(`sha256:${createHash('sha256').update('same').digest('hex')}`)
     expect(await hashFile(join(dir, 'b.png'))).toBe(a)
     expect(await hashFile(join(dir, 'c.png'))).not.toBe(a)
+  })
+
+  it('hashes in the background and settles on null when the file cannot be read, so a review never fails on it', async () => {
+    await writeFile(join(dir, 'd.png'), 'same')
+    expect(await fingerprintInBackground(join(dir, 'd.png'))).toBe(await hashFile(join(dir, 'a.png')))
+    expect(await fingerprintInBackground(join(dir, 'missing.png'))).toBeNull()
   })
 
   it('rejects for a missing file', async () => {

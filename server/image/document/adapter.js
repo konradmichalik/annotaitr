@@ -36,7 +36,7 @@ export async function buildDocumentServer({ document, source = null, origin = 'c
       app.use(createDocumentApiRouter({ document, source, origin, targetLabel, state, caches, voiceNotes, resolveDecision: safeResolve }))
       app.use(createThreadsRouter({
         session,
-        current: () => ({ kind: 'document', fingerprint: session?.fingerprint ?? null, pages: document.pages.map((p) => p.number) })
+        current: () => ({ pages: document.pages.map((p) => p.number) })
       }))
       app.use(createTranscriptionRouter({ available: voiceNotes, config: transcription }))
     }

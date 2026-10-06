@@ -9,17 +9,19 @@ export function videoDuration(req) {
 }
 
 /**
- * Last round's marks and replies. `current(req)` is read per request, so a
- * recapture at another viewport is reflected without restarting.
+ * Last round's marks and replies. Kind and fingerprint come from the session;
+ * `current(req)` adds what only the adapter knows (image size, pages, duration)
+ * and is read per request, so a recapture at another viewport is reflected.
  */
 export function createThreadsRouter({ session, current }) {
   const router = Router()
-  router.get('/api/threads', (req, res) => {
+  router.get('/api/threads', async (req, res) => {
     const previous = session?.previous ?? null
+    const facts = { kind: session?.target.kind, fingerprint: await session?.fingerprint ?? null, ...current(req) }
     res.json(success({
       sessionId: session?.sessionId ?? null,
       round: previous?.round ?? null,
-      threads: anchorThreads(previous, current(req))
+      threads: anchorThreads(previous, facts)
     }))
   })
   return router

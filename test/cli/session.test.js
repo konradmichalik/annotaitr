@@ -34,6 +34,12 @@ describe('review sessions in the CLI', () => {
     expect(session).toMatchObject({ round: 1, writtenAt: 2000, target, threads: [{ handle: 'a3f19c2e', number: 1, annotation: pin }] })
   })
 
+  it('waits for a fingerprint still being computed before storing it', async () => {
+    const opened = { ...(await open()), fingerprint: Promise.resolve('sha256:cd') }
+    await recordSession(opened, { annotations: [pin] }, { now: 2000, dir, log })
+    expect((await readSession(opened.sessionId, dir)).session.fingerprint).toBe('sha256:cd')
+  })
+
   it('stores the fingerprint the runner attached to the session', async () => {
     const opened = { ...(await open()), fingerprint: 'sha256:ab' }
     await recordSession(opened, { annotations: [pin] }, { now: 2000, dir, log })

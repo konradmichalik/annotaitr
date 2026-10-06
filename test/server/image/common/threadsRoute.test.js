@@ -22,7 +22,7 @@ describe('threads route', () => {
   }
 
   it('answers the anchored previous round', async () => {
-    const url = await serve(createThreadsRouter({ session, current: () => ({ kind: 'file', fingerprint: 'sha256:a', width: 50, height: 50 }) }))
+    const url = await serve(createThreadsRouter({ session, current: () => ({ width: 50, height: 50 }) }))
     const body = await (await fetch(`${url}/api/threads`)).json()
     expect(body).toEqual({ success: true, data: { sessionId: '2f8c1a9e04b7', round: 1, threads: [{ ...session.previous.threads[0], anchor: 'exact', reason: null }] } })
   })
@@ -41,11 +41,27 @@ describe('threads route', () => {
     let width = 50
     const url = await serve(createThreadsRouter({
       session: { ...session, target: { kind: 'url', label: 'http://x/' } },
-      current: () => ({ kind: 'url', fingerprint: null, width, height: 50 })
+      current: () => ({ width, height: 50 })
     }))
     expect((await (await fetch(`${url}/api/threads`)).json()).data.threads[0].anchor).toBe('ghost')
     width = 1
     expect((await (await fetch(`${url}/api/threads`)).json()).data.threads[0].anchor).toBe('orphan')
+  })
+
+  it('takes kind and fingerprint from the session, so a URL is never exact even with matching fingerprints', async () => {
+    const url = await serve(createThreadsRouter({
+      session: { ...session, target: { kind: 'url', label: 'http://x/' } },
+      current: () => ({ width: 50, height: 50 })
+    }))
+    expect((await (await fetch(`${url}/api/threads`)).json()).data.threads[0].anchor).toBe('ghost')
+  })
+
+  it('waits for a fingerprint that is still being computed', async () => {
+    const url = await serve(createThreadsRouter({
+      session: { ...session, fingerprint: Promise.resolve('sha256:a') },
+      current: () => ({ width: 50, height: 50 })
+    }))
+    expect((await (await fetch(`${url}/api/threads`)).json()).data.threads[0].anchor).toBe('exact')
   })
 })
 

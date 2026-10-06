@@ -2,7 +2,7 @@ import { resolve as resolvePath, basename } from 'node:path'
 import { captureFlagError } from './args.js'
 import { fail } from './help.js'
 import { serveUntilDecision } from './outcome.js'
-import { hashFile } from '../server/image/common/fingerprint.js'
+import { fingerprintInBackground } from '../server/image/common/fingerprint.js'
 import { openSession } from './session.js'
 
 /**
@@ -41,6 +41,6 @@ export async function runVideo({ target, origin, viewportSpec, delaySpec, sessio
 
   const opened = await openSession({ identity: resolvePath(target), target: { kind: 'video', label: basename(target) }, ...session })
   if (opened.error) { fail(opened.error); return }
-  const reviewed = { ...opened, fingerprint: await hashFile(video.path) }
+  const reviewed = { ...opened, fingerprint: fingerprintInBackground(video.path) }
   await serveUntilDecision(await buildVideoServer({ video, origin, targetLabel: basename(target), session: reviewed }), reviewed)
 }

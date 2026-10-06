@@ -53,12 +53,7 @@ export async function buildImageServer(options) {
       }))
       app.use(createThreadsRouter({
         session,
-        current: () => ({
-          kind: session?.target.kind ?? 'file',
-          fingerprint: session?.fingerprint ?? null,
-          width: state.capture.width,
-          height: state.capture.height
-        })
+        current: () => ({ width: state.capture.width, height: state.capture.height })
       }))
       app.use(createTranscriptionRouter({ available: voiceNotes, config: transcription }))
     }

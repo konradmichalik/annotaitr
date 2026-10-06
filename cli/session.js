@@ -45,7 +45,9 @@ export async function openSession({
 export async function recordSession(opened, decision, { now = Date.now(), dir = sessionDir(), log = stderrLine } = {}) {
   const describeElement = (annotation) => describeMatch(matchAnnotation(decision.domMap, annotation))
   const threads = buildThreads(decision.annotations ?? [], describeElement)
-  const session = nextSession(opened.previous, { sessionId: opened.sessionId, target: opened.target, fingerprint: opened.fingerprint ?? null, threads, now })
+  const session = nextSession(opened.previous, {
+    sessionId: opened.sessionId, target: opened.target, fingerprint: await opened.fingerprint, threads, now
+  })
   try {
     await writeSession(session, dir)
   } catch (error) {

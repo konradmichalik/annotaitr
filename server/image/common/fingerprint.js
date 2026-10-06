@@ -8,3 +8,12 @@ export async function hashFile(path) {
   await pipeline(createReadStream(path), hash)
   return `sha256:${hash.digest('hex')}`
 }
+
+/**
+ * Started next to the server instead of before it, so a large video does not
+ * hold back the browser. Settles on null when the file cannot be read: the
+ * marks then show as ghosts, and the review itself never fails on it.
+ */
+export function fingerprintInBackground(path) {
+  return hashFile(path).catch(() => null)
+}
