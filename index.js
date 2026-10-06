@@ -224,12 +224,12 @@ export function parseArgs(argv) {
       }
       feedbackNotesFlagGiven = true
     } else if (arg === '--source') {
-      if (!args[i + 1]) {
+      if (!args[i + 1] || args[i + 1].startsWith('-')) {
         return { error: '--source requires the path of the file the PDF was rendered from' }
       }
       sourceSpec = args[++i]
     } else if (arg === '--pages') {
-      if (!args[i + 1]) {
+      if (!args[i + 1] || args[i + 1].startsWith('-')) {
         return { error: '--pages requires a page range, e.g. 1-5,8,12-' }
       }
       const parsed = parsePageRanges(args[++i])

@@ -100,6 +100,11 @@ describe('parseArgs', () => {
     expect(parseArgs([...BASE, '--pages']).error).toMatch(/--pages requires/)
   })
 
+  it('does not take the next flag as the value of --source or --pages', () => {
+    expect(parseArgs([...BASE, 'deck.pdf', '--source', '--pages', '1-2']).error).toMatch(/--source requires/)
+    expect(parseArgs([...BASE, 'deck.pdf', '--pages', '--source', 'deck.pptx']).error).toMatch(/--pages requires/)
+  })
+
   it('errors on a malformed --pages range', () => {
     expect(parseArgs([...BASE, '--pages', '5-2', 'deck.pdf']).error).toMatch(/--pages: "5-2"/)
   })
