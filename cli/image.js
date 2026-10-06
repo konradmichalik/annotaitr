@@ -7,7 +7,6 @@ import { fileExists, isPdfTarget, isVideoTarget } from './detect.js'
 import { fail, printHelpAndExit } from './help.js'
 import { serveUntilDecision } from './outcome.js'
 import { openSession } from './session.js'
-import { urlIdentity } from '../server/core/session/identity.js'
 import { runVideo } from './video.js'
 import { runDocument } from './document.js'
 
@@ -80,7 +79,7 @@ async function resolveImageCapture(targets, { viewportSpec, delaySpec }, { clipb
 
 function imageSessionTarget(target, clipboardPath) {
   if (clipboardPath || !target) { return { identity: null, target: { kind: 'clipboard', label: 'clipboard image' } } }
-  if (isSupportedCaptureUrl(target)) { return { identity: urlIdentity(target), target: { kind: 'url', label: target } } }
+  if (isSupportedCaptureUrl(target)) { return { identity: new URL(target).href, target: { kind: 'url', label: target } } }
   return { identity: resolvePath(target), target: { kind: 'file', label: target } }
 }
 

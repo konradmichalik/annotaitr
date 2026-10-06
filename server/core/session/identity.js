@@ -16,7 +16,3 @@ export function sessionIdFor(identity) {
 export function newSessionId() {
   return randomBytes(6).toString('hex')
 }
-
-export function urlIdentity(url) {
-  return new URL(url).href
-}

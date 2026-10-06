@@ -25,11 +25,34 @@ function sessionPath(dir, sessionId) {
   return join(dir, `${sessionId}.json`)
 }
 
+// On Linux tmpdir() is the shared /tmp: a folder another user created first
+// could let them plant or swap session files, or a symlink under our temp name.
+async function assertPrivateDir(dir) {
+  const info = await lstat(dir)
+  const foreign = typeof process.getuid === 'function' && info.uid !== process.getuid()
+  if (!info.isDirectory() || foreign || (info.mode & 0o077) !== 0) {
+    throw new Error(`${dir} must be a folder owned by you and closed to others (chmod 700)`)
+  }
+}
+
+function isWellFormed(session) {
+  return Array.isArray(session.threads) &&
+    session.threads.every((t) => Array.isArray(t?.replies)) &&
+    Number.isInteger(session.round) &&
+    Number.isFinite(session.writtenAt)
+}
+
 export async function readSession(sessionId, dir = sessionDir()) {
-  if (!isSessionId(sessionId)) { return { error: `Invalid session id "${sessionId}"` } }
+  let path
+  try {
+    path = sessionPath(dir, sessionId)
+    await assertPrivateDir(dir)
+  } catch (error) {
+    return error.code === 'ENOENT' ? { missing: true } : { error: error.message }
+  }
   let raw
   try {
-    raw = await readFile(sessionPath(dir, sessionId), 'utf-8')
+    raw = await readFile(path, 'utf-8')
   } catch (error) {
     if (error.code === 'ENOENT') { return { missing: true } }
     return { error: `Cannot read session ${sessionId}: ${error.message}` }
@@ -43,31 +66,8 @@ export async function readSession(sessionId, dir = sessionDir()) {
   if (session?.schemaVersion !== SCHEMA_VERSION) {
     return { error: `Session ${sessionId} has schema version ${session?.schemaVersion}, this build reads ${SCHEMA_VERSION}` }
   }
-  if (!Array.isArray(session.threads) || !Number.isInteger(session.round) || !Number.isFinite(session.writtenAt)) {
-    return { error: `Session ${sessionId} is malformed` }
-  }
+  if (!isWellFormed(session)) { return { error: `Session ${sessionId} is malformed` } }
   return { session }
-}
-
-// On Linux tmpdir() is the shared /tmp: a folder another user created first
-// could let them swap session files or plant a symlink under our temp name.
-async function assertPrivateDir(dir) {
-  const info = await lstat(dir)
-  const foreign = typeof process.getuid === 'function' && info.uid !== process.getuid()
-  if (!info.isDirectory() || foreign || (info.mode & 0o077) !== 0) {
-    throw new Error(`${dir} must be a folder owned by you and closed to others (chmod 700)`)
-  }
-}
-
-export async function writeSession(session, dir = sessionDir()) {
-  const target = sessionPath(dir, session.sessionId)
-  await mkdir(dir, { recursive: true, mode: 0o700 })
-  await assertPrivateDir(dir)
-  // A reader must never see half a file, so the content lands under a temp name first.
-  const temp = `${target}.${randomBytes(6).toString('hex')}.tmp`
-  await writeFile(temp, JSON.stringify(session, null, 2), { mode: 0o600, flag: 'wx' })
-  await rename(temp, target)
-  return target
 }
 
 async function acquireLock(lock) {
@@ -90,6 +90,32 @@ async function acquireLock(lock) {
   }
 }
 
+async function withLock(target, work) {
+  const lock = `${target}.lock`
+  await acquireLock(lock)
+  try {
+    return await work()
+  } finally {
+    await rm(lock, { force: true })
+  }
+}
+
+// A reader must never see half a file, so the content lands under a temp name first.
+async function writeAtomic(target, session) {
+  const temp = `${target}.${randomBytes(6).toString('hex')}.tmp`
+  await writeFile(temp, JSON.stringify(session, null, 2), { mode: 0o600, flag: 'wx' })
+  await rename(temp, target)
+  return target
+}
+
+// Locked as well, so a new round never lands in the middle of a reply that would write the old one back.
+export async function writeSession(session, dir = sessionDir()) {
+  const target = sessionPath(dir, session.sessionId)
+  await mkdir(dir, { recursive: true, mode: 0o700 })
+  await assertPrivateDir(dir)
+  return withLock(target, () => writeAtomic(target, session))
+}
+
 /**
  * Read, change and write a session under a lock file. Agents often run
  * several `reply` calls in parallel, and without the lock the last write
@@ -99,18 +125,15 @@ async function acquireLock(lock) {
 export async function updateSession(sessionId, dir, update) {
   const read = await readSession(sessionId, dir)
   if (!read.session) { return read }
-  const lock = `${sessionPath(dir, sessionId)}.lock`
-  await acquireLock(lock)
-  try {
+  const target = sessionPath(dir, sessionId)
+  return withLock(target, async () => {
     const fresh = await readSession(sessionId, dir)
     if (!fresh.session) { return fresh }
     const result = update(fresh.session)
     if (result.error) { return result }
-    await writeSession(result.session, dir)
+    await writeAtomic(target, result.session)
     return result
-  } finally {
-    await rm(lock, { force: true })
-  }
+  })
 }
 
 // os.tmpdir() is not reliably cleaned on macOS, so old sessions are removed

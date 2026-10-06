@@ -97,6 +97,33 @@ describe('session store', () => {
     }
   })
 
+  it('refuses to read sessions from a folder other users can open, which could plant them', async () => {
+    await writeSession(session(), dir)
+    await chmod(dir, 0o755)
+    try {
+      expect((await readSession(ID, dir)).error).toMatch(/closed to others/)
+    } finally {
+      await chmod(dir, 0o700)
+    }
+  })
+
+  it('reports a thread without a replies list as malformed', async () => {
+    await writeSession(session({ threads: [{ handle: 'a3f19c2e', number: 1, annotation: {} }] }), dir)
+    expect((await readSession(ID, dir)).error).toMatch(/malformed/)
+  })
+
+  it('waits for a running reply before writing a new round over it', async () => {
+    await writeSession(session(), dir)
+    const lock = join(dir, `${ID}.json.lock`)
+    await writeFile(lock, '')
+    const writing = writeSession(session({ round: 2 }), dir)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect((await readSession(ID, dir)).session.round).toBe(1)
+    await rm(lock)
+    await writing
+    expect((await readSession(ID, dir)).session.round).toBe(2)
+  })
+
   it('prunes nothing when the folder does not exist yet', async () => {
     expect(await pruneSessions(Date.now(), dir)).toBe(0)
   })
