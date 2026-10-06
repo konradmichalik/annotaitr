@@ -106,3 +106,17 @@ describe('parseAnnotationsJson with video times', () => {
     expect(() => parseAnnotationsJson(JSON.stringify([{ ...timed, endTime: 1 }]))).toThrow(/endTime/)
   })
 })
+
+describe('parseAnnotationsJson with PDF pages', () => {
+  const paged = { id: 'p', type: 'box', geometry: { x: 0, y: 0, width: 1, height: 1 }, page: 3 }
+
+  it('keeps the page on import', () => {
+    expect(parseAnnotationsJson(JSON.stringify([paged]))).toEqual([paged])
+  })
+
+  it('rejects a page that is not a whole number from 1', () => {
+    expect(() => parseAnnotationsJson(JSON.stringify([{ ...paged, page: 0 }]))).toThrow(/page/)
+    expect(() => parseAnnotationsJson(JSON.stringify([{ ...paged, page: 1.5 }]))).toThrow(/page/)
+    expect(() => parseAnnotationsJson(JSON.stringify([{ ...paged, page: '2' }]))).toThrow(/page/)
+  })
+})

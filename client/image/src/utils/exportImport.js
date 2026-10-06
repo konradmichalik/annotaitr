@@ -90,6 +90,7 @@ function validateAnnotation(ann, index) {
     throw new Error(`Annotation ${index + 1}: arrowStyle must be a string.`)
   }
   validateTimes(ann, index)
+  validatePage(ann, index)
 }
 
 function isValidTime(value) {
@@ -103,6 +104,13 @@ function validateTimes(ann, index) {
   }
   if (ann.endTime !== undefined && (!isValidTime(ann.endTime) || ann.time === undefined || ann.endTime <= ann.time)) {
     throw new Error(`Annotation ${index + 1}: endTime must be a number after time.`)
+  }
+}
+
+/** page only exists on annotations of a PDF. */
+function validatePage(ann, index) {
+  if (ann.page !== undefined && ann.page !== null && !(Number.isInteger(ann.page) && ann.page >= 1)) {
+    throw new Error(`Annotation ${index + 1}: page must be a whole number >= 1.`)
   }
 }
 

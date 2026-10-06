@@ -1901,6 +1901,99 @@ button.voice-note:hover {
   line-height: 1.5;
 }
 
+/* === Document review: page strip and stale-PDF banner === */
+.page-strip {
+  flex-shrink: 0;
+  width: 152px;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  background: var(--bg-sidebar);
+}
+
+.page-strip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  list-style: none;
+}
+
+.page-strip-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 4px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.page-strip-item:hover {
+  background: var(--bg-secondary);
+}
+
+.page-strip-item:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.page-strip-item--current {
+  border-color: var(--primary);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.page-strip-thumb {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.page-strip-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3125rem;
+  border-radius: 9999px;
+  background: var(--primary-strong);
+  color: var(--on-primary-strong);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  text-align: center;
+}
+
+.document-banner {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-top: 1px solid var(--warning);
+  background: var(--warning-bg);
+  color: var(--text);
+  font-size: 0.875rem;
+}
+
+@media (forced-colors: active) {
+  .page-strip-item--current {
+    border-color: Highlight;
+  }
+
+  .page-strip-badge {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+  }
+}
+
 .timeline {
   flex-shrink: 0;
   padding: 10px 20px 12px;

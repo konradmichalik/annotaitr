@@ -55,6 +55,11 @@ export function createDocumentApiRouter({ document, source, origin, targetLabel,
   router.get('/api/pages/:page/image', servePage(caches.pages))
   router.get('/api/pages/:page/thumb', servePage(caches.thumbs))
 
+  // The text layer as element map follows later; until then a PDF has none.
+  router.get('/api/elements', (_req, res) => {
+    res.json(success({ elements: [] }))
+  })
+
   router.get('/api/annotations', (_req, res) => {
     res.json(success({ annotations: state.annotations }))
   })
