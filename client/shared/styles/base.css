@@ -1,0 +1,180 @@
+/* Design tokens for both themes, reset, base typography, scrollbars, focus ring and key hints. */
+
+:root {
+  /* Nord Snow Storm + Polar Night */
+  --bg: #fff;
+  --bg-secondary: #eceff4; /* nord6 */
+  --bg-sidebar: #f4f6f9; /* between bg and bg-secondary */
+  --bg-card: #fff;
+  --text: #2e3440; /* nord0 */
+  --text-muted: #4c566a; /* nord3 */
+  --border: #d8dee9; /* nord4 */
+  --border-light: #e5e9f0; /* nord5 */
+
+  /* Nord Frost */
+  --primary: #5e81ac; /* nord10 */
+
+  /* A darker primary that carries small white text at WCAG AA contrast. */
+  --primary-strong: #4c6a91;
+  --on-primary-strong: #fff;
+
+  /* Nord Aurora */
+  --success: #a3be8c; /* nord14 */
+  --success-bg: rgb(163 190 140 / 12%);
+  --warning: #d08770; /* nord12 */
+  --warning-bg: rgb(208 135 112 / 12%);
+  --danger: #bf616a; /* nord11 */
+  --deletion-bg: rgb(191 97 106 / 12%);
+  --deletion-text: #bf616a; /* nord11 */
+  --comment-bg: rgb(235 203 139 / 18%);
+  --comment-border: #ebcb8b; /* nord13 */
+  --code-bg: #2e3440; /* nord0 */
+  --mermaid-bg: #f0f2f5; /* light neutral for diagrams */
+  --shadow: 0 1px 3px rgb(0 0 0 / 6%), 0 4px 12px rgb(0 0 0 / 4%);
+  --shadow-lg: 0 4px 16px rgb(0 0 0 / 10%), 0 12px 40px rgb(0 0 0 / 6%);
+  --dot-color: rgb(94 129 172 / 12%); /* nord10 tint */
+
+  /* Scrollbar */
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgb(76 86 106 / 20%); /* nord3 */
+  --scrollbar-thumb-hover: rgb(76 86 106 / 35%);
+
+  /* Badge */
+  --badge-bg: #d8dee9; /* nord4 */
+  --badge-text: #4c566a; /* nord3 */
+
+  /* Layout */
+  --content-max-width: 900px;
+  --sidebar-width: 300px;
+  --sidebar-collapsed-width: 48px;
+  --toc-width: 220px;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  /* Typography */
+  --base-font-size: 15px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
+}
+
+/* Dark mode variables — Nord Polar Night */
+:root[data-theme="dark"] {
+  --bg: #2e3440; /* nord0 */
+  --bg-secondary: #3b4252; /* nord1 — chrome: header, footer */
+  --bg-sidebar: #353b49; /* between nord0 and nord1 */
+  --bg-card: #2e3440; /* nord0 — article card, same as body */
+  --text: #eceff4; /* nord6 */
+  --text-muted: #d8dee9; /* nord4 */
+  --border: #434c5e; /* nord2 */
+  --border-light: #434c5e; /* nord2 — visible card border */
+
+  /* Nord Frost */
+  --primary: #88c0d0; /* nord8 */
+  --primary-strong: #88c0d0;
+  --on-primary-strong: #2e3440;
+
+  /* Nord Aurora */
+  --success: #a3be8c; /* nord14 */
+  --success-bg: rgb(163 190 140 / 12%);
+  --warning: #d08770; /* nord12 */
+  --warning-bg: rgb(208 135 112 / 12%);
+  --danger: #bf616a; /* nord11 */
+  --deletion-bg: rgb(191 97 106 / 15%);
+  --deletion-text: #bf616a; /* nord11 */
+  --comment-bg: rgb(235 203 139 / 12%);
+  --comment-border: #ebcb8b; /* nord13 */
+  --code-bg: #2e3440; /* nord0 */
+  --mermaid-bg: #2e3440; /* nord0 — matches dark mermaid theme */
+  --shadow: 0 1px 3px rgb(0 0 0 / 25%), 0 4px 12px rgb(0 0 0 / 20%);
+  --shadow-lg: 0 4px 16px rgb(0 0 0 / 35%), 0 12px 40px rgb(0 0 0 / 25%);
+  --dot-color: rgb(136 192 208 / 12%); /* nord8 tint */
+
+  /* Scrollbar */
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgb(216 222 233 / 12%); /* nord4 */
+  --scrollbar-thumb-hover: rgb(216 222 233 / 22%);
+
+  /* Badge */
+  --badge-bg: #4c566a; /* nord3 */
+  --badge-text: #eceff4; /* nord6 */
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] body {
+  color-scheme: dark;
+}
+
+/* === Reset & Base === */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* One look for every key hint, in the settings and in the image tools. */
+kbd {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text);
+  white-space: nowrap;
+  box-shadow: 0 1px 0 var(--border);
+}
+
+/* === Scrollbar === */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Read by screen readers, where an icon alone would say nothing. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* One focus ring for every control, drawn only for keyboard focus. */
+:where(button, a, [role="button"], [role="tab"], [role="menuitem"], [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}

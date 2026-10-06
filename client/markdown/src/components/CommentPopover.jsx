@@ -5,7 +5,7 @@ import { FileAutocomplete } from './FileAutocomplete.jsx'
 import { TextareaBackdrop } from './TextareaBackdrop.jsx'
 import { getOffscreenSide } from '../utils/popoverVisibility.js'
 
-const POPOVER_WIDTH = 384
+const POPOVER_WIDTH = 320
 const GAP = 8
 
 function computePosition(anchorRect) {
@@ -26,6 +26,7 @@ export function CommentPopover({
   anchorEl,
   initialText = '',
   placeholder = 'Add a comment...',
+  submitLabel = 'Save',
   onSubmit,
   onClose,
 }) {
@@ -255,7 +256,7 @@ export function CommentPopover({
           disabled={!hasText}
           onClick={handleSubmit}
         >
-          Save
+          {submitLabel}
         </button>
       </div>
     </div>

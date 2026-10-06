@@ -22,6 +22,7 @@ import { useSettings } from './hooks/useSettings.js'
 import { useCrossFileSearch } from './hooks/useCrossFileSearch.js'
 import { SettingsModal } from './components/SettingsModal.jsx'
 import { Logo } from '../../shared/components/Logo.jsx'
+import { DoneScreen, DoneAutoClose } from '../../shared/components/DoneScreen.jsx'
 import { getItem, setItem } from '../../shared/utils/storage.js'
 import 'katex/dist/katex.min.css'
 import './styles.css'
@@ -626,47 +627,34 @@ export default function App() {
   const { serverGone, reconnectState } = useServerConnection({ submitted })
 
   const { state: autoCloseState, enableAndStart } = useAutoClose(submitted, settings.autoCloseDelay)
-  const { width: panelWidth, handleMouseDown: handlePanelResize } = useResizablePanel('md-annotator-panel-width', 280, 1)
+  const { width: panelWidth, handleMouseDown: handlePanelResize } = useResizablePanel('md-annotator-panel-width', 300, 1)
   const { width: tocWidth, handleMouseDown: handleTocResize } = useResizablePanel('md-annotator-toc-width', 220, -1)
 
   if (serverGone && !submitted) {
     return (
-      <div className="app">
-        <div className="done-screen">
-          <div className="done-card">
-            <div className="done-icon done-icon--disconnected">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="1" y1="1" x2="23" y2="23"/>
-                <path d="M16.72 11.06A10.94 10.94 0 0119 12.55"/>
-                <path d="M5 12.55a10.94 10.94 0 015.17-2.39"/>
-                <path d="M10.71 5.05A16 16 0 0122.56 9"/>
-                <path d="M1.42 9a15.91 15.91 0 014.7-2.88"/>
-                <path d="M8.53 16.11a6 6 0 016.95 0"/>
-                <line x1="12" y1="20" x2="12.01" y2="20"/>
-              </svg>
+      <div className="app-shell">
+        <DoneScreen
+          variant="disconnected"
+          title="Server Disconnected"
+          message="The server is no longer available. Your annotations have not been submitted."
+        >
+          {reconnectState === 'reconnecting' && (
+            <p className="done-hint">Attempting to reconnect...</p>
+          )}
+          {reconnectState === 'failed' && (
+            <p className="done-hint">Could not reconnect to the server.</p>
+          )}
+          {annotations.length > 0 && (
+            <div className="done-actions">
+              <p className="done-backup-info">
+                {annotations.length} annotation{annotations.length !== 1 ? 's' : ''} in this file not yet submitted.
+              </p>
+              <button onClick={() => setExportModalOpen(true)} className="btn btn-feedback">
+                Export Annotations
+              </button>
             </div>
-            <h1 className="done-title">Server Disconnected</h1>
-            <p className="done-message">
-              The server is no longer available. Your annotations have not been submitted.
-            </p>
-            {reconnectState === 'reconnecting' && (
-              <p className="done-hint">Attempting to reconnect...</p>
-            )}
-            {reconnectState === 'failed' && (
-              <p className="done-hint">Could not reconnect to the server.</p>
-            )}
-            {annotations.length > 0 && (
-              <div className="done-actions">
-                <p className="done-backup-info">
-                  {annotations.length} annotation{annotations.length !== 1 ? 's' : ''} in this file not yet submitted.
-                </p>
-                <button onClick={() => setExportModalOpen(true)} className="btn btn-feedback">
-                  Export Annotations
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+          )}
+        </DoneScreen>
         <ExportModal
           isOpen={exportModalOpen}
           onClose={() => setExportModalOpen(false)}
@@ -683,62 +671,29 @@ export default function App() {
 
   if (submitted) {
     return (
-      <div className="app">
-        <div className="done-screen">
-          <div className="done-card">
-            <div className={`done-icon done-icon--${decision}`}>
-              {decision === 'approved' ? (
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-              ) : (
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13"/>
-                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                </svg>
-              )}
-            </div>
-            <h1 className="done-title">
-              {decision === 'approved'
-                ? (approvedNoteCount > 0 ? 'Approved with Notes' : 'Approved')
-                : 'Feedback Submitted'}
-            </h1>
-            <p className="done-message">
-              {decision === 'approved'
-                ? (approvedNoteCount > 0
-                  ? `Approved as-is. ${approvedNoteCount} annotation${approvedNoteCount !== 1 ? 's' : ''} passed along as notes.`
-                  : 'No changes requested. The file was approved as-is.')
-                : `${totalAnnotationCount} annotation${totalAnnotationCount !== 1 ? 's' : ''} ${ORIGIN_LABELS[origin] ? `sent to ${ORIGIN_LABELS[origin]}` : 'submitted'}.`}
-            </p>
-            {decision === 'feedback' && ORIGIN_LABELS[origin]
-              ? <p className="done-hint">{ORIGIN_LABELS[origin]} is processing your feedback. A new browser tab will open with the next iteration.</p>
-              : <p className="done-hint">You can close this tab.</p>}
-            <div className="done-autoclose">
-              {autoCloseState.phase === 'counting' && (
-                <p className="done-countdown">
-                  This tab will close in <span className="done-countdown-number">{autoCloseState.remaining}</span> second{autoCloseState.remaining !== 1 ? 's' : ''}...
-                </p>
-              )}
-              {autoCloseState.phase === 'closeFailed' && (
-                <p className="done-hint">Could not close this tab automatically. Please close it manually.</p>
-              )}
-              {autoCloseState.phase === 'prompt' && (
-                <label className="done-autoclose-prompt">
-                  <input
-                    type="checkbox"
-                    checked={false}
-                    onChange={() => {
-                      updateSetting('autoCloseDelay', '3')
-                      enableAndStart()
-                    }}
-                  />
-                  <span>Auto-close this tab after 3 seconds</span>
-                </label>
-              )}
-            </div>
-          </div>
-          <Logo className="app-logo done-logo" />
-        </div>
+      <div className="app-shell">
+        <DoneScreen
+          variant={decision}
+          title={decision === 'approved'
+            ? (approvedNoteCount > 0 ? 'Approved with Notes' : 'Approved')
+            : 'Feedback Submitted'}
+          message={decision === 'approved'
+            ? (approvedNoteCount > 0
+              ? `Approved as-is. ${approvedNoteCount} annotation${approvedNoteCount !== 1 ? 's' : ''} passed along as notes.`
+              : 'No changes requested. The file was approved as-is.')
+            : `${totalAnnotationCount} annotation${totalAnnotationCount !== 1 ? 's' : ''} ${ORIGIN_LABELS[origin] ? `sent to ${ORIGIN_LABELS[origin]}` : 'submitted'}.`}
+        >
+          {decision === 'feedback' && ORIGIN_LABELS[origin]
+            ? <p className="done-hint">{ORIGIN_LABELS[origin]} is processing your feedback. A new browser tab will open with the next iteration.</p>
+            : <p className="done-hint">You can close this tab.</p>}
+          <DoneAutoClose
+            state={autoCloseState}
+            onEnable={() => {
+              updateSetting('autoCloseDelay', '3')
+              enableAndStart()
+            }}
+          />
+        </DoneScreen>
       </div>
     )
   }
@@ -772,7 +727,7 @@ export default function App() {
   const hasAnyHashMismatch = files.some(f => f.hashMismatch)
 
   return (
-    <div className="app">
+    <div className="app-shell">
       {hasAnyHashMismatch && (
         <div className="hash-mismatch-banner">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -816,32 +771,9 @@ export default function App() {
           {ORIGIN_LABELS[origin] && (
             <span className="origin-badge">{ORIGIN_LABELS[origin]}</span>
           )}
-          <span className="app-filepath">{filePath}</span>
+          <span className="app-target" title={filePath}>{filePath}</span>
         </div>
         <div className="header-right">
-          <div className={`mode-toggle${shiftHeld ? ' mode-toggle--temp' : ''}`}>
-            <button
-              className={`mode-toggle-btn${!effectivePinpointMode ? ' active' : ''}`}
-              onClick={() => setPinpointMode(shiftHeld)}
-              title="Selection mode: select text to annotate (hold Shift to toggle)"
-            >
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12M3 10h8M3 15h10" />
-              </svg>
-              Select
-            </button>
-            <button
-              className={`mode-toggle-btn${effectivePinpointMode ? ' active' : ''}`}
-              onClick={() => setPinpointMode(!shiftHeld)}
-              title="Pinpoint mode: click a block to annotate (hold Shift to toggle)"
-            >
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <circle cx="12" cy="12" r="3" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
-              </svg>
-              Pinpoint
-            </button>
-          </div>
           <button
             onClick={handleSubmitFeedback}
             className="btn btn-feedback"
@@ -902,37 +834,76 @@ export default function App() {
             />
             {!tocCollapsed && (
               <div
-                className="resize-handle"
+                className="panel-splitter"
                 onMouseDown={handleTocResize}
               />
             )}
           </>
         )}
-        <div className="viewer-wrapper">
-          {!isPlainTextFile && <div className="view-toggle">
-            <button
-              className={`view-toggle-btn${viewMode === 'preview' ? ' active' : ''}`}
-              onClick={() => setViewMode('preview')}
-              title="Rendered preview"
-              aria-label="Rendered preview"
+        <div className="viewer-wrapper canvas-surface">
+          <div className="canvas-topbar">
+            <div
+              className={`toolbar${shiftHeld ? ' toolbar--temp' : ''}`}
+              role="toolbar"
+              aria-label="Annotation mode"
             >
-              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-            </button>
-            <button
-              className={`view-toggle-btn${viewMode === 'source' ? ' active' : ''}`}
-              onClick={() => setViewMode('source')}
-              title="Markdown source"
-              aria-label="Markdown source"
-            >
-              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <polyline strokeLinecap="round" strokeLinejoin="round" points="16 18 22 12 16 6" />
-                <polyline strokeLinecap="round" strokeLinejoin="round" points="8 6 2 12 8 18" />
-              </svg>
-            </button>
-          </div>}
+              <button
+                type="button"
+                className={!effectivePinpointMode ? 'active' : ''}
+                aria-pressed={!effectivePinpointMode}
+                onClick={() => setPinpointMode(shiftHeld)}
+                title="Selection mode: select text to annotate (hold Shift to toggle)"
+              >
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12M3 10h8M3 15h10" />
+                </svg>
+                Select
+              </button>
+              <button
+                type="button"
+                className={effectivePinpointMode ? 'active' : ''}
+                aria-pressed={effectivePinpointMode}
+                onClick={() => setPinpointMode(!shiftHeld)}
+                title="Pinpoint mode: click a block to annotate (hold Shift to toggle)"
+              >
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                  <circle cx="12" cy="12" r="3" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
+                </svg>
+                Pinpoint
+              </button>
+            </div>
+            {!isPlainTextFile && (
+              <div className="toolbar" role="toolbar" aria-label="View">
+                <button
+                  type="button"
+                  className={viewMode === 'preview' ? 'active' : ''}
+                  aria-pressed={viewMode === 'preview'}
+                  onClick={() => setViewMode('preview')}
+                  title="Rendered preview"
+                  aria-label="Rendered preview"
+                >
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className={viewMode === 'source' ? 'active' : ''}
+                  aria-pressed={viewMode === 'source'}
+                  onClick={() => setViewMode('source')}
+                  title="Markdown source"
+                  aria-label="Markdown source"
+                >
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                    <polyline strokeLinecap="round" strokeLinejoin="round" points="16 18 22 12 16 6" />
+                    <polyline strokeLinecap="round" strokeLinejoin="round" points="8 6 2 12 8 18" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
           {effectiveViewMode === 'preview' ? (
             <Viewer
               key={activeFile?.path || 'empty'}
@@ -965,7 +936,7 @@ export default function App() {
         </div>
         {!sidebarCollapsed && (
           <div
-            className="resize-handle"
+            className="panel-splitter"
             onMouseDown={handlePanelResize}
           />
         )}

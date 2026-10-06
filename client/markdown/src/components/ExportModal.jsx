@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { formatAnnotationsForExport, formatAnnotationsForJsonExport, copyToClipboard, downloadAsFile, downloadAsJsonFile } from '../utils/export.js'
-import { CloseIcon } from './Icons.jsx'
+import { CloseIcon } from '../../../shared/components/CloseIcon.jsx'
+import { useModalDismiss } from '../../../shared/hooks/useModalDismiss.js'
 
 const CopyIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -27,7 +28,6 @@ export function ExportModal({ isOpen, onClose, annotations, blocks, filePath, co
   const [content, setContent] = useState('')
   const [downloadOpen, setDownloadOpen] = useState(false)
   const dialogRef = useRef(null)
-  const prevFocusedRef = useRef(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -35,20 +35,7 @@ export function ExportModal({ isOpen, onClose, annotations, blocks, filePath, co
     }
   }, [isOpen, annotations, blocks, filePath])
 
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape') {onClose()}
-    }
-    if (isOpen) {
-      prevFocusedRef.current = document.activeElement
-      document.addEventListener('keydown', handleEscape)
-      dialogRef.current?.focus()
-      return () => {
-        document.removeEventListener('keydown', handleEscape)
-        prevFocusedRef.current?.focus?.()
-      }
-    }
-  }, [isOpen, onClose])
+  useModalDismiss(isOpen, onClose, dialogRef)
 
   useEffect(() => {
     if (!isOpen) {setDownloadOpen(false)}

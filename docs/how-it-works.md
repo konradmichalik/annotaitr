@@ -51,7 +51,7 @@ than discarded.
 
 ### Copying and saving
 
-The menu in the sidebar header copies the annotated image (markup and
+The More actions menu (⋮) in the sidebar header copies the annotated image (markup and
 legend baked in, as the agent gets it) to the clipboard or saves it as a
 PNG, and copies the feedback as Markdown, without the temp-file path that
 only means something to an agent. Both are rendered from the annotations
