@@ -356,3 +356,72 @@
   font: inherit;
   cursor: pointer;
 }
+
+/* Agent reply status. The text always uses the body colour, so contrast holds in both themes, and the status colour only tints the background and border. */
+.status-chip {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background: var(--bg-secondary);
+  color: var(--text);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.status-chip--applied {
+  border-color: var(--success);
+  background: var(--success-bg);
+}
+
+.status-chip--partial,
+.status-chip--deferred {
+  border-color: var(--comment-border);
+  background: var(--comment-bg);
+}
+
+.status-chip--declined {
+  border-color: var(--danger);
+  background: var(--deletion-bg);
+}
+
+.status-chip--question {
+  border-color: var(--warning);
+  background: var(--warning-bg);
+}
+
+.status-chip--none {
+  color: var(--text-muted);
+}
+
+.reply-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reply-list-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-start;
+}
+
+.reply-list-text {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.reply-list-time {
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+}
