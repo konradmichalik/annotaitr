@@ -105,12 +105,14 @@ test('text on a PDF page is selected word by word and quoted in the feedback', a
     await expect(page.locator('.page-skeleton')).toHaveCount(0)
     const toolbar = page.getByRole('toolbar', { name: 'Annotation tools' })
     await toolbar.getByText('Text', { exact: true }).click()
-    // Body lines sit 160pt and 188pt below the top of a 960pt wide slide, in 22pt type.
+    // Body lines sit 160pt and 188pt below the top of a 960pt wide slide, in
+    // 22pt type from x 60pt. Both points aim at the middle of a word ("North"
+    // and "stayed"), since word edges shift with the fonts a system has.
     const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
     const scale = canvas.width / 960
-    await page.mouse.move(canvas.x + 70 * scale, canvas.y + 152 * scale)
+    await page.mouse.move(canvas.x + 85 * scale, canvas.y + 152 * scale)
     await page.mouse.down()
-    await page.mouse.move(canvas.x + 120 * scale, canvas.y + 180 * scale, { steps: 4 })
+    await page.mouse.move(canvas.x + 155 * scale, canvas.y + 180 * scale, { steps: 4 })
     await page.mouse.up()
     await expect(page.locator('.comment-popover-element')).toContainText('"North grew 12% South stayed"')
     await page.getByPlaceholder('Add a comment (optional)...').fill('Say rose')
