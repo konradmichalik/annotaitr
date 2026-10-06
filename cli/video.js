@@ -1,4 +1,5 @@
 import { resolve as resolvePath, basename } from 'node:path'
+import { captureFlagError } from './args.js'
 import { fail } from './help.js'
 import { serveUntilDecision } from './outcome.js'
 
@@ -25,14 +26,8 @@ async function loadVideoRuntime() {
 }
 
 export async function runVideo({ target, origin, viewportSpec, delaySpec }) {
-  if (viewportSpec) {
-    fail('--viewport only applies to a URL target, not a video file.')
-    return
-  }
-  if (delaySpec !== null) {
-    fail('--delay only applies to a URL target, not a video file.')
-    return
-  }
+  const flagError = captureFlagError('a video file', { viewportSpec, delaySpec })
+  if (flagError) { fail(flagError); return }
   const { resolveVideoFile, buildVideoServer } = await loadVideoRuntime()
   let video
   try {

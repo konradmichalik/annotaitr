@@ -1,6 +1,7 @@
 import { resolve as resolvePath, basename } from 'node:path'
 import { createRequire } from 'node:module'
 import { isSourceNewer, siblingPdf, pdfPathFor } from '../server/image/document/source.js'
+import { captureFlagError } from './args.js'
 import { fileExists } from './detect.js'
 import { fail } from './help.js'
 import { serveUntilDecision } from './outcome.js'
@@ -49,14 +50,8 @@ export async function convertHint(target) {
 }
 
 export async function runDocument({ target, origin, viewportSpec, delaySpec, sourceSpec, pageRanges }) {
-  if (viewportSpec) {
-    fail('--viewport only applies to a URL target, not a PDF.')
-    return
-  }
-  if (delaySpec !== null) {
-    fail('--delay only applies to a URL target, not a PDF.')
-    return
-  }
+  const flagError = captureFlagError('a PDF', { viewportSpec, delaySpec })
+  if (flagError) { fail(flagError); return }
   const pdfPath = resolvePath(target)
   if (!(await fileExists(pdfPath))) {
     fail(`File not found: ${pdfPath}`)

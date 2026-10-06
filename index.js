@@ -3,7 +3,7 @@
 import { resolve as resolvePath } from 'node:path'
 import { realpathSync } from 'node:fs'
 import { isOfficeDocument } from './server/image/common/fileTypes.js'
-import { parseArgs, VALID_MODES } from './cli/args.js'
+import { parseArgs, captureFlagError, VALID_MODES } from './cli/args.js'
 import { detectMode, fileExists, isPdfTarget } from './cli/detect.js'
 import { CHAT_IMAGE_HINT, fail, printHelpAndExit } from './cli/help.js'
 import { convertHint } from './cli/document.js'
@@ -12,7 +12,7 @@ import { runMarkdown } from './cli/markdown.js'
 
 async function main() {
   const {
-    help, targets, origin, viewportSpec, delaySpec, feedbackNotes, modeOverride, viewportFlagGiven, feedbackNotesFlagGiven,
+    help, targets, origin, viewportSpec, delaySpec, feedbackNotes, modeOverride, feedbackNotesFlagGiven,
     sourceSpec, pageRanges, error
   } = parseArgs(process.argv)
 
@@ -56,18 +56,8 @@ async function main() {
     mode = detected.mode
   }
 
-  if (mode === 'markdown' && viewportFlagGiven) {
-    fail('--viewport only applies to image targets, not markdown files.')
-    return
-  }
-  if (mode === 'markdown' && delaySpec !== null) {
-    fail('--delay only applies to a URL target, not markdown files.')
-    return
-  }
-  if (mode === 'image' && feedbackNotesFlagGiven) {
-    fail('--feedback-notes only applies to markdown targets, not images.')
-    return
-  }
+  const flagError = flagErrorForMode(mode, { viewportSpec, delaySpec, feedbackNotesFlagGiven })
+  if (flagError) { fail(flagError); return }
 
   if (mode === 'markdown') {
     await runMarkdown({ targets, origin, feedbackNotes })
@@ -76,6 +66,13 @@ async function main() {
   } else {
     fail(`Unknown mode "${mode}". Valid: ${VALID_MODES.join(', ')}`)
   }
+}
+
+/** The error for a flag that does not apply to the mode, or null. */
+function flagErrorForMode(mode, { viewportSpec, delaySpec, feedbackNotesFlagGiven }) {
+  if (mode === 'markdown') { return captureFlagError('markdown files', { viewportSpec, delaySpec }) }
+  if (mode === 'image' && feedbackNotesFlagGiven) { return '--feedback-notes only applies to markdown targets, not images.' }
+  return null
 }
 
 // Only run main() when this file is executed directly (`node index.js` or

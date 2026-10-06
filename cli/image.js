@@ -2,6 +2,7 @@ import { resolve as resolvePath } from 'node:path'
 import { isSupportedCaptureUrl } from '../server/image/common/fileTypes.js'
 import { parseViewportSpec, parseDelay, describeCapture, MAX_DELAY_MS } from '../server/image/common/config.js'
 import { saveClipboardImage } from '../server/image/still/clipboard.js'
+import { captureFlagError } from './args.js'
 import { fileExists, isPdfTarget, isVideoTarget } from './detect.js'
 import { fail, printHelpAndExit } from './help.js'
 import { serveUntilDecision } from './outcome.js'
@@ -54,12 +55,8 @@ async function resolveImageCapture(targets, { viewportSpec, delaySpec }, { clipb
     return { capture: await captureUrl(target, viewport, settings), targetLabel: target, settings }
   }
 
-  if (viewportSpec) {
-    return { error: '--viewport only applies to a URL target, not a local image file.' }
-  }
-  if (delaySpec !== null) {
-    return { error: '--delay only applies to a URL target, not a local image file.' }
-  }
+  const flagError = captureFlagError('a local image file', { viewportSpec, delaySpec })
+  if (flagError) { return { error: flagError } }
 
   let imagePath
   if (target) {

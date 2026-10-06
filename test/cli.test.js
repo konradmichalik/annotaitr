@@ -3,7 +3,7 @@ import { join, resolve as resolvePath } from 'node:path'
 import { mkdtemp, mkdir, writeFile, rm, symlink, utimes } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { parseArgs } from '../cli/args.js'
+import { parseArgs, captureFlagError } from '../cli/args.js'
 import { detectMode, isVideoTarget, isPdfTarget } from '../cli/detect.js'
 
 // For CLI runs that must be rejected up front: if one ever starts a server
@@ -21,7 +21,6 @@ describe('parseArgs', () => {
       delaySpec: null,
       feedbackNotes: null,
       modeOverride: null,
-      viewportFlagGiven: false,
       feedbackNotesFlagGiven: false,
       sourceSpec: null,
       pageRanges: null
@@ -41,7 +40,6 @@ describe('parseArgs', () => {
     expect(result.targets).toEqual(['http://x'])
     expect(result.origin).toBe('claude-code')
     expect(result.viewportSpec).toBe('mobile')
-    expect(result.viewportFlagGiven).toBe(true)
   })
 
   it('parses --as to force a mode', () => {
@@ -108,6 +106,19 @@ describe('parseArgs', () => {
 
   it('errors on a malformed --pages range', () => {
     expect(parseArgs([...BASE, '--pages', '5-2', 'deck.pdf']).error).toMatch(/--pages: "5-2"/)
+  })
+})
+
+describe('captureFlagError', () => {
+  it('names the flag and the target kind', () => {
+    expect(captureFlagError('a PDF', { viewportSpec: 'mobile', delaySpec: null }))
+      .toBe('--viewport only applies to a URL target, not a PDF.')
+    expect(captureFlagError('a PDF', { viewportSpec: null, delaySpec: '0' }))
+      .toBe('--delay only applies to a URL target, not a PDF.')
+  })
+
+  it('accepts a target without either flag', () => {
+    expect(captureFlagError('a PDF', { viewportSpec: null, delaySpec: null })).toBeNull()
   })
 })
 
