@@ -156,9 +156,10 @@ requests.
 
 ### Reply per mark
 
-If the feedback ends with a `Session:` line, answer every mark once the
-changes are applied. Run one `annotaitr reply` per handle, quoting the handle
-from the feedback:
+If the feedback ends with a `Session:` line, answer every mark that carries a
+handle once the changes are applied. Run one `annotaitr reply` per handle,
+quoting the handle from the feedback. A mark without a handle cannot receive a
+reply:
 
 ```bash
 annotaitr reply --session <id> --to a3f19c2e --status applied --text "Moved the button below the form"

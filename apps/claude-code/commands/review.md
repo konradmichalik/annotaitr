@@ -89,7 +89,7 @@ no handle, refer to that annotation by its number and quoted text instead, and
 never invent one.
 
 If the image, video or PDF feedback ends with a `Session:` line, answer each
-mark after applying the changes: run one `annotaitr reply --session <id> --to
+mark that carries a handle after applying the changes: run one `annotaitr reply --session <id> --to
 <handle> --status <status> --text "..."` per handle, with the handle quoted
 from the feedback and `<status>` one of `applied`, `partial`, `declined`,
 `deferred` or `question`. The text says what changed, what is left, why you

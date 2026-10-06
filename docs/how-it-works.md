@@ -169,8 +169,10 @@ reply in the next round is the subject of
 Image mode already does this. Each decision with marks is written to a session
 file, and the feedback ends with a `Session:` line. The agent answers each
 handle with `annotaitr reply --status ...` (see [review
-sessions](usage.md#review-sessions)). Reopening the same target within 24 hours
-starts the next round and shows the previous round's marks, with the agent's
+sessions](usage.md#review-sessions)). Reopening the same image file, URL, video
+or PDF within 24 hours starts the next round, while a clipboard image has no
+identity to be found by and continues only with `--session <id>`. The next round
+shows the previous round's marks, with the agent's
 replies, in a separate layer that a "Previous round" toggle hides. Marks whose
 position no longer matches, for example after a page was re-captured, are drawn
 as ghosts. Markdown mode has no sessions yet.
