@@ -2,8 +2,8 @@
 // server share no modules, so this is duplicated deliberately) - POST
 // /api/annotations is reachable directly, bypassing the client's own import
 // validator entirely, so it needs its own copy of the same bound.
-export const MAX_ANNOTATIONS = 10000
-export const MAX_POINTS_PER_ANNOTATION = 5000
+const MAX_ANNOTATIONS = 10000
+const MAX_POINTS_PER_ANNOTATION = 5000
 
 const isPoint = (p) => Number.isFinite(p?.x) && Number.isFinite(p?.y)
 
@@ -12,7 +12,7 @@ const isPoint = (p) => Number.isFinite(p?.x) && Number.isFinite(p?.y)
  * more points, than the client itself would ever produce, and a mark with a
  * malformed point, which would otherwise crash the feedback formatting.
  */
-export function annotationsWithinLimits(annotations) {
+function annotationsWithinLimits(annotations) {
   if (annotations.length > MAX_ANNOTATIONS) { return false }
   return annotations.every((annotation) => {
     const points = annotation?.geometry?.points
