@@ -19,6 +19,8 @@ mode-specific except `--help`, `--origin` and `--as`.
 | A single `http(s)` URL | Image (capture) |
 | A single existing file with a supported image extension (`.png`, `.jpg`, `.jpeg`, `.webp`, `.svg`) | Image (local file) |
 | A single existing video or GIF (`.mp4`, `.m4v`, `.webm`, `.mov`, `.gif`) | Image (video, on a timeline) |
+| A single existing PDF | Image (document, page by page) |
+| A single existing `.pptx`, `.ppt`, `.odp`, `.key`, `.docx`, `.doc`, `.odt`, `.rtf` or `.pages` | Prints a `CONVERT TO PDF FIRST:` hint and exits `0` |
 | Anything else | Exits `1` naming the supported extensions and suggesting `--as` |
 
 ```bash
@@ -28,6 +30,7 @@ annotaitr http://localhost:3000      # image: capture
 annotaitr                            # image: clipboard (macOS), or help
 annotaitr ./diagram.svg              # image: SVG, rasterized to PNG
 annotaitr ./bug-recording.mov        # image: video on a timeline
+annotaitr ./deck.pdf --source ./deck.pptx   # image: PDF, page by page
 annotaitr --as image ./mockup.png    # skip detection, force a mode
 ```
 
@@ -100,6 +103,78 @@ directory:
 Videos are limited to 500 MB and GIFs to 50 MB and 2000 frames. One
 submission exports at most 50 distinct frames.
 
+## PDFs
+
+A PDF opens with a strip of page thumbnails on the left and previous/next
+buttons next to the zoom controls. Draw on the page shown with the usual
+tools: each annotation belongs to its page. A page shows a placeholder while
+it is rendered, and the next page is rendered ahead in the background. The
+button next to **Add general comment** adds a comment about the page shown
+without drawing, for notes like "this slide is too dense".
+
+| Key | Action |
+|-----|--------|
+| `PageDown` / `]` | Next page |
+| `PageUp` / `[` | Previous page |
+| `Home` / `End` | First / last page |
+
+Pages are rendered on this machine with pdf.js (the optional dependency
+`pdfjs-dist`, plus `@napi-rs/canvas`), in a worker thread: a page that takes
+longer than 10 seconds is given up and shows an error instead of blocking
+the review. The longer side of a page is rendered at 2000px. Encrypted PDFs
+are rejected, export an unprotected copy. A PDF is limited to 200 MB and a
+review to 200 pages, `--pages` picks a part of a longer one.
+
+The feedback is grouped by page, numbered across the whole document, and
+points at one image per annotated page (markup and legend baked in) plus
+`overview.png` with the annotated pages side by side. Untouched pages are
+not written.
+
+The PDF's text layer works like the element map of a captured web page:
+hovering with the **Element** tool outlines a text block, heading or link,
+clicking selects it, and the feedback names the text under every mark, e.g.
+`Text: heading "Revenue by region"`. Text blocks are rebuilt from where the
+text sits on the page, since a PDF has no DOM. A scanned PDF has no text
+layer, so it gets no `Text:` lines and no Element or Text tool.
+
+The **Text** tool selects text like a browser does: drag from the first to
+the last word you mean, across lines if needed, and the selection snaps to
+whole words. The comment box and the sidebar show the selected words, and
+the feedback quotes them exactly, e.g. `Quote: "North grew 12%"`, so the
+agent can find the passage in the source. Word positions are measured
+approximately, since a PDF only stores where a run of text starts and how
+wide it is.
+
+Office formats are not converted. `annotaitr deck.pptx` prints a
+`CONVERT TO PDF FIRST:` hint with the command to run once the PDF exists,
+and exits `0` so a slash command passes it on to the agent. Export the PDF
+with the tool that created the document (PowerPoint, Keynote, LibreOffice,
+Marp, Slidev).
+
+## `--source`
+
+PDF only. The file the PDF was rendered from: a `.pptx`, a Keynote package,
+a Marp `deck.md` or a Slidev project directory. The feedback names it, so
+the agent edits the source and not the PDF. If the source was changed after
+the PDF, annotaitr warns in the terminal, in the annotator and in the
+feedback that the PDF may be outdated. For a directory, the newest file
+inside counts, ignoring `node_modules`, `.git`, dot directories, `dist` and
+`build`.
+
+```bash
+annotaitr ./deck.pdf --source ./deck.pptx
+```
+
+## `--pages`
+
+PDF only. Reviews only these pages: single pages and ranges separated by
+commas, an open range runs to the last page. Page numbers in the feedback
+stay the document's own.
+
+```bash
+annotaitr --pages 1-5,8,12- ./report.pdf
+```
+
 ## Voice notes
 
 With [whisper.cpp](https://github.com/ggml-org/whisper.cpp) and ffmpeg
@@ -128,7 +203,7 @@ terminal invocation never needs it.
 ## `--viewport`
 
 Image mode only, and only meaningful when the target is a URL. A local
-image, video or GIF rejects it. A preset
+image, video, GIF or PDF rejects it. A preset
 (the default `desktop`, or `laptop`, `tablet`, `mobile`) or an explicit
 `<width>x<height>`.
 
@@ -154,7 +229,7 @@ target, the feedback names the capture it refers to, e.g.
 
 Image mode only, URL targets only. Waits this many milliseconds (0 to
 10000) after the page has loaded before capturing, so animations,
-carousels and lazy content can settle. A local image, video, GIF or
+carousels and lazy content can settle. A local image, video, GIF, PDF or
 Markdown target rejects it.
 
 ```bash
@@ -222,7 +297,7 @@ goes to stderr, the decision goes to stdout on exit:
 
 | Exit code | Meaning |
 |-----------|---------|
-| `0` | Approved, or feedback submitted: stdout carries the formatted decision |
+| `0` | Approved, or feedback submitted: stdout carries the formatted decision. Also a hint printed instead of opening the annotator (`PASTED CHAT IMAGE:`, `CONVERT TO PDF FIRST:`) |
 | `1` | An error (bad arguments, unsupported target), the browser tab was closed with no decision, or the process was interrupted (`Ctrl+C`) |
 
 `md-annotator` works as an alias for the same binary, for existing scripts

@@ -7,6 +7,7 @@ import { formatApprovalOutput } from './feedback.js'
 import { exportVideoFeedback, formatVideoApprovalWithNotes } from './videoFeedback.js'
 import { orderVideoAnnotations, planFrames, validateVideoAnnotations, MAX_FRAMES } from './timeline.js'
 import { writeVideoOutput } from './videoOutput.js'
+import { pngSize } from './render.js'
 import { config } from './config.js'
 
 function success(data) { return { success: true, data } }
@@ -17,15 +18,6 @@ const FRAME_UPLOAD_LIMIT = '40mb'
 // A browser reports duration and currentTime with slight rounding, so an
 // annotation on the very last frame can land a hair past `duration`.
 const DURATION_TOLERANCE = 0.5
-const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
-
-/** Width and height from a PNG's IHDR chunk, or null when the buffer is not a PNG. */
-function pngSize(buffer) {
-  if (!Buffer.isBuffer(buffer) || buffer.length < 24) { return null }
-  if (!buffer.subarray(0, 8).equals(PNG_SIGNATURE) || buffer.toString('ascii', 12, 16) !== 'IHDR') { return null }
-  return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) }
-}
-
 function isPositiveNumber(value) {
   return typeof value === 'number' && Number.isFinite(value) && value > 0
 }

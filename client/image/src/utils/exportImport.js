@@ -1,6 +1,7 @@
 import { isPointsGeometry, MAX_POINTS_PER_ANNOTATION } from './drawing.js'
+import { MAX_QUOTE_LENGTH, MAX_TEXT_RECTS } from './textSelection.js'
 
-const VALID_TYPES = new Set(['box', 'element', 'arrow', 'freehand', 'highlighter', 'pin', 'comment'])
+const VALID_TYPES = new Set(['box', 'element', 'text', 'arrow', 'freehand', 'highlighter', 'pin', 'comment'])
 const MAX_ANNOTATIONS = 10000
 
 function isFiniteNumber(value) {
@@ -12,6 +13,8 @@ function isValidPoint(point) {
 }
 
 /** Validate a single annotation's geometry against the shape its `type` requires. */
+const isRect = (r) => isFiniteNumber(r?.x) && isFiniteNumber(r?.y) && isFiniteNumber(r?.width) && isFiniteNumber(r?.height)
+
 function validateGeometry(type, geometry, index) {
   // A general comment about the whole image has no geometry - it isn't drawn
   // on the canvas at all.
@@ -19,10 +22,14 @@ function validateGeometry(type, geometry, index) {
   if (!geometry || typeof geometry !== 'object') {
     throw new Error(`Annotation ${index + 1}: missing geometry.`)
   }
-  if (type === 'box' || type === 'element') {
+  if (type === 'box' || type === 'element' || type === 'text') {
     if (!isFiniteNumber(geometry.x) || !isFiniteNumber(geometry.y)
       || !isFiniteNumber(geometry.width) || !isFiniteNumber(geometry.height)) {
       throw new Error(`Annotation ${index + 1}: ${type} geometry must have numeric x/y/width/height.`)
+    }
+    if (type === 'text' && !(Array.isArray(geometry.rects) && geometry.rects.length > 0
+      && geometry.rects.length <= MAX_TEXT_RECTS && geometry.rects.every(isRect))) {
+      throw new Error(`Annotation ${index + 1}: text geometry must have 1 to ${MAX_TEXT_RECTS} rects of {x, y, width, height}.`)
     }
     return
   }
@@ -61,6 +68,10 @@ function validateAnnotation(ann, index) {
     throw new Error(`Annotation ${index + 1}: unknown type "${ann.type}".`)
   }
   validateGeometry(ann.type, ann.geometry, index)
+  // Mirrors server/image/pages.js, which refuses a text selection without its words.
+  if (ann.type === 'text' && !(typeof ann.quote === 'string' && ann.quote.length > 0 && ann.quote.length <= MAX_QUOTE_LENGTH)) {
+    throw new Error(`Annotation ${index + 1}: a text selection needs its selected text (at most ${MAX_QUOTE_LENGTH} characters).`)
+  }
   if (ann.text !== null && ann.text !== undefined && typeof ann.text !== 'string') {
     throw new Error(`Annotation ${index + 1}: text must be a string or null.`)
   }
@@ -90,6 +101,7 @@ function validateAnnotation(ann, index) {
     throw new Error(`Annotation ${index + 1}: arrowStyle must be a string.`)
   }
   validateTimes(ann, index)
+  validatePage(ann, index)
 }
 
 function isValidTime(value) {
@@ -103,6 +115,13 @@ function validateTimes(ann, index) {
   }
   if (ann.endTime !== undefined && (!isValidTime(ann.endTime) || ann.time === undefined || ann.endTime <= ann.time)) {
     throw new Error(`Annotation ${index + 1}: endTime must be a number after time.`)
+  }
+}
+
+/** page only exists on annotations of a PDF. */
+function validatePage(ann, index) {
+  if (ann.page !== undefined && ann.page !== null && !(Number.isInteger(ann.page) && ann.page >= 1)) {
+    throw new Error(`Annotation ${index + 1}: page must be a whole number >= 1.`)
   }
 }
 

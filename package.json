@@ -4,7 +4,7 @@
   "description": "Browser-based image and Markdown annotator for AI-assisted review, with built-in web page capture",
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13"
   },
   "bin": {
     "annotaitr": "./index.js",
@@ -53,7 +53,8 @@
     "react-dom": "^19.0.0"
   },
   "optionalDependencies": {
-    "@napi-rs/canvas": "^1.0.8",
+    "@napi-rs/canvas": "^1.0.10",
+    "pdfjs-dist": "^6.4.299",
     "playwright": "^1.63.0"
   },
   "devDependencies": {
@@ -71,6 +72,7 @@
     "mermaid": "^11.12.3",
     "omggif": "^1.0.10",
     "pako": "^2.1.0",
+    "pdf-lib": "^1.17.1",
     "plantuml-encoder": "^1.4.0",
     "stylelint": "^17.0.0",
     "stylelint-config-standard": "^40.0.0",

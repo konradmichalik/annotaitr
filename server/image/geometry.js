@@ -14,7 +14,8 @@ export function boundingPoint(annotation) {
   if (type === 'pin') {
     return { x: geometry.x, y: geometry.y }
   }
-  if (type === 'box' || type === 'element') {
+  // A text selection's geometry is the box around all of its lines.
+  if (type === 'box' || type === 'element' || type === 'text') {
     return { x: geometry.x + geometry.width / 2, y: geometry.y + geometry.height / 2 }
   }
   if (type === 'arrow') {

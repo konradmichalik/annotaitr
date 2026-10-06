@@ -13,10 +13,16 @@ import ExportMenu from './components/ExportMenu.jsx'
 import SettingsModal from './components/SettingsModal.jsx'
 import Timeline from './components/Timeline.jsx'
 import MediaSlot from './components/MediaSlot.jsx'
+import PageStrip from './components/PageStrip.jsx'
+import PageNav from './components/PageNav.jsx'
+import PageImage from './components/PageImage.jsx'
 import { useSettings } from './hooks/useSettings.js'
 import { useMediaPlayer } from './hooks/useMediaPlayer.js'
 import { useVideoReview } from './hooks/useVideoReview.js'
 import { useTimelineShortcuts } from './hooks/useTimelineShortcuts.js'
+import { useDocumentReview } from './hooks/useDocumentReview.js'
+import { useDocumentShortcuts } from './hooks/useDocumentShortcuts.js'
+import { pageLabel, isPaged } from './utils/documentPages.js'
 import { uploadFrames } from './utils/uploadFrames.js'
 import { formatTimes } from './utils/timeline.js'
 import { readError } from './utils/readError.js'
@@ -50,7 +56,7 @@ export default function App() {
   const [meta, setMeta] = useState(null)
   // Elements of a captured web page (empty for files, the clipboard and
   // recordings), so the canvas can outline and name what each mark hits.
-  const [elements, setElements] = useState([])
+  const [capturedElements, setElements] = useState([])
   // What is being captured right now ("Tablet 768×1024"), or null.
   const [recapturing, setRecapturing] = useState(null)
   const [imageUrl, setImageUrl] = useState(null)
@@ -68,9 +74,27 @@ export default function App() {
   const { settings, updateSetting, resetSettings } = useSettings()
   const { isVideo, controller, playerState, error: mediaError } = useMediaPlayer(meta)
   const video = useVideoReview({ controller, playerState, annotations: state.annotations })
-  const mediaWidth = isVideo ? controller?.width : meta?.width
-  const mediaHeight = isVideo ? controller?.height : meta?.height
-  const subject = isVideo ? 'recording' : 'image'
+  const doc = useDocumentReview({ meta, annotations: state.annotations })
+  const { isDocument } = doc
+  // Ordering, numbering and what the canvas shows follow the time axis of a
+  // recording or the page axis of a PDF; a still image passes straight through.
+  const review = isDocument ? doc : video
+  // A PDF's text layer is per page; a captured web page has one element map.
+  const elements = isDocument ? doc.elements : capturedElements
+  const words = isDocument ? doc.words : []
+  // While a page's text is still on its way the Element and Text tools stay
+  // offered, so the toolbar does not shift on every page; once it is known
+  // that a page has none (a scan), a tool that needs it falls back to Select.
+  const textPending = isDocument && !doc.textLoaded
+  const offersElementTool = elements.length > 0 || textPending
+  const offersTextTool = words.length > 0 || textPending
+  useEffect(() => {
+    const unavailable = (activeTool === 'element' && !offersElementTool) || (activeTool === 'text' && !offersTextTool)
+    if (unavailable) { setActiveTool('select') }
+  }, [activeTool, offersElementTool, offersTextTool])
+  const mediaWidth = isVideo ? controller?.width : (isDocument ? doc.currentPage?.width : meta?.width)
+  const mediaHeight = isVideo ? controller?.height : (isDocument ? doc.currentPage?.height : meta?.height)
+  const subject = isVideo ? 'recording' : (isDocument ? 'document' : 'image')
   const { state: autoCloseState, enableAndStart } = useAutoClose(!!decision, settings.autoCloseDelay)
   const { serverGone, reconnectState } = useServerConnection({ submitted: !!decision })
   const { width: panelWidth, handleMouseDown: handlePanelResize } = useResizablePanel('img-annotator-panel-width', 300, 1)
@@ -166,12 +190,13 @@ export default function App() {
   }, [state.annotations.length])
 
   const { takeTimes, range, clearRange } = video
+  const { takePage } = doc
   const addAnnotation = useCallback((partial) => {
     dispatch({
       type: 'ADD',
-      annotation: { id: createAnnotationId(), createdAt: Date.now(), ...partial, ...takeTimes() }
+      annotation: { id: createAnnotationId(), createdAt: Date.now(), ...partial, ...takeTimes(), ...takePage() }
     })
-  }, [takeTimes])
+  }, [takeTimes, takePage])
 
   const addComment = useCallback((times) => {
     const id = createAnnotationId()
@@ -184,6 +209,8 @@ export default function App() {
   }, [])
 
   const addGlobalComment = useCallback(() => addComment({}), [addComment])
+  const pageShown = doc.current
+  const addPageComment = useCallback(() => addComment({ page: pageShown }), [addComment, pageShown])
   const clearAutoEdit = useCallback(() => setAutoEditId(null), [])
 
   const addSpanComment = useCallback(() => {
@@ -191,7 +218,7 @@ export default function App() {
     clearRange()
   }, [addComment, range, clearRange])
 
-  const { seekTo } = video
+  const seekTo = isDocument ? doc.seekTo : video.seekTo
   const editAnnotation = useCallback((id) => {
     const annotation = state.annotations.find((a) => a.id === id)
     if (annotation) { seekTo(annotation) }
@@ -229,6 +256,23 @@ export default function App() {
     onMarkEnd: video.markEnd
   })
 
+  // A comment popover belongs to the page it was opened on.
+  const { goTo, step } = doc
+  const goToPage = useCallback((page) => {
+    setEditingAnnotationId(null)
+    goTo(page)
+  }, [goTo])
+  const stepPage = useCallback((delta) => {
+    setEditingAnnotationId(null)
+    step(delta)
+  }, [step])
+
+  useDocumentShortcuts({
+    enabled: isDocument,
+    disabled: settingsOpen || showExport || !!decision,
+    onStep: stepPage
+  })
+
   const editGlobalComment = useCallback((id, text) => {
     const before = state.annotations.find((a) => a.id === id)
     if (!before) { return }
@@ -255,9 +299,14 @@ export default function App() {
       setErrorStatus('Import failed: these annotations belong to a still image, not to a recording.')
       return
     }
+    const reviewed = new Set(doc.pages.map((p) => p.number))
+    if (isDocument && annotations.some((a) => (a.type !== 'comment' && !isPaged(a)) || (isPaged(a) && !reviewed.has(a.page)))) {
+      setErrorStatus('Import failed: these annotations belong to another image or to pages not part of this review.')
+      return
+    }
     dispatch({ type: 'SET_ALL', annotations })
     showToast(`Imported ${annotations.length} annotation${annotations.length === 1 ? '' : 's'}`)
-  }, [showToast, isVideo, setErrorStatus])
+  }, [showToast, isVideo, isDocument, doc.pages, setErrorStatus])
 
   const submit = useCallback(async (endpoint) => {
     if (submittingRef.current) { return }
@@ -312,6 +361,12 @@ export default function App() {
     setZoom(Math.round(Math.max(0.1, Math.min(3, fit)) * 100) / 100)
   }, [mediaWidth, mediaHeight])
 
+  // A page is rendered larger than most screens, so a document opens fitted,
+  // and again whenever the page size changes (portrait after landscape).
+  useEffect(() => {
+    if (isDocument) { zoomFit() }
+  }, [isDocument, zoomFit])
+
   const annotationCount = state.annotations.length
   const origin = meta?.origin
 
@@ -321,8 +376,22 @@ export default function App() {
     if (video.spanComplete) { return 'Span marked. Pick a tool (or click "Pin") and click the frame to mark something in it, or click "Comment span" to comment without drawing.' }
     if (video.range.start !== null) { return 'Span started. Move to where it ends (play, scrub or use the arrows), then click "Set end here".' }
     if (isVideo) { return 'Pause on a frame and draw on it. Space plays, arrows step frames, I and O mark a span.' }
-    if (activeTool === 'element') { return 'Point at a page element to see what it is, then click to select it and add a comment.' }
+    if (activeTool === 'text') { return 'Drag across the text you mean, from its first to its last word, then add a comment.' }
+    if (activeTool === 'element') { return `Point at ${isDocument ? 'a text block or link' : 'a page element'} to see what it is, then click to select it and add a comment.` }
+    if (isDocument) { return 'Draw on the page. PageUp/PageDown or [ and ] switch pages, Home and End jump to the first and last.' }
     return 'Click a mark to select it, drag to move, or press Delete to remove it.'
+  }
+
+  function pageMedia() {
+    if (isVideo) { return <MediaSlot element={controller.element} label={`Recording ${meta.targetLabel ?? ''}`.trim()} /> }
+    if (!isDocument) { return null }
+    return (
+      <PageImage
+        src={doc.imageUrl} alt={`Page ${doc.current} of ${meta.targetLabel ?? 'the document'}`}
+        width={mediaWidth * zoom} height={mediaHeight * zoom} loadingLabel={`Loading page ${doc.current}`}
+        loading={doc.loading} onLoad={doc.markLoaded} onError={doc.reportImageError}
+      />
+    )
   }
 
   if (serverGone && !decision) {
@@ -496,13 +565,15 @@ export default function App() {
       </header>
 
       <main className="app-body">
+        {isDocument && <PageStrip pages={doc.pages} current={doc.current} counts={doc.counts} onSelect={goToPage} />}
         <div className="app-stage">
           <div className="app-main">
             <div className="canvas-topbar">
               <Toolbar
                 activeTool={activeTool}
                 onSelectTool={setActiveTool}
-                elementTool={elements.length > 0}
+                elementTool={offersElementTool}
+                textTool={offersTextTool}
                 colorMode={settings.colorMode}
                 fixedColor={settings.fixedColor}
                 onChangeColorMode={(mode) => updateSetting('colorMode', mode)}
@@ -512,26 +583,30 @@ export default function App() {
                 {meta?.capture && (
                   <ViewportControl capture={meta.capture} busy={!!recapturing} annotationCount={state.annotations.length} onApply={recapture} />
                 )}
+                {isDocument && <PageNav pages={doc.pages} current={doc.current} pageCount={meta.pageCount} onStep={stepPage} />}
                 <ZoomControls zoom={zoom} onZoomBy={zoomBy} onZoomReset={zoomReset} onZoomFit={zoomFit} />
               </div>
             </div>
             {mediaError && <p className="media-error" role="alert">{mediaError}</p>}
+            {doc.pageError && <p className="media-error" role="alert">Page {doc.current} could not be rendered: {doc.pageError}</p>}
             {recapturing && <CaptureOverlay label={recapturing} />}
-            {meta && (isVideo ? controller && playerState : imageUrl) && (
+            {meta && (isVideo ? controller && playerState : (isDocument ? doc.currentPage && !doc.pageError : imageUrl)) && (
               <ImageCanvas
+                key={isDocument ? doc.current : 'media'}
                 imageUrl={imageUrl}
                 imageAlt={meta.targetLabel ? `Annotating ${meta.targetLabel}` : 'Image being annotated'}
                 imageWidth={mediaWidth}
                 imageHeight={mediaHeight}
                 activeTool={activeTool}
-                annotations={video.visible}
-                media={isVideo ? <MediaSlot element={controller.element} label={`Recording ${meta.targetLabel ?? ''}`.trim()} /> : null}
-                numberFor={isVideo ? video.numberFor : null}
-                nextNumber={video.nextNumber}
+                annotations={review.visible}
+                media={pageMedia()}
+                numberFor={isVideo || isDocument ? review.numberFor : null}
+                nextNumber={review.nextNumber}
                 onBeforeInteract={isVideo ? beforeCanvasInteract : null}
                 describeTime={isVideo ? describeTime : null}
                 voiceNotes={!!meta.voiceNotes}
                 elements={elements}
+                words={words}
                 zoom={zoom}
                 onZoomBy={zoomBy}
                 editingAnnotationId={editingAnnotationId}
@@ -547,6 +622,11 @@ export default function App() {
               />
             )}
           </div>
+            {meta?.sourceIsNewer && (
+              <p className="document-banner" role="status">
+                {meta.source} is newer than {meta.targetLabel}. The PDF may be outdated, regenerate it before reviewing.
+              </p>
+            )}
             {isVideo && controller && playerState && (
               <Timeline
                 controller={controller}
@@ -584,21 +664,39 @@ export default function App() {
                   <line x1="8" y1="12" x2="16" y2="12" />
                 </svg>
               </button>
+              {isDocument && (
+                <button
+                  type="button"
+                  className="panel-icon-btn"
+                  onClick={addPageComment}
+                  title={`Add comment for page ${doc.current}`}
+                  aria-label={`Add comment for page ${doc.current}`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="12" y1="12" x2="12" y2="18" />
+                    <line x1="9" y1="15" x2="15" y2="15" />
+                  </svg>
+                </button>
+              )}
               <ExportMenu
                 annotations={state.annotations}
-                target={meta?.targetLabel}
+                target={isDocument && meta?.targetLabel ? `${meta.targetLabel.replace(/\.pdf$/i, '')} page ${doc.current}` : meta?.targetLabel}
                 imageActions={!isVideo}
+                page={isDocument ? doc.current : null}
                 onOpenJson={() => setShowExport(true)}
                 onDone={showToast}
               />
             </div>
             <AnnotationPanel
-              annotations={video.ordered}
+              annotations={review.ordered}
               onRemove={removeAnnotation}
               onEdit={editAnnotation}
               onEditGlobalComment={editGlobalComment}
               elements={elements}
-              timeLabelFor={isVideo ? formatTimes : null}
+              timeLabelFor={isVideo ? formatTimes : (isDocument ? pageLabel : null)}
+              subject={subject}
               autoEditId={autoEditId}
               onAutoEditConsumed={clearAutoEdit}
             />
@@ -608,7 +706,12 @@ export default function App() {
 
       <footer className="app-status">
         <span role="status">{statusText()}</span>
-        {mediaWidth && <span className="image-stats">{mediaWidth} &times; {mediaHeight}px</span>}
+        {mediaWidth && (
+          <span className="image-stats">
+            {isDocument && `Page ${doc.current} of ${meta.pageCount} · `}
+            {mediaWidth} &times; {mediaHeight}px
+          </span>
+        )}
       </footer>
 
       {showExport && (

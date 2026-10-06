@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { TOOL_ICONS, ACTION_ICONS } from '../utils/icons.jsx'
 import { matchAnnotation, describeElements } from '../utils/elementMatch.js'
 
-const TYPE_LABELS = { box: 'Box', element: 'Element', arrow: 'Arrow', freehand: 'Freehand', highlighter: 'Highlight', pin: 'Pin' }
+const TYPE_LABELS = { box: 'Box', element: 'Element', text: 'Text', arrow: 'Arrow', freehand: 'Freehand', highlighter: 'Highlight', pin: 'Pin' }
 
 /** A general comment about the whole image (no geometry, no canvas presence): edited inline right here, not via the canvas popover. */
 function GlobalCommentItem({ annotation, title = 'General comment', timeLabel = null, isEditing, onStartEdit, onSave, onCancel, onRemove }) {
@@ -120,21 +120,23 @@ function ShapeItem({ annotation, number, timeLabel, elementHint = null, onEdit, 
 }
 
 function commentTitle(annotation, number) {
+  if (Number.isInteger(annotation.page)) { return `${number}. Page comment` }
   if (typeof annotation.time !== 'number') { return `${number}. General comment` }
   return `${number}. ${typeof annotation.endTime === 'number' ? 'Span comment' : 'Comment'}`
 }
 
 /**
- * `timeLabelFor` switches to the recording layout: one list in the given
- * (time) order, every entry numbered as in the feedback and tagged with its
- * time. Without it, the still-image layout lists general comments first.
+ * `timeLabelFor` switches to the recording and document layout: one list in
+ * the given (time or page) order, every entry numbered as in the feedback
+ * and tagged with its time or page. Without it, the still-image layout lists
+ * general comments first. `subject` names what is being marked up.
  * `autoEditId` opens a just-added comment for typing straight away;
  * `onAutoEditConsumed` lets the parent clear it, so a panel mounted again
  * later (the sidebar shown again) does not reopen that comment.
  */
 export default function AnnotationPanel({
   annotations, onRemove, onEdit, onEditGlobalComment, timeLabelFor = null, autoEditId = null, onAutoEditConsumed = null,
-  elements = []
+  elements = [], subject = 'image'
 }) {
   const [editingGlobalId, setEditingGlobalId] = useState(null)
 
@@ -150,7 +152,7 @@ export default function AnnotationPanel({
   }
 
   if (annotations.length === 0) {
-    return <p className="panel-empty">No annotations yet. Pick a tool above and mark up the {timeLabelFor ? 'recording' : 'image'}.</p>
+    return <p className="panel-empty">No annotations yet. Pick a tool above and mark up the {subject}.</p>
   }
 
   const renderComment = (annotation, extra = {}) => (
@@ -175,6 +177,7 @@ export default function AnnotationPanel({
             <ShapeItem
               key={annotation.id} annotation={annotation} number={index + 1}
               timeLabel={timeLabelFor(annotation)} onEdit={onEdit} onRemove={onRemove}
+              elementHint={annotation.quote ? `"${annotation.quote}"` : null}
             />
           )))}
       </ul>

@@ -1,10 +1,10 @@
 // test/e2e/video.spec.js
-import { spawn } from 'node:child_process'
 import { writeFile, rm, mkdtemp } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test, expect } from '@playwright/test'
+import { startCli } from '../helpers/cli.js'
 import { GifWriter } from 'omggif'
 
 // 2 s of ffmpeg's testsrc2 at 160x90 and 10 fps, VP8: Playwright's Chromium
@@ -19,26 +19,6 @@ function makeGif(path) {
     writer.addFrame(0, 0, 40, 30, new Array(40 * 30).fill(color), { delay: 20 })
   }
   return writeFile(path, buffer.slice(0, writer.end()))
-}
-
-function startCli(target) {
-  const child = spawn('node', [join(process.cwd(), 'index.js'), target], {
-    cwd: process.cwd(),
-    env: { ...process.env, ANNOTAITR_PORT: '0', ANNOTAITR_NO_OPEN: '1' }
-  })
-  let stdout = ''
-  child.stdout.on('data', (chunk) => { stdout += chunk.toString() })
-  const url = new Promise((resolve, reject) => {
-    let stderr = ''
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk.toString()
-      const match = stderr.match(/Server running at (http:\/\/\S+)/)
-      if (match) { resolve(match[1]) }
-    })
-    child.on('exit', (code) => reject(new Error(`CLI exited early with code ${code}: ${stderr}`)))
-  })
-  const exited = new Promise((resolve) => child.on('exit', resolve))
-  return { child, url, exited, stdout: () => stdout }
 }
 
 async function drawBox(page, from, to) {
@@ -56,7 +36,7 @@ async function addComment(page, text) {
 }
 
 test('a video gets a point and a span annotation and the CLI prints frames for both', async ({ page }) => {
-  const cli = startCli(WEBM_FIXTURE)
+  const cli = startCli([WEBM_FIXTURE])
   try {
     await page.goto(await cli.url)
     const time = page.locator('.timeline-time')
@@ -108,7 +88,7 @@ test('a video gets a point and a span annotation and the CLI prints frames for b
 })
 
 test('dragging a span marker resizes and moves it, and undo restores it', async ({ page }) => {
-  const cli = startCli(WEBM_FIXTURE)
+  const cli = startCli([WEBM_FIXTURE])
   try {
     await page.goto(await cli.url)
     const time = page.locator('.timeline-time')
@@ -153,7 +133,7 @@ test('dragging a span marker resizes and moves it, and undo restores it', async 
 })
 
 test('a point annotation becomes a span by dragging its handle or with Alt+Shift+Right', async ({ page }) => {
-  const cli = startCli(WEBM_FIXTURE)
+  const cli = startCli([WEBM_FIXTURE])
   try {
     await page.goto(await cli.url)
     await expect(page.locator('.timeline-time')).toContainText('/ 00:02.000')
@@ -188,7 +168,7 @@ test('a GIF steps frame by frame and exports the annotated frame', async ({ page
   const dir = await mkdtemp(join(tmpdir(), 'annotaitr-e2e-gif-'))
   const gifPath = join(dir, 'anim.gif')
   await makeGif(gifPath)
-  const cli = startCli(gifPath)
+  const cli = startCli([gifPath])
   try {
     await page.goto(await cli.url)
     const time = page.locator('.timeline-time')

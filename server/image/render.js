@@ -18,7 +18,7 @@ const LEGEND_BG = '#20242c'
 const LEGEND_HEADER_COLOR = '#f5f6fa'
 const LEGEND_TEXT_COLOR = '#b8bfcc'
 
-const TYPE_LABELS = { box: 'Box', element: 'Element', arrow: 'Arrow', freehand: 'Freehand', highlighter: 'Highlight', pin: 'Pin', comment: 'General comment' }
+const TYPE_LABELS = { box: 'Box', element: 'Element', text: 'Text', arrow: 'Arrow', freehand: 'Freehand', highlighter: 'Highlight', pin: 'Pin', comment: 'General comment' }
 
 function drawArrowhead(ctx, x1, y1, x2, y2, color, headLength, lineWidth) {
   const angle = Math.atan2(y2 - y1, x2 - x1)
@@ -89,6 +89,19 @@ function drawElement(ctx, geometry, number, color) {
   ctx.fillRect(x, y, width, height)
   ctx.restore()
   drawBox(ctx, geometry, number, color)
+}
+
+// A text selection is painted like a marker over its lines, so the words
+// stay readable underneath.
+const TEXT_FILL_ALPHA = 0.3
+
+function drawSelectedText(ctx, geometry, number, color) {
+  ctx.save()
+  ctx.globalAlpha = TEXT_FILL_ALPHA
+  for (const { x, y, width, height } of geometry.rects) { ctx.fillRect(x, y, width, height) }
+  ctx.restore()
+  const [first] = geometry.rects
+  drawBadge(ctx, first.x, first.y, number, color)
 }
 
 function drawArrow(ctx, annotation, number, color) {
@@ -167,6 +180,7 @@ function drawAnnotation(ctx, annotation, number) {
 
   if (annotation.type === 'box') { drawBox(ctx, annotation.geometry, number, color) }
   else if (annotation.type === 'element') { drawElement(ctx, annotation.geometry, number, color) }
+  else if (annotation.type === 'text') { drawSelectedText(ctx, annotation.geometry, number, color) }
   else if (annotation.type === 'arrow') { drawArrow(ctx, annotation, number, color) }
   else if (annotation.type === 'freehand') { drawFreehand(ctx, annotation.geometry, number, color) }
   else if (annotation.type === 'highlighter') { drawHighlighter(ctx, annotation.geometry, number, color) }
@@ -192,8 +206,9 @@ function wrapText(ctx, text, maxWidth) {
   return lines
 }
 
-/** A comment pinned to a moment or span of a recording is not about the whole image. */
+/** A comment pinned to a moment, a span or a page is not about the whole image. */
 function legendLabel(annotation) {
+  if (annotation.type === 'comment' && Number.isInteger(annotation.page)) { return 'Page comment' }
   if (annotation.type === 'comment' && typeof annotation.time === 'number') {
     return typeof annotation.endTime === 'number' ? 'Span comment' : 'Comment'
   }
@@ -275,19 +290,40 @@ export const CONTACT_SHEET_GAP = 8
 export const CONTACT_SHEET_LABEL_HEIGHT = 22
 const CONTACT_SHEET_FONT_SIZE = 13
 
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+
+/** Width and height from a PNG's IHDR chunk, or null when the buffer is not a PNG. */
+export function pngSize(buffer) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 24) { return null }
+  if (!buffer.subarray(0, 8).equals(PNG_SIGNATURE) || buffer.toString('ascii', 12, 16) !== 'IHDR') { return null }
+  return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) }
+}
+
+async function tileSize(buffer) {
+  const size = pngSize(buffer)
+  if (size) { return size }
+  const image = await loadImage(buffer)
+  return { width: image.width, height: image.height }
+}
+
 /**
- * Lay frames out as a labelled grid (a strip across a span, or an overview
- * of the whole recording), so the agent sees a sequence in one image
- * instead of having to open every frame.
+ * Lay frames or pages out as a labelled grid (a strip across a span, an
+ * overview of a recording or of a document's annotated pages), so the agent
+ * sees a sequence in one image instead of having to open every file.
  *
- * @param {{ buffer: Buffer, label: string }[]} tiles - all frames share one size
- * @param {{ columns: number, tileWidth: number }} layout - tileWidth is a maximum, frames are never upscaled
+ * Every cell has the width of the widest tile (at most `tileWidth`, tiles
+ * are never upscaled) and the height of the tallest aspect ratio, and each
+ * tile is fitted and centred in it. Frames of one recording share a size, so
+ * they fill their cells exactly; a document mixing portrait and landscape
+ * pages keeps every page undistorted.
+ *
+ * @param {{ buffer: Buffer, label: string }[]} tiles
+ * @param {{ columns: number, tileWidth: number }} layout
  */
 export async function composeContactSheet(tiles, { columns, tileWidth }) {
-  // Decoded one at a time: a full-size frame can take hundreds of megabytes.
-  const first = await loadImage(tiles[0].buffer)
-  const width = Math.min(tileWidth, first.width)
-  const height = Math.round((first.height * width) / first.width)
+  const sizes = await Promise.all(tiles.map((tile) => tileSize(tile.buffer)))
+  const width = Math.min(tileWidth, Math.max(...sizes.map((s) => s.width)))
+  const height = Math.round(width * Math.max(...sizes.map((s) => s.height / s.width)))
   const cellHeight = height + CONTACT_SHEET_LABEL_HEIGHT
   const cols = Math.min(columns, tiles.length)
   const rows = Math.ceil(tiles.length / cols)
@@ -303,11 +339,15 @@ export async function composeContactSheet(tiles, { columns, tileWidth }) {
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
 
+  // Decoded one at a time: a full-size frame can take hundreds of megabytes.
   for (const [index, tile] of tiles.entries()) {
-    const image = index === 0 ? first : await loadImage(tile.buffer)
+    const image = await loadImage(tile.buffer)
+    const scale = Math.min(width / image.width, height / image.height, 1)
+    const drawWidth = Math.round(image.width * scale)
+    const drawHeight = Math.round(image.height * scale)
     const x = CONTACT_SHEET_GAP + (index % cols) * (width + CONTACT_SHEET_GAP)
     const y = CONTACT_SHEET_GAP + Math.floor(index / cols) * (cellHeight + CONTACT_SHEET_GAP)
-    ctx.drawImage(image, x, y, width, height)
+    ctx.drawImage(image, x + Math.round((width - drawWidth) / 2), y + Math.round((height - drawHeight) / 2), drawWidth, drawHeight)
     ctx.fillStyle = LEGEND_HEADER_COLOR
     ctx.fillText(tile.label, x + 4, y + height + CONTACT_SHEET_LABEL_HEIGHT / 2)
   }

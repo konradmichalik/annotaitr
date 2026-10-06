@@ -4,6 +4,7 @@ import ColorModePicker from './ColorModePicker.jsx'
 const TOOLS = [
   { id: 'select', label: 'Select' },
   { id: 'element', label: 'Element' },
+  { id: 'text', label: 'Text' },
   { id: 'box', label: 'Box' },
   { id: 'arrow', label: 'Arrow' },
   { id: 'freehand', label: 'Freehand' },
@@ -11,11 +12,15 @@ const TOOLS = [
   { id: 'pin', label: 'Pin' }
 ]
 
-/** `elementTool` offers picking a page element, which only a captured web page has. */
+/**
+ * `elementTool` offers picking a page element, which a captured web page and
+ * a PDF page with a text layer have; `textTool` offers selecting text, which
+ * only a PDF page with a text layer has.
+ */
 export default function Toolbar({
-  activeTool, onSelectTool, colorMode, fixedColor, onChangeColorMode, onChangeFixedColor, elementTool = false
+  activeTool, onSelectTool, colorMode, fixedColor, onChangeColorMode, onChangeFixedColor, elementTool = false, textTool = false
 }) {
-  const tools = elementTool ? TOOLS : TOOLS.filter((tool) => tool.id !== 'element')
+  const tools = TOOLS.filter((tool) => (tool.id !== 'element' || elementTool) && (tool.id !== 'text' || textTool))
   return (
     <div className="toolbar" role="toolbar" aria-label="Annotation tools">
       {tools.map((tool) => (

@@ -1,9 +1,9 @@
 import { tmpdir } from 'node:os'
 import { join, resolve as resolvePath } from 'node:path'
-import { mkdtemp, writeFile, rm, symlink } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, rm, symlink, utimes } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { parseArgs, detectMode, isVideoTarget } from '../index.js'
+import { parseArgs, detectMode, isVideoTarget, isPdfTarget } from '../index.js'
 
 // For CLI runs that must be rejected up front: if one ever starts a server
 // instead, it opens no browser and fails on the timeout rather than hanging.
@@ -21,7 +21,9 @@ describe('parseArgs', () => {
       feedbackNotes: null,
       modeOverride: null,
       viewportFlagGiven: false,
-      feedbackNotesFlagGiven: false
+      feedbackNotesFlagGiven: false,
+      sourceSpec: null,
+      pageRanges: null
     })
   })
 
@@ -86,6 +88,26 @@ describe('parseArgs', () => {
   it('errors when --feedback-notes has no value', () => {
     expect(parseArgs([...BASE, '--feedback-notes']).error).toMatch(/--feedback-notes requires/)
   })
+
+  it('parses --source and --pages', () => {
+    const result = parseArgs([...BASE, '--source', 'deck.pptx', '--pages', '1-3,9-', 'deck.pdf'])
+    expect(result.sourceSpec).toBe('deck.pptx')
+    expect(result.pageRanges).toEqual([{ from: 1, to: 3 }, { from: 9, to: null }])
+  })
+
+  it('errors when --source or --pages has no value', () => {
+    expect(parseArgs([...BASE, '--source']).error).toMatch(/--source requires/)
+    expect(parseArgs([...BASE, '--pages']).error).toMatch(/--pages requires/)
+  })
+
+  it('does not take the next flag as the value of --source or --pages', () => {
+    expect(parseArgs([...BASE, 'deck.pdf', '--source', '--pages', '1-2']).error).toMatch(/--source requires/)
+    expect(parseArgs([...BASE, 'deck.pdf', '--pages', '--source', 'deck.pptx']).error).toMatch(/--pages requires/)
+  })
+
+  it('errors on a malformed --pages range', () => {
+    expect(parseArgs([...BASE, '--pages', '5-2', 'deck.pdf']).error).toMatch(/--pages: "5-2"/)
+  })
 })
 
 describe('detectMode', () => {
@@ -133,6 +155,16 @@ describe('detectMode', () => {
     const path = join(dir, name)
     await writeFile(path, 'x')
     expect(await detectMode([path])).toEqual({ mode: 'image', capture: 'video', resolvedPath: path })
+  })
+
+  it('detects an existing PDF as image mode with a document capture', async () => {
+    const path = join(dir, 'deck.pdf')
+    await writeFile(path, 'x')
+    expect(await detectMode([path])).toEqual({ mode: 'image', capture: 'document', resolvedPath: path })
+  })
+
+  it('names PDFs among the supported extensions in the error', async () => {
+    expect((await detectMode([join(dir, 'missing.xyz')])).error).toMatch(/\.pdf/)
   })
 
   it('errors on a mix of markdown and image targets', async () => {
@@ -215,6 +247,106 @@ describe('video targets', () => {
 
   it('reports a missing video forced with --as image', () => {
     const result = spawnSync('node', ['index.js', '--as', 'image', join(dir, 'missing.mp4')])
+    expect(result.status).toBe(1)
+    expect(result.stderr.toString()).toMatch(/File not found/)
+  })
+})
+
+describe('isPdfTarget', () => {
+  it('takes a local PDF path but leaves a URL to page capture', () => {
+    expect(isPdfTarget('./deck.pdf')).toBe(true)
+    expect(isPdfTarget('https://example.com/deck.pdf')).toBe(false)
+  })
+})
+
+describe('office documents', () => {
+  let dir
+
+  beforeAll(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'annotaitr-cli-office-'))
+    await writeFile(join(dir, 'deck.pptx'), 'x')
+    await mkdir(join(dir, 'talk.key'))
+    await writeFile(join(dir, 'talk.key', 'Index.zip'), 'x')
+    await writeFile(join(dir, 'memo.docx'), 'x')
+    await utimes(join(dir, 'memo.docx'), new Date(1000), new Date(1000))
+    await writeFile(join(dir, 'memo.pdf'), 'x')
+  })
+
+  afterAll(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  it('prints a convert hint with the command to run and exits 0', () => {
+    const result = spawnSync('node', ['index.js', '--origin', 'claude-code', join(dir, 'deck.pptx')], NO_SERVER)
+    expect(result.status).toBe(0)
+    const out = result.stdout.toString()
+    expect(out).toMatch(/^CONVERT TO PDF FIRST: /)
+    expect(out).toContain(`annotaitr ${join(dir, 'deck.pdf')} --source ${join(dir, 'deck.pptx')}`)
+  })
+
+  it('points at an existing, current PDF next to the document', () => {
+    const result = spawnSync('node', ['index.js', join(dir, 'memo.docx')], NO_SERVER)
+    expect(result.status).toBe(0)
+    expect(result.stdout.toString()).toMatch(/memo\.pdf already exists/)
+  })
+
+  it('handles a Keynote package directory with a trailing slash', () => {
+    const result = spawnSync('node', ['index.js', `${join(dir, 'talk.key')}/`], NO_SERVER)
+    expect(result.status).toBe(0)
+    expect(result.stdout.toString()).toContain(`annotaitr ${join(dir, 'talk.pdf')} --source ${join(dir, 'talk.key')}`)
+  })
+
+  it('reports a missing office document instead of the generic detection error', () => {
+    const result = spawnSync('node', ['index.js', join(dir, 'missing.pptx')], NO_SERVER)
+    expect(result.status).toBe(1)
+    expect(result.stderr.toString()).toMatch(/File not found: .*missing\.pptx/)
+  })
+
+  it('takes precedence over a forced mode', () => {
+    const result = spawnSync('node', ['index.js', '--as', 'image', join(dir, 'deck.pptx')], NO_SERVER)
+    expect(result.status).toBe(0)
+    expect(result.stdout.toString()).toMatch(/^CONVERT TO PDF FIRST:/)
+  })
+})
+
+describe('PDF-only flags', () => {
+  let dir, pdfPath, mdPath
+
+  beforeAll(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'annotaitr-cli-pdf-'))
+    pdfPath = join(dir, 'deck.pdf')
+    mdPath = join(dir, 'notes.md')
+    await writeFile(pdfPath, 'x')
+    await writeFile(mdPath, '# Notes')
+  })
+
+  afterAll(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  it.each([['--source', 'deck.pptx'], ['--pages', '1-2']])('rejects %s for a target that is not a PDF', (flag, value) => {
+    const result = spawnSync('node', ['index.js', flag, value, mdPath], NO_SERVER)
+    expect(result.status).toBe(1)
+    expect(result.stderr.toString()).toMatch(new RegExp(`${flag} only applies to a PDF target`))
+  })
+
+  it('rejects --viewport and --delay for a PDF, which is never captured', () => {
+    const viewport = spawnSync('node', ['index.js', '--viewport', 'mobile', pdfPath], NO_SERVER)
+    expect(viewport.status).toBe(1)
+    expect(viewport.stderr.toString()).toMatch(/--viewport only applies to a URL target, not a PDF/)
+    const delay = spawnSync('node', ['index.js', '--delay', '100', pdfPath], NO_SERVER)
+    expect(delay.status).toBe(1)
+    expect(delay.stderr.toString()).toMatch(/--delay only applies to a URL target, not a PDF/)
+  })
+
+  it('reports a missing --source', () => {
+    const result = spawnSync('node', ['index.js', '--source', join(dir, 'missing.pptx'), pdfPath], NO_SERVER)
+    expect(result.status).toBe(1)
+    expect(result.stderr.toString()).toMatch(/Source not found/)
+  })
+
+  it('reports a missing PDF forced with --as image', () => {
+    const result = spawnSync('node', ['index.js', '--as', 'image', join(dir, 'missing.pdf')], NO_SERVER)
     expect(result.status).toBe(1)
     expect(result.stderr.toString()).toMatch(/File not found/)
   })

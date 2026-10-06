@@ -7,6 +7,7 @@ import {
 import { resolveArrowStyle, strokeWidthOf, dashArrayFor, pickStyleFields } from '../utils/annotationStyles.js'
 import { cursorForTool } from '../utils/cursors.js'
 import { matchAnnotation, matchPoint, describeElements } from '../utils/elementMatch.js'
+import { wordIndexAt, selectWords } from '../utils/textSelection.js'
 import { ANNOTATION_COLORS } from '../utils/annotationColors.js'
 import { ACTION_ICONS } from '../utils/icons.jsx'
 import CommentPopover from './CommentPopover.jsx'
@@ -124,6 +125,21 @@ function ElementShape({ geometry, color, selectionProps }) {
   )
 }
 
+// Painted like a marker over the selected lines, matching the server's
+// rendering in server/image/render.js.
+function TextShape({ geometry, color, number, selectionProps }) {
+  const [first] = geometry.rects
+  return (
+    <>
+      {geometry.rects.map(({ x, y, width, height }) => (
+        <rect key={`${x}-${y}`} x={x} y={y} width={width} height={height} fill={color} fillOpacity={0.3} {...(selectionProps ?? {})} />
+      ))}
+      <circle cx={first.x} cy={first.y} r="11" fill={color} />
+      <text x={first.x} y={first.y} textAnchor="middle" dominantBaseline="central" fill="#fff" fontSize="12" fontWeight="700">{number}</text>
+    </>
+  )
+}
+
 function AnnotationShape({ annotation, number, markerId, dashed = false, selected = false }) {
   const color = annotation.color || DEFAULT_COLOR
   const strokeWidth = strokeWidthOf(annotation)
@@ -135,6 +151,7 @@ function AnnotationShape({ annotation, number, markerId, dashed = false, selecte
   const { type, geometry } = annotation
 
   if (type === 'element') { return <ElementShape geometry={geometry} color={color} selectionProps={selectionProps} /> }
+  if (type === 'text') { return <TextShape geometry={geometry} color={color} number={number} selectionProps={selectionProps} /> }
   if (type === 'box') { return <BoxShape geometry={geometry} color={color} strokeWidth={strokeWidth} dash={dash} selectionProps={selectionProps} /> }
   if (type === 'arrow') { return <ArrowShape annotation={annotation} color={color} strokeWidth={strokeWidth} dash={dash} markerId={markerId} selectionProps={selectionProps} /> }
   if (type === 'freehand') { return <FreehandShape geometry={geometry} color={color} strokeWidth={strokeWidth} dash={dash} selectionProps={selectionProps} /> }
@@ -218,7 +235,8 @@ export default function ImageCanvas({
   // describeTime(annotation | null) names what an annotation is pinned to in
   // time, null meaning the one being drawn.
   media = null, numberFor = null, nextNumber = annotations.length + 1, onBeforeInteract = null, describeTime = null,
-  voiceNotes = false, elements = []
+  // A PDF page's words in reading order, for the Text tool.
+  voiceNotes = false, elements = [], words = []
 }) {
   const wrapperRef = useRef(null)
   // Set by the wheel handler just before onZoomBy fires, and consumed by the
@@ -435,6 +453,12 @@ export default function ImageCanvas({
       return
     }
 
+    if (activeTool === 'text') {
+      setDragStart(point)
+      setDragPoint(point)
+      return
+    }
+
     if (isPointCollectingTool(activeTool)) {
       setStrokePoints([point])
       return
@@ -453,9 +477,9 @@ export default function ImageCanvas({
       return
     }
 
-    // A selected page element stays on its element: it can be picked and
-    // commented on, but not dragged off it.
-    if (moveState.current && moveState.current.type !== 'element') {
+    // A selected page element or text stays where it is on the page: it can
+    // be picked and commented on, but not dragged off it.
+    if (moveState.current && moveState.current.type !== 'element' && moveState.current.type !== 'text') {
       const point = pointFromEvent(event, wrapperRef, imageWidth, imageHeight, zoom)
       const { id, type, startGeometry, startPoint } = moveState.current
       const dx = point.x - startPoint.x
@@ -477,7 +501,7 @@ export default function ImageCanvas({
       return
     }
 
-    if ((activeTool === 'box' || activeTool === 'arrow') && dragStart) {
+    if ((activeTool === 'box' || activeTool === 'arrow' || activeTool === 'text') && dragStart) {
       setDragPoint(pointFromEvent(event, wrapperRef, imageWidth, imageHeight, zoom))
       return
     }
@@ -511,6 +535,11 @@ export default function ImageCanvas({
       setDragStart(null)
       const picked = matchPoint(elements, dragStart)
       if (picked) { createPending({ type: 'element', geometry: { ...picked.box }, color: nextColor }) }
+    } else if (activeTool === 'text' && dragStart) {
+      const selection = selectWords(words, wordIndexAt(words, dragStart), wordIndexAt(words, point))
+      setDragStart(null)
+      setDragPoint(null)
+      if (selection) { createPending({ type: 'text', ...selection, color: nextColor }) }
     } else if (activeTool === 'pin' && dragStart) {
       setDragStart(null)
       createPending({ type: 'pin', geometry: dragStart, color: nextColor })
@@ -536,7 +565,7 @@ export default function ImageCanvas({
       // next mousedown happens to reset it.
       setStrokePoints([])
     }
-  }, [activeTool, dragStart, strokePoints, nextColor, createPending, elements])
+  }, [activeTool, dragStart, strokePoints, nextColor, createPending, elements, words])
 
   const handleMouseUp = useCallback((event) => {
     if (pending) { return }
@@ -592,7 +621,9 @@ export default function ImageCanvas({
         const after = { ...pending.before, text, color, ...styleFields }
         onCommitEdit(pending.id, pending.before, after)
       } else {
-        onAddAnnotation({ type: pending.type, geometry: pending.geometry, text, color, ...styleFields })
+        // A text selection carries the words it selected along with its geometry.
+        const quote = pending.type === 'text' ? { quote: pending.quote } : {}
+        onAddAnnotation({ type: pending.type, geometry: pending.geometry, text, color, ...styleFields, ...quote })
       }
     }
     setPending(null)
@@ -614,13 +645,16 @@ export default function ImageCanvas({
     livePreview = { type: 'arrow', geometry: { x1: dragStart.x, y1: dragStart.y, x2: dragPoint.x, y2: dragPoint.y }, color: nextColor, arrowStyle: 'head' }
   } else if (isPointCollectingTool(activeTool) && strokePoints.length > 1) {
     livePreview = { type: activeTool, geometry: { points: strokePoints }, color: nextColor }
+  } else if (activeTool === 'text' && dragStart && dragPoint) {
+    const selection = selectWords(words, wordIndexAt(words, dragStart), wordIndexAt(words, dragPoint))
+    livePreview = selection ? { type: 'text', ...selection, color: nextColor } : null
   }
 
   // Only the Element tool outlines what is under the pointer; every tool
   // names the matched element in the comment popover.
   const hovered = !pending && hoverPoint ? matchPoint(elements, hoverPoint) : null
   const highlighted = hovered ? [hovered] : []
-  const elementHint = describeElements(matchAnnotation(elements, pending))
+  const elementHint = pending?.type === 'text' ? `"${pending.quote}"` : describeElements(matchAnnotation(elements, pending))
 
   let cursor = cursorForTool(activeTool)
   if (hoveringAnnotation) { cursor = 'grab' }

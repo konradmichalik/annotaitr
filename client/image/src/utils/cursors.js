@@ -23,5 +23,6 @@ export function cursorForTool(tool) {
   // Picking a page element is a click on something, not drawing.
   if (tool === 'element') { return 'pointer' }
   if (tool === 'highlighter') { return HIGHLIGHTER_CURSOR }
+  if (tool === 'text') { return 'text' }
   return 'crosshair'
 }

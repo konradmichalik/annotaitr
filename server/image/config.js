@@ -138,5 +138,7 @@ export const config = {
   // 8K. A frame PNG declares its size in a few bytes but decodes to
   // width x height x 4, and the overview holds a dozen of them.
   maxVideoDimension: 8192,
-  maxGifBytes: 50 * 1024 * 1024
+  maxGifBytes: 50 * 1024 * 1024,
+  // The render worker reads a PDF into memory whole.
+  maxPdfBytes: 200 * 1024 * 1024
 }

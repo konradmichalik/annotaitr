@@ -106,3 +106,32 @@ describe('parseAnnotationsJson with video times', () => {
     expect(() => parseAnnotationsJson(JSON.stringify([{ ...timed, endTime: 1 }]))).toThrow(/endTime/)
   })
 })
+
+describe('parseAnnotationsJson with PDF pages', () => {
+  const paged = { id: 'p', type: 'box', geometry: { x: 0, y: 0, width: 1, height: 1 }, page: 3 }
+
+  it('keeps the page on import', () => {
+    expect(parseAnnotationsJson(JSON.stringify([paged]))).toEqual([paged])
+  })
+
+  it('rejects a page that is not a whole number from 1', () => {
+    expect(() => parseAnnotationsJson(JSON.stringify([{ ...paged, page: 0 }]))).toThrow(/page/)
+    expect(() => parseAnnotationsJson(JSON.stringify([{ ...paged, page: 1.5 }]))).toThrow(/page/)
+    expect(() => parseAnnotationsJson(JSON.stringify([{ ...paged, page: '2' }]))).toThrow(/page/)
+  })
+})
+
+describe('parseAnnotationsJson with text selections', () => {
+  const rects = [{ x: 1, y: 2, width: 30, height: 10 }]
+  const selection = { id: 't', type: 'text', page: 1, quote: 'North grew', geometry: { x: 1, y: 2, width: 30, height: 10, rects } }
+
+  it('keeps a text selection on import', () => {
+    expect(parseAnnotationsJson(serializeAnnotations([selection]))).toEqual([selection])
+  })
+
+  it('rejects a text selection the server would refuse', () => {
+    expect(() => parseAnnotationsJson(JSON.stringify([{ ...selection, quote: '' }]))).toThrow(/selected text/)
+    expect(() => parseAnnotationsJson(JSON.stringify([{ ...selection, quote: 'x'.repeat(5001) }]))).toThrow(/selected text/)
+    expect(() => parseAnnotationsJson(JSON.stringify([{ ...selection, geometry: { ...selection.geometry, rects: [] } }]))).toThrow(/rects/)
+  })
+})

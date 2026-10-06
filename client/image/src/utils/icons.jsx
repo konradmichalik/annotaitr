@@ -40,6 +40,12 @@ export const TOOL_ICONS = {
       <path d="M3 21h6" />
     </svg>
   ),
+  // Tabler "cursor-text": selecting text on a PDF page.
+  text: (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <path d="M10 12h4" /><path d="M9 4a3 3 0 0 1 3 3v10a3 3 0 0 1 -3 3" /><path d="M15 4a3 3 0 0 0 -3 3v10a3 3 0 0 0 3 3" />
+    </svg>
+  ),
   pin: (
     <svg {...ICON_PROPS} aria-hidden="true">
       <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />

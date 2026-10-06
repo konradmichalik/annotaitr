@@ -3,28 +3,29 @@ import { useDropdown } from '../hooks/useDropdown.js'
 import { EXPORT_ICONS } from '../utils/icons.jsx'
 import { exportFileName } from '../utils/exportFile.js'
 
-function postAnnotations(path, annotations) {
+function postAnnotations(path, annotations, extra = {}) {
   return fetch(path, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ annotations })
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ annotations, ...extra })
   }).then((res) => {
     if (!res.ok) { throw new Error(`the server answered ${res.status}`) }
     return res
   })
 }
 
-const imageBlob = (annotations) => postAnnotations('/api/annotated-image', annotations).then((res) => res.blob())
+// A PDF has one image per page, so it names the page to render.
+const imageBlob = (annotations, page) => postAnnotations('/api/annotated-image', annotations, page ? { page } : {}).then((res) => res.blob())
 
-async function copyImage(annotations) {
+async function copyImage(annotations, page) {
   if (typeof ClipboardItem === 'undefined' || !navigator.clipboard?.write) {
     throw new Error('this browser cannot copy images, use Save image instead')
   }
   // The promise goes into the ClipboardItem as is: Safari only allows the
   // write while the click that started it is still being handled.
-  await navigator.clipboard.write([new ClipboardItem({ 'image/png': imageBlob(annotations) })])
+  await navigator.clipboard.write([new ClipboardItem({ 'image/png': imageBlob(annotations, page) })])
 }
 
-async function saveImage(annotations, target) {
-  const url = URL.createObjectURL(await imageBlob(annotations))
+async function saveImage(annotations, target, page) {
+  const url = URL.createObjectURL(await imageBlob(annotations, page))
   const link = document.createElement('a')
   link.href = url
   link.download = exportFileName(target)
@@ -71,9 +72,10 @@ function useMenuFocus(open, listRef, triggerRef) {
 /**
  * Copy or save what the annotator shows, for a ticket or a colleague, plus
  * the JSON export/import. `imageActions` is off for recordings, which have
- * no single image to hand over.
+ * no single image to hand over. A PDF passes the `page` shown, which is the
+ * image its image actions hand over.
  */
-export default function ExportMenu({ annotations, target, imageActions, onOpenJson, onDone }) {
+export default function ExportMenu({ annotations, target, imageActions, page = null, onOpenJson, onDone }) {
   const { open, setOpen, toggle, wrapperRef } = useDropdown()
   const listRef = useRef(null)
   const triggerRef = useRef(null)
@@ -87,9 +89,10 @@ export default function ExportMenu({ annotations, target, imageActions, onOpenJs
       onDone(`Could not export: ${error.message}`)
     }
   }
+  const noun = page ? 'page' : 'image'
   const items = [
-    imageActions && { id: 'copy-image', icon: EXPORT_ICONS.copyImage, label: 'Copy annotated image', onClick: run(() => copyImage(annotations), 'Annotated image copied') },
-    imageActions && { id: 'save-image', icon: EXPORT_ICONS.saveImage, label: 'Save annotated image', onClick: run(() => saveImage(annotations, target), 'Annotated image saved') },
+    imageActions && { id: 'copy-image', icon: EXPORT_ICONS.copyImage, label: `Copy annotated ${noun}`, onClick: run(() => copyImage(annotations, page), `Annotated ${noun} copied`) },
+    imageActions && { id: 'save-image', icon: EXPORT_ICONS.saveImage, label: `Save annotated ${noun}`, onClick: run(() => saveImage(annotations, target, page), `Annotated ${noun} saved`) },
     imageActions && { id: 'copy-text', icon: EXPORT_ICONS.copyText, label: 'Copy feedback as Markdown', disabled: annotations.length === 0, onClick: run(() => copyText(annotations), 'Feedback copied as Markdown') },
     { id: 'json', icon: EXPORT_ICONS.json, label: 'Export / import annotations (JSON)', separated: imageActions, onClick: () => { setOpen(false); onOpenJson() } }
   ].filter(Boolean)

@@ -88,6 +88,39 @@ and an overview of the whole recording, and prints feedback that points at
 those files. Agents read images, not video, so the frames are the
 deliverable.
 
+### PDFs
+
+A PDF is image mode on a list of pages. The server parses it with pdf.js in
+a worker thread, so a slow or hostile page never stalls the server: every
+render has a timeout, after which the worker is replaced. `/api/meta` lists
+the pages with their size in rendered pixels (longer side 2000px), which is
+also the space annotation geometry lives in. Pages and thumbnails are
+rendered on first request, thumbnails at their own small size, and only a
+few full pages are kept in memory.
+
+Every annotation carries a `page`, a page comment is a comment with a
+`page`, a general comment has none. Annotations are numbered by page, in the
+order they were made within a page, with general comments last. On submit
+the server bakes each annotated page's marks into its own image, lays the
+annotated pages out in an overview and prints feedback grouped by page. With
+`--source`, the feedback names the file the agent edits and warns when that
+file is newer than the PDF.
+
+The text layer stands in for the DOM map of a captured page. The worker
+reports every text run with its position and font size and every link
+annotation; the server merges runs into lines and lines into blocks (same
+column, no paragraph gap, similar font size), calls a block a heading when
+its font is clearly larger than the page's body text, and serves the result
+per page in the shape the shared element matcher already consumes. The
+feedback quotes the matched text as untrusted document content.
+
+A text selection snaps to the page's words. The worker splits every text run
+into words, measuring each word's share of the run in a generic sans serif,
+and the server lists them in reading order (block by block, line by line).
+The Text tool selects every word between the two it was dragged across and
+stores one rectangle per line plus the selected words as `quote`, which the
+feedback prints as a `Quote:` line.
+
 ## Markdown mode
 
 Once a file is open in the browser:

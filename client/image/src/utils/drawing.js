@@ -29,8 +29,9 @@ export function boxFromPoints(p1, p2) {
  * A single representative point for an annotation, used both to anchor an
  * edit popover and to decide where a scroll-into-view should center.
  */
-// A selected page element covers the same rectangle a drawn box does.
-const isBoxLike = (type) => type === 'box' || type === 'element'
+// A selected page element covers the same rectangle a drawn box does, and a
+// text selection's geometry is the box around all of its lines.
+const isBoxLike = (type) => type === 'box' || type === 'element' || type === 'text'
 
 export function annotationCentroid(annotation) {
   const { type, geometry } = annotation
@@ -124,8 +125,12 @@ function hitTolerance(annotation) {
 }
 
 /** Whether `point` falls on/inside `annotation`, for click-to-select hit-testing. */
+const inRect = (point, r) => point.x >= r.x && point.x <= r.x + r.width && point.y >= r.y && point.y <= r.y + r.height
+
 export function hitTestAnnotation(point, annotation) {
   const { type, geometry } = annotation
+  // Only the selected lines, not the whole box around them.
+  if (type === 'text') { return geometry.rects.some((rect) => inRect(point, rect)) }
   if (isBoxLike(type)) {
     return point.x >= geometry.x && point.x <= geometry.x + geometry.width
       && point.y >= geometry.y && point.y <= geometry.y + geometry.height

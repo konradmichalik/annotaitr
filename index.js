@@ -2,6 +2,7 @@
 
 import { resolve as resolvePath, basename } from 'node:path'
 import { readFileSync, realpathSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { access, constants } from 'node:fs/promises'
 import { readEnvWithFallback } from './server/core/config.js'
 import { openBrowser } from './server/core/browser.js'
@@ -9,7 +10,9 @@ import { withLifecycle } from './server/core/lifecycle.js'
 import { isAnnotatableFile, supportedExtensions as markdownExtensions } from './server/markdown/file.js'
 import { buildMarkdownServer } from './server/markdown/adapter.js'
 import { formatApprovalOutput as formatMarkdownApproval } from './server/markdown/feedback.js'
-import { isImageFile, isVideoFile, isSupportedCaptureUrl, videoExtensions } from './server/image/capture.js'
+import { isImageFile, isVideoFile, isPdfFile, isOfficeDocument, isSupportedCaptureUrl, videoExtensions } from './server/image/capture.js'
+import { parsePageRanges } from './server/image/pages.js'
+import { isSourceNewer, siblingPdf, pdfPathFor } from './server/image/source.js'
 import { parseViewportSpec, parseDelay, describeCapture, MAX_DELAY_MS } from './server/image/config.js'
 import { saveClipboardImage } from './server/image/clipboard.js'
 
@@ -60,6 +63,29 @@ async function loadVideoRuntime() {
   }
 }
 
+/**
+ * A PDF needs no playwright either, but pdf.js (loaded inside the render
+ * worker, so resolved here up front to fail early) and @napi-rs/canvas.
+ */
+async function loadDocumentRuntime() {
+  try {
+    createRequire(import.meta.url).resolve('pdfjs-dist/package.json')
+    const [document, adapter] = await Promise.all([
+      import('./server/image/document.js'),
+      import('./server/image/documentAdapter.js')
+    ])
+    return { openPdfDocument: document.openPdfDocument, buildDocumentServer: adapter.buildDocumentServer }
+  } catch (error) {
+    if (error.code === 'ERR_MODULE_NOT_FOUND' || error.code === 'MODULE_NOT_FOUND') {
+      throw new Error(
+        'Reviewing a PDF needs pdfjs-dist and @napi-rs/canvas, which are optional dependencies. ' +
+        'Install them with: npm i pdfjs-dist @napi-rs/canvas'
+      )
+    }
+    throw error
+  }
+}
+
 const VALID_ORIGINS = ['cli', 'claude-code', 'opencode', 'vibe']
 const VALID_MODES = ['image', 'markdown']
 
@@ -81,6 +107,10 @@ Which mode runs is auto-detected from the target:
   - a single existing image file (.png, .jpg, .jpeg, .webp, .svg) -> image mode
   - a single existing video or GIF (${videoExtensions().join(', ')}) -> image mode,
     annotated on a timeline, with every annotated frame exported as PNG
+  - a single existing PDF                                  -> image mode, page by page,
+    with every annotated page exported as PNG
+  - a PowerPoint, Word, Keynote, Pages or OpenDocument file prints how to
+    export it to PDF first, nothing is converted here
 
 Options:
   --help                       Show this help message
@@ -89,6 +119,8 @@ Options:
   --viewport <preset|WxH>       Image mode only: desktop (default) | laptop | tablet | mobile | <W>x<H>
   --delay <ms>                  Image mode only: wait this long after the page loads before capturing (0 to 10000)
   --feedback-notes <json|path>  Markdown mode only: AI notes to display as read-only annotations
+  --source <path>               PDF only: the file the PDF was rendered from, named in the feedback
+  --pages <range>               PDF only: review only these pages, e.g. 1-5,8,12-
 
 Markdown files supported:
   Markdown (.md, .markdown, .mdown, .mkd) renders as formatted markdown.
@@ -119,6 +151,7 @@ Examples:
   annotaitr --viewport mobile http://localhost:3000/checkout
   annotaitr ./diagram.svg
   annotaitr ./bug-recording.mov
+  annotaitr ./deck.pdf --source ./deck.pptx
   annotaitr                              # read an image from the clipboard (macOS)
 `.trim()
 
@@ -152,6 +185,8 @@ export function parseArgs(argv) {
   let modeOverride = null
   let viewportFlagGiven = false
   let feedbackNotesFlagGiven = false
+  let sourceSpec = null
+  let pageRanges = null
   const targets = []
 
   for (let i = 0; i < args.length; i++) {
@@ -188,6 +223,18 @@ export function parseArgs(argv) {
         return { error: `--feedback-notes: ${err.message}` }
       }
       feedbackNotesFlagGiven = true
+    } else if (arg === '--source') {
+      if (!args[i + 1] || args[i + 1].startsWith('-')) {
+        return { error: '--source requires the path of the file the PDF was rendered from' }
+      }
+      sourceSpec = args[++i]
+    } else if (arg === '--pages') {
+      if (!args[i + 1] || args[i + 1].startsWith('-')) {
+        return { error: '--pages requires a page range, e.g. 1-5,8,12-' }
+      }
+      const parsed = parsePageRanges(args[++i])
+      if (parsed.error) { return { error: parsed.error } }
+      pageRanges = parsed.ranges
     } else if (!arg.startsWith('-')) {
       targets.push(arg)
     } else {
@@ -210,7 +257,10 @@ export function parseArgs(argv) {
     }
   }
 
-  return { targets, origin, viewportSpec, delaySpec, feedbackNotes, modeOverride, viewportFlagGiven, feedbackNotesFlagGiven }
+  return {
+    targets, origin, viewportSpec, delaySpec, feedbackNotes, modeOverride, viewportFlagGiven, feedbackNotesFlagGiven,
+    sourceSpec, pageRanges
+  }
 }
 
 async function fileExists(path) {
@@ -230,6 +280,7 @@ async function fileExists(path) {
  * 3. a single http(s) URL -> image (capture)
  * 4. a single existing file with a supported image extension -> image (local file)
  * 4b. a single existing video or GIF -> image (video capture)
+ * 4c. a single existing PDF -> image (document review)
  * 5. anything else -> a detailed error
  */
 export async function detectMode(targets) {
@@ -253,6 +304,9 @@ export async function detectMode(targets) {
     if ((await fileExists(abs)) && isVideoFile(abs)) {
       return { mode: 'image', capture: 'video', resolvedPath: abs }
     }
+    if ((await fileExists(abs)) && isPdfFile(abs)) {
+      return { mode: 'image', capture: 'document', resolvedPath: abs }
+    }
   }
 
   return { error: buildDetectionError(targets) }
@@ -271,6 +325,7 @@ function buildDetectionError(targets) {
     `Markdown/plain-text extensions: ${markdownExtensions().join(', ')}\n` +
     'Image extensions: .png, .jpg, .jpeg, .webp, .svg (or a http(s) URL to capture)\n' +
     `Video extensions: ${videoExtensions().join(', ')}\n` +
+    'Documents: .pdf\n' +
     'Use --as image or --as markdown to force a mode.'
   )
 }
@@ -396,12 +451,85 @@ async function runVideo({ target, origin, viewportSpec, delaySpec }) {
   await handleOutcome(server, decision, () => decision.output)
 }
 
+/** A local PDF. A URL is captured as a page, whatever its path ends in. */
+export function isPdfTarget(target) {
+  return isPdfFile(target) && !isSupportedCaptureUrl(target)
+}
+
+// Leaves plain paths as typed, so the hint reads like a command a person would write.
+function shellArg(value) {
+  return /^[\w./@:+-]+$/.test(value) ? value : `'${value.replace(/'/g, "'\\''")}'`
+}
+
+/**
+ * An office document is reviewed as the PDF its own tool exports. The hint
+ * is for the agent that built the file (it knows how to render it) and for
+ * a person running the CLI by hand alike, so it carries the next command.
+ */
+async function convertHint(target) {
+  const { document: trimmed, pdf: pdfPath } = pdfPathFor(target)
+  const command = `annotaitr ${shellArg(pdfPath)} --source ${shellArg(trimmed)}`
+  const name = basename(trimmed)
+  const next = (await siblingPdf(resolvePath(trimmed)))
+    ? `${basename(pdfPath)} already exists and is not older than ${name}. If it is current, run:`
+    : `Export ${name} to PDF with the tool that created it, then run:`
+  return `CONVERT TO PDF FIRST: ${trimmed}\nannotaitr reviews documents as PDF. ${next}\n  ${command}\n`
+}
+
 /** A local video or GIF. A URL is captured as a page, whatever its path ends in. */
 export function isVideoTarget(target) {
   return isVideoFile(target) && !isSupportedCaptureUrl(target)
 }
 
-async function runImage({ targets, origin, viewportSpec, delaySpec = null, clipboardPath }) {
+async function runDocument({ target, origin, viewportSpec, delaySpec, sourceSpec, pageRanges }) {
+  if (viewportSpec) {
+    fail('--viewport only applies to a URL target, not a PDF.')
+    return
+  }
+  if (delaySpec !== null) {
+    fail('--delay only applies to a URL target, not a PDF.')
+    return
+  }
+  const pdfPath = resolvePath(target)
+  if (!(await fileExists(pdfPath))) {
+    fail(`File not found: ${pdfPath}`)
+    return
+  }
+  const sourcePath = sourceSpec ? resolvePath(sourceSpec) : null
+  if (sourcePath && !(await fileExists(sourcePath))) {
+    fail(`Source not found: ${sourcePath}`)
+    return
+  }
+
+  const { openPdfDocument, buildDocumentServer } = await loadDocumentRuntime()
+  let document
+  try {
+    document = await openPdfDocument(pdfPath, { pageRanges })
+  } catch (error) {
+    fail(error.message)
+    return
+  }
+
+  const freshness = sourcePath ? await isSourceNewer(sourcePath, pdfPath) : { newer: false }
+  const source = sourcePath ? { label: basename(sourcePath), newer: freshness.newer === true } : null
+  if (source?.newer) {
+    process.stderr.write(`Warning: ${source.label} is newer than ${basename(pdfPath)}. The PDF may be outdated, regenerate it before reviewing.\n`)
+  }
+  if (freshness.skipped) { process.stderr.write(`Note: ${freshness.skipped}.\n`) }
+
+  const server = withLifecycle(await buildDocumentServer({ document, source, origin, targetLabel: basename(pdfPath) }))
+  process.stderr.write(`Server running at ${server.url}\n`)
+  await openBrowser(server.url)
+
+  const decision = await server.waitForDecision()
+  await handleOutcome(server, decision, () => decision.output)
+}
+
+async function runImage({ targets, origin, viewportSpec, delaySpec = null, clipboardPath, sourceSpec = null, pageRanges = null }) {
+  if (targets.length === 1 && isPdfTarget(targets[0])) {
+    await runDocument({ target: targets[0], origin, viewportSpec, delaySpec, sourceSpec, pageRanges })
+    return
+  }
   if (targets.length === 1 && isVideoTarget(targets[0])) {
     await runVideo({ target: targets[0], origin, viewportSpec, delaySpec })
     return
@@ -487,7 +615,10 @@ async function runBareInvocation({ origin, viewportSpec }) {
 }
 
 async function main() {
-  const { help, targets, origin, viewportSpec, delaySpec, feedbackNotes, modeOverride, viewportFlagGiven, feedbackNotesFlagGiven, error } = parseArgs(process.argv)
+  const {
+    help, targets, origin, viewportSpec, delaySpec, feedbackNotes, modeOverride, viewportFlagGiven, feedbackNotesFlagGiven,
+    sourceSpec, pageRanges, error
+  } = parseArgs(process.argv)
 
   if (error) { fail(error); return }
   if (help) { printHelpAndExit(0); return }
@@ -497,6 +628,24 @@ async function main() {
   if (targets.some((t) => t.startsWith('[Image'))) {
     process.stdout.write(CHAT_IMAGE_HINT)
     return
+  }
+
+  // Not a mode: nothing is opened, the agent gets told how to make a PDF.
+  if (targets.length === 1 && isOfficeDocument(targets[0])) {
+    if (!(await fileExists(resolvePath(targets[0])))) {
+      fail(`File not found: ${resolvePath(targets[0])}`)
+      return
+    }
+    process.stdout.write(await convertHint(targets[0]))
+    return
+  }
+
+  const pdfTarget = targets.length === 1 && isPdfTarget(targets[0])
+  for (const [flag, given] of [['--source', sourceSpec !== null], ['--pages', pageRanges !== null]]) {
+    if (given && !pdfTarget) {
+      fail(`${flag} only applies to a PDF target.`)
+      return
+    }
   }
 
   if (targets.length === 0 && !modeOverride) {
@@ -527,7 +676,7 @@ async function main() {
   if (mode === 'markdown') {
     await runMarkdown({ targets, origin, feedbackNotes })
   } else if (mode === 'image') {
-    await runImage({ targets, origin, viewportSpec, delaySpec })
+    await runImage({ targets, origin, viewportSpec, delaySpec, sourceSpec, pageRanges })
   } else {
     fail(`Unknown mode "${mode}". Valid: ${VALID_MODES.join(', ')}`)
   }
