@@ -58,6 +58,12 @@ export function orderDocumentAnnotations(annotations) {
 export function validateDocumentAnnotations(annotations, pageNumbers) {
   for (const [index, annotation] of annotations.entries()) {
     const label = `Annotation ${index + 1}`
+    // Checked here rather than when the feedback is formatted, which would
+    // turn a bad entry into a failed decision.
+    if (typeof annotation !== 'object' || annotation === null) { return `${label}: must be an object` }
+    if (annotation.text !== undefined && annotation.text !== null && typeof annotation.text !== 'string') {
+      return `${label}: text must be a string`
+    }
     const hasPage = annotation.page !== undefined && annotation.page !== null
     if (annotation.type !== 'comment' && !hasPage) {
       return `${label}: a drawn annotation needs a page`

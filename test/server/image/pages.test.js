@@ -58,6 +58,11 @@ describe('validateDocumentAnnotations', () => {
     expect(validateDocumentAnnotations([box('a', 5), comment('b', 2), comment('c')], pages)).toBeNull()
   })
 
+  it('rejects entries that are not objects or carry non-string text', () => {
+    expect(validateDocumentAnnotations([null], pages)).toMatch(/must be an object/)
+    expect(validateDocumentAnnotations([{ ...box('a', 1), text: 42 }], pages)).toMatch(/text must be a string/)
+  })
+
   it('requires a page on a drawn mark', () => {
     expect(validateDocumentAnnotations([box('a', null)], pages)).toMatch(/needs a page/)
   })

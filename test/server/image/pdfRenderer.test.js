@@ -31,7 +31,7 @@ describe('createPdfRenderer', () => {
     const renderer = await createPdfRenderer(pdfPath)
     try {
       expect(renderer.pageCount).toBe(3)
-      expect(renderer.pageSizes).toEqual([
+      expect(await Promise.all([1, 2, 3].map((page) => renderer.pageSize(page)))).toEqual([
         { width: 960, height: 540 }, { width: 595, height: 842 }, { width: 842, height: 595 }
       ])
     } finally {
@@ -72,6 +72,50 @@ describe('createPdfRenderer', () => {
       await renderer.close()
     }
   }, 20_000)
+
+  it('gives up on opening a PDF that takes too long to parse', async () => {
+    await expect(createPdfRenderer(pdfPath, { openTimeoutMs: 1 })).rejects.toThrow(/Opening deck\.pdf took longer than 1 ms/)
+  })
+
+  it('keeps rendering the same document when the file changes on disk', async () => {
+    const path = join(dir, 'changing.pdf')
+    await writeFile(path, await makeHeavyPdf(150_000))
+    const renderer = await createPdfRenderer(path, { timeoutMs: 300 })
+    try {
+      await writeFile(path, 'replaced by a half-written export')
+      // The timeout replaces the worker, which parses the bytes read at the start again.
+      await expect(renderer.render(1, 2000)).rejects.toThrow(/took longer/)
+      await expect(renderer.render(2, 200)).resolves.toMatchObject({ width: 200 })
+    } finally {
+      await renderer.close()
+    }
+  }, 20_000)
+
+  it('runs page renders before queued thumbnails and drops abandoned ones', async () => {
+    const renderer = await createPdfRenderer(pdfPath)
+    try {
+      const order = []
+      const abandoned = new AbortController()
+      const first = renderer.render(1, 200).then(() => order.push('first'))
+      const thumb = renderer.render(2, 200, { priority: 0 }).then(() => order.push('thumb'))
+      const page = renderer.render(3, 200, { priority: 1 }).then(() => order.push('page'))
+      const gone = renderer.render(2, 200, { priority: 1, signal: abandoned.signal })
+      abandoned.abort()
+      await Promise.all([first, thumb, page])
+      await expect(gone).rejects.toMatchObject({ name: 'AbortError' })
+      expect(order).toEqual(['first', 'page', 'thumb'])
+    } finally {
+      await renderer.close()
+    }
+  })
+
+  it('rejects pending and later renders once closed', async () => {
+    const renderer = await createPdfRenderer(heavyPath)
+    const pending = renderer.render(1, 2000)
+    await renderer.close()
+    await expect(pending).rejects.toThrow()
+    await expect(renderer.render(2, 200)).rejects.toThrow(/closed/)
+  })
 
   it('rejects a page outside the document', async () => {
     const renderer = await createPdfRenderer(pdfPath)

@@ -291,6 +291,12 @@ describe('office documents', () => {
     expect(result.stdout.toString()).toContain(`annotaitr ${join(dir, 'talk.pdf')} --source ${join(dir, 'talk.key')}`)
   })
 
+  it('reports a missing office document instead of the generic detection error', () => {
+    const result = spawnSync('node', ['index.js', join(dir, 'missing.pptx')], NO_SERVER)
+    expect(result.status).toBe(1)
+    expect(result.stderr.toString()).toMatch(/File not found: .*missing\.pptx/)
+  })
+
   it('takes precedence over a forced mode', () => {
     const result = spawnSync('node', ['index.js', '--as', 'image', join(dir, 'deck.pptx')], NO_SERVER)
     expect(result.status).toBe(0)

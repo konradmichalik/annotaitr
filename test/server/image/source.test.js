@@ -1,6 +1,6 @@
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { mkdtemp, mkdir, writeFile, rm, utimes } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, rm, utimes, symlink } from 'node:fs/promises'
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { isSourceNewer, siblingPdf } from '../../../server/image/source.js'
 
@@ -49,6 +49,18 @@ describe('isSourceNewer', () => {
     }
     await touch(join(source, 'slides.md'), 1000)
     expect(await isSourceNewer(source, pdf)).toEqual({ newer: false })
+  })
+
+  it('counts a symlinked file with its target', async () => {
+    const source = join(dir, 'project')
+    await mkdir(source)
+    await touch(join(dir, 'outside.md'), 3000)
+    await symlink(join(dir, 'outside.md'), join(source, 'slides.md'))
+    expect(await isSourceNewer(source, pdf)).toEqual({ newer: true })
+  })
+
+  it('skips the check instead of failing when the source cannot be read', async () => {
+    expect(await isSourceNewer(join(dir, 'missing'), pdf)).toEqual({ skipped: expect.stringMatching(/could not check/) })
   })
 
   it('skips the check instead of guessing when a directory holds too many files', async () => {

@@ -60,7 +60,7 @@ describe('createPageCache', () => {
       calls.push(page)
       if (page === 9 && fail) { fail = false; throw new Error('boom') }
       return { buffer: Buffer.from(String(page)) }
-    }, 2)
+    }, 2, 0)
     await Promise.all([cache.get(1), cache.get(1)])
     await cache.get(2)
     await cache.get(3)
@@ -69,6 +69,47 @@ describe('createPageCache', () => {
     await expect(cache.get(9)).rejects.toThrow('boom')
     await new Promise((r) => setTimeout(r, 0))
     expect((await cache.get(9)).toString()).toBe('9')
+  })
+})
+
+describe('createPageCache failures', () => {
+  it('answers a failed page from the cache for a moment instead of rendering it again', async () => {
+    let calls = 0
+    const cache = createPageCache(async () => { calls += 1; throw new Error('slow page') }, 2, 60_000)
+    await expect(cache.get(1)).rejects.toThrow('slow page')
+    await expect(cache.get(1)).rejects.toThrow('slow page')
+    expect(calls).toBe(1)
+  })
+
+  it('lets a late failure of an evicted render leave the newer entry alone', async () => {
+    let rejectFirst
+    let calls = 0
+    const cache = createPageCache((page) => {
+      calls += 1
+      if (page === 1 && calls === 1) { return new Promise((_resolve, reject) => { rejectFirst = reject }) }
+      return Promise.resolve({ buffer: Buffer.from(String(page)) })
+    }, 1, 0)
+    const first = cache.get(1)
+    await cache.get(2)
+    await cache.get(1)
+    rejectFirst(new Error('late'))
+    await expect(first).rejects.toThrow('late')
+    await new Promise((r) => setTimeout(r, 5))
+    await cache.get(1)
+    expect(calls).toBe(3)
+  })
+
+  it('forgets an abandoned render at once', async () => {
+    let calls = 0
+    const abort = Object.assign(new Error('gone'), { name: 'AbortError' })
+    const cache = createPageCache(async () => {
+      calls += 1
+      if (calls === 1) { throw abort }
+      return { buffer: Buffer.from('ok') }
+    }, 2, 60_000)
+    await expect(cache.get(1)).rejects.toBe(abort)
+    await new Promise((r) => setTimeout(r, 0))
+    expect((await cache.get(1)).toString()).toBe('ok')
   })
 })
 
@@ -129,6 +170,12 @@ describe('document annotator server', () => {
 
     expect((await fetch(`${server.url}/api/pages/3/image`)).status).toBe(404)
     expect((await fetch(`${server.url}/api/pages/abc/thumb`)).status).toBe(404)
+  })
+
+  it('rejects annotation entries that would only fail at decision time', async () => {
+    await start()
+    expect((await post('/api/annotations', { annotations: [null] })).status).toBe(400)
+    expect((await post('/api/annotations', { annotations: [box('a', 1, { text: 42 })] })).status).toBe(400)
   })
 
   it('rejects annotations without a page or on a page outside the review', async () => {

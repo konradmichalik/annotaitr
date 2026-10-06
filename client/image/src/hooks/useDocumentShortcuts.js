@@ -12,20 +12,28 @@ const STEPS = {
 }
 
 /**
- * Page keys for a PDF: PageUp/PageDown and [ / ] move one page, Home and End
- * jump to the first and last. Ignored while typing, with a modifier held (so
- * Cmd+Z and friends keep working) and while `disabled`.
+ * How many pages a key press moves, or null when it is not a page key here:
+ * while typing, with a modifier held (so Cmd+Z and friends keep working),
+ * inside a menu (which uses Home and End itself) or when something else
+ * already handled the key.
  */
+export function pageStepFor(event) {
+  if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) { return null }
+  const target = event.target
+  if (TEXT_ENTRY_TAGS.has(target?.tagName) || target?.closest?.('[role="menu"]')) { return null }
+  return STEPS[event.key] ?? null
+}
+
+/** Page keys for a PDF: PageUp/PageDown and [ / ] move one page, Home and End jump to the first and last. */
 export function useDocumentShortcuts({ enabled, disabled, onStep }) {
   useEffect(() => {
     if (!enabled) { return }
     const handleKeyDown = (event) => {
-      if (disabled || event.metaKey || event.ctrlKey || event.altKey) { return }
-      if (TEXT_ENTRY_TAGS.has(document.activeElement?.tagName)) { return }
-      const delta = STEPS[event.key]
-      if (delta === undefined) { return }
+      if (disabled) { return }
+      const step = pageStepFor(event)
+      if (step === null) { return }
       event.preventDefault()
-      onStep(delta)
+      onStep(step)
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)

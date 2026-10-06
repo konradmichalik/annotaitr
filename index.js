@@ -631,7 +631,11 @@ async function main() {
   }
 
   // Not a mode: nothing is opened, the agent gets told how to make a PDF.
-  if (targets.length === 1 && isOfficeDocument(targets[0]) && (await fileExists(resolvePath(targets[0])))) {
+  if (targets.length === 1 && isOfficeDocument(targets[0])) {
+    if (!(await fileExists(resolvePath(targets[0])))) {
+      fail(`File not found: ${resolvePath(targets[0])}`)
+      return
+    }
     process.stdout.write(await convertHint(targets[0]))
     return
   }

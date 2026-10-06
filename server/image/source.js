@@ -24,10 +24,15 @@ async function newestFileMtime(dir, maxFiles) {
       const path = join(current, entry.name)
       if (entry.isDirectory()) {
         pending.push(path)
-      } else if (entry.isFile()) {
+        continue
+      }
+      // A symlinked file counts with its target's mtime. A symlinked
+      // directory is not followed, which also rules out loops.
+      const stats = entry.isFile() || entry.isSymbolicLink() ? await stat(path).catch(() => null) : null
+      if (stats?.isFile()) {
         files += 1
         if (files > maxFiles) { return null }
-        newest = Math.max(newest, (await stat(path)).mtimeMs)
+        newest = Math.max(newest, stats.mtimeMs)
       }
     }
   }
@@ -39,9 +44,18 @@ async function sourceMtime(path, maxFiles) {
   return stats.isDirectory() ? newestFileMtime(path, maxFiles) : stats.mtimeMs
 }
 
-/** `{ newer }`, or `{ skipped }` with the reason when a directory source is too large to scan. */
+/**
+ * `{ newer }`, or `{ skipped }` with the reason when the source cannot be
+ * compared (too many files, unreadable). The check only ever warns, so it
+ * never fails the review.
+ */
 export async function isSourceNewer(sourcePath, pdfPath, { maxFiles = MAX_FILES } = {}) {
-  const source = await sourceMtime(sourcePath, maxFiles)
+  let source
+  try {
+    source = await sourceMtime(sourcePath, maxFiles)
+  } catch (error) {
+    return { skipped: `could not check whether the PDF is outdated: ${error.message}` }
+  }
   if (source === null) {
     return { skipped: `the source holds more than ${maxFiles} files, not checked whether the PDF is outdated` }
   }
