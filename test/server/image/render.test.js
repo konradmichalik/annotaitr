@@ -208,6 +208,29 @@ describe('composeContactSheet', () => {
     expect(decoded.height).toBe(2 * (50 + CONTACT_SHEET_LABEL_HEIGHT) + 3 * CONTACT_SHEET_GAP)
   })
 
+  it('fits tiles of mixed sizes into cells sized for the tallest aspect ratio, without distorting them', async () => {
+    const tiles = [
+      { buffer: makeFixturePng(200, 100, '#ff0000'), label: 'landscape' },
+      { buffer: makeFixturePng(100, 200, '#00ff00'), label: 'portrait' }
+    ]
+    const result = await composeContactSheet(tiles, { columns: 2, tileWidth: 100 })
+    const decoded = await loadImage(result)
+    // Cells are 100 wide and 200 tall (portrait ratio 2:1).
+    expect(decoded.width).toBe(2 * 100 + 3 * CONTACT_SHEET_GAP)
+    expect(decoded.height).toBe(200 + CONTACT_SHEET_LABEL_HEIGHT + 2 * CONTACT_SHEET_GAP)
+
+    const ctx = createCanvas(decoded.width, decoded.height).getContext('2d')
+    ctx.drawImage(decoded, 0, 0)
+    const pixel = (x, y) => Array.from(ctx.getImageData(x, y, 1, 1).data.slice(0, 3))
+    const cellTop = CONTACT_SHEET_GAP
+    // The landscape tile is 100x50, centred vertically in its 200px cell.
+    expect(pixel(CONTACT_SHEET_GAP + 50, cellTop + 100)).toEqual([255, 0, 0])
+    expect(pixel(CONTACT_SHEET_GAP + 50, cellTop + 10)).not.toEqual([255, 0, 0])
+    // The portrait tile fills its cell: 100x200.
+    expect(pixel(2 * CONTACT_SHEET_GAP + 150, cellTop + 10)).toEqual([0, 255, 0])
+    expect(pixel(2 * CONTACT_SHEET_GAP + 150, cellTop + 190)).toEqual([0, 255, 0])
+  })
+
   it('never upscales a tile beyond the source width', async () => {
     const result = await composeContactSheet([{ buffer: makeFixturePng(80, 40), label: 'x' }], { columns: 1, tileWidth: 400 })
     const decoded = await loadImage(result)
