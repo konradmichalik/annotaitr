@@ -97,7 +97,11 @@ test('text on a PDF page is selected word by word and quoted in the feedback', a
   await writeFile(pdfPath, await makePdf([{ size: 'slide', title: 'Revenue by region', body: ['North grew 12%', 'South stayed flat'] }]))
   const cli = startCli([pdfPath])
   try {
+    // The Text tool is offered while the page's words are still on their
+    // way, but a drag only selects once they have arrived.
+    const textLoaded = page.waitForResponse((res) => res.url().includes('/api/pages/1/elements'))
     await page.goto(await cli.url)
+    await textLoaded
     await expect(page.locator('.page-skeleton')).toHaveCount(0)
     const toolbar = page.getByRole('toolbar', { name: 'Annotation tools' })
     await toolbar.getByText('Text', { exact: true }).click()
