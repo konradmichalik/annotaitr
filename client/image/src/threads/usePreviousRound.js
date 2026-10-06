@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { threadsQuery } from './threadView.js'
+import { readPreviousRound, threadsQuery } from './threadView.js'
 
 const NONE = { round: null, threads: [] }
 
@@ -12,7 +12,7 @@ export function usePreviousRound({ ready, duration }) {
     let wanted = true
     fetch(`/api/threads${threadsQuery(duration)}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((r) => { if (wanted) { setLoaded({ round: r?.data?.round ?? null, threads: r?.data?.threads ?? [] }) } })
+      .then((body) => { if (wanted) { setLoaded(readPreviousRound(body)) } })
       .catch(() => {})
     return () => { wanted = false }
   }, [ready, duration])

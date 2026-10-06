@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  STATUS_DISPLAY, threadStatus, placedThreads, orphanThreads, threadPageCounts, threadsQuery
+  STATUS_DISPLAY, statusDisplay, readPreviousRound, threadStatus, placedThreads, orphanThreads, threadPageCounts, threadsQuery
 } from '../../../client/image/src/threads/threadView.js'
 
 const box = (extra = {}) => ({ type: 'box', geometry: { x: 1, y: 1, width: 5, height: 5 }, text: 'Fix', ...extra })
@@ -69,5 +69,34 @@ describe('threadsQuery', () => {
     expect(threadsQuery(12.5)).toBe('?duration=12.5')
     expect(threadsQuery(undefined)).toBe('')
     expect(threadsQuery(Number.NaN)).toBe('')
+  })
+})
+
+describe('statusDisplay', () => {
+  it('looks up the display of the last reply status', () => {
+    expect(statusDisplay(thread(box(), { replies: [reply('declined')] }))).toBe(STATUS_DISPLAY.declined)
+  })
+
+  it('falls back to the no-reply display for a status a hand-edited session invented', () => {
+    expect(statusDisplay(thread(box(), { replies: [reply('wontfix')] }))).toBe(STATUS_DISPLAY.none)
+  })
+})
+
+describe('readPreviousRound', () => {
+  const empty = { round: null, threads: [] }
+
+  it('reads round and threads from a well-formed body', () => {
+    const t = thread(box())
+    expect(readPreviousRound({ data: { round: 2, threads: [t] } })).toEqual({ round: 2, threads: [t] })
+  })
+
+  it.each([
+    ['a failed response', null],
+    ['a body without data', {}],
+    ['threads that are not an array', { data: { round: 2, threads: 'nope' } }],
+    ['threads missing', { data: { round: 2 } }]
+  ])('is empty for %s', (_, body) => {
+    expect(readPreviousRound(body).threads).toEqual([])
+    if (body === null) { expect(readPreviousRound(body)).toEqual(empty) }
   })
 })

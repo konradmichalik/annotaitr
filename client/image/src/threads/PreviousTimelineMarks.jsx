@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { layoutMarkerLanes, MARKER_SIZE_PX } from '../video/timeline.js'
-import { STATUS_DISPLAY, threadStatus } from './threadView.js'
+import { statusDisplay } from './threadView.js'
 
 const LANE_GAP_PX = 2
 
@@ -22,7 +22,7 @@ export default function PreviousTimelineMarks({ threads, round, duration, onShow
   return (
     <div ref={rowRef} className="timeline-markers timeline-markers--previous" style={{ height: laneCount * (MARKER_SIZE_PX + LANE_GAP_PX) }}>
       {threads.map((thread) => {
-        const { icon, label } = STATUS_DISPLAY[threadStatus(thread)]
+        const { icon, label } = statusDisplay(thread)
         const name = `Round ${round} mark ${thread.number}, ${label}`
         return (
           <button

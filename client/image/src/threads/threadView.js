@@ -17,19 +17,24 @@ export function threadStatus(thread) {
   return thread.replies.at(-1)?.status ?? 'none'
 }
 
+// A status from a hand-edited session must not crash the canvas, it reads as no reply.
+export function statusDisplay(thread) {
+  return STATUS_DISPLAY[threadStatus(thread)] ?? STATUS_DISPLAY.none
+}
+
 function inView(annotation, view) {
   if (view.kind === 'video') { return isVisibleAt(annotation, view.time, view.tolerance) }
   if (view.kind === 'document') { return annotation.page === view.page }
   return true
 }
 
-/** Threads to draw in the current view. Orphans have no place and general comments no geometry, so the panel lists them instead. */
-export function placedThreads(threads, view) {
-  return threads.filter((t) => t.anchor !== 'orphan' && t.annotation.type !== 'comment' && inView(t.annotation, view))
-}
-
 // Orphans and general comments have no mark, so their popover hangs off the panel entry or the timeline tick.
 export const hasMark = (thread) => thread.anchor !== 'orphan' && thread.annotation.type !== 'comment'
+
+/** Threads to draw in the current view. Orphans have no place and general comments no geometry, so the panel lists them instead. */
+export function placedThreads(threads, view) {
+  return threads.filter((t) => hasMark(t) && inView(t.annotation, view))
+}
 
 export function orphanThreads(threads) {
   return threads.filter((t) => t.anchor === 'orphan')
@@ -47,4 +52,11 @@ export function threadPageCounts(threads) {
 // The server orphans video marks past the end only when it knows the duration, which only the browser can measure.
 export function threadsQuery(duration) {
   return Number.isFinite(duration) ? `?duration=${duration}` : ''
+}
+
+/** The `/api/threads` body as last round state. Anything unexpected, including a failed request (null), is an empty round. */
+export function readPreviousRound(body) {
+  const threads = body?.data?.threads
+  if (!Array.isArray(threads)) { return { round: null, threads: [] } }
+  return { round: body.data.round ?? null, threads }
 }

@@ -1,13 +1,16 @@
 import { annotationTopAnchor } from '../utils/drawing.js'
-import { STATUS_DISPLAY, threadStatus } from './threadView.js'
+import { statusDisplay, threadStatus } from './threadView.js'
 
 const BADGE_HEIGHT = 20
+// SVG text cannot be measured before it renders, so the pill is sized from the character count: about 6.5px per
+// glyph at the 11px badge font, plus 12px of padding.
 const CHAR_WIDTH = 6.5
+const PADDING = 12
 
 function Badge({ thread, anchor }) {
-  const { icon, label } = STATUS_DISPLAY[threadStatus(thread)]
+  const { icon, label } = statusDisplay(thread)
   const text = `${icon} ${thread.number} ${label}`
-  const width = text.length * CHAR_WIDTH + 12
+  const width = text.length * CHAR_WIDTH + PADDING
   return (
     <g className={`previous-round-badge previous-round-badge--${threadStatus(thread)}`} transform={`translate(${anchor.x - width / 2} ${Math.max(0, anchor.y - BADGE_HEIGHT - 4)})`}>
       <rect width={width} height={BADGE_HEIGHT} rx="10" />
