@@ -1,7 +1,7 @@
 /**
  * The image-loading and page-capture functions that actually need
  * playwright and @napi-rs/canvas — both optionalDependencies. Kept out of
- * server/image/common/fileTypes.js (pure detection helpers) so index.js only loads
+ * server/image/common/fileTypes.js (pure detection helpers) so the CLI only loads
  * this module once image mode is already confirmed, via a dynamic import.
  */
 

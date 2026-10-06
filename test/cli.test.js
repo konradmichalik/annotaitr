@@ -3,7 +3,8 @@ import { join, resolve as resolvePath } from 'node:path'
 import { mkdtemp, mkdir, writeFile, rm, symlink, utimes } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { parseArgs, detectMode, isVideoTarget, isPdfTarget } from '../index.js'
+import { parseArgs } from '../cli/args.js'
+import { detectMode, isVideoTarget, isPdfTarget } from '../cli/detect.js'
 
 // For CLI runs that must be rejected up front: if one ever starts a server
 // instead, it opens no browser and fails on the timeout rather than hanging.

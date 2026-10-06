@@ -21,7 +21,7 @@ const OFFICE_EXTENSIONS = new Set(['.pptx', '.ppt', '.odp', '.key', '.docx', '.d
 
 /**
  * Pure, dependency-free detection helpers, kept separate from
- * server/image/still/loader.js so index.js can decide the mode (markdown vs.
+ * server/image/still/loader.js so the CLI can decide the mode (markdown vs.
  * image) without pulling in playwright or @napi-rs/canvas — both
  * optionalDependencies — for a target that turns out to be markdown.
  */

@@ -3,7 +3,7 @@ import { basename, dirname, extname, join } from 'node:path'
 
 /**
  * The file a PDF was rendered from (--source) and whether that rendering is
- * still current. Dependency-free, so index.js can use it for the convert
+ * still current. Dependency-free, so the CLI can use it for the convert
  * hint without loading pdf.js.
  */
 

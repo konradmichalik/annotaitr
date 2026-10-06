@@ -4,7 +4,7 @@
 
 annotaitr is a plugin and CLI for Claude Code, OpenCode and Mistral Vibe. It opens an image, a captured web page, a video, a PDF or Markdown/plain-text files in a browser UI for annotation. The user's feedback is printed to stdout for the calling agent to apply. Requires Node.js 22.13 or newer.
 
-The mode (`image` or `markdown`) is auto-detected from the CLI target by `detectMode()` in `index.js`, or forced with `--as`.
+The mode (`image` or `markdown`) is auto-detected from the CLI target by `detectMode()` in `cli/detect.js`, or forced with `--as`.
 
 Flow: CLI (`index.js`) starts an Express server, opens the browser and blocks until the user submits a decision. Each client is a React SPA built as one single-file HTML bundle (vite-plugin-singlefile).
 
@@ -15,7 +15,8 @@ Stdout is the contract with the calling agent:
 
 ## Structure
 
-- `index.js`: CLI entry, argument parsing, mode detection, stdout output
+- `index.js`: CLI entry, dispatches to a mode runner
+- `cli/`: argument parsing (`args.js`), mode detection (`detect.js`), help text, one runner per target kind (`markdown.js`, `image.js`, `video.js`, `document.js`) and the stdout output on a decision (`outcome.js`)
 - `server/core/`: mode-agnostic Express bootstrap, config (`ANNOTAITR_*` environment variables), browser opening, signal handling
 - `server/markdown/`: markdown mode API routes, feedback formatting and file loading
 - `server/image/`: image mode, split into `common/` (rendering, feedback basics, element matching, transcription, config) and one folder per target kind: `still/` (image file, URL capture, clipboard), `video/` and `document/` (PDF)
