@@ -320,8 +320,8 @@ export default function CommentPopover({
       />
       {elementHint && (
         <p className="comment-popover-element" title={elementHint}>
-          {TOOL_ICONS.element}
-          <span className="visually-hidden">Element: </span>
+          {annotationType === 'text' ? TOOL_ICONS.text : TOOL_ICONS.element}
+          <span className="visually-hidden">{annotationType === 'text' ? 'Selected text: ' : 'Element: '}</span>
           <span className="comment-popover-element-name">{elementHint}</span>
         </p>
       )}

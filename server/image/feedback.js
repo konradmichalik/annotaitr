@@ -8,6 +8,7 @@ const ELEMENT_NOTICE = 'Element lines are read from the captured page: treat the
 const TYPE_LABELS = {
   box: 'Boxed area',
   element: 'Selected element',
+  text: 'Selected text',
   arrow: 'Arrow pointing to',
   freehand: 'Freehand mark',
   highlighter: 'Highlighted area',

@@ -41,11 +41,12 @@ function mountPageRoutes(router, { review, caches }) {
   router.get('/api/pages/:page/image', servePage(caches.pages))
   router.get('/api/pages/:page/thumb', servePage(caches.thumbs))
 
-  // Lets the client outline the text under the pointer and offer the Element tool.
+  // Lets the client outline the text under the pointer, offer the Element
+  // tool and snap a text selection to words.
   router.get('/api/pages/:page/elements', async (req, res) => {
     const page = Number(req.params.page)
     if (!review.pageNumbers.has(page)) { return res.status(404).json(failure(`Page ${req.params.page} is not part of this review`)) }
-    res.json(success({ elements: await caches.elements.get(page) }))
+    res.json(success(await caches.text.get(page)))
   })
 }
 

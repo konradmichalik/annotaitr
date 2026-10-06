@@ -57,6 +57,8 @@ export default function App() {
   // Elements of a captured web page (empty for files, the clipboard and
   // recordings), so the canvas can outline and name what each mark hits.
   const [elements, setElements] = useState([])
+  // A PDF page's words in reading order, for selecting text.
+  const [words, setWords] = useState([])
   // What is being captured right now ("Tablet 768×1024"), or null.
   const [recapturing, setRecapturing] = useState(null)
   const [imageUrl, setImageUrl] = useState(null)
@@ -355,9 +357,14 @@ export default function App() {
     if (pageShownForElements === null) { return }
     let current = true
     setElements([])
+    setWords([])
     fetch(`/api/pages/${pageShownForElements}/elements`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((r) => { if (current) { setElements(r?.data?.elements ?? []) } })
+      .then((r) => {
+        if (!current) { return }
+        setElements(r?.data?.elements ?? [])
+        setWords(r?.data?.words ?? [])
+      })
       .catch(() => {})
     return () => { current = false }
   }, [pageShownForElements])
@@ -377,6 +384,7 @@ export default function App() {
     if (video.spanComplete) { return 'Span marked. Pick a tool (or click "Pin") and click the frame to mark something in it, or click "Comment span" to comment without drawing.' }
     if (video.range.start !== null) { return 'Span started. Move to where it ends (play, scrub or use the arrows), then click "Set end here".' }
     if (isVideo) { return 'Pause on a frame and draw on it. Space plays, arrows step frames, I and O mark a span.' }
+    if (activeTool === 'text') { return 'Drag across the text you mean, from its first to its last word, then add a comment.' }
     if (activeTool === 'element') { return `Point at ${isDocument ? 'a text block or link' : 'a page element'} to see what it is, then click to select it and add a comment.` }
     if (isDocument) { return 'Draw on the page. PageUp/PageDown or [ and ] switch pages, Home and End jump to the first and last.' }
     return 'Click a mark to select it, drag to move, or press Delete to remove it.'
@@ -573,6 +581,7 @@ export default function App() {
                 activeTool={activeTool}
                 onSelectTool={setActiveTool}
                 elementTool={elements.length > 0}
+                textTool={words.length > 0}
                 colorMode={settings.colorMode}
                 fixedColor={settings.fixedColor}
                 onChangeColorMode={(mode) => updateSetting('colorMode', mode)}
@@ -605,6 +614,7 @@ export default function App() {
                 describeTime={isVideo ? describeTime : null}
                 voiceNotes={!!meta.voiceNotes}
                 elements={elements}
+                words={words}
                 zoom={zoom}
                 onZoomBy={zoomBy}
                 editingAnnotationId={editingAnnotationId}

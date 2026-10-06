@@ -135,7 +135,15 @@ hovering with the **Element** tool outlines a text block, heading or link,
 clicking selects it, and the feedback names the text under every mark, e.g.
 `Text: heading "Revenue by region"`. Text blocks are rebuilt from where the
 text sits on the page, since a PDF has no DOM. A scanned PDF has no text
-layer, so it gets no `Text:` lines and no Element tool.
+layer, so it gets no `Text:` lines and no Element or Text tool.
+
+The **Text** tool selects text like a browser does: drag from the first to
+the last word you mean, across lines if needed, and the selection snaps to
+whole words. The comment box and the sidebar show the selected words, and
+the feedback quotes them exactly, e.g. `Quote: "North grew 12%"`, so the
+agent can find the passage in the source. Word positions are measured
+approximately, since a PDF only stores where a run of text starts and how
+wide it is.
 
 Office formats are not converted. `annotaitr deck.pptx` prints a
 `CONVERT TO PDF FIRST:` hint with the command to run once the PDF exists,

@@ -63,6 +63,15 @@ describe('validateDocumentAnnotations', () => {
     expect(validateDocumentAnnotations([{ ...box('a', 1), text: 42 }], pages)).toMatch(/text must be a string/)
   })
 
+  it('accepts a text selection with its lines and quote, and rejects one without', () => {
+    const rects = [{ x: 1, y: 2, width: 30, height: 10 }]
+    const selection = { id: 't', type: 'text', page: 1, quote: 'North grew', geometry: { x: 1, y: 2, width: 30, height: 10, rects } }
+    expect(validateDocumentAnnotations([selection], pages)).toBeNull()
+    expect(validateDocumentAnnotations([{ ...selection, quote: '' }], pages)).toMatch(/selected text/)
+    expect(validateDocumentAnnotations([{ ...selection, geometry: { ...selection.geometry, rects: [] } }], pages)).toMatch(/line rectangles/)
+    expect(validateDocumentAnnotations([{ ...selection, geometry: { ...selection.geometry, rects: [{ x: 'a' }] } }], pages)).toMatch(/line rectangles/)
+  })
+
   it('requires a page on a drawn mark', () => {
     expect(validateDocumentAnnotations([box('a', null)], pages)).toMatch(/needs a page/)
   })

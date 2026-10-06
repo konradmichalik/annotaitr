@@ -2,7 +2,9 @@
  * Turn the text runs of a PDF page into the element map image mode matches
  * annotations against (server/image/elementMatch.js): one element per text
  * block, headings told apart by their font size, plus links. A PDF has no
- * DOM, so blocks are rebuilt from where the runs sit on the page.
+ * DOM, so blocks are rebuilt from where the runs (one per word, see
+ * renderWorker.js) sit on the page. The same blocks give the page's words in
+ * reading order, which a text selection snaps to.
  */
 
 const MAX_NAME_LENGTH = 80
@@ -39,8 +41,9 @@ function groupLines(runs) {
       line.text += gap > run.fontSize * 0.15 ? ` ${run.str}` : run.str
       line.box = union(line.box, run.box)
       line.fontSize = Math.max(line.fontSize, run.fontSize)
+      line.runs.push(run)
     } else {
-      lines.push({ text: run.str, box: { ...run.box }, fontSize: run.fontSize })
+      lines.push({ text: run.str, box: { ...run.box }, fontSize: run.fontSize, runs: [run] })
     }
   }
   return lines
@@ -62,8 +65,9 @@ function groupBlocks(lines) {
       block.text += ` ${line.text}`
       block.box = union(block.box, line.box)
       block.last = line
+      block.lines.push(line)
     } else {
-      blocks.push({ text: line.text, box: line.box, fontSize: line.fontSize, last: line })
+      blocks.push({ text: line.text, box: line.box, fontSize: line.fontSize, last: line, lines: [line] })
     }
   }
   return blocks
@@ -79,11 +83,18 @@ function bodySize(blocks) {
   return [...chars].reduce((best, entry) => (entry[1] > best[1] ? entry : best), [0, 0])[0]
 }
 
+/** Every word of the page in reading order: block by block, line by line. */
+function wordsOf(blocks) {
+  const lines = blocks.flatMap((block) => block.lines)
+  return lines.flatMap((line, index) => line.runs.map((run) => ({ text: run.str.trim(), line: index, box: run.box })))
+}
+
 /**
  * @param {{ runs?: { str: string, fontSize: number, box: object }[], links?: { url: string, box: object }[] }} page
  *   text runs and links of one page, boxes in the rendered page's pixels
+ * @returns {{ elements: object[], words: { text: string, line: number, box: object }[] }}
  */
-export function buildTextElements({ runs = [], links = [] }) {
+export function buildTextLayer({ runs = [], links = [] }) {
   const blocks = groupBlocks(groupLines(runs))
   const body = bodySize(blocks)
   const text = blocks
@@ -95,5 +106,5 @@ export function buildTextElements({ runs = [], links = [] }) {
     }))
     .filter((element) => element.name)
   const linked = links.map(({ url, box }) => ({ tag: 'link', name: capName(url), selector: '', box }))
-  return [...text, ...linked]
+  return { elements: [...text, ...linked], words: wordsOf(blocks) }
 }

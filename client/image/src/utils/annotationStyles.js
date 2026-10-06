@@ -80,7 +80,9 @@ export const STYLE_FIELDS = {
   arrow: ['arrowStyle', 'strokeWidth', 'dashStyle'],
   freehand: ['strokeWidth', 'dashStyle'],
   highlighter: ['strokeWidth'],
-  pin: []
+  pin: [],
+  // A marker over the selected words, like a page element only its color varies.
+  text: []
 }
 
 /** Pick only the style fields relevant to `type` out of `source`, per STYLE_FIELDS. */

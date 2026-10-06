@@ -46,10 +46,26 @@ function viewportFor(page, longSide) {
 // Bounds what one page can hand back; real pages stay far below.
 const MAX_TEXT_RUNS = 5000
 
+// pdf.js reports where a text run starts and how wide it is, not where its
+// words are. Each word's share of the run is measured in a generic sans
+// serif and scaled to the run's real width: close enough for a selection
+// to snap to whole words in most fonts.
+const measure = createCanvas(1, 1).getContext('2d')
+measure.font = '100px sans-serif'
+
+function splitIntoWords(str, x, width) {
+  const total = measure.measureText(str).width || 1
+  return [...str.matchAll(/\S+/g)].map(({ 0: word, index }) => ({
+    str: word,
+    x: x + (width * measure.measureText(str.slice(0, index)).width) / total,
+    width: (width * measure.measureText(word).width) / total
+  }))
+}
+
 /**
- * The page's text runs and links, with boxes in the pixels of the page
- * rendered at `longSide`. A run's box spans from its descent below the
- * baseline to its ascent above it, estimated from the font size.
+ * The page's words and links, with boxes in the pixels of the page rendered
+ * at `longSide`. A word's box spans from its descent below the baseline to
+ * its ascent above it, estimated from the font size.
  */
 async function pageText(doc, { page: number, longSide }) {
   const page = await doc.getPage(number)
@@ -62,12 +78,16 @@ async function pageText(doc, { page: number, longSide }) {
   const { items } = await page.getTextContent()
   const runs = items
     .filter((item) => typeof item.str === 'string' && item.str.trim())
-    .slice(0, MAX_TEXT_RUNS)
-    .map((item) => {
+    .flatMap((item) => {
       const [a, b, , , x, y] = item.transform
       const size = Math.hypot(a, b)
-      return { str: item.str, fontSize: size * viewport.scale, box: toBox([x, y - size * 0.2, x + item.width, y + size * 0.8]) }
+      return splitIntoWords(item.str, x, item.width).map((word) => ({
+        str: word.str,
+        fontSize: size * viewport.scale,
+        box: toBox([word.x, y - size * 0.2, word.x + word.width, y + size * 0.8])
+      }))
     })
+    .slice(0, MAX_TEXT_RUNS)
   const links = (await page.getAnnotations())
     .filter((annotation) => annotation.subtype === 'Link' && typeof annotation.url === 'string')
     .map((annotation) => ({ url: annotation.url, box: toBox(annotation.rect) }))

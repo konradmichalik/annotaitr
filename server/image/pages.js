@@ -5,6 +5,25 @@
  */
 
 export const MAX_PAGES = 200
+// A selection across a whole dense page stays well below both.
+const MAX_TEXT_RECTS = 500
+const MAX_QUOTE_LENGTH = 5000
+
+const isFiniteNumber = (value) => typeof value === 'number' && Number.isFinite(value)
+const isRect = (r) => isFiniteNumber(r?.x) && isFiniteNumber(r?.y) && isFiniteNumber(r?.width) && isFiniteNumber(r?.height)
+
+/** A text selection: the lines it covers, the box around them and the selected words. */
+function textSelectionError(annotation, label) {
+  const { geometry, quote } = annotation
+  if (!isRect(geometry) || !Array.isArray(geometry.rects) || geometry.rects.length === 0
+    || geometry.rects.length > MAX_TEXT_RECTS || !geometry.rects.every(isRect)) {
+    return `${label}: a text selection needs a box and 1 to ${MAX_TEXT_RECTS} line rectangles`
+  }
+  if (typeof quote !== 'string' || quote.length === 0 || quote.length > MAX_QUOTE_LENGTH) {
+    return `${label}: a text selection needs the selected text (at most ${MAX_QUOTE_LENGTH} characters)`
+  }
+  return null
+}
 
 const ITEM = /^(\d+)(?:-(\d*))?$/
 
@@ -71,6 +90,8 @@ export function validateDocumentAnnotations(annotations, pageNumbers) {
     if (hasPage && !pageNumbers.has(annotation.page)) {
       return `${label}: page ${annotation.page} is not part of this review`
     }
+    const textError = annotation.type === 'text' ? textSelectionError(annotation, label) : null
+    if (textError) { return textError }
   }
   return null
 }

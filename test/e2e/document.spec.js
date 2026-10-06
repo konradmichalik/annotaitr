@@ -90,3 +90,35 @@ test('a PDF whose source changed after the export shows the stale banner', async
     await rm(dir, { recursive: true, force: true })
   }
 })
+
+test('text on a PDF page is selected word by word and quoted in the feedback', async ({ page }) => {
+  const dir = await mkdtemp(join(tmpdir(), 'annotaitr-e2e-pdf-text-'))
+  const pdfPath = join(dir, 'deck.pdf')
+  await writeFile(pdfPath, await makePdf([{ size: 'slide', title: 'Revenue by region', body: ['North grew 12%', 'South stayed flat'] }]))
+  const cli = startCli([pdfPath])
+  try {
+    await page.goto(await cli.url)
+    await expect(page.locator('.page-skeleton')).toHaveCount(0)
+    const toolbar = page.getByRole('toolbar', { name: 'Annotation tools' })
+    await toolbar.getByText('Text', { exact: true }).click()
+    // Body lines sit 160pt and 188pt below the top of a 960pt wide slide, in 22pt type.
+    const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
+    const scale = canvas.width / 960
+    await page.mouse.move(canvas.x + 70 * scale, canvas.y + 152 * scale)
+    await page.mouse.down()
+    await page.mouse.move(canvas.x + 120 * scale, canvas.y + 180 * scale, { steps: 4 })
+    await page.mouse.up()
+    await expect(page.locator('.comment-popover-element')).toContainText('"North grew 12% South stayed"')
+    await page.getByPlaceholder('Add a comment (optional)...').fill('Say rose')
+    await page.getByRole('button', { name: 'Add', exact: true }).click()
+    await expect(page.locator('.app-sidebar')).toContainText('"North grew 12% South stayed"')
+
+    await page.getByRole('button', { name: /^Feedback/ }).click()
+    expect(await cli.exited).toBe(0)
+    expect(cli.stdout()).toMatch(/### 1\. \[#[0-9a-f]{8}\] Selected text: [^\n]*\nQuote: "North grew 12% South stayed"\n> Say rose/)
+    await rm(cli.stdout().match(/Overview: (.*)\/overview\.png/)[1], { recursive: true, force: true })
+  } finally {
+    cli.child.kill()
+    await rm(dir, { recursive: true, force: true })
+  }
+})

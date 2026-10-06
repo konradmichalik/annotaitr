@@ -18,7 +18,7 @@ const LEGEND_BG = '#20242c'
 const LEGEND_HEADER_COLOR = '#f5f6fa'
 const LEGEND_TEXT_COLOR = '#b8bfcc'
 
-const TYPE_LABELS = { box: 'Box', element: 'Element', arrow: 'Arrow', freehand: 'Freehand', highlighter: 'Highlight', pin: 'Pin', comment: 'General comment' }
+const TYPE_LABELS = { box: 'Box', element: 'Element', text: 'Text', arrow: 'Arrow', freehand: 'Freehand', highlighter: 'Highlight', pin: 'Pin', comment: 'General comment' }
 
 function drawArrowhead(ctx, x1, y1, x2, y2, color, headLength, lineWidth) {
   const angle = Math.atan2(y2 - y1, x2 - x1)
@@ -89,6 +89,19 @@ function drawElement(ctx, geometry, number, color) {
   ctx.fillRect(x, y, width, height)
   ctx.restore()
   drawBox(ctx, geometry, number, color)
+}
+
+// A text selection is painted like a marker over its lines, so the words
+// stay readable underneath.
+const TEXT_FILL_ALPHA = 0.3
+
+function drawSelectedText(ctx, geometry, number, color) {
+  ctx.save()
+  ctx.globalAlpha = TEXT_FILL_ALPHA
+  for (const { x, y, width, height } of geometry.rects) { ctx.fillRect(x, y, width, height) }
+  ctx.restore()
+  const [first] = geometry.rects
+  drawBadge(ctx, first.x, first.y, number, color)
 }
 
 function drawArrow(ctx, annotation, number, color) {
@@ -167,6 +180,7 @@ function drawAnnotation(ctx, annotation, number) {
 
   if (annotation.type === 'box') { drawBox(ctx, annotation.geometry, number, color) }
   else if (annotation.type === 'element') { drawElement(ctx, annotation.geometry, number, color) }
+  else if (annotation.type === 'text') { drawSelectedText(ctx, annotation.geometry, number, color) }
   else if (annotation.type === 'arrow') { drawArrow(ctx, annotation, number, color) }
   else if (annotation.type === 'freehand') { drawFreehand(ctx, annotation.geometry, number, color) }
   else if (annotation.type === 'highlighter') { drawHighlighter(ctx, annotation.geometry, number, color) }

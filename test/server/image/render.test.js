@@ -199,6 +199,27 @@ describe('flattenAnnotations with explicit numbers', () => {
   })
 })
 
+describe('flattenAnnotations with a text selection', () => {
+  it('tints every selected line and leaves the rest of the image alone', async () => {
+    const source = makeFixturePng(200, 100, '#ffffff')
+    const selection = {
+      type: 'text', color: '#ff0000', text: 'tighter',
+      geometry: { x: 20, y: 10, width: 160, height: 50, rects: [{ x: 20, y: 10, width: 160, height: 20 }, { x: 20, y: 40, width: 60, height: 20 }] }
+    }
+    const decoded = await loadImage(await flattenAnnotations(source, [selection]))
+    const ctx = createCanvas(decoded.width, decoded.height).getContext('2d')
+    ctx.drawImage(decoded, 0, 0)
+    const pixel = (x, y) => Array.from(ctx.getImageData(x, y, 1, 1).data.slice(0, 3))
+    const [r, g, b] = pixel(100, 20)
+    expect(r).toBe(255)
+    expect(g).toBeLessThan(255)
+    expect(b).toBeLessThan(255)
+    expect(pixel(70, 50)).not.toEqual([255, 255, 255])
+    // Inside the box around both lines, but on no line.
+    expect(pixel(150, 50)).toEqual([255, 255, 255])
+  })
+})
+
 describe('composeContactSheet', () => {
   it('lays tiles out in a grid scaled to the tile width, with a label bar under each', async () => {
     const tiles = Array.from({ length: 5 }, (_, i) => ({ buffer: makeFixturePng(200, 100), label: `00:0${i}.000` }))

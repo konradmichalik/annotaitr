@@ -114,6 +114,13 @@ its font is clearly larger than the page's body text, and serves the result
 per page in the shape the shared element matcher already consumes. The
 feedback quotes the matched text as untrusted document content.
 
+A text selection snaps to the page's words. The worker splits every text run
+into words, measuring each word's share of the run in a generic sans serif,
+and the server lists them in reading order (block by block, line by line).
+The Text tool selects every word between the two it was dragged across and
+stores one rectangle per line plus the selected words as `quote`, which the
+feedback prints as a `Quote:` line.
+
 ## Markdown mode
 
 Once a file is open in the browser:

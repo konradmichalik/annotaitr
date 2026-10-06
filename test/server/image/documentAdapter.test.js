@@ -201,7 +201,7 @@ describe('document annotator server', () => {
     expect(output).toMatch(/^4 annotations on 2 of 3 pages\.\n\nSource: deck\.pptx \(rendered as deck\.pdf\)\n/)
     expect(output).toMatch(/## Page 1\nAnnotated page: .*page-01\.png\n\n### 1\. Boxed area/)
     expect(output).toMatch(/## Page 3\nAnnotated page: .*page-03\.png\n\n### 2\. Boxed area[^\n]*\nText: text "Three"\n> note b\n\n### 3\. Page comment\n> Too dense/)
-    expect(output).toContain('Text lines are read from the PDF')
+    expect(output).toContain('Text and Quote lines are read from the PDF')
     expect(output).toMatch(/## General\n### 4\. General comment about the whole document/)
 
     const overview = output.match(/Overview: (.*)\n/)[1]

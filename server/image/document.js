@@ -1,6 +1,6 @@
 import { stat } from 'node:fs/promises'
 import { createPdfRenderer } from './pdf/renderer.js'
-import { buildTextElements } from './pdf/textLayer.js'
+import { buildTextLayer } from './pdf/textLayer.js'
 import { selectPages } from './pages.js'
 import { config } from './config.js'
 
@@ -76,32 +76,34 @@ export function createPageCache(render, capacity = PAGE_CACHE_SIZE, failureTtlMs
   }
 }
 
+const NO_TEXT = { elements: [], words: [] }
+
 /**
- * The text-layer element map of each page, read on first request and kept.
- * A page whose text cannot be read simply has no elements: the map only
- * names what a mark points at, it never fails the review.
+ * The text layer of each page (element map and words), read on first
+ * request and kept. A page whose text cannot be read simply has none: the
+ * text only names and selects what is on the page, it never fails the review.
  */
-function createElementCache(document) {
+function createTextCache(document) {
   const entries = new Map()
   return {
     get(page) {
       if (!entries.has(page)) {
-        entries.set(page, document.renderer.pageText(page, PAGE_LONG_SIDE).then(buildTextElements, () => []))
+        entries.set(page, document.renderer.pageText(page, PAGE_LONG_SIDE).then(buildTextLayer, () => NO_TEXT))
       }
       return entries.get(page)
     }
   }
 }
 
-/** All element maps of `pages`, keyed by page number. */
+/** The element maps of `pages`, keyed by page number. */
 export async function elementsForPages(caches, pages) {
-  return new Map(await Promise.all(pages.map(async (page) => [page, await caches.elements.get(page)])))
+  return new Map(await Promise.all(pages.map(async (page) => [page, (await caches.text.get(page)).elements])))
 }
 
-/** The full-size pages (a few at a time), the thumbnails and element maps (all of them, they are small) of a document. */
+/** The full-size pages (a few at a time), the thumbnails and text layers (all of them, they are small) of a document. */
 export function createDocumentCaches(document) {
   return {
-    elements: createElementCache(document),
+    text: createTextCache(document),
     pages: createPageCache((page, signal) => document.renderer.render(page, PAGE_LONG_SIDE, { priority: PAGE_PRIORITY, signal })),
     thumbs: createPageCache((page, signal) => document.renderer.render(page, THUMB_LONG_SIDE, { priority: THUMB_PRIORITY, signal }), Infinity)
   }

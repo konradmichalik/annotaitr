@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { TOOL_ICONS, ACTION_ICONS } from '../utils/icons.jsx'
 import { matchAnnotation, describeElements } from '../utils/elementMatch.js'
 
-const TYPE_LABELS = { box: 'Box', element: 'Element', arrow: 'Arrow', freehand: 'Freehand', highlighter: 'Highlight', pin: 'Pin' }
+const TYPE_LABELS = { box: 'Box', element: 'Element', text: 'Text', arrow: 'Arrow', freehand: 'Freehand', highlighter: 'Highlight', pin: 'Pin' }
 
 /** A general comment about the whole image (no geometry, no canvas presence): edited inline right here, not via the canvas popover. */
 function GlobalCommentItem({ annotation, title = 'General comment', timeLabel = null, isEditing, onStartEdit, onSave, onCancel, onRemove }) {
@@ -177,6 +177,7 @@ export default function AnnotationPanel({
             <ShapeItem
               key={annotation.id} annotation={annotation} number={index + 1}
               timeLabel={timeLabelFor(annotation)} onEdit={onEdit} onRemove={onRemove}
+              elementHint={annotation.quote ? `"${annotation.quote}"` : null}
             />
           )))}
       </ul>

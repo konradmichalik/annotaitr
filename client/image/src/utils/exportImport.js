@@ -12,6 +12,8 @@ function isValidPoint(point) {
 }
 
 /** Validate a single annotation's geometry against the shape its `type` requires. */
+const isRect = (r) => isFiniteNumber(r?.x) && isFiniteNumber(r?.y) && isFiniteNumber(r?.width) && isFiniteNumber(r?.height)
+
 function validateGeometry(type, geometry, index) {
   // A general comment about the whole image has no geometry - it isn't drawn
   // on the canvas at all.
@@ -19,10 +21,13 @@ function validateGeometry(type, geometry, index) {
   if (!geometry || typeof geometry !== 'object') {
     throw new Error(`Annotation ${index + 1}: missing geometry.`)
   }
-  if (type === 'box' || type === 'element') {
+  if (type === 'box' || type === 'element' || type === 'text') {
     if (!isFiniteNumber(geometry.x) || !isFiniteNumber(geometry.y)
       || !isFiniteNumber(geometry.width) || !isFiniteNumber(geometry.height)) {
       throw new Error(`Annotation ${index + 1}: ${type} geometry must have numeric x/y/width/height.`)
+    }
+    if (type === 'text' && !(Array.isArray(geometry.rects) && geometry.rects.length > 0 && geometry.rects.every(isRect))) {
+      throw new Error(`Annotation ${index + 1}: text geometry must have a non-empty rects array of {x, y, width, height}.`)
     }
     return
   }

@@ -143,11 +143,15 @@ describe('pageText', () => {
     await rm(dir, { recursive: true, force: true })
   })
 
-  it('reports text runs and links in the pixels of the rendered page', async () => {
+  it('reports words and links in the pixels of the rendered page', async () => {
     const renderer = await createPdfRenderer(pdfPath)
     try {
       const { runs, links } = await renderer.pageText(1, 2000)
-      const title = runs.find((r) => r.str === 'Revenue by region')
+      expect(runs.slice(0, 3).map((r) => r.str)).toEqual(['Revenue', 'by', 'region'])
+      // One run per word, left to right without overlapping.
+      expect(runs[1].box.x).toBeGreaterThan(runs[0].box.x + runs[0].box.width)
+      expect(runs[2].box.x).toBeGreaterThan(runs[1].box.x + runs[1].box.width)
+      const title = runs[0]
       // 40pt at 2000/960 px per point; the title sits 90pt below the top edge.
       expect(title.fontSize).toBeCloseTo(40 * 2000 / 960, 1)
       expect(title.box.x).toBeCloseTo(60 * 2000 / 960, 0)

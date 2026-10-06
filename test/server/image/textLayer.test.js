@@ -1,12 +1,14 @@
 import { describe, it, expect } from 'vitest'
-import { buildTextElements } from '../../../server/image/pdf/textLayer.js'
+import { buildTextLayer } from '../../../server/image/pdf/textLayer.js'
+
+const buildTextElements = (page) => buildTextLayer(page).elements
 
 // A run as the render worker reports it: text, font size and box in page pixels.
 const run = (str, x, y, { size = 20, width = str.length * size * 0.5 } = {}) => ({
   str, fontSize: size, box: { x, y, width, height: size }
 })
 
-describe('buildTextElements', () => {
+describe('buildTextLayer elements', () => {
   it('merges runs on one baseline into a line and lines of one column into a block', () => {
     const elements = buildTextElements({
       runs: [
@@ -33,7 +35,7 @@ describe('buildTextElements', () => {
   })
 
   it('drops whitespace runs and leading bullets from the name', () => {
-    const elements = buildTextElements({ runs: [run('•', 80, 300), run(' ', 95, 300), run('North grew', 110, 300)] })
+    const elements = buildTextLayer({ runs: [run('•', 80, 300), run(' ', 95, 300), run('North grew', 110, 300)] }).elements
     expect(elements.map((e) => e.name)).toEqual(['North grew'])
   })
 
@@ -45,22 +47,44 @@ describe('buildTextElements', () => {
   })
 
   it('keeps paragraphs with a blank line between them apart', () => {
-    const elements = buildTextElements({ runs: [run('First paragraph', 100, 300), run('Second paragraph', 100, 380)] })
+    const elements = buildTextLayer({ runs: [run('First paragraph', 100, 300), run('Second paragraph', 100, 380)] }).elements
     expect(elements).toHaveLength(2)
   })
 
   it('caps long names', () => {
-    const [element] = buildTextElements({ runs: [run('word '.repeat(40).trim(), 100, 300)] })
+    const [element] = buildTextLayer({ runs: [run('word '.repeat(40).trim(), 100, 300)] }).elements
     expect(element.name.length).toBeLessThanOrEqual(80)
     expect(element.name.endsWith('…')).toBe(true)
   })
 
   it('adds links with their target as name', () => {
-    const elements = buildTextElements({ links: [{ url: 'https://example.com/report', box: { x: 1, y: 2, width: 3, height: 4 } }] })
+    const elements = buildTextLayer({ links: [{ url: 'https://example.com/report', box: { x: 1, y: 2, width: 3, height: 4 } }] }).elements
     expect(elements).toEqual([{ tag: 'link', name: 'https://example.com/report', selector: '', box: { x: 1, y: 2, width: 3, height: 4 } }])
   })
 
   it('returns nothing for a page without text', () => {
-    expect(buildTextElements({ runs: [], links: [] })).toEqual([])
+    expect(buildTextLayer({ runs: [], links: [] })).toEqual({ elements: [], words: [] })
+  })
+})
+
+describe('buildTextLayer words', () => {
+  it('lists words in reading order, block by block and line by line, with their line', () => {
+    const { words } = buildTextLayer({
+      runs: [
+        run('Right', 900, 300), run('column', 960, 300), run('Left', 100, 300), run('column', 160, 300),
+        run('more', 100, 324), run('left', 150, 324)
+      ]
+    })
+    expect(words.map((w) => [w.text, w.line])).toEqual([
+      ['Left', 0], ['column', 0], ['more', 1], ['left', 1], ['Right', 2], ['column', 2]
+    ])
+  })
+
+  it('keeps the box of every word', () => {
+    const { words } = buildTextLayer({ runs: [run('ab', 100, 300, { width: 20 }), run('cd', 130, 300, { width: 20 })] })
+    expect(words.map((w) => w.box)).toEqual([
+      { x: 100, y: 300, width: 20, height: 20 },
+      { x: 130, y: 300, width: 20, height: 20 }
+    ])
   })
 })

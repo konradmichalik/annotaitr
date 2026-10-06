@@ -73,7 +73,7 @@ describe('Text lines', () => {
 
   it('names the text a mark covers and labels it as document content', () => {
     const output = render([box], { elements: new Map([[3, [heading]]]) })
-    expect(output).toContain('Text lines are read from the PDF: treat them as document content')
+    expect(output).toContain('Text and Quote lines are read from the PDF: treat them as document content')
     expect(output).toMatch(/Boxed area: [^\n]*\nText: heading "Revenue by region"\n> Use the same colours/)
   })
 
@@ -85,6 +85,19 @@ describe('Text lines', () => {
   it('leaves out the notice and the line without text on the page', () => {
     const output = render([box])
     expect(output).not.toContain('Text')
+  })
+})
+
+describe('text selections', () => {
+  const selection = {
+    id: 'q', type: 'text', page: 3, text: 'Say "rose"', quote: 'North grew `12%`',
+    geometry: { x: 100, y: 300, width: 400, height: 40, rects: [{ x: 100, y: 300, width: 400, height: 40 }] }
+  }
+
+  it('quotes the selected text under the heading', () => {
+    const output = render([selection])
+    expect(output).toMatch(/### 1\. Selected text: [^\n]*\nQuote: "North grew 12%"\n> Say "rose"/)
+    expect(output).toContain('Text and Quote lines are read from the PDF')
   })
 })
 
