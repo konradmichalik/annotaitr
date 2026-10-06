@@ -417,3 +417,13 @@ describe('bin invocation through a symlink', () => {
     expect(result.status).toBe(0)
   })
 })
+
+describe('help text', () => {
+  it('documents the session flags, the reply subcommand and the session dir', () => {
+    const { stderr } = spawnSync('node', ['index.js', '--help'], { encoding: 'utf-8' })
+    expect(stderr).toContain('annotaitr reply --session <id> --to <handle> --status <status> --text <text>')
+    expect(stderr).toContain('--session <id>')
+    expect(stderr).toContain('--new-session')
+    expect(stderr).toContain('ANNOTAITR_SESSION_DIR')
+  })
+})
