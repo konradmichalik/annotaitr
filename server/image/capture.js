@@ -14,6 +14,11 @@ export const VIDEO_MIME_TYPES = {
 
 export const videoExtensions = () => Object.keys(VIDEO_MIME_TYPES)
 
+// Reviewed as a PDF exported by whatever produced them, never converted here.
+// Keynote and Pages documents can be package directories, which extname()
+// still reads correctly with a trailing slash.
+const OFFICE_EXTENSIONS = new Set(['.pptx', '.ppt', '.odp', '.key', '.docx', '.doc', '.odt', '.rtf', '.pages'])
+
 /**
  * Pure, dependency-free detection helpers, kept separate from
  * server/image/loader.js so index.js can decide the mode (markdown vs.
@@ -30,6 +35,14 @@ export function isVideoFile(filePath) {
 
 export function isGifFile(filePath) {
   return extname(filePath).toLowerCase() === '.gif'
+}
+
+export function isPdfFile(filePath) {
+  return extname(filePath).toLowerCase() === '.pdf'
+}
+
+export function isOfficeDocument(filePath) {
+  return OFFICE_EXTENSIONS.has(extname(filePath).toLowerCase())
 }
 
 export function isSvgFile(filePath) {
