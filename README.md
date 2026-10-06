@@ -54,7 +54,7 @@ Which mode runs is auto-detected from the target: see Usage below and
 ## 🔥 Installation
 
 > [!IMPORTANT]
-> Requires Node.js 22+ and npm. Image mode additionally needs `playwright`
+> Requires Node.js 22.13+ and npm. Image mode additionally needs `playwright`
 > and `@napi-rs/canvas`, both `optionalDependencies` installed by default. A
 > markdown-only install can skip them and gets an actionable error if image
 > mode is ever invoked without them.

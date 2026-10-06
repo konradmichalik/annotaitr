@@ -2,7 +2,7 @@
 
 ## Project overview
 
-annotaitr is a plugin and CLI for Claude Code, OpenCode and Mistral Vibe. It opens an image, a captured web page or Markdown/plain-text files in a browser UI for annotation. The user's feedback is printed to stdout for the calling agent to apply. Requires Node.js 22 or newer.
+annotaitr is a plugin and CLI for Claude Code, OpenCode and Mistral Vibe. It opens an image, a captured web page or Markdown/plain-text files in a browser UI for annotation. The user's feedback is printed to stdout for the calling agent to apply. Requires Node.js 22.13 or newer.
 
 The mode (`image` or `markdown`) is auto-detected from the CLI target by `detectMode()` in `index.js`, or forced with `--as`.
 
