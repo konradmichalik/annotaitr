@@ -2,6 +2,7 @@ import { resolve as resolvePath } from 'node:path'
 import { readFileSync } from 'node:fs'
 import { readEnvWithFallback } from '../server/core/config.js'
 import { parsePageRanges } from '../server/image/document/pages.js'
+import { isSessionId } from '../server/core/session/identity.js'
 
 const VALID_ORIGINS = ['cli', 'claude-code', 'opencode', 'vibe']
 export const VALID_MODES = ['image', 'markdown']
@@ -57,14 +58,28 @@ const VALUE_OPTIONS = {
       const parsed = parsePageRanges(value)
       return parsed.error ? { error: parsed.error } : { value: parsed.ranges }
     }
+  },
+  '--session': {
+    key: 'sessionId',
+    noFlagValue: true,
+    missing: '--session requires the session id printed after "Session:"',
+    parse: (value) => (isSessionId(value)
+      ? { value }
+      : { error: `--session expects the 12-character id printed after "Session:", got "${value}"` })
   }
 }
+
+const FLAG_OPTIONS = { '--new-session': 'newSession' }
 
 function parseOptions(args) {
   const options = {}
   const targets = []
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
+    if (FLAG_OPTIONS[arg]) {
+      options[FLAG_OPTIONS[arg]] = true
+      continue
+    }
     const option = VALUE_OPTIONS[arg]
     if (!option) {
       if (arg.startsWith('-')) { return { error: `Unknown option: ${arg}` } }
@@ -110,6 +125,10 @@ export function parseArgs(argv) {
   const notes = feedbackNotesFlagGiven ? { value: options.feedbackNotes } : feedbackNotesFromEnv()
   if (notes.error) { return { error: notes.error } }
 
+  if (options.sessionId && options.newSession) {
+    return { error: '--session and --new-session cannot be combined' }
+  }
+
   return {
     targets,
     origin,
@@ -119,7 +138,9 @@ export function parseArgs(argv) {
     modeOverride: options.modeOverride ?? null,
     feedbackNotesFlagGiven,
     sourceSpec: options.sourceSpec ?? null,
-    pageRanges: options.pageRanges ?? null
+    pageRanges: options.pageRanges ?? null,
+    sessionId: options.sessionId ?? null,
+    newSession: options.newSession === true
   }
 }
 

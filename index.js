@@ -26,8 +26,9 @@ async function main() {
 
   const {
     help, targets, origin, viewportSpec, delaySpec, feedbackNotes, modeOverride, feedbackNotesFlagGiven,
-    sourceSpec, pageRanges, error
+    sourceSpec, pageRanges, sessionId, newSession, error
   } = parseArgs(process.argv)
+  const session = { sessionId, newSession }
 
   if (error) { fail(error); return }
   if (help) { printHelpAndExit(0); return }
@@ -58,7 +59,7 @@ async function main() {
   }
 
   if (targets.length === 0 && !modeOverride) {
-    await runBareInvocation({ origin, viewportSpec })
+    await runBareInvocation({ origin, viewportSpec, session })
     return
   }
 
@@ -69,21 +70,24 @@ async function main() {
     mode = detected.mode
   }
 
-  const flagError = flagErrorForMode(mode, { viewportSpec, delaySpec, feedbackNotesFlagGiven })
+  const flagError = flagErrorForMode(mode, { viewportSpec, delaySpec, feedbackNotesFlagGiven, sessionId, newSession })
   if (flagError) { fail(flagError); return }
 
   if (mode === 'markdown') {
     await runMarkdown({ targets, origin, feedbackNotes })
   } else if (mode === 'image') {
-    await runImage({ targets, origin, viewportSpec, delaySpec, sourceSpec, pageRanges })
+    await runImage({ targets, origin, viewportSpec, delaySpec, sourceSpec, pageRanges, session })
   } else {
     fail(`Unknown mode "${mode}". Valid: ${VALID_MODES.join(', ')}`)
   }
 }
 
 /** The error for a flag that does not apply to the mode, or null. */
-function flagErrorForMode(mode, { viewportSpec, delaySpec, feedbackNotesFlagGiven }) {
-  if (mode === 'markdown') { return captureFlagError('markdown files', { viewportSpec, delaySpec }) }
+function flagErrorForMode(mode, { viewportSpec, delaySpec, feedbackNotesFlagGiven, sessionId, newSession }) {
+  if (mode === 'markdown') {
+    if (sessionId || newSession) { return '--session and --new-session only apply to image targets.' }
+    return captureFlagError('markdown files', { viewportSpec, delaySpec })
+  }
   if (mode === 'image' && feedbackNotesFlagGiven) { return '--feedback-notes only applies to markdown targets, not images.' }
   return null
 }

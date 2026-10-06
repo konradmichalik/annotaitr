@@ -76,7 +76,9 @@ async function resolveImageCapture(targets, { viewportSpec, delaySpec }, { clipb
   return { capture: await loadImageFromFile(imagePath), targetLabel: target ?? 'clipboard image' }
 }
 
-export async function runImage({ targets, origin, viewportSpec, delaySpec = null, clipboardPath, sourceSpec = null, pageRanges = null }) {
+export async function runImage({
+  targets, origin, viewportSpec, delaySpec = null, clipboardPath, sourceSpec = null, pageRanges = null, session = {}
+}) {
   if (targets.length === 1 && isPdfTarget(targets[0])) {
     await runDocument({ target: targets[0], origin, viewportSpec, delaySpec, sourceSpec, pageRanges })
     return
@@ -110,7 +112,7 @@ export async function runImage({ targets, origin, viewportSpec, delaySpec = null
  * a missing/unreadable clipboard here is not an error — it's the same "tell
  * me what to do" signal a bare invocation on any other platform gets.
  */
-export async function runBareInvocation({ origin, viewportSpec }) {
+export async function runBareInvocation({ origin, viewportSpec, session = {} }) {
   if (process.platform !== 'darwin') {
     printHelpAndExit(0)
     return
@@ -124,5 +126,5 @@ export async function runBareInvocation({ origin, viewportSpec }) {
     return
   }
 
-  await runImage({ targets: [], origin, viewportSpec, clipboardPath })
+  await runImage({ targets: [], origin, viewportSpec, clipboardPath, session })
 }
