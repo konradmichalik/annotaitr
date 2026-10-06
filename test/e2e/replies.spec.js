@@ -25,6 +25,32 @@ async function firstRoundWithReply(target, env, annotation, status = 'applied', 
   })
 }
 
+// Round 1 of the video fixture: a box at 1 s with an applied reply. Round 2 is then a fresh CLI on the same session dir.
+async function firstVideoRoundWithReply(page, env) {
+    const first = startCli([WEBM_FIXTURE], env)
+    await page.goto(await first.url)
+    await expect(page.locator('.timeline-time')).toContainText('/ 00:02.000')
+    await page.keyboard.press('Shift+ArrowRight')
+    await expect(page.locator('.timeline-time')).toContainText('00:01.000 /')
+    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Box').click()
+    const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
+    await page.mouse.move(canvas.x + 20, canvas.y + 20)
+    await page.mouse.down()
+    await page.mouse.move(canvas.x + 80, canvas.y + 60)
+    await page.mouse.up()
+    await page.getByPlaceholder('Add a comment (optional)...').fill('Box on the first second')
+    await page.getByRole('button', { name: 'Add', exact: true }).click()
+    const saved = async () => (await (await fetch(`${await first.url}/api/annotations`)).json()).data.annotations
+    await expect.poll(async () => (await saved()).length).toBe(1)
+    const id = (await saved())[0].id
+    await page.getByRole('button', { name: 'Feedback' }).click()
+    await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible({ timeout: 20_000 })
+    const sessionId = (await first.exited, first.stdout()).match(/Session: ([0-9a-f]{12})/)[1]
+    spawnSync('node', ['index.js', 'reply', '--session', sessionId, '--to', id.slice(0, 8), '--status', 'applied', '--text', 'Moved the button'], {
+      env: { ...process.env, ...env }, encoding: 'utf-8'
+    })
+}
+
 test.describe('replies from the last round', () => {
   let dir, image, env
   test.beforeEach(async () => {
@@ -303,28 +329,7 @@ test.describe('replies from the last round', () => {
   })
 
   test('puts last round on the video timeline and opens the thread from its tick', async ({ page }) => {
-    const first = startCli([WEBM_FIXTURE], env)
-    await page.goto(await first.url)
-    await expect(page.locator('.timeline-time')).toContainText('/ 00:02.000')
-    await page.keyboard.press('Shift+ArrowRight')
-    await expect(page.locator('.timeline-time')).toContainText('00:01.000 /')
-    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Box').click()
-    const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
-    await page.mouse.move(canvas.x + 20, canvas.y + 20)
-    await page.mouse.down()
-    await page.mouse.move(canvas.x + 80, canvas.y + 60)
-    await page.mouse.up()
-    await page.getByPlaceholder('Add a comment (optional)...').fill('Box on the first second')
-    await page.getByRole('button', { name: 'Add', exact: true }).click()
-    const saved = async () => (await (await fetch(`${await first.url}/api/annotations`)).json()).data.annotations
-    await expect.poll(async () => (await saved()).length).toBe(1)
-    const id = (await saved())[0].id
-    await page.getByRole('button', { name: 'Feedback' }).click()
-    await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible({ timeout: 20_000 })
-    const sessionId = (await first.exited, first.stdout()).match(/Session: ([0-9a-f]{12})/)[1]
-    spawnSync('node', ['index.js', 'reply', '--session', sessionId, '--to', id.slice(0, 8), '--status', 'applied', '--text', 'Moved the button'], {
-      env: { ...process.env, ...env }, encoding: 'utf-8'
-    })
+    await firstVideoRoundWithReply(page, env)
 
     const cli = startCli([WEBM_FIXTURE], env)
     try {
@@ -339,6 +344,26 @@ test.describe('replies from the last round', () => {
       await page.keyboard.press('Escape')
       await expect(page.getByRole('dialog')).toHaveCount(0)
       await expect(tick).toBeFocused()
+    } finally {
+      cli.child.kill()
+    }
+  })
+
+  test('does not pull focus to the panel entry when a video thread closes itself by leaving its mark', async ({ page }) => {
+    await firstVideoRoundWithReply(page, env)
+    const cli = startCli([WEBM_FIXTURE], env)
+    try {
+      await page.goto(await cli.url)
+      await expect(page.locator('.timeline-time')).toContainText('/ 00:02.000')
+      const entry = page.getByRole('region', { name: /Round 1 replies/ }).getByRole('button', { name: /Box on the first second/ })
+      await entry.click()
+      await expect(page.getByRole('dialog')).toHaveCount(1)
+      await expect(page.locator('.timeline-time')).toContainText('00:01.000 /')
+      // A frame step by key is not an outside click, so only the mark leaving the view can close the popover.
+      await page.keyboard.press('ArrowRight')
+      await expect(page.locator('.timeline-time')).not.toContainText('00:01.000 /')
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await expect(entry).not.toBeFocused()
     } finally {
       cli.child.kill()
     }

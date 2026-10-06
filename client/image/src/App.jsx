@@ -17,6 +17,7 @@ import PageStrip from './document/PageStrip.jsx'
 import PageNav from './document/PageNav.jsx'
 import PageImage from './document/PageImage.jsx'
 import { usePreviousRound } from './threads/usePreviousRound.js'
+import { useThreadPopover } from './threads/useThreadPopover.js'
 import PreviousRoundPanel from './threads/PreviousRoundPanel.jsx'
 import ThreadPopover from './threads/ThreadPopover.jsx'
 import { placedThreads, threadPageCounts, hasMark } from './threads/threadView.js'
@@ -68,11 +69,6 @@ export default function App() {
   const [imageUrl, setImageUrl] = useState(null)
   const [decision, setDecision] = useState(null)
   const [activeTool, setActiveTool] = useState('select')
-  const [showPrevious, setShowPrevious] = useState(true)
-  const [openThreadHandle, setOpenThreadHandle] = useState(null)
-  // A thread without a mark (orphan, general comment) opens anchored at its panel entry instead of on the canvas.
-  const [entryThread, setEntryThread] = useState(null)
-  const threadOpenerRef = useRef(null)
   const [showExport, setShowExport] = useState(false)
   const [editingAnnotationId, setEditingAnnotationId] = useState(null)
   const [zoom, setZoom] = useState(1)
@@ -101,41 +97,14 @@ export default function App() {
     ? { kind: 'video', time: playerState?.currentTime ?? 0, tolerance: (playerState?.frameDuration ?? 1 / 30) / 2 }
     : (isDocument ? { kind: 'document', page: doc.current } : { kind: 'still' })
   const previousThreads = placedThreads(previous.threads, previousView)
-  const markedThreads = placedThreads(previous.threads, { kind: 'still' })
+  const seekTo = isDocument ? doc.seekTo : video.seekTo
+  const {
+    showPrevious, openThreadHandle, entryThread,
+    openCanvasThread, showThread, showEntryThread, showTimelineThread, togglePrevious, closeThread
+  } = useThreadPopover({ previousThreads, seekTo })
+  const markedThreads = previous.threads.filter(hasMark)
   const previousPageCounts = isDocument && showPrevious ? threadPageCounts(markedThreads) : undefined
   const timelineThreads = isVideo && showPrevious ? previous.threads.filter((t) => t.anchor !== 'orphan' && typeof t.annotation.time === 'number') : []
-  const closeThread = useCallback(() => {
-    setOpenThreadHandle(null)
-    setEntryThread(null)
-    threadOpenerRef.current?.focus()
-    threadOpenerRef.current = null
-  }, [])
-  // A thread opened from the panel seeks first, so the mark takes a render or two to arrive. Only a mark that
-  // was in view and then left (another page, playback past a span) closes its popover, otherwise it would
-  // come back on its own when the view returns.
-  const threadSeenRef = useRef(false)
-  const openThreadPlaced = !!openThreadHandle && previousThreads.some((t) => t.handle === openThreadHandle)
-  useEffect(() => {
-    if (!openThreadHandle) {
-      threadSeenRef.current = false
-    } else if (openThreadPlaced) {
-      threadSeenRef.current = true
-    } else if (threadSeenRef.current) {
-      threadSeenRef.current = false
-      closeThread()
-    }
-  }, [openThreadHandle, openThreadPlaced, closeThread])
-  const openCanvasThread = useCallback((handle) => {
-    setEntryThread(null)
-    threadOpenerRef.current = null
-    setOpenThreadHandle(handle)
-  }, [])
-  // Hiding the layer closes the open thread too, so showing it again does not bring the popover back.
-  const togglePrevious = useCallback(() => {
-    setShowPrevious((prev) => !prev)
-    setOpenThreadHandle(null)
-    setEntryThread(null)
-  }, [])
   // A PDF's text layer is per page; a captured web page has one element map.
   const elements = isDocument ? doc.elements : capturedElements
   const words = isDocument ? doc.words : []
@@ -275,26 +244,6 @@ export default function App() {
     clearRange()
   }, [addComment, range, clearRange])
 
-  const seekTo = isDocument ? doc.seekTo : video.seekTo
-  const showThread = useCallback((thread, opener) => {
-    seekTo(thread.annotation)
-    setShowPrevious(true)
-    setEntryThread(null)
-    threadOpenerRef.current = opener
-    setOpenThreadHandle(thread.handle)
-  }, [seekTo])
-  const showEntryThread = useCallback((thread, anchorPoint, opener) => {
-    setOpenThreadHandle(null)
-    threadOpenerRef.current = opener
-    setEntryThread({ thread, anchorPoint })
-  }, [])
-  // A tick on the timeline is a thread's only entry on a video: with a mark the canvas shows it, a general comment hangs off the tick.
-  const showTimelineThread = useCallback((thread, opener) => {
-    if (hasMark(thread)) { return showThread(thread, opener) }
-    seekTo(thread.annotation)
-    const rect = opener.getBoundingClientRect()
-    showEntryThread(thread, { x: rect.left + rect.width / 2, y: rect.top }, opener)
-  }, [showThread, showEntryThread, seekTo])
   const editAnnotation = useCallback((id) => {
     const annotation = state.annotations.find((a) => a.id === id)
     if (annotation) { seekTo(annotation) }
