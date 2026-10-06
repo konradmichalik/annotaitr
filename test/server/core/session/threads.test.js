@@ -23,7 +23,7 @@ describe('nextSession', () => {
 
   it('starts at round 1', () => {
     expect(nextSession(null, { sessionId: '2f8c1a9e04b7', target, threads: [], now: 9 })).toEqual({
-      schemaVersion: 1, sessionId: '2f8c1a9e04b7', round: 1, writtenAt: 9, target, threads: []
+      schemaVersion: 1, sessionId: '2f8c1a9e04b7', round: 1, writtenAt: 9, target, fingerprint: null, threads: []
     })
   })
 
@@ -32,6 +32,11 @@ describe('nextSession', () => {
     const next = nextSession(previous, { sessionId: '2f8c1a9e04b7', target, threads: [], now: 2 })
     expect(next.round).toBe(2)
     expect(next.threads).toEqual([])
+  })
+
+  it('records the fingerprint of the reviewed target', () => {
+    expect(nextSession(null, { sessionId: '2f8c1a9e04b7', target, fingerprint: 'sha256:ab', threads: [], now: 1 }).fingerprint)
+      .toBe('sha256:ab')
   })
 })
 
