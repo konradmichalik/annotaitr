@@ -83,4 +83,21 @@ test.describe('replies from the last round', () => {
       cli.child.kill()
     }
   })
+
+  test('greys out a ghost pin instead of keeping its mark colour', async ({ page }) => {
+    await firstRoundWithReply(image, env, { id: UUID, type: 'pin', geometry: { x: 100, y: 100 }, text: 'Pin note', color: '#bf616a' })
+    await writeFile(image, makeFixturePng(400, 300, '#aa0000'))
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      const circle = page.locator('.previous-round--ghost .previous-round-shape circle')
+      await expect(circle).toBeVisible()
+      const muted = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim())
+      const fill = await circle.evaluate((el) => getComputedStyle(el).fill)
+      const probe = await page.evaluate((c) => { const d = document.createElement('i'); d.style.color = c; document.body.append(d); const v = getComputedStyle(d).color; d.remove(); return v }, muted)
+      expect(fill).toBe(probe)
+    } finally {
+      cli.child.kill()
+    }
+  })
 })
