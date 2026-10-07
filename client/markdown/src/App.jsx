@@ -32,14 +32,9 @@ import { useShiftHeld } from './hooks/useShiftHeld.js'
 import { useModeShortcuts } from './hooks/useModeShortcuts.js'
 import { SettingsModal } from './components/SettingsModal.jsx'
 import { getItem, setItem } from '../../shared/utils/storage.js'
+import { intentOf } from '../../shared/utils/intents.js'
 import 'katex/dist/katex.min.css'
 import './styles.css'
-
-const NOTE_NOUNS = {
-  COMMENT: ['comment'],
-  DELETION: ['deletion'],
-  INSERTION: ['insertion'],
-}
 
 function getInitialSidebarCollapsed() {
   return getItem('md-annotator-sidebar-collapsed') === 'true'
@@ -123,9 +118,9 @@ export default function App() {
   )
   // The active file's general comment is what the decision dialog's summary edits.
   const generalComment = annotations.find(isGeneralComment) ?? null
-  const decisionNoteTypes = files.flatMap(f => f.annState.annotations)
+  const decisionNoteIntents = files.flatMap(f => f.annState.annotations)
     .filter(a => a.type !== 'NOTES' && a !== generalComment)
-    .map(a => a.type)
+    .map(intentOf)
   const notesGroups = files
     .map(f => ({
       filePath: f.path,
@@ -255,8 +250,8 @@ export default function App() {
     setSelectedAnnotationId(prev => prev === id ? null : prev)
   }, [annDispatch])
 
-  const handleEditAnnotation = useCallback((id, annotationType, text, label) => {
-    annDispatch({ type: 'EDIT', id, annotationType, text, label })
+  const handleEditAnnotation = useCallback((id, annotationType, text, label, intent) => {
+    annDispatch({ type: 'EDIT', id, annotationType, text, label, intent })
   }, [annDispatch])
 
   const handlePanelEdit = useCallback((id) => {
@@ -580,9 +575,7 @@ export default function App() {
       {decisionOpen && (
         <DecisionDialog
           origin={origin}
-          noteTypes={decisionNoteTypes}
-          nouns={NOTE_NOUNS}
-          generalType="COMMENT"
+          noteIntents={decisionNoteIntents}
           generalText={generalComment ? generalComment.text : null}
           onSubmit={finishFromDialog}
           onClose={closeDecision}

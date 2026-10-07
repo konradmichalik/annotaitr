@@ -15,7 +15,7 @@ import { formatLabelText } from '../../utils/quickLabels.js'
 import { getItem, setItem } from '../../../../shared/utils/storage.js'
 import { groupHtmlWrappers } from '../../utils/htmlWrappers.js'
 import { isOpenableFileLink } from '../../utils/links.js'
-import { getLinkInfo, removeInsertionMarker, createPersistentInsertionMarker, findAnnotationElement } from '../../utils/viewerDom.js'
+import { getLinkInfo, removeInsertionMarker, createPersistentInsertionMarker, createTemporaryInsertionMarker, insertionPointAfter, findAnnotationElement } from '../../utils/viewerDom.js'
 import { createInsertionAnnotation, createTokenAnnotation, createElementAnnotation, getBlockLabel } from '../../utils/viewerAnnotations.js'
 
 const PINPOINT_HINT_LEARNED_KEY = 'md-annotator-pinpoint-hint-learned'
@@ -97,7 +97,7 @@ export const Viewer = forwardRef(function Viewer({
   }, [setToolbarState, setRequestedToolbarStep])
 
   // --- Viewer-specific annotate (insertion + element + text) ---
-  const handleAnnotate = useCallback((type, text, label) => {
+  const handleAnnotate = useCallback((type, text, label, intent) => {
     if (!toolbarState) { return }
 
     // Insertion annotations bypass web-highlighter
@@ -119,7 +119,7 @@ export const Viewer = forwardRef(function Viewer({
 
     // Token annotations in code blocks
     if (toolbarState.tokenMode && !toolbarState.mode) {
-      onAddAnnotationRef.current(createTokenAnnotation(toolbarState.tokenData, type, text, label))
+      onAddAnnotationRef.current({ ...createTokenAnnotation(toolbarState.tokenData, type, text, label), ...(intent ? { intent } : {}) })
       closeToolbar()
       return
     }
@@ -127,17 +127,34 @@ export const Viewer = forwardRef(function Viewer({
     // Element annotations (image/diagram) bypass web-highlighter
     if (toolbarState.elementMode) {
       if (toolbarState.mode === 'edit') {
-        onEditAnnotationRef.current(toolbarState.annotation.id, type, text)
+        onEditAnnotationRef.current(toolbarState.annotation.id, type, text, undefined, intent)
       } else {
-        onAddAnnotationRef.current(createElementAnnotation(toolbarState.elementData, type, text, label))
+        onAddAnnotationRef.current({ ...createElementAnnotation(toolbarState.elementData, type, text, label), ...(intent ? { intent } : {}) })
       }
       closeToolbar()
       return
     }
 
     // Text annotation — delegate to hook
-    handleTextAnnotate(type, text, label)
+    handleTextAnnotate(type, text, label, intent)
   }, [toolbarState, handleTextAnnotate, closeToolbar, containerRef])
+
+  // Add on a text selection inserts after it: the pending highlight gives way to an insertion point at its end.
+  const handleAddAfter = useCallback(() => {
+    const highlighter = highlighterRef.current
+    const source = toolbarState?.source
+    const last = source && highlighter?.getDoms(source.id)?.at(-1)
+    if (!last) { return }
+    const point = insertionPointAfter(last)
+    if (!point) { return }
+    highlighter.remove(source.id)
+    pendingSourceRef.current = null
+    window.getSelection()?.removeAllRanges()
+    const { blockEl, ...insertionData } = point
+    const marker = createTemporaryInsertionMarker(blockEl, insertionData.offset)
+    setToolbarState({ element: marker, insertionMode: true, insertionData })
+    setRequestedToolbarStep((prev) => (prev ?? 0) + 1)
+  }, [toolbarState, highlighterRef, pendingSourceRef, setToolbarState, setRequestedToolbarStep])
 
   // --- Viewer-specific close (insertion cleanup + base) ---
   const handleToolbarClose = useCallback(() => {
@@ -428,6 +445,7 @@ export const Viewer = forwardRef(function Viewer({
         <Toolbar
           highlightElement={toolbarState?.element ?? null}
           onAnnotate={handleAnnotate}
+          onAddAfter={toolbarState?.source && !toolbarState.mode ? handleAddAfter : null}
           onClose={handleToolbarClose}
           onDelete={handleToolbarDelete}
           onQuickLabel={handleQuickLabel}

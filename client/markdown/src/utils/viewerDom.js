@@ -19,6 +19,30 @@ export function createPersistentInsertionMarker(id, blockEl, offset) {
   marker.className = 'insertion-marker'
   marker.dataset.highlightId = id
   marker.dataset.insertionId = id
+  return placeMarker(marker, blockEl, offset)
+}
+
+/** The marker Add puts after a selection, which the composer anchors to until the text is saved. */
+export function createTemporaryInsertionMarker(blockEl, offset) {
+  const marker = document.createElement('span')
+  marker.className = 'insertion-marker-temp'
+  return placeMarker(marker, blockEl, offset)
+}
+
+/** Where a selection ends inside its block, counted as insertion offsets count: markers do not count. */
+export function insertionPointAfter(el) {
+  let blockEl = el.parentElement
+  while (blockEl && !blockEl.dataset?.blockId) { blockEl = blockEl.parentElement }
+  if (!blockEl) { return null }
+  const range = document.createRange()
+  range.selectNodeContents(blockEl)
+  range.setEndAfter(el)
+  const offset = range.toString().replaceAll('\u200B', '').length
+  const text = blockEl.textContent.replaceAll('\u200B', '')
+  return { blockEl, blockId: blockEl.dataset.blockId, offset, afterContext: text.slice(Math.max(0, offset - 50), offset) }
+}
+
+function placeMarker(marker, blockEl, offset) {
   marker.textContent = '​'
 
   const range = document.createRange()

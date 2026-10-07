@@ -69,8 +69,11 @@ const SHORTCUT_GROUPS = [
     items: [
       { keys: `${MOD} + Z`, desc: 'Undo' },
       { keys: `${MOD} + Shift + Z`, desc: 'Redo' },
-      { keys: `${MOD} + D`, desc: 'Delete selected text' },
-      { keys: `${MOD} + K`, desc: 'Comment on selected text' },
+      { keys: `1 / ${MOD} + K`, desc: 'Change: comment on selected text' },
+      { keys: '2', desc: 'Add: insert text after the selection' },
+      { keys: `3 / ${MOD} + D`, desc: 'Remove selected text' },
+      { keys: '4', desc: 'Ask a question about selected text' },
+      { keys: 'Tab, then 1\u20134', desc: 'Intent of the comment being written' },
       { keys: 'Alt + 1\u20130', desc: 'Quick label on selected text' },
       { keys: `${MOD} + Enter`, desc: 'Save the comment' },
       { keys: 'Escape', desc: 'Discard the comment being written' },
