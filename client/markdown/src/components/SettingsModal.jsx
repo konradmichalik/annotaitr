@@ -79,7 +79,10 @@ const SHORTCUT_GROUPS = [
   {
     title: 'Modes',
     items: [
-      { keys: 'Hold Shift', desc: 'Temporarily toggle Select / Pinpoint' },
+      { keys: 'V', desc: 'Select text' },
+      { keys: 'C', desc: 'Pinpoint' },
+      { keys: 'Hold Shift', desc: 'Temporarily toggle Select text / Pinpoint' },
+      { keys: 'G', desc: 'General comment' },
     ],
   },
   {

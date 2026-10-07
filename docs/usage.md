@@ -323,7 +323,7 @@ saved, a warning goes to stderr and the decision is printed as usual. Several
 
 In round 2 the reviewer can answer a thread from the previous round in the
 annotator. Opening a thread, from its badge on the canvas or from the "Round 1
-replies" panel, shows a "Reply to the agent" field. Send, or Ctrl/Cmd+Enter,
+replies" section under the panel's **Replies** tab, shows a "Reply to the agent" field. Send, or Ctrl/Cmd+Enter,
 stores the reply as "pending, sent with your decision". It can be removed
 until the decision is submitted. The panel shows the reviewer's reply as
 "You: ..." and counts them as "· N to send", and a thread with a pending reply
@@ -352,6 +352,34 @@ Reviewer: CI-Grün #2e7d32
 Answered threads continue into the next round on the same handle, so
 `annotaitr reply --to <handle>` works on them. All other threads end with the
 decision.
+
+## Tools and the feedback panel
+
+The tools float in a dock at the bottom of the work area, zoom and page
+navigation at its top right, the capture control of a web page at its top
+left. A mode offers only the tools that work in it. The arrow keys move along
+the dock, and each tool has a letter. The letters are ignored while typing and
+with a modifier held:
+
+| Key | Image, PDF, web page, video | Markdown |
+| --- | --- | --- |
+| `V` | Select | Select text |
+| `E` | Element (captured web pages, PDFs with text) | |
+| `T` | Text (PDFs with text) | |
+| `R` | Box | |
+| `A` | Arrow | |
+| `P` | Freehand | |
+| `H` | Highlighter | |
+| `C` | Pin | Pinpoint |
+| `Esc` | Back to Select | |
+| `G` | General comment | General comment |
+
+The status bar names what the active tool does and its keys. The feedback
+panel lists one card per note with the number the agent reads in the output.
+Selecting a mark selects its card and the other way round. With an earlier
+round the panel switches between **This round** and **Replies**; with several
+markdown files between **This file** and **All files**. The general comment is
+the row at the bottom of the panel.
 
 ## Finishing a review
 

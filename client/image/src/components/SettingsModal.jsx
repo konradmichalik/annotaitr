@@ -18,6 +18,21 @@ function BehaviorTab(props) {
 
 const SHORTCUT_GROUPS = [
   {
+    title: 'Tools',
+    items: [
+      { keys: 'V', desc: 'Select' },
+      { keys: 'E', desc: 'Element (captured pages and PDFs with text)' },
+      { keys: 'T', desc: 'Text (PDFs with text)' },
+      { keys: 'R', desc: 'Box' },
+      { keys: 'A', desc: 'Arrow' },
+      { keys: 'P', desc: 'Freehand' },
+      { keys: 'H', desc: 'Highlighter' },
+      { keys: 'C', desc: 'Pin' },
+      { keys: 'Escape', desc: 'Back to Select' },
+      { keys: 'G', desc: 'General comment' }
+    ]
+  },
+  {
     title: 'Annotations',
     items: [
       { keys: 'Click a mark', desc: 'Select it (shows resize handles)' },
