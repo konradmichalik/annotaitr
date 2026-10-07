@@ -374,7 +374,7 @@
 
 /* One palette per status. The chip, the reply rule and the badge on the image all read these two properties. */
 .status-chip--applied,
-.previous-round-badge--applied,
+.status--applied,
 .reply-list-item:has(.status-chip--applied) {
   --status-fg: var(--success);
   --status-bg: var(--success-bg);
@@ -382,8 +382,8 @@
 
 .status-chip--partial,
 .status-chip--deferred,
-.previous-round-badge--partial,
-.previous-round-badge--deferred,
+.status--partial,
+.status--deferred,
 .reply-list-item:has(.status-chip--partial),
 .reply-list-item:has(.status-chip--deferred) {
   --status-fg: var(--comment-border);
@@ -391,14 +391,14 @@
 }
 
 .status-chip--declined,
-.previous-round-badge--declined,
+.status--declined,
 .reply-list-item:has(.status-chip--declined) {
   --status-fg: var(--danger);
   --status-bg: var(--deletion-bg);
 }
 
 .status-chip--question,
-.previous-round-badge--question,
+.status--question,
 .reply-list-item:has(.status-chip--question) {
   --status-fg: var(--warning);
   --status-bg: var(--warning-bg);

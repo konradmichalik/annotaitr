@@ -15,7 +15,7 @@ function Badge({ thread, anchor }) {
   const markerWidth = badgeShowsNumber(thread) ? MARKER_SIZE + GAP : 0
   const width = markerWidth + chipWidth
   return (
-    <g className={`previous-round-badge previous-round-badge--${threadStatus(thread)}`} transform={`translate(${anchor.x - width / 2} ${Math.max(0, anchor.y - BADGE_HEIGHT - 4)})`}>
+    <g className={`previous-round-badge status--${threadStatus(thread)}`} transform={`translate(${anchor.x - width / 2} ${Math.max(0, anchor.y - BADGE_HEIGHT - 4)})`}>
       {markerWidth > 0 && (
         <>
           <circle className="previous-round-badge-marker" cx={MARKER_SIZE / 2} cy={BADGE_HEIGHT / 2} r={MARKER_SIZE / 2} />
