@@ -363,34 +363,45 @@
   gap: 0.25rem;
   align-items: center;
   padding: 0 0.5rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--status-fg, var(--border));
   border-radius: 9999px;
-  background: var(--bg-secondary);
+  background: var(--status-bg, var(--bg-secondary));
   color: var(--text);
   font-size: 0.75rem;
   line-height: 1.5;
   white-space: nowrap;
 }
 
-.status-chip--applied {
-  border-color: var(--success);
-  background: var(--success-bg);
+/* One palette per status. The chip, the reply rule and the badge on the image all read these two properties. */
+.status-chip--applied,
+.previous-round-badge--applied,
+.reply-list-item:has(.status-chip--applied) {
+  --status-fg: var(--success);
+  --status-bg: var(--success-bg);
 }
 
 .status-chip--partial,
-.status-chip--deferred {
-  border-color: var(--comment-border);
-  background: var(--comment-bg);
+.status-chip--deferred,
+.previous-round-badge--partial,
+.previous-round-badge--deferred,
+.reply-list-item:has(.status-chip--partial),
+.reply-list-item:has(.status-chip--deferred) {
+  --status-fg: var(--comment-border);
+  --status-bg: var(--comment-bg);
 }
 
-.status-chip--declined {
-  border-color: var(--danger);
-  background: var(--deletion-bg);
+.status-chip--declined,
+.previous-round-badge--declined,
+.reply-list-item:has(.status-chip--declined) {
+  --status-fg: var(--danger);
+  --status-bg: var(--deletion-bg);
 }
 
-.status-chip--question {
-  border-color: var(--warning);
-  background: var(--warning-bg);
+.status-chip--question,
+.previous-round-badge--question,
+.reply-list-item:has(.status-chip--question) {
+  --status-fg: var(--warning);
+  --status-bg: var(--warning-bg);
 }
 
 .status-chip--none {
@@ -406,31 +417,14 @@
   list-style: none;
 }
 
+/* Agent replies are indented behind a rule in the status colour, so they read as an answer to the quote above them. */
 .reply-list-item {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   align-items: flex-start;
   padding-left: 0.625rem;
-  border-left: 3px solid var(--border);
-}
-
-/* Agent replies are indented behind a rule in the status colour, so they read as an answer to the quote above them. */
-.reply-list-item:has(.status-chip--applied) {
-  border-left-color: var(--success);
-}
-
-.reply-list-item:has(.status-chip--partial),
-.reply-list-item:has(.status-chip--deferred) {
-  border-left-color: var(--comment-border);
-}
-
-.reply-list-item:has(.status-chip--declined) {
-  border-left-color: var(--danger);
-}
-
-.reply-list-item:has(.status-chip--question) {
-  border-left-color: var(--warning);
+  border-left: 3px solid var(--status-fg, var(--border));
 }
 
 .reply-list-author {
