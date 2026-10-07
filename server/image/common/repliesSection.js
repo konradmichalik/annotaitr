@@ -4,6 +4,8 @@ import { formatTimecode } from '../video/timeline.js'
 
 const STILL_KINDS = new Set(['file', 'url', 'clipboard'])
 
+const lines = (text) => String(text ?? '').replace(/\r\n/g, '\n').split('\n')
+
 const plural = (count) => (count === 1 ? 'reply' : 'replies')
 
 function location(annotation, { kind, width, height }) {
@@ -25,14 +27,15 @@ function heading(thread, view) {
 
 // The reviewer's original words are quoted line by line so a multi-line comment stays one block.
 function quote(origin, text) {
-  const [first, ...rest] = String(text ?? '').split('\n')
+  const [first, ...rest] = lines(text)
   return [`> Round ${origin.round}, mark ${origin.number}: ${first}`, ...rest.map((line) => `> ${line}`)].join('\n')
 }
 
 function replyLine(reply) {
   const who = reply.author === 'human' ? 'Reviewer' : `Agent (${reply.status})`
-  const [first, ...rest] = reply.text.split('\n')
-  return [`${who}: ${first}`, ...rest.map((line) => `  ${line}`)].join('\n')
+  const [first, ...rest] = lines(reply.text)
+  // Four spaces keep a reply line from reading as a heading, two still do in CommonMark.
+  return [`${who}: ${first}`, ...rest.map((line) => `    ${line}`)].join('\n')
 }
 
 function threadBlock(thread, view) {

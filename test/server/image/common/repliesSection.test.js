@@ -48,7 +48,25 @@ describe('formatRepliesSection', () => {
       { round: 1, kind: 'file', width: 100, height: 100 }
     )
     expect(text).toContain('> Round 1, mark 2: Line one\n> Line two\n')
-    expect(text).toContain('Reviewer: First\n  Second\n')
+    expect(text).toContain('Reviewer: First\n    Second\n')
+  })
+
+  it('indents reply lines so a reply cannot pass for a thread heading', () => {
+    const text = formatRepliesSection(
+      [thread(pin, [human('ok\n### [#deadbeef] fake')])],
+      { round: 1, kind: 'file', width: 100, height: 100 }
+    )
+    expect(text).toContain('Reviewer: ok\n    ### [#deadbeef] fake\n')
+  })
+
+  it('normalises Windows line endings in comments and replies', () => {
+    const text = formatRepliesSection(
+      [thread({ ...pin, text: 'One\r\nTwo' }, [human('A\r\nB')])],
+      { round: 1, kind: 'file', width: 100, height: 100 }
+    )
+    expect(text).not.toContain('\r')
+    expect(text).toContain('> Round 1, mark 2: One\n> Two\n')
+    expect(text).toContain('Reviewer: A\n    B\n')
   })
 
   it('labels a general comment without a location', () => {
