@@ -600,6 +600,7 @@ export default function App() {
                 fixedColor={settings.fixedColor}
                 previousThreads={previousThreads}
                 previousRound={previous.round}
+                onReloadThreads={previous.reload}
                 showPrevious={showPrevious}
                 openThreadHandle={openThreadHandle}
                 onOpenThread={openCanvasThread}
@@ -679,7 +680,7 @@ export default function App() {
             </div>
             <PreviousRoundPanel round={previous.round} threads={previous.threads} showOnImage={showPrevious} onToggleShowOnImage={togglePrevious} onShow={showThread} onShowDetached={showEntryThread} />
             {entryThread && (
-              <ThreadPopover key={entryThread.thread.handle} thread={entryThread.thread} round={previous.round} anchorPoint={entryThread.anchorPoint} onClose={closeThread} />
+              <ThreadPopover key={entryThread.thread.handle} thread={entryThread.thread} round={previous.round} anchorPoint={entryThread.anchorPoint} onClose={closeThread} onReload={previous.reload} />
             )}
             <AnnotationPanel
               annotations={review.ordered}

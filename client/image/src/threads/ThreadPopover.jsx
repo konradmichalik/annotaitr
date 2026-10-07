@@ -4,6 +4,8 @@ import { useOutsideClick } from '../../../shared/hooks/useOutsideClick.js'
 import { useModalDismiss } from '../../../shared/hooks/useModalDismiss.js'
 import { TOOL_ICONS } from '../utils/icons.jsx'
 import ReplyList from '../../../shared/components/ReplyList.jsx'
+import ReplyForm from './ReplyForm.jsx'
+import { removeReply } from './replyApi.js'
 import { STATUS_DISPLAY, AUTHOR_LABELS, threadTitle, threadRound, threadNumber } from './threadView.js'
 
 const POPOVER_WIDTH = 320
@@ -23,7 +25,11 @@ function computePosition(anchorPoint) {
     : { top: anchorPoint.y + GAP, left }
 }
 
-export function ThreadPopoverContent({ thread, round }) {
+export function ThreadPopoverContent({ thread, round, onReload }) {
+  const handleRemove = async (reply) => {
+    await removeReply(thread.handle, reply.id)
+    onReload()
+  }
   return (
     <>
       <h2 className="thread-popover-title">
@@ -42,13 +48,17 @@ export function ThreadPopoverContent({ thread, round }) {
         <p className="thread-popover-text">{thread.annotation.text}</p>
       </blockquote>
       {thread.replies.length > 0
-        ? <ReplyList replies={thread.replies} display={STATUS_DISPLAY} labels={AUTHOR_LABELS} />
+        ? <ReplyList
+            replies={thread.replies} display={STATUS_DISPLAY} labels={AUTHOR_LABELS}
+            pendingLabel="pending, sent with your decision" onRemove={onReload && handleRemove}
+          />
         : <p className="thread-popover-empty">No reply from the agent yet.</p>}
+      {onReload && <ReplyForm handle={thread.handle} onSent={onReload} />}
     </>
   )
 }
 
-export default function ThreadPopover({ thread, round, anchorPoint, onClose }) {
+export default function ThreadPopover({ thread, round, anchorPoint, onClose, onReload }) {
   const popoverRef = useRef(null)
   useOutsideClick(popoverRef, onClose)
   // The owner puts focus back on whatever opened the visible popover; a restore of its own would return to the one before a switch.
@@ -65,7 +75,7 @@ export default function ThreadPopover({ thread, round, anchorPoint, onClose }) {
       onMouseDown={(event) => event.stopPropagation()}
     >
       <div className="thread-popover-body">
-        <ThreadPopoverContent thread={thread} round={round} />
+        <ThreadPopoverContent thread={thread} round={round} onReload={onReload} />
       </div>
     </div>,
     document.body

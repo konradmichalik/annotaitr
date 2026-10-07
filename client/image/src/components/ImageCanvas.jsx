@@ -240,7 +240,7 @@ export default function ImageCanvas({
   // A PDF page's words in reading order, for the Text tool.
   voiceNotes = false, elements = [], words = [],
   // Last round's marks (placed threads only), drawn read-only and opened with the Select tool.
-  previousThreads = [], previousRound = null, showPrevious = false, openThreadHandle = null, onOpenThread = null, onCloseThread = null
+  previousThreads = [], previousRound = null, showPrevious = false, openThreadHandle = null, onOpenThread = null, onCloseThread = null, onReloadThreads = null
 }) {
   const wrapperRef = useRef(null)
   // A thread opened from the panel on another page mounts this canvas with its popover already due, before the wrapper exists to anchor it to.
@@ -758,6 +758,7 @@ export default function ImageCanvas({
           thread={openThread} round={previousRound}
           anchorPoint={toClientPoint(wrapperRef, annotationBottomAnchor(openThread.annotation), zoom)}
           onClose={onCloseThread}
+          onReload={onReloadThreads}
         />
       )}
       {pending && (

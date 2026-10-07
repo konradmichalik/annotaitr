@@ -62,6 +62,32 @@ test.describe('replies from the last round', () => {
   })
   test.afterEach(async () => { await rm(dir, { recursive: true, force: true }) })
 
+  test('answers the agent in the popover, removes and resends the reply', async ({ page }) => {
+    await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Button colour', color: '#bf616a' }, 'question', 'Green or blue?')
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      await page.getByRole('region', { name: /Round 1 replies/ }).getByRole('button', { name: /1\..*question/ }).click()
+      const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
+      const field = dialog.getByLabel('Reply to the agent')
+      await field.fill('x'.repeat(4001))
+      await dialog.getByRole('button', { name: 'Send' }).click()
+      await expect(dialog.getByRole('alert')).toContainText('longer than 4000')
+      await expect(field).toHaveValue('x'.repeat(4001))
+      await field.fill('Green, the dark one')
+      await field.press('Control+Enter')
+      await expect(dialog.getByText('pending, sent with your decision')).toBeVisible()
+      await expect(field).toHaveValue('')
+      await dialog.getByRole('button', { name: 'Remove your reply' }).click()
+      await expect(dialog.getByText('pending, sent with your decision')).toHaveCount(0)
+      await field.fill('Green')
+      await dialog.getByRole('button', { name: 'Send' }).click()
+      await expect(dialog.getByText('Green', { exact: true })).toBeVisible()
+    } finally {
+      cli.child.kill()
+    }
+  })
+
   test('shows the mark with its reply, opens the thread from the canvas and hides it on demand', async ({ page }) => {
     await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Button too close', color: '#bf616a' })
     const cli = startCli([image], env)
