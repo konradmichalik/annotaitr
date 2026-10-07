@@ -21,7 +21,6 @@ import { useThreadPopover } from './threads/useThreadPopover.js'
 import PreviousRoundPanel from './threads/PreviousRoundPanel.jsx'
 import ThreadPopover from './threads/ThreadPopover.jsx'
 import { placedThreads, threadPageCounts, hasMark } from './threads/threadView.js'
-import { ACTION_ICONS } from './utils/icons.jsx'
 import { useSettings } from './hooks/useSettings.js'
 import { useMediaPlayer } from './video/useMediaPlayer.js'
 import { useVideoReview } from './video/useVideoReview.js'
@@ -564,18 +563,6 @@ export default function App() {
                   <ViewportControl capture={meta.capture} busy={!!recapturing} annotationCount={state.annotations.length} onApply={recapture} />
                 )}
                 {isDocument && <PageNav pages={doc.pages} current={doc.current} pageCount={meta.pageCount} onStep={stepPage} />}
-                {markedThreads.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={togglePrevious}
-                    className="btn btn-icon"
-                    aria-pressed={showPrevious}
-                    aria-label="Previous round"
-                    title="Show or hide last round's marks and replies"
-                  >
-                    {ACTION_ICONS.history}
-                  </button>
-                )}
                 <ZoomControls zoom={zoom} onZoomBy={zoomBy} onZoomReset={zoomReset} onZoomFit={zoomFit} />
               </div>
             </div>
@@ -690,7 +677,7 @@ export default function App() {
                 onDone={showToast}
               />
             </div>
-            <PreviousRoundPanel round={previous.round} threads={previous.threads} onShow={showThread} onShowDetached={showEntryThread} />
+            <PreviousRoundPanel round={previous.round} threads={previous.threads} showOnImage={showPrevious} onToggleShowOnImage={togglePrevious} onShow={showThread} onShowDetached={showEntryThread} />
             {entryThread && (
               <ThreadPopover key={entryThread.thread.handle} thread={entryThread.thread} round={previous.round} anchorPoint={entryThread.anchorPoint} onClose={closeThread} />
             )}

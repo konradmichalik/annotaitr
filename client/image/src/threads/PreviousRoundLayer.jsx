@@ -1,20 +1,31 @@
 import { annotationTopAnchor } from '../utils/drawing.js'
-import { statusDisplay, threadStatus } from './threadView.js'
+import { statusDisplay, threadStatus, badgeShowsNumber } from './threadView.js'
 
 const BADGE_HEIGHT = 20
-// SVG text cannot be measured before it renders, so the pill is sized from the character count: about 6.5px per
-// glyph at the 11px badge font, plus 12px of padding.
+const MARKER_SIZE = 16
+const GAP = 4
+// SVG text cannot be measured before it renders, so the chip is sized from the character count: about 6.5px per
+// glyph at the 11px badge font, plus 16px of padding.
 const CHAR_WIDTH = 6.5
-const PADDING = 12
+const PADDING = 16
 
 function Badge({ thread, anchor }) {
-  const { icon, label } = statusDisplay(thread)
-  const text = `${icon} ${thread.number} ${label}`
-  const width = text.length * CHAR_WIDTH + PADDING
+  const { label } = statusDisplay(thread)
+  const chipWidth = label.length * CHAR_WIDTH + PADDING
+  const markerWidth = badgeShowsNumber(thread) ? MARKER_SIZE + GAP : 0
+  const width = markerWidth + chipWidth
   return (
-    <g className={`previous-round-badge previous-round-badge--${threadStatus(thread)}`} transform={`translate(${anchor.x - width / 2} ${Math.max(0, anchor.y - BADGE_HEIGHT - 4)})`}>
-      <rect width={width} height={BADGE_HEIGHT} rx="10" />
-      <text x={width / 2} y={BADGE_HEIGHT / 2} textAnchor="middle" dominantBaseline="central">{text}</text>
+    <g className={`previous-round-badge status--${threadStatus(thread)}`} transform={`translate(${anchor.x - width / 2} ${Math.max(0, anchor.y - BADGE_HEIGHT - 4)})`}>
+      {markerWidth > 0 && (
+        <>
+          <circle className="previous-round-badge-marker" cx={MARKER_SIZE / 2} cy={BADGE_HEIGHT / 2} r={MARKER_SIZE / 2} />
+          <text className="previous-round-badge-number" x={MARKER_SIZE / 2} y={BADGE_HEIGHT / 2} textAnchor="middle" dominantBaseline="central">{thread.number}</text>
+        </>
+      )}
+      {/* The tint is translucent like the sidebar chip, so an opaque plate underneath keeps the label readable over any image. */}
+      <rect className="previous-round-badge-plate" x={markerWidth} width={chipWidth} height={BADGE_HEIGHT} rx={BADGE_HEIGHT / 2} />
+      <rect className="previous-round-badge-chip" x={markerWidth} width={chipWidth} height={BADGE_HEIGHT} rx={BADGE_HEIGHT / 2} />
+      <text className="previous-round-badge-label" x={markerWidth + chipWidth / 2} y={BADGE_HEIGHT / 2} textAnchor="middle" dominantBaseline="central">{label}</text>
     </g>
   )
 }

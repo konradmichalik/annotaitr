@@ -19,7 +19,7 @@ function ThreadEntry({ thread, onActivate }) {
   )
 }
 
-export default function PreviousRoundPanel({ round, threads, onShow, onShowDetached }) {
+export default function PreviousRoundPanel({ round, threads, showOnImage, onToggleShowOnImage, onShow, onShowDetached }) {
   if (threads.length === 0) { return null }
 
   const orphans = orphanThreads(threads)
@@ -36,10 +36,24 @@ export default function PreviousRoundPanel({ round, threads, onShow, onShowDetac
 
   return (
     <section className="previous-round-panel" aria-labelledby="previous-round-summary">
+      {/* A sibling of the details, not part of the summary, so a press on the switch can never fold the section. */}
+      {threads.some(hasMark) && (
+      <button
+        type="button"
+        role="switch"
+        aria-checked={showOnImage}
+        aria-label="Show on image"
+        className="previous-round-switch"
+        onClick={onToggleShowOnImage}
+      >
+        <span className="previous-round-switch-label">On image</span>
+        <span className="previous-round-switch-track" aria-hidden="true"><span className="previous-round-switch-knob" /></span>
+      </button>
+      )}
       <details open>
         <summary id="previous-round-summary">
           <span className="previous-round-icon">{ACTION_ICONS.history}</span>
-          Round {round} replies ({threads.length})
+          Round {round} replies <span className="panel-badge">{threads.length}</span>
         </summary>
         {placed.length > 0 && (
           <ul className="previous-round-list">

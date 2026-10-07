@@ -22,6 +22,9 @@ export function statusDisplay(thread) {
   return STATUS_DISPLAY[threadStatus(thread)] ?? STATUS_DISPLAY.none
 }
 
+// Pins and text marks draw their number inside the shape, a second one in the badge would only repeat it.
+export const badgeShowsNumber = (thread) => !['pin', 'text'].includes(thread.annotation.type)
+
 function inView(annotation, view) {
   if (view.kind === 'video') { return isVisibleAt(annotation, view.time, view.tolerance) }
   if (view.kind === 'document') { return annotation.page === view.page }
