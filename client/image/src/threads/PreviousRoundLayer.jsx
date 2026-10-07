@@ -1,5 +1,5 @@
 import { annotationTopAnchor } from '../utils/drawing.js'
-import { statusDisplay, threadStatus, badgeShowsNumber, threadNumber } from './threadView.js'
+import { statusDisplay, threadStatus, badgeShowsNumber, threadNumber, pendingReplies } from './threadView.js'
 
 const BADGE_HEIGHT = 20
 const MARKER_SIZE = 16
@@ -11,11 +11,13 @@ const PADDING = 16
 
 function Badge({ thread, anchor }) {
   const { label } = statusDisplay(thread)
-  const chipWidth = label.length * CHAR_WIDTH + PADDING
+  const replyPending = pendingReplies(thread).length > 0
+  const chipWidth = (label.length + (replyPending ? 2 : 0)) * CHAR_WIDTH + PADDING
   const markerWidth = badgeShowsNumber(thread) ? MARKER_SIZE + GAP : 0
   const width = markerWidth + chipWidth
   return (
-    <g className={`previous-round-badge status--${threadStatus(thread)}`} transform={`translate(${anchor.x - width / 2} ${Math.max(0, anchor.y - BADGE_HEIGHT - 4)})`}>
+    <g className={`previous-round-badge status--${threadStatus(thread)}`} transform={`translate(${anchor.x - width / 2} ${Math.max(0, anchor.y - BADGE_HEIGHT - 4)})`} role={replyPending ? 'img' : undefined} aria-label={replyPending ? `${label}, reply pending` : undefined}>
+      {replyPending && <title>{label}, reply pending</title>}
       {markerWidth > 0 && (
         <>
           <circle className="previous-round-badge-marker" cx={MARKER_SIZE / 2} cy={BADGE_HEIGHT / 2} r={MARKER_SIZE / 2} />
@@ -25,7 +27,7 @@ function Badge({ thread, anchor }) {
       {/* The tint is translucent like the sidebar chip, so an opaque plate underneath keeps the label readable over any image. */}
       <rect className="previous-round-badge-plate" x={markerWidth} width={chipWidth} height={BADGE_HEIGHT} rx={BADGE_HEIGHT / 2} />
       <rect className="previous-round-badge-chip" x={markerWidth} width={chipWidth} height={BADGE_HEIGHT} rx={BADGE_HEIGHT / 2} />
-      <text className="previous-round-badge-label" x={markerWidth + chipWidth / 2} y={BADGE_HEIGHT / 2} textAnchor="middle" dominantBaseline="central">{label}</text>
+      <text className="previous-round-badge-label" x={markerWidth + chipWidth / 2} y={BADGE_HEIGHT / 2} textAnchor="middle" dominantBaseline="central">{label}{replyPending ? ' ↩' : ''}</text>
     </g>
   )
 }

@@ -20,7 +20,7 @@ import { usePreviousRound } from './threads/usePreviousRound.js'
 import { useThreadPopover } from './threads/useThreadPopover.js'
 import PreviousRoundPanel from './threads/PreviousRoundPanel.jsx'
 import ThreadPopover from './threads/ThreadPopover.jsx'
-import { placedThreads, threadPageCounts, hasMark } from './threads/threadView.js'
+import { placedThreads, threadPageCounts, hasMark, pendingReplyCount } from './threads/threadView.js'
 import { useSettings } from './hooks/useSettings.js'
 import { useMediaPlayer } from './video/useMediaPlayer.js'
 import { useVideoReview } from './video/useVideoReview.js'
@@ -395,6 +395,10 @@ export default function App() {
   }, [isDocument, zoomFit])
 
   const annotationCount = state.annotations.length
+  const replyCount = pendingReplyCount(previous.threads)
+  const decisionItemCount = annotationCount + replyCount
+  const notesTitle = [annotationCount > 0 && `${annotationCount} annotation(s)`, replyCount > 0 && `${replyCount} reply(ies)`].filter(Boolean).join(' and ')
+  const submitTitle = decisionItemCount === 0 ? 'Add annotations first' : `Submit ${notesTitle}`
   const origin = meta?.origin
 
   function statusText() {
@@ -501,22 +505,22 @@ export default function App() {
             type="button"
             onClick={() => submit('feedback')}
             className="btn btn-feedback"
-            disabled={annotationCount === 0 || !!exportProgress}
-            title={annotationCount === 0 ? 'Add annotations first' : `Submit ${annotationCount} annotation(s)`}
+            disabled={decisionItemCount === 0 || !!exportProgress}
+            title={submitTitle}
           >
             Feedback
-            {annotationCount > 0 && <span className="btn-badge">{annotationCount}</span>}
+            {decisionItemCount > 0 && <span className="btn-badge">{decisionItemCount}</span>}
           </button>
           <button
             type="button"
             onClick={() => submit('approve')}
             className="btn btn-approve"
             disabled={!!exportProgress}
-            title={annotationCount > 0
-              ? `Approve as-is and pass ${annotationCount} annotation(s) along as notes`
+            title={decisionItemCount > 0
+              ? `Approve as-is and pass ${notesTitle} along as notes`
               : `Approve the ${subject} as-is`}
           >
-            {annotationCount > 0 ? 'Approve with Notes' : 'Approve'}
+            {decisionItemCount > 0 ? 'Approve with Notes' : 'Approve'}
           </button>
           <button
             type="button"

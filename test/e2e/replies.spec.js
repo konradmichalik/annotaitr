@@ -62,6 +62,48 @@ test.describe('replies from the last round', () => {
   })
   test.afterEach(async () => { await rm(dir, { recursive: true, force: true }) })
 
+  test('submits a round that only carries a reply', async ({ page }) => {
+    await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Button colour', color: '#bf616a' }, 'question', 'Green or blue?')
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      const section = page.getByRole('region', { name: /Round 1 replies/ })
+      await section.getByRole('button', { name: /1\..*question/ }).click()
+      const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
+      await dialog.getByLabel('Reply to the agent').fill('Green')
+      await dialog.getByRole('button', { name: 'Send' }).click()
+      await page.keyboard.press('Escape')
+      await expect(section.getByText('You: Green')).toBeVisible()
+      await expect(section.getByText('1 to send')).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Approve with Notes' })).toBeVisible()
+      await expect(page.locator('.previous-round-badge[aria-label*="reply pending"]')).toHaveCount(1)
+      const feedback = page.getByRole('button', { name: /^Feedback/ })
+      await expect(feedback).toBeEnabled()
+      await expect(feedback).toHaveAttribute('title', 'Submit 1 reply(ies)')
+      await feedback.click()
+      await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
+      await cli.exited
+      const out = cli.stdout()
+      expect(out).toMatch(/^Feedback: 1 reply to round 1, no new marks\./)
+      expect(out).toContain('Reviewer: Green')
+
+      const sessionId = out.match(/Session: ([0-9a-f]{12})/)[1]
+      spawnSync('node', ['index.js', 'reply', '--session', sessionId, '--to', UUID.slice(0, 8), '--status', 'applied', '--text', 'Green it is'], {
+        env: { ...process.env, ...env }, encoding: 'utf-8'
+      })
+      const third = startCli([image], env)
+      try {
+        await page.goto(await third.url)
+        await page.getByRole('region', { name: /replies/ }).getByRole('button', { name: /1\./ }).click()
+        await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' })).toBeVisible()
+      } finally {
+        third.child.kill()
+      }
+    } finally {
+      cli.child.kill()
+    }
+  })
+
   test('answers the agent in the popover, removes and resends the reply', async ({ page }) => {
     await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Button colour', color: '#bf616a' }, 'question', 'Green or blue?')
     const cli = startCli([image], env)

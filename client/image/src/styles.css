@@ -1909,6 +1909,16 @@ button.voice-note:hover {
   white-space: nowrap;
 }
 
+.previous-round-entry-reply--pending {
+  font-style: italic;
+}
+
+.previous-round-to-send {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
 .previous-round-entry-reason {
   flex-basis: 100%;
   font-size: 0.75rem;
