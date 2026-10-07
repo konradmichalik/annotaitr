@@ -95,9 +95,10 @@ describe('a review session across rounds', () => {
   it('carries a thread the reviewer answered into the next round and shows the exchange', async () => {
     const first = await reviewRound(image, env)
     const sessionId = first.stdout.match(/Session: ([0-9a-f]{12})/)[1]
-    spawnSync('node', ['index.js', 'reply', '--session', sessionId, '--to', 'a3f19c2e', '--status', 'question', '--text', 'Green or blue?'], {
+    const firstReply = spawnSync('node', ['index.js', 'reply', '--session', sessionId, '--to', 'a3f19c2e', '--status', 'question', '--text', 'Green or blue?'], {
       env: { ...process.env, ...env }, encoding: 'utf-8'
     })
+    expect(firstReply.status).toBe(0)
 
     const second = startCli([image], env)
     const url = await second.url
