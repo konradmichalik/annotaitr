@@ -278,3 +278,110 @@ test('the markdown selection bar asks with 4 and adds after the selection with 2
     }
   })
 })
+
+test('Keep open stops the done page countdown', async ({ page }) => {
+  await withTargets(async ({ markdown }) => {
+    const cli = startCli([markdown, '--origin', 'claude-code'])
+    try {
+      await page.goto(await cli.url)
+      await page.getByRole('button', { name: 'Settings' }).click()
+      await page.getByRole('radio', { name: '3 s', exact: true }).check()
+      await page.keyboard.press('Escape')
+      await page.getByRole('button', { name: 'Approve', exact: true }).click()
+      await expect(page.getByRole('status').getByRole('heading', { name: 'Approved' })).toBeVisible()
+      await expect(page.getByText('Closes in 3 s')).toBeVisible()
+      await page.getByRole('button', { name: 'Keep open' }).click()
+      await expect(page.getByText('This tab stays open until you close it.')).toBeVisible()
+      await page.waitForTimeout(3500)
+      expect(page.isClosed()).toBe(false)
+      await expect(page.getByRole('heading', { name: 'Approved' })).toBeVisible()
+      expect(cli.stdout()).toMatch(/^APPROVED/)
+    } finally {
+      cli.child.kill()
+    }
+  })
+})
+
+test('the done page stays open with export actions once the session is gone', async ({ page }) => {
+  test.setTimeout(60_000)
+  await withTargets(async ({ image }) => {
+    const cli = startCli([image, '--origin', 'opencode'])
+    try {
+      await page.goto(await cli.url)
+      await page.getByRole('button', { name: /General comment/ }).click()
+      await page.locator('.app-sidebar textarea').first().fill('Keep this thought')
+      await page.keyboard.press('ControlOrMeta+Enter')
+      await expect(page.getByRole('button', { name: /^Send feedback/ })).toBeVisible()
+      cli.child.kill()
+      const alert = page.getByRole('alert')
+      await expect(alert.getByRole('heading', { name: 'OpenCode stopped waiting' })).toBeVisible({ timeout: 30_000 })
+      await expect(alert).toContainText('Your 1 note was not delivered')
+      await expect(page.getByRole('button', { name: 'Copy as Markdown' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Save annotated image' })).toBeVisible()
+      const download = page.waitForEvent('download')
+      await page.getByRole('button', { name: 'Export JSON' }).click()
+      const json = JSON.parse(await (await download).createReadStream().then((stream) => stream.toArray()).then((chunks) => Buffer.concat(chunks).toString()))
+      expect(json.map((a) => a.text)).toEqual(['Keep this thought'])
+      await page.waitForTimeout(3500)
+      await expect(alert.getByRole('heading', { name: 'OpenCode stopped waiting' })).toBeVisible()
+      await expect(page.getByText('This tab stays open until you close it.')).toBeVisible()
+    } finally {
+      cli.child.kill()
+    }
+  })
+})
+
+test('? opens the shortcut list of the open mode', async ({ page }) => {
+  await withTargets(async ({ markdown }) => {
+    const cli = startCli([markdown])
+    try {
+      await page.goto(await cli.url)
+      await page.locator('.viewer-wrapper').click({ position: { x: 5, y: 5 } })
+      await page.keyboard.press('Shift+?')
+      const dialog = page.getByRole('dialog', { name: 'Settings' })
+      await expect(dialog.getByRole('tab', { name: 'Shortcuts' })).toHaveAttribute('aria-selected', 'true')
+      await expect(dialog.getByRole('heading', { name: 'Shortcuts for Markdown' })).toBeVisible()
+      await expect(dialog.getByRole('searchbox', { name: 'Search shortcuts' })).toBeFocused()
+      await expect(dialog.getByText('Pinpoint', { exact: true })).toBeVisible()
+      await expect(dialog.getByText('Box', { exact: true })).toHaveCount(0)
+      await page.keyboard.type('undo')
+      await expect(dialog.locator('.shortcut-row')).toHaveCount(1)
+      await dialog.getByRole('tab', { name: 'Shortcuts' }).focus()
+      await page.keyboard.press('ArrowUp')
+      await expect(dialog.getByRole('tab', { name: /Markdown/ })).toBeFocused()
+      await expect(dialog.getByRole('tab', { name: /Markdown/ })).toHaveAttribute('aria-selected', 'true')
+      await page.keyboard.press('Escape')
+      await expect(dialog).toHaveCount(0)
+    } finally {
+      cli.child.kill()
+    }
+  })
+})
+
+test('the default intent setting starts a new box with that intent', async ({ page }) => {
+  await withTargets(async ({ image }) => {
+    const cli = startCli([image])
+    try {
+      await page.goto(await cli.url)
+      await page.getByRole('button', { name: 'Settings' }).click()
+      await page.getByLabel('Default intent').selectOption('remove')
+      await page.keyboard.press('Escape')
+      await page.keyboard.press('r')
+      const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
+      await page.mouse.move(canvas.x + 10, canvas.y + 10)
+      await page.mouse.down()
+      await page.mouse.move(canvas.x + 60, canvas.y + 60)
+      await page.mouse.up()
+      await expect(page.getByRole('button', { name: 'Intent: Remove' })).toBeVisible()
+      await page.getByPlaceholder('Add a comment…').fill('Drop this block')
+      await page.keyboard.press('ControlOrMeta+Enter')
+      await expect(page.getByRole('button', { name: /^1\. Remove, Box/ })).toBeVisible()
+      await page.keyboard.press('c')
+      await page.mouse.click(canvas.x + 120, canvas.y + 100)
+      await expect(page.getByRole('button', { name: 'Intent: Question' })).toBeVisible()
+      await page.keyboard.press('Escape')
+    } finally {
+      cli.child.kill()
+    }
+  })
+})
