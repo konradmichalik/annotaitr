@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useState, useCallback, useRef, useMemo } from 'react'
-import { annotationReducer, initialAnnotationState } from './state/annotationReducer.js'
+import { annotationReducer, initialAnnotationState, upcomingNumber } from './state/annotationReducer.js'
 import { createAnnotationId } from '../../shared/utils/annotationId.js'
+import { intentOf } from '../../shared/utils/intents.js'
 import Toolbar, { offeredTools } from './components/Toolbar.jsx'
 import ZoomControls from './components/ZoomControls.jsx'
 import ViewportControl from './components/ViewportControl.jsx'
@@ -29,9 +30,9 @@ import { useVideoReview } from './video/useVideoReview.js'
 import { useTimelineShortcuts } from './video/useTimelineShortcuts.js'
 import { useDocumentReview } from './document/useDocumentReview.js'
 import { useDocumentShortcuts } from './document/useDocumentShortcuts.js'
-import { pageLabel, isPaged } from './document/documentPages.js'
+import { pageLabel, isPaged, orderDocumentAnnotations } from './document/documentPages.js'
 import { uploadFrames } from './utils/uploadFrames.js'
-import { formatTimes } from './video/timeline.js'
+import { formatTimes, orderVideoAnnotations } from './video/timeline.js'
 import { readError } from './utils/readError.js'
 import { useAutoClose } from '../../shared/hooks/useAutoClose.js'
 import { useServerConnection } from '../../shared/hooks/useServerConnection.js'
@@ -47,17 +48,6 @@ import { DoneScreen, DoneAutoClose } from '../../shared/components/DoneScreen.js
 import { getItem, setItem } from '../../shared/utils/storage.js'
 import { PanelSwitch } from '../../shared/components/PanelSwitch.jsx'
 import { GeneralCommentRow } from '../../shared/components/GeneralCommentRow.jsx'
-
-const NOTE_NOUNS = {
-  box: ['box', 'boxes'],
-  arrow: ['arrow'],
-  freehand: ['drawing'],
-  highlighter: ['highlight'],
-  pin: ['pin'],
-  comment: ['comment'],
-  text: ['text mark'],
-  element: ['element mark']
-}
 
 // The general comment has no shape, page or time: it is about the whole target.
 const isGeneralComment = (a) => a.type === 'comment' && !a.geometry && typeof a.page !== 'number' && typeof a.time !== 'number'
@@ -378,7 +368,9 @@ export default function App() {
       setErrorStatus('Import failed: these annotations belong to another image or to pages not part of this review.')
       return
     }
-    dispatch({ type: 'SET_ALL', annotations })
+    // An export from before notes kept their numbers is numbered the way that version numbered it.
+    const order = isVideo ? orderVideoAnnotations : (isDocument ? orderDocumentAnnotations : undefined)
+    dispatch({ type: 'SET_ALL', annotations, order })
     showToast(`Imported ${annotations.length} annotation${annotations.length === 1 ? '' : 's'}`)
   }, [showToast, isVideo, isDocument, doc.pages, setErrorStatus])
 
@@ -425,10 +417,11 @@ export default function App() {
       : applySummary(state.annotations, summary, { isGeneral: isGeneralComment, create: createGeneralComment })
     submit(choice === 'feedback' ? 'feedback' : 'approve', choice === 'approve' ? [] : withSummary)
   }
-  // Approving while the agent waits for an answer goes through the dialog, which lists the open questions.
+  // While the agent waits for answers, the main button opens the dialog with the open questions first,
+  // so they are seen before feedback or an approval ends the wait.
   const decidePrimary = (choice) => {
-    if (choice === 'approve' && unanswered.length > 0) {
-      setDecisionDialog({ choice: 'approve' })
+    if (unanswered.length > 0) {
+      setDecisionDialog({ choice })
       return
     }
     finish({ choice })
@@ -651,8 +644,7 @@ export default function App() {
                 activeTool={activeTool}
                 annotations={review.visible}
                 media={pageMedia()}
-                numberFor={isVideo || isDocument ? review.numberFor : null}
-                nextNumber={review.nextNumber}
+                nextNumber={upcomingNumber(state)}
                 onBeforeInteract={isVideo ? beforeCanvasInteract : null}
                 describeTime={isVideo ? describeTime : null}
                 voiceNotes={!!meta.voiceNotes}
@@ -808,14 +800,12 @@ export default function App() {
       {decisionDialog && (
         <DecisionDialog
           origin={origin}
-          noteTypes={state.annotations.filter((a) => a !== generalComment).map((a) => a.type)}
-          nouns={NOTE_NOUNS}
-          generalType="comment"
+          noteIntents={state.annotations.filter((a) => a !== generalComment).map(intentOf)}
           generalText={generalComment ? generalComment.text : null}
           replies={replyCount}
           info={replyCount > 0 ? `${plural(replyCount, 'pending reply', 'pending replies')} to round ${previous.round} ${replyCount === 1 ? 'goes' : 'go'} out with this.` : null}
           initialChoice={decisionDialog.choice}
-          approvalWarning={unanswered.length > 0 && <UnansweredQuestions threads={unanswered} round={previous.round} onAnswer={answerQuestions} />}
+          warning={unanswered.length > 0 && <UnansweredQuestions threads={unanswered} round={previous.round} onAnswer={answerQuestions} />}
           busy={!!exportProgress}
           onSubmit={finishFromDialog}
           onClose={closeDecision}

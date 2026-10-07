@@ -3,26 +3,27 @@ import { useModalDismiss } from '../hooks/useModalDismiss.js'
 import { trapTab } from '../utils/focusTrap.js'
 import { decisionLegend } from '../utils/origin.js'
 import {
-  decisionOptions, defaultChoice, describeBreakdown, needsDiscardConfirm, plural, submitLabel
+  decisionOptions, defaultChoice, describeIntents, needsDiscardConfirm, plural, submitLabel
 } from '../utils/decision.js'
 import { MOD } from './SettingsModal.jsx'
 import { isSaveKey } from '../utils/keys.js'
 
 /**
  * Finish review: Send feedback, Approve with notes or Approve, plus an optional
- * summary that becomes the general comment. `noteTypes` lists the type of every
- * note except the general comment, which `generalText` carries (null when there
- * is none). `approvalWarning` is shown while an approval is selected.
+ * summary that becomes the general comment. `noteIntents` lists the intent of
+ * every note except the general comment, which `generalText` carries (null when
+ * there is none). `warning` (the agent's unanswered questions) is shown whatever
+ * is selected, since feedback and an approval both end the agent's wait.
  */
 export function DecisionDialog({
-  origin, noteTypes, nouns, generalType, generalText = null, replies = 0, info = null,
-  initialChoice = null, approvalWarning = null, busy = false, onSubmit, onClose
+  origin, noteIntents, generalText = null, replies = 0, info = null,
+  initialChoice = null, warning = null, busy = false, onSubmit, onClose
 }) {
   const dialogRef = useRef(null)
   const [summary, setSummary] = useState(generalText ?? '')
   const hasSummary = summary.trim() !== ''
-  const types = hasSummary ? [...noteTypes, generalType] : noteTypes
-  const counts = { notes: types.length, replies, breakdown: describeBreakdown(types, nouns) }
+  const intents = hasSummary ? [...noteIntents, null] : noteIntents
+  const counts = { notes: intents.length, replies, breakdown: describeIntents(intents) }
   const options = decisionOptions(counts)
   const [picked, setPicked] = useState(() => initialChoice ?? defaultChoice(counts))
   // Clearing the summary can take away the only note, and with it the choices that need one.
@@ -108,7 +109,7 @@ export function DecisionDialog({
             </div>
           )}
 
-          {choice !== 'feedback' && approvalWarning}
+          {warning}
           {info && <p className="decision-info">{info}</p>}
           {confirming && (
             <p className="decision-confirm" role="alert">

@@ -1,6 +1,6 @@
 import { threadTitle } from './threadView.js'
 
-/** Shown in the decision dialog while an approval is selected and the agent still waits for an answer, so a question is not approved away unseen. */
+/** Shown in the decision dialog while the agent still waits for an answer, so a question is not sent or approved away unseen. */
 export default function UnansweredQuestions({ threads, round, onAnswer }) {
   const count = threads.length
   return (

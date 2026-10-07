@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  plural, primaryAction, defaultChoice, decisionOptions, submitLabel, needsDiscardConfirm, describeBreakdown, applySummary
+  plural, primaryAction, defaultChoice, decisionOptions, submitLabel, needsDiscardConfirm, describeIntents, applySummary
 } from '../../../client/shared/utils/decision.js'
 
 describe('plural', () => {
@@ -72,19 +72,13 @@ describe('needsDiscardConfirm', () => {
   })
 })
 
-describe('describeBreakdown', () => {
-  const nouns = { box: ['box', 'boxes'], pin: ['pin'] }
-
-  it('counts per type in order of first appearance', () => {
-    expect(describeBreakdown(['pin', 'box', 'pin'], nouns)).toBe('2 pins, 1 box')
-  })
-
-  it('calls unknown types notes', () => {
-    expect(describeBreakdown(['box', 'zigzag', 'zigzag'], nouns)).toBe('1 box, 2 notes')
+describe('describeIntents', () => {
+  it('counts the notes per intent in a fixed order, general comments last', () => {
+    expect(describeIntents(['question', 'change', null, 'question', 'remove'])).toBe('1 Change, 1 Remove, 2 Question, 1 General')
   })
 
   it('is empty without notes', () => {
-    expect(describeBreakdown([], nouns)).toBe('')
+    expect(describeIntents([])).toBe('')
   })
 })
 

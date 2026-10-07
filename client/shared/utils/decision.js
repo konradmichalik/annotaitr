@@ -1,3 +1,5 @@
+import { INTENTS, intentWord } from './intents.js'
+
 /**
  * The decision a reviewer submits, shared by both clients. `feedback` asks for
  * changes, `approve-notes` approves and passes the notes along as context,
@@ -48,17 +50,14 @@ export function needsDiscardConfirm(choice, notes) {
   return choice === 'approve' && notes > 0
 }
 
-/** "2 pins, 1 box": one count per type, in order of first appearance. `nouns` maps a type to [singular, plural]. */
-export function describeBreakdown(types, nouns) {
-  const counts = new Map()
-  for (const type of types) {
-    const key = nouns[type] ? type : null
-    counts.set(key, (counts.get(key) ?? 0) + 1)
-  }
-  return [...counts].map(([key, count]) => {
-    const [one, many] = nouns[key] ?? ['note']
-    return plural(count, one, many)
-  }).join(', ')
+/** "2 Change, 1 Question, 1 General": the notes per intent, in the order the composer lists them. `null` is a general comment. */
+export function describeIntents(intents) {
+  const order = [...INTENTS.map((i) => i.id), null]
+  return order
+    .map((intent) => [intent, intents.filter((value) => (value ?? null) === intent).length])
+    .filter(([, count]) => count > 0)
+    .map(([intent, count]) => `${count} ${intentWord(intent)}`)
+    .join(', ')
 }
 
 /**
