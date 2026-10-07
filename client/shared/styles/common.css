@@ -3,6 +3,7 @@
  * `@import`s this file first and adds only the rules specific to its mode.
  */
 @import url('./tokens.css');
+@import url('./fonts.css');
 @import url('./base.css');
 @import url('./chrome.css');
 @import url('./panel.css');
