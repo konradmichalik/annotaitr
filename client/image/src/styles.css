@@ -1997,3 +1997,11 @@ button.voice-note:hover {
   color: var(--ink-muted);
   font-style: italic;
 }
+
+/* The marks the Session gone page paints into a PNG: rendered, so their colours compute, but off screen. */
+.snapshot-layer {
+  position: fixed;
+  top: 0;
+  left: -100000px;
+  pointer-events: none;
+}

@@ -140,7 +140,7 @@ test('the Element tool outlines and picks a page element, other tools only name 
     await page.getByRole('button', { name: 'Add', exact: true }).click()
 
     await page.getByRole('button', { name: /^Send feedback/ }).click()
-    await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible()
     expect(await new Promise((resolve) => child.on('exit', resolve))).toBe(0)
     expect(stdout()).toMatch(/### 1\. \[#\w+\] Change · Selected element: .*\nElement: img "Team photo" \("team.png"\) · #hero\n> Swap the photo/)
     expect(stdout()).toMatch(/### 2\. \[#\w+\] Question · Comment pin: .*\nElement: button "Contact us" · #contact/)
@@ -211,7 +211,7 @@ test('the viewport picker captures the page again in place, after confirming tha
 
     await pinAt(30, 30)
     await page.getByRole('button', { name: /^Send feedback/ }).click()
-    await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible()
     expect(await new Promise((resolve) => child.on('exit', resolve))).toBe(0)
     expect(stdout()).toContain('Captured at mobile landscape (812×375), section #pricing, after 200 ms\n')
   } finally {

@@ -58,7 +58,7 @@ test('a PDF is annotated page by page and the CLI prints per-page feedback with 
 
     await expect(page.locator('.app-sidebar')).toContainText('Page 2')
     await page.getByRole('button', { name: /^Send feedback/ }).click()
-    await expect(page.getByText('Feedback Submitted')).toBeVisible()
+    await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible()
 
     expect(await cli.exited).toBe(0)
     const output = cli.stdout()

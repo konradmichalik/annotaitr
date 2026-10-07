@@ -42,10 +42,10 @@ import { AppHeader } from '../../shared/components/AppHeader.jsx'
 import { DecisionDialog } from '../../shared/components/DecisionDialog.jsx'
 import { useDecisionShortcut } from '../../shared/hooks/useDecisionShortcut.js'
 import { useShortcutListKey } from '../../shared/hooks/useShortcutListKey.js'
-import { agentName } from '../../shared/utils/origin.js'
 import { applySummary, plural } from '../../shared/utils/decision.js'
 import { sourceKind, targetFacts } from './utils/headerSource.js'
-import { DoneScreen, DoneAutoClose } from '../../shared/components/DoneScreen.jsx'
+import ImageDoneScreen from './components/ImageDoneScreen.jsx'
+import { doneOutcome } from '../../shared/utils/done.js'
 import { getItem, setItem } from '../../shared/utils/storage.js'
 import { PanelSwitch } from '../../shared/components/PanelSwitch.jsx'
 import { GeneralCommentRow } from '../../shared/components/GeneralCommentRow.jsx'
@@ -149,7 +149,7 @@ export default function App() {
   const mediaWidth = isVideo ? controller?.width : (isDocument ? doc.currentPage?.width : meta?.width)
   const mediaHeight = isVideo ? controller?.height : (isDocument ? doc.currentPage?.height : meta?.height)
   const subject = isVideo ? 'recording' : (isDocument ? 'document' : 'image')
-  const { state: autoCloseState, enableAndStart } = useAutoClose(!!decision, settings.autoCloseDelay)
+  const { state: autoCloseState, keepOpen } = useAutoClose(!!decision, settings.autoCloseDelay)
   const { serverGone, reconnectState } = useServerConnection({ submitted: !!decision })
   const { width: panelWidth, handleMouseDown: handlePanelResize } = useResizablePanel('img-annotator-panel-width', 340, 1)
   const toastTimerRef = useRef(null)
@@ -159,6 +159,9 @@ export default function App() {
   // The annotation as it was when a marker drag began, so the whole drag
   // becomes one undo step.
   const markerDragRef = useRef(null)
+  // The image last shown, still loaded after the canvas is gone, for Save annotated image when the session ends.
+  const lastImageRef = useRef(null)
+  const keepImage = useCallback((element) => { if (element) { lastImageRef.current = element } }, [])
   const errorTimerRef = useRef(null)
 
   const showToast = useCallback((message) => {
@@ -515,71 +518,29 @@ export default function App() {
       <PageImage
         src={doc.imageUrl} alt={`Page ${doc.current} of ${meta.targetLabel ?? 'the document'}`}
         width={mediaWidth * zoom} height={mediaHeight * zoom} loadingLabel={`Loading page ${doc.current}`}
-        loading={doc.loading} onLoad={doc.markLoaded} onError={doc.reportImageError}
+        loading={doc.loading} onLoad={doc.markLoaded} onError={doc.reportImageError} imageRef={keepImage}
       />
     )
   }
 
-  if (serverGone && !decision) {
+  const outcome = doneOutcome({ decision, serverGone, notes: annotationCount, replies: replyCount })
+  if (outcome) {
     return (
       <div className="app-shell">
-        <DoneScreen
-          variant="disconnected"
-          title="Server Disconnected"
-          message="The server is no longer available. Your annotations have not been submitted."
-        >
-          {reconnectState === 'reconnecting' && <p className="done-hint">Attempting to reconnect...</p>}
-          {reconnectState === 'failed' && <p className="done-hint">Could not reconnect to the server.</p>}
-          {annotationCount > 0 && (
-            <div className="done-actions">
-              <p className="done-backup-info">
-                {annotationCount} annotation{annotationCount === 1 ? '' : 's'} not yet submitted.
-              </p>
-              <button type="button" onClick={() => setShowExport(true)} className="btn btn-primary">
-                Export Annotations
-              </button>
-            </div>
-          )}
-        </DoneScreen>
-        {showExport && (
-          <ExportModal
-            annotations={state.annotations}
-            onImport={importAnnotations}
-            onClose={() => setShowExport(false)}
-          />
-        )}
-        {toast && <div className="toast">{toast}</div>}
-      </div>
-    )
-  }
-
-  if (decision) {
-    return (
-      <div className="app-shell">
-        <DoneScreen
-          variant={decision}
-          title={decision === 'approved'
-            ? (decisionItemCount > 0 ? 'Approved with Notes' : 'Approved')
-            : 'Feedback Submitted'}
-          message={decision === 'approved'
-            ? (decisionItemCount > 0
-              ? `Approved as-is. ${notesTitle} passed along as notes.`
-              : `No changes requested. The ${subject} was approved as-is.`)
-            : `${notesTitle} ${agentName(origin) ? `sent to ${agentName(origin)}` : 'submitted'}.`}
-        >
-          <p className="done-hint">
-            {decision === 'feedback' && agentName(origin)
-              ? `${agentName(origin)} is processing your feedback.`
-              : 'You can close this tab.'}
-          </p>
-          <DoneAutoClose
-            state={autoCloseState}
-            onEnable={() => {
-              updateSetting('autoCloseDelay', '3')
-              enableAndStart()
-            }}
-          />
-        </DoneScreen>
+        <ImageDoneScreen
+          outcome={outcome}
+          annotations={outcome === 'approved' ? [] : state.annotations}
+          replies={replyCount}
+          origin={origin}
+          target={meta?.targetLabel}
+          locate={isVideo ? formatTimes : (isDocument ? pageLabel : null)}
+          snapshot={isVideo || !mediaWidth ? null : {
+            image: lastImageRef.current, width: mediaWidth, height: mediaHeight, marks: review.visible, noun: isDocument ? 'page' : 'image'
+          }}
+          countdown={autoCloseState}
+          onKeepOpen={keepOpen}
+          reconnecting={reconnectState === 'reconnecting'}
+        />
       </div>
     )
   }
@@ -667,6 +628,7 @@ export default function App() {
                 colorMode={settings.colorMode}
                 fixedColor={settings.fixedColor}
                 newIntent={settings.defaultIntent}
+                imageRef={keepImage}
                 previousThreads={previousThreads}
                 previousRound={previous.round}
                 onReloadThreads={previous.reload}

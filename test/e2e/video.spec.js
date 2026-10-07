@@ -73,7 +73,7 @@ test('a video gets a point and a span annotation and the CLI prints frames for b
     await expect(page.getByRole('button', { name: /Annotation 1 at 00:01.000/ })).toBeVisible()
 
     await page.getByRole('button', { name: /^Send feedback/ }).click()
-    await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible({ timeout: 20_000 })
 
     expect(await cli.exited).toBe(0)
     const stdout = cli.stdout()
@@ -180,7 +180,7 @@ test('a GIF steps frame by frame and exports the annotated frame', async ({ page
     await addComment(page, 'Second frame')
 
     await page.getByRole('button', { name: /^Send feedback/ }).click()
-    await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible({ timeout: 20_000 })
 
     expect(await cli.exited).toBe(0)
     expect(cli.stdout()).toMatch(/### 1\. \[#\w+\] Change · at 00:00\.200, Boxed area/)

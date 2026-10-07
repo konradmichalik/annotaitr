@@ -11,7 +11,8 @@ import { SidePanelIcon } from '../../shared/components/HeaderIcons.jsx'
 import { useDecisionShortcut } from '../../shared/hooks/useDecisionShortcut.js'
 import { useShortcutListKey } from '../../shared/hooks/useShortcutListKey.js'
 import { useReviewDecision, isGeneralComment, createGeneralComment } from './hooks/useReviewDecision.js'
-import { DisconnectedScreen, SubmittedScreen } from './components/DoneScreens.jsx'
+import { MarkdownDoneScreen } from './components/DoneScreens.jsx'
+import { doneOutcome } from '../../shared/utils/done.js'
 import { HashMismatchBanner, DraftBanner } from './components/ReviewBanners.jsx'
 import { CanvasTopbar } from './components/CanvasTopbar.jsx'
 import { ModeHelp } from './components/ModeHelp.jsx'
@@ -381,7 +382,7 @@ export default function App() {
 
   const { serverGone, reconnectState } = useServerConnection({ submitted })
 
-  const { state: autoCloseState, enableAndStart } = useAutoClose(submitted, settings.autoCloseDelay)
+  const { state: autoCloseState, keepOpen } = useAutoClose(submitted, settings.autoCloseDelay)
   const { width: panelWidth, handleMouseDown: handlePanelResize } = useResizablePanel('md-annotator-panel-width', 340, 1)
   const { width: tocWidth, handleMouseDown: handleTocResize } = useResizablePanel('md-annotator-toc-width', 220, -1)
 
@@ -397,33 +398,22 @@ export default function App() {
     />
   )
 
-  if (serverGone && !submitted) {
+  const outcome = doneOutcome({
+    decision,
+    serverGone,
+    notes: decision === 'approved' ? approvedNoteCount : totalAnnotationCount
+  })
+  if (outcome) {
     return (
       <div className="app-shell">
-        <DisconnectedScreen
-          reconnectState={reconnectState}
-          annotationCount={annotations.length}
-          onExport={() => setExportModalOpen(true)}
-        />
-        {exportModal}
-        {toast && <div className="toast">{toast}</div>}
-      </div>
-    )
-  }
-
-  if (submitted) {
-    return (
-      <div className="app-shell">
-        <SubmittedScreen
-          decision={decision}
-          approvedNoteCount={approvedNoteCount}
-          totalAnnotationCount={totalAnnotationCount}
+        <MarkdownDoneScreen
+          outcome={outcome}
+          files={files}
           origin={origin}
-          autoCloseState={autoCloseState}
-          onEnableAutoClose={() => {
-            updateSetting('autoCloseDelay', '3')
-            enableAndStart()
-          }}
+          target={isMultiFile ? `${files.length} files` : filePath}
+          countdown={autoCloseState}
+          onKeepOpen={keepOpen}
+          reconnecting={reconnectState === 'reconnecting'}
         />
       </div>
     )

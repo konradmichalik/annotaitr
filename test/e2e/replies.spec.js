@@ -45,7 +45,7 @@ async function firstVideoRoundWithReply(page, env) {
     await expect.poll(async () => (await saved()).length).toBe(1)
     const id = (await saved())[0].id
     await page.getByRole('button', { name: /^Send feedback/ }).click()
-    await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible({ timeout: 20_000 })
     const sessionId = (await first.exited, first.stdout()).match(/Session: ([0-9a-f]{12})/)[1]
     spawnSync('node', ['index.js', 'reply', '--session', sessionId, '--to', id.slice(0, 8), '--status', 'applied', '--text', 'Moved the button'], {
       env: { ...process.env, ...env }, encoding: 'utf-8'
@@ -80,8 +80,8 @@ test.describe('replies from the last round', () => {
       await expect(feedback).toBeEnabled()
       await expect(feedback).toHaveAttribute('title', 'Submit 1 reply')
       await feedback.click()
-      await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
-      await expect(page.getByText(/^1 reply (sent to|submitted)/)).toBeVisible()
+      await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible()
+      await expect(page.getByText('1 reply', { exact: true })).toBeVisible()
       await cli.exited
       const out = cli.stdout()
       expect(out).toMatch(/^Feedback: 1 reply to round 1, no new marks\./)
@@ -199,7 +199,7 @@ test.describe('replies from the last round', () => {
       await page.getByPlaceholder('Add a comment…').fill('New note')
       await page.getByRole('button', { name: 'Add', exact: true }).click()
       await page.getByRole('button', { name: /^Send feedback/ }).click()
-      await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible()
       await cli.exited
       const stdout = cli.stdout()
       expect(stdout).toContain('New note')
@@ -592,8 +592,7 @@ test.describe('replies from the last round', () => {
       await decision.getByRole('radio', { name: 'Approve with notes' }).check()
       await expect(decision.getByText(/not answered/)).toHaveCount(0)
       await decision.getByRole('button', { name: 'Approve with notes' }).click()
-      await expect(page.getByRole('heading', { name: 'Approved with Notes' })).toBeVisible()
-      await expect(page.getByText(/1 reply passed along as notes/)).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Approved with 1 reply' })).toBeVisible()
       await cli.exited
       expect(cli.stdout()).toMatch(/^APPROVED WITH NOTES: 1 reply to round 1\./)
     } finally {

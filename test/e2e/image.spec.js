@@ -57,7 +57,7 @@ test('a full box annotation submits and the CLI prints structured feedback', asy
     await expect(page.getByRole('button', { name: /^1\. Change, Box/ })).toBeVisible()
 
     await page.getByRole('button', { name: /^Send feedback/ }).click()
-    await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible()
 
     const exitCode = await new Promise((resolve) => child.on('exit', resolve))
     expect(exitCode).toBe(0)

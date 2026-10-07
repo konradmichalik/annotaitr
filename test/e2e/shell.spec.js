@@ -59,7 +59,7 @@ test('a theme picked in image mode applies in markdown mode', async ({ page }) =
       await page.goto(markdownUrl)
       await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
       await page.getByRole('button', { name: 'Settings' }).click()
-      await expect(page.getByRole('radio', { name: 'Dark' })).toHaveAttribute('aria-checked', 'true')
+      await expect(page.getByRole('radio', { name: 'Dark' })).toBeChecked()
     } finally {
       markdownCli.child.kill()
     }
@@ -126,7 +126,7 @@ test('the decision dialog sends a summary as the general comment', async ({ page
       await expect(summary).toHaveValue('First pass')
       await summary.fill('Tighten the intro')
       await summary.press('ControlOrMeta+Enter')
-      await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible()
       await cli.exited
       expect(cli.stdout()).toContain('Tighten the intro')
       expect(cli.stdout()).not.toContain('First pass')

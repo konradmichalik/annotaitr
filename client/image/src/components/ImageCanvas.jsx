@@ -104,7 +104,7 @@ function SelectionToolbar({ point, onEdit, onRemove, onClose }) {
 export default function ImageCanvas({
   imageUrl, imageAlt = 'Image being annotated', imageWidth, imageHeight, activeTool, annotations, zoom, onZoomBy,
   editingAnnotationId, onAddAnnotation, onUpdateAnnotation, onCommitEdit, onRemoveAnnotation, onRequestEdit,
-  onUndo, onRedo, colorMode = 'intent', fixedColor = null, newIntent = 'change',
+  onUndo, onRedo, colorMode = 'intent', fixedColor = null, newIntent = 'change', imageRef = null,
   // A video passes its player element, the frame-visible subset of its
   // annotations and a hook to pause playback before any pointer interaction.
   // `nextNumber` is the number the note being drawn will keep.
@@ -554,7 +554,7 @@ export default function ImageCanvas({
       onMouseMove={handleMouseMove}
       onMouseLeave={() => setHoverPoint(null)}
     >
-      {media ?? <img src={imageUrl} alt={imageAlt} width={imageWidth * zoom} height={imageHeight * zoom} draggable={false} />}
+      {media ?? <img ref={imageRef} src={imageUrl} alt={imageAlt} width={imageWidth * zoom} height={imageHeight * zoom} draggable={false} />}
       <svg
         className="annotation-overlay"
         width={imageWidth * zoom} height={imageHeight * zoom}

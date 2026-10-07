@@ -1,63 +1,178 @@
-import { Logo } from './Logo.jsx'
+import { useState } from 'react'
+import { agentName } from '../utils/origin.js'
+import { countsLabel, previewNotes } from '../utils/done.js'
+import { intentBadgeStyle, intentWord } from '../utils/intents.js'
+import { plural } from '../utils/decision.js'
+
+const ICON_PROPS = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true }
 
 const ICONS = {
-  approved: (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  ),
-  feedback: (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <line x1="22" y1="2" x2="11" y2="13" />
-      <polygon points="22 2 15 22 11 13 2 9 22 2" />
-    </svg>
-  ),
-  disconnected: (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <line x1="1" y1="1" x2="23" y2="23" />
-      <path d="M16.72 11.06A10.94 10.94 0 0119 12.55" />
-      <path d="M5 12.55a10.94 10.94 0 015.17-2.39" />
-      <path d="M10.71 5.05A16 16 0 0122.56 9" />
-      <path d="M1.42 9a15.91 15.91 0 014.7-2.88" />
-      <path d="M8.53 16.11a6 6 0 016.95 0" />
-      <line x1="12" y1="20" x2="12.01" y2="20" />
+  sent: <svg {...ICON_PROPS}><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4z" /></svg>,
+  check: <svg {...ICON_PROPS}><polyline points="20 6 9 17 4 12" /></svg>,
+  unlinked: (
+    <svg {...ICON_PROPS}>
+      <path d="M9 17H7A5 5 0 0 1 7 7h2" /><path d="M15 7h2a5 5 0 0 1 4 8" /><line x1="8" y1="12" x2="12" y2="12" /><line x1="2" y1="2" x2="22" y2="22" />
     </svg>
   )
 }
 
-/** The full-page card shown once the review is over, or once the server went away. */
-export function DoneScreen({ variant, title, message, children }) {
+// A file is named by its name alone, the full path is in the tooltip; a URL stays whole.
+const shortTarget = (target) => (/^https?:\/\//.test(target) ? target : target.split(/[\\/]/).pop())
+
+function NoteRows({ notes, more, label, dashed = false }) {
   return (
-    <div className="done-screen canvas-surface">
-      <div className="done-card">
-        <div className={`done-icon done-icon--${variant}`}>{ICONS[variant]}</div>
-        <h1 className="done-title">{title}</h1>
-        <p className="done-message">{message}</p>
-        {children}
+    <div className={`done-notes${dashed ? ' done-notes--context' : ''}`}>
+      <ul className="done-note-list" aria-label={label}>
+        {notes.map((note) => (
+          <li key={note.id} className="done-note">
+            <span className="done-note-badge" style={intentBadgeStyle(note.intent)} aria-hidden={!note.number}>{note.number ?? ''}</span>
+            <span className="done-note-text">{note.text}</span>
+            <span className="done-note-intent" style={note.intent ? { color: `var(--intent-${note.intent}-label)` } : undefined}>{intentWord(note.intent)}</span>
+          </li>
+        ))}
+      </ul>
+      {more && <p className="done-note-more">{more}</p>}
+    </div>
+  )
+}
+
+/**
+ * The countdown line: a bar that shrinks over the delay (only where motion
+ * is welcome), the seconds left and Keep open. Not a live region, so a
+ * screen reader is not told every second.
+ */
+function Countdown({ state, onKeepOpen }) {
+  if (state.phase === 'counting') {
+    return (
+      <div className="done-countdown">
+        <span className="done-countdown-bar" style={{ '--countdown': `${state.total}s` }} aria-hidden="true"><span /></span>
+        <span>Closes in {state.remaining} s</span>
+        <button type="button" className="done-text-btn" onClick={onKeepOpen}>Keep open</button>
       </div>
-      <Logo className="app-logo done-logo" />
+    )
+  }
+  const lines = {
+    off: 'You can close this tab.',
+    kept: 'This tab stays open until you close it.',
+    closeFailed: 'The browser kept this tab open. You can close it.'
+  }
+  return lines[state.phase] ? <p className="done-countdown">{lines[state.phase]}</p> : null
+}
+
+function Heading({ icon, tone, title, subtitle }) {
+  return (
+    <div className="done-heading">
+      <span className={`done-icon done-icon--${tone}`}>{ICONS[icon]}</span>
+      <div>
+        <h1 className="done-title">{title}</h1>
+        <p className="done-subtitle">{subtitle}</p>
+      </div>
     </div>
   )
 }
 
-/** Countdown, failure note or opt-in checkbox, depending on the useAutoClose phase. */
-export function DoneAutoClose({ state, onEnable }) {
+/** Copy, save and export for notes that never reached the agent; each action reports back in one status line. */
+function RescueActions({ actions }) {
+  const [message, setMessage] = useState('')
+  const run = (action) => async () => {
+    try {
+      await action.run()
+      setMessage(action.done)
+    } catch (error) {
+      setMessage(`Could not ${action.label.toLowerCase()}: ${error.message}`)
+    }
+  }
   return (
-    <div className="done-autoclose">
-      {state.phase === 'counting' && (
-        <p className="done-countdown">
-          This tab will close in <span className="done-countdown-number">{state.remaining}</span> second{state.remaining !== 1 ? 's' : ''}...
-        </p>
-      )}
-      {state.phase === 'closeFailed' && (
-        <p className="done-hint">Could not close this tab automatically. Please close it manually.</p>
-      )}
-      {state.phase === 'prompt' && (
-        <label className="done-autoclose-prompt">
-          <input type="checkbox" checked={false} onChange={onEnable} />
-          <span>Auto-close this tab after 3 seconds</span>
-        </label>
-      )}
-    </div>
+    <>
+      <div className="done-actions">
+        {actions.map((action, index) => (
+          <button key={action.label} type="button" className={`btn${index === 0 ? ' btn-primary' : ''}`} onClick={run(action)}>
+            {action.label}
+          </button>
+        ))}
+      </div>
+      <p className="done-action-status" role="status">{message}</p>
+    </>
+  )
+}
+
+/**
+ * The page after the review: what was sent (Send feedback), that nothing
+ * changes (Approve), the notes passed as context (Approve with notes), or,
+ * when the session ended first, that nothing was delivered and how to keep
+ * the notes. `notes` are `{ id, number, intent, text }`; `outcome` comes from doneOutcome().
+ */
+export function DoneScreen({ outcome, origin, target, notes = [], replies = 0, countdown, onKeepOpen, actions = [], reconnecting = false }) {
+  const agent = agentName(origin)
+  const subject = agent ?? 'The agent'
+  const { shown, more } = previewNotes(notes, replies)
+  const countdownLine = <Countdown state={countdown} onKeepOpen={onKeepOpen} />
+
+  if (outcome === 'gone') {
+    return (
+      <main className="done-screen canvas-surface">
+        <div className="done-card">
+          <div role="alert">
+            <Heading icon="unlinked" tone="warn" title={`${subject} stopped waiting`} subtitle="The session ended before your decision arrived" />
+            <p className="done-box">
+              {notes.length > 0
+                ? <>Your {plural(notes.length, 'note')} {notes.length === 1 ? 'was' : 'were'} <strong>not delivered</strong>. Take them with you and paste them into the next session.</>
+                : <>Nothing was <strong>delivered</strong>, and this round has no notes to keep.</>}
+            </p>
+          </div>
+          {notes.length > 0 && <RescueActions actions={actions} />}
+          <p className="done-countdown">
+            {reconnecting ? 'Trying to reach the session again. ' : ''}This tab stays open until you close it.
+          </p>
+        </div>
+      </main>
+    )
+  }
+
+  if (outcome === 'approved') {
+    return (
+      <main className="done-screen canvas-surface">
+        <div className="done-card done-card--centered">
+          <div role="status">
+            <span className="done-icon done-icon--ok done-icon--round">{ICONS.check}</span>
+            <h1 className="done-title">Approved</h1>
+            <p className="done-subtitle">
+              {subject} continues without changes{target ? <> to <code className="done-target" title={target}>{shortTarget(target)}</code></> : null}.
+            </p>
+          </div>
+          {countdownLine}
+        </div>
+      </main>
+    )
+  }
+
+  if (outcome === 'approved-notes') {
+    return (
+      <main className="done-screen canvas-surface">
+        <div className="done-card">
+          <div role="status">
+            <Heading
+              icon="check" tone="ok"
+              title={`Approved with ${countsLabel(notes.length, replies)}`}
+              subtitle={`${subject} keeps ${notes.length + replies === 1 ? 'it' : 'them'} as context, nothing gets changed`}
+            />
+            {shown.length > 0 && <NoteRows notes={shown} more={more} label="Notes passed as context" dashed />}
+          </div>
+          {countdownLine}
+        </div>
+      </main>
+    )
+  }
+
+  return (
+    <main className="done-screen canvas-surface">
+      <div className="done-card">
+        <div role="status">
+          <Heading icon="sent" tone="ink" title={`Sent to ${agent ?? 'the agent'}`} subtitle={countsLabel(notes.length, replies)} />
+          {(shown.length > 0 || more) && <NoteRows notes={shown} more={more} label="Sent notes" />}
+        </div>
+        {countdownLine}
+      </div>
+    </main>
   )
 }

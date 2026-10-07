@@ -5,10 +5,10 @@
  * page navigation already announces the page, and a page from the cache
  * would otherwise queue a "loading" announcement it never needed.
  */
-export default function PageImage({ src, alt, width, height, loadingLabel, loading, onLoad, onError }) {
+export default function PageImage({ src, alt, width, height, loadingLabel, loading, onLoad, onError, imageRef = null }) {
   return (
     <div className="page-image" style={{ width, height }}>
-      <img src={src} alt={alt} width={width} height={height} draggable={false} onLoad={onLoad} onError={onError} />
+      <img ref={imageRef} src={src} alt={alt} width={width} height={height} draggable={false} onLoad={onLoad} onError={onError} />
       {loading && (
         <div className="page-skeleton" aria-hidden="true">
           <span className="page-skeleton-label">{loadingLabel}…</span>
