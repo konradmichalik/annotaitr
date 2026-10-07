@@ -69,7 +69,9 @@ test.describe('replies from the last round', () => {
       await page.goto(await cli.url)
       const layer = page.locator('.previous-round')
       await expect(layer.getByText('applied')).toBeVisible()
-      await expect(layer.locator('.previous-round-badge').first()).toHaveText('1applied')
+      const badge = layer.locator('.previous-round-badge').first()
+      await expect(badge.locator('.previous-round-badge-number')).toHaveText('1')
+      await expect(badge.locator('.previous-round-badge-label')).toHaveText('applied')
 
       await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: 'Select' }).click()
       const box = await page.locator('.image-canvas-wrapper').boundingBox()
@@ -82,6 +84,8 @@ test.describe('replies from the last round', () => {
 
       const toggle = page.getByRole('switch', { name: 'Show on image' })
       await expect(toggle).toHaveAttribute('aria-checked', 'true')
+      await expect(toggle).not.toHaveAttribute('title', /.*/)
+      expect((await toggle.boundingBox()).height).toBeGreaterThanOrEqual(44)
       await expect(page.getByRole('button', { name: 'Previous round' })).toHaveCount(0)
       await toggle.click()
       await expect(toggle).toHaveAttribute('aria-checked', 'false')
@@ -133,7 +137,17 @@ test.describe('replies from the last round', () => {
       // The pin draws its own number, so the badge is the chip alone, without a leading glyph, and it is not faded with the shape.
       const badge = page.locator('.previous-round--ghost .previous-round-badge')
       await expect(badge).toHaveText('applied')
-      expect(await badge.evaluate((el) => getComputedStyle(el.closest('.previous-round-mark')).opacity)).toBe('1')
+      // The fade sits on .previous-round-shape, so the badge must stay outside it and no ancestor up to the layer may fade it either.
+      await expect(page.locator('.previous-round-shape .previous-round-badge')).toHaveCount(0)
+      const opacities = await badge.evaluate((el) => {
+        const found = []
+        for (let node = el; node && !node.classList.contains('previous-round'); node = node.parentElement) {
+          found.push(getComputedStyle(node).opacity)
+        }
+        return found
+      })
+      expect(opacities.length).toBeGreaterThan(1)
+      expect(opacities.every((o) => o === '1')).toBe(true)
     } finally {
       cli.child.kill()
     }
