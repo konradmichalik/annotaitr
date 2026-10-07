@@ -68,17 +68,17 @@ test('a video gets a point and a span annotation and the CLI prints frames for b
     await page.locator('.panel-global-textarea').fill('Span without drawing')
     await page.getByRole('button', { name: 'Save' }).click()
 
-    await expect(page.getByRole('button', { name: /Annotation 1 from 00:00.900 to 00:01.200/ })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Annotation 2 at 00:01.000/ })).toBeVisible()
+    // Numbers follow the order the notes were made in, not time: the box came first.
+    await expect(page.getByRole('button', { name: /Annotation 2 from 00:00.900 to 00:01.200/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Annotation 1 at 00:01.000/ })).toBeVisible()
 
     await page.getByRole('button', { name: /^Send feedback/ }).click()
     await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible({ timeout: 20_000 })
 
     expect(await cli.exited).toBe(0)
     const stdout = cli.stdout()
-    expect(stdout).toContain('2 annotations on the recording clip.webm (00:02.000, 160x90).')
-    expect(stdout).toMatch(/### 1\. \[#\w+\] from 00:00\.900 to 00:01\.200, Span comment/)
-    expect(stdout).toMatch(/### 2\. \[#\w+\] at 00:01\.000, Boxed area/)
+    expect(stdout).toContain('2 annotations (2 Change) on the recording clip.webm (00:02.000, 160x90).')
+    expect(stdout).toMatch(/### 2\. \[#\w+\] Change · from 00:00\.900 to 00:01\.200, Span comment[\s\S]*### 1\. \[#\w+\] Change · at 00:01\.000, Boxed area/)
     for (const [, path] of stdout.matchAll(/(?:Frame|Strip|Overview): (\S+)/g)) {
       expect(existsSync(path)).toBe(true)
     }
@@ -183,7 +183,7 @@ test('a GIF steps frame by frame and exports the annotated frame', async ({ page
     await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible({ timeout: 20_000 })
 
     expect(await cli.exited).toBe(0)
-    expect(cli.stdout()).toMatch(/### 1\. \[#\w+\] at 00:00\.200, Boxed area/)
+    expect(cli.stdout()).toMatch(/### 1\. \[#\w+\] Change · at 00:00\.200, Boxed area/)
     expect(cli.stdout()).toMatch(/Frame: \S+frame-01-00m00\.200s\.png/)
   } finally {
     await rm(dir, { recursive: true, force: true })

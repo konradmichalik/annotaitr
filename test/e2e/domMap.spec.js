@@ -122,7 +122,7 @@ test('the Element tool outlines and picks a page element, other tools only name 
     await expect(page.locator('.comment-popover-element')).toHaveText('Element: img#hero "Team photo" (team.png)')
     await page.getByPlaceholder('Add a comment…').fill('Swap the photo')
     await page.getByRole('button', { name: 'Add', exact: true }).click()
-    await expect(page.getByRole('button', { name: /^1\. Element/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^1\. Change, Element/ })).toBeVisible()
     await expect(page.locator('.element-highlight')).toHaveCount(0)
 
     // A selected element stays on its element when dragged.
@@ -142,8 +142,8 @@ test('the Element tool outlines and picks a page element, other tools only name 
     await page.getByRole('button', { name: /^Send feedback/ }).click()
     await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
     expect(await new Promise((resolve) => child.on('exit', resolve))).toBe(0)
-    expect(stdout()).toMatch(/### 1\. \[#\w+\] Selected element: .*\nElement: img "Team photo" \("team.png"\) · #hero\n> Swap the photo/)
-    expect(stdout()).toMatch(/### 2\. \[#\w+\] Comment pin: .*\nElement: button "Contact us" · #contact/)
+    expect(stdout()).toMatch(/### 1\. \[#\w+\] Change · Selected element: .*\nElement: img "Team photo" \("team.png"\) · #hero\n> Swap the photo/)
+    expect(stdout()).toMatch(/### 2\. \[#\w+\] Question · Comment pin: .*\nElement: button "Contact us" · #contact/)
   } finally {
     if (child.exitCode === null) { child.kill() }
   }
@@ -172,7 +172,7 @@ test('the viewport picker captures the page again in place, after confirming tha
       await page.getByRole('button', { name: 'Add', exact: true }).click()
     }
     await pinAt(60, 300)
-    await expect(page.getByRole('button', { name: /^1\. Pin/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^1\. Question, Pin/ })).toBeVisible()
 
     // Declining keeps the annotation and the capture.
     await trigger.click()
@@ -181,13 +181,13 @@ test('the viewport picker captures the page again in place, after confirming tha
     page.once('dialog', (dialog) => dialog.dismiss())
     await page.getByRole('button', { name: 'Capture again' }).click()
     await expect(page.getByRole('alert')).toHaveText('Not captured again, your annotation is kept.')
-    await expect(page.getByRole('button', { name: /^1\. Pin/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^1\. Question, Pin/ })).toBeVisible()
 
     page.once('dialog', (dialog) => dialog.accept())
     await choose('Phone')
     await captureAgain()
     await expect(trigger).toHaveText('Phone 375×812')
-    await expect(page.getByRole('button', { name: /^1\. Pin/ })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /^1\. Question, Pin/ })).toHaveCount(0)
     // The fixture's 400px card makes the page wider than the phone, and a full-page capture shows all of it.
     expect((await meta()).capture.viewport).toEqual({ width: 375, height: 812 })
 

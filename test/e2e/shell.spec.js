@@ -216,8 +216,8 @@ test('the markdown selection bar opens the composer, which keeps a draft on a cl
       await page.mouse.up()
 
       const bar = page.getByRole('toolbar', { name: 'Selection' })
-      await expect(bar.getByRole('button', { name: 'Delete' })).toHaveAttribute('type', 'button')
-      await bar.getByRole('button', { name: 'Comment' }).click()
+      await expect(bar.getByRole('button', { name: 'Remove' })).toHaveAttribute('type', 'button')
+      await bar.getByRole('button', { name: 'Change' }).click()
 
       const composer = page.getByRole('dialog', { name: 'Comment on selection' })
       const field = composer.getByRole('textbox', { name: 'Comment on selection' })
@@ -232,6 +232,47 @@ test('the markdown selection bar opens the composer, which keeps a draft on a cl
       await page.getByRole('button', { name: /^Send feedback/ }).click()
       await cli.exited
       expect(cli.stdout()).toContain('> Name the paragraph')
+    } finally {
+      if (cli.child.exitCode === null) { cli.child.kill() }
+    }
+  })
+})
+
+test('the markdown selection bar asks with 4 and adds after the selection with 2', async ({ page }) => {
+  await withTargets(async ({ markdown }) => {
+    const cli = startCli([markdown])
+    const select = async (from, to) => {
+      const rect = await page.getByText('A paragraph to review.').boundingBox()
+      await page.mouse.move(rect.x + from, rect.y + rect.height / 2)
+      await page.mouse.down()
+      await page.mouse.move(rect.x + to, rect.y + rect.height / 2, { steps: 4 })
+      await page.mouse.up()
+      await expect(page.getByRole('toolbar', { name: 'Selection' })).toBeVisible()
+    }
+    try {
+      await page.goto(await cli.url)
+      await select(2, 40)
+      await page.keyboard.press('4')
+      const ask = page.getByRole('dialog', { name: 'Question on selection' })
+      await expect(ask.getByRole('button', { name: 'Intent: Question' })).toBeVisible()
+      await ask.getByRole('textbox').fill('Which paragraph?')
+      await page.keyboard.press('ControlOrMeta+Enter')
+      await expect(page.getByRole('button', { name: /^1\. Question/ })).toBeVisible()
+
+      await select(60, 110)
+      await page.keyboard.press('2')
+      const add = page.getByRole('dialog', { name: 'Text to insert' })
+      await expect(add.getByRole('button', { name: /^Intent/ })).toHaveCount(0)
+      await add.getByRole('textbox').fill(' Mind the gap.')
+      await page.keyboard.press('ControlOrMeta+Enter')
+      await expect(page.getByRole('button', { name: /^2\. Add/ })).toBeVisible()
+
+      await page.getByRole('button', { name: /^Send feedback/ }).click()
+      await cli.exited
+      const stdout = cli.stdout()
+      expect(stdout).toContain('2 annotations (1 Add, 1 Question):')
+      expect(stdout).toMatch(/## 1\. Question · Text \(Line 3\)[^\n]*\n```\n[^\n]+\n```\n> Which paragraph\?/)
+      expect(stdout).toMatch(/## 2\. Add · Insertion \(Line 3\)[^\n]*\nAfter: `[^`]+`\n```\nMind the gap\.\n```/)
     } finally {
       if (cli.child.exitCode === null) { cli.child.kill() }
     }

@@ -209,7 +209,7 @@ test.describe('replies from the last round', () => {
     }
   })
 
-  test('greys out a ghost pin instead of keeping its mark colour', async ({ page }) => {
+  test('draws a ghost pin as a dashed grey outline instead of its mark colour', async ({ page }) => {
     await firstRoundWithReply(image, env, { id: UUID, type: 'pin', geometry: { x: 100, y: 100 }, text: 'Pin note', color: '#bf616a' })
     await writeFile(image, makeFixturePng(400, 300, '#aa0000'))
     const cli = startCli([image], env)
@@ -217,10 +217,15 @@ test.describe('replies from the last round', () => {
       await page.goto(await cli.url)
       const circle = page.locator('.previous-round--ghost .previous-round-shape circle')
       await expect(circle).toBeVisible()
-      const muted = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim())
-      const fill = await circle.evaluate((el) => getComputedStyle(el).fill)
-      const probe = await page.evaluate((c) => { const d = document.createElement('i'); d.style.color = c; document.body.append(d); const v = getComputedStyle(d).color; d.remove(); return v }, muted)
-      expect(fill).toBe(probe)
+      const earlier = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--intent-earlier-mark').trim())
+      const { fill, stroke, dash } = await circle.evaluate((el) => {
+        const style = getComputedStyle(el)
+        return { fill: style.fill, stroke: style.stroke, dash: style.strokeDasharray }
+      })
+      const probe = await page.evaluate((c) => { const d = document.createElement('i'); d.style.color = c; document.body.append(d); const v = getComputedStyle(d).color; d.remove(); return v }, earlier)
+      expect(fill).toBe('none')
+      expect(stroke).toBe(probe)
+      expect(dash).not.toBe('none')
       // The pin draws its own number, so the badge is the chip alone, without a leading glyph, and it is not faded with the shape.
       const badge = page.locator('.previous-round--ghost .previous-round-badge')
       await expect(badge).toHaveText('applied')
