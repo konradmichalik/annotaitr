@@ -3,7 +3,7 @@ import { success, failure } from '../core/http.js'
 import { relative, resolve, dirname, isAbsolute } from 'node:path'
 import { createHash } from 'node:crypto'
 import { readAnnotatableFile, isAnnotatableFile, isPathInside, isPlainTextFile, resolveAnnotatablePath } from './file.js'
-import { exportFeedback, exportMultiFileFeedback } from './feedback.js'
+import { exportFeedback, exportMultiFileFeedback, intentSummary } from './feedback.js'
 import { listWorkspaceFiles } from './workspace.js'
 import { config } from './config.js'
 
@@ -151,7 +151,7 @@ export function createApiRouter(filePaths, resolveDecision, origin = 'cli', stor
       if (noteCount > 0) {
         const notes = exportMultiFileFeedback(files)
         res.json(success({ message: 'Approved with notes' }))
-        setTimeout(() => resolveDecision({ approved: true, feedback: notes, annotationCount: noteCount }), 100)
+        setTimeout(() => resolveDecision({ approved: true, feedback: notes, annotationCount: noteCount, intents: intentSummary(files) }), 100)
         return
       }
     }

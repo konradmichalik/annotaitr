@@ -1,3 +1,5 @@
+import { normalizeNotes } from '../../core/notes.js'
+
 /**
  * Pure page-axis helpers for reviewing a PDF: the --pages selection,
  * annotation ordering and validation. The document counterpart of
@@ -70,7 +72,8 @@ export function isPaged(annotation) {
  */
 export function orderDocumentAnnotations(annotations) {
   const paged = annotations.filter(isPaged).sort((a, b) => a.page - b.page)
-  return [...paged, ...annotations.filter((a) => !isPaged(a))]
+  // Notes from before numbers were stored are numbered in page order, as they used to be.
+  return normalizeNotes([...paged, ...annotations.filter((a) => !isPaged(a))])
 }
 
 /** The first problem with the annotations' page fields, or null when they are all valid. */
@@ -99,14 +102,14 @@ export function validateDocumentAnnotations(annotations, pageNumbers) {
 /**
  * The pages to export, in document order, each with its annotations and the
  * numbers they carry in the feedback. `ordered` comes from
- * orderDocumentAnnotations(), so a number is its position there.
+ * orderDocumentAnnotations(), which gives every note its number.
  */
 export function planDocumentPages(ordered) {
   const pages = new Map()
   ordered.forEach((annotation, index) => {
     if (!isPaged(annotation)) { return }
     if (!pages.has(annotation.page)) { pages.set(annotation.page, []) }
-    pages.get(annotation.page).push({ annotation, number: index + 1 })
+    pages.get(annotation.page).push({ annotation, number: annotation.number ?? index + 1 })
   })
   return [...pages].map(([page, entries]) => ({ page, entries }))
 }

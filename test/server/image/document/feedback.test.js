@@ -28,7 +28,7 @@ function render(annotations, { formatter = exportDocumentFeedback, source = null
 describe('exportDocumentFeedback', () => {
   it('opens with counts, the source and the overview', () => {
     const output = render([general, pin, box, pageComment])
-    expect(output).toMatch(/^4 annotations on 2 of 12 pages\.\n\nSource: deck\.pdf\nOverview: \/tmp\/out\/overview\.png\n/)
+    expect(output).toMatch(/^4 annotations \(2 Change, 1 Question, 1 General\) on 2 of 12 pages\.\n\nSource: deck\.pdf\nOverview: \/tmp\/out\/overview\.png\n/)
   })
 
   it('names the source a PDF was rendered from and warns when it was newer', () => {
@@ -39,16 +39,16 @@ describe('exportDocumentFeedback', () => {
 
   it('groups annotations under their page with the annotated page image, numbered across the document', () => {
     const output = render([general, pin, box, pageComment])
-    expect(output).toContain('## Page 3\nAnnotated page: /tmp/out/page-3.png\n\n### 1. [#a3f19c2e] Boxed area: top right (')
+    expect(output).toContain('## Page 3\nAnnotated page: /tmp/out/page-3.png\n\n### 1. [#a3f19c2e] Change · Boxed area: top right (')
     expect(output).toContain('> Use the same colours as on page 2\n')
-    expect(output).toContain('### 2. [#7b210e44] Page comment\n> Too much text\n> split it\n')
-    expect(output).toContain('## Page 7\nAnnotated page: /tmp/out/page-7.png\n\n### 3. Comment pin:')
+    expect(output).toContain('### 2. [#7b210e44] Change · Page comment\n> Too much text\n> split it\n')
+    expect(output).toContain('## Page 7\nAnnotated page: /tmp/out/page-7.png\n\n### 3. Question · Comment pin:')
     expect(output.indexOf('## Page 3')).toBeLessThan(output.indexOf('## Page 7'))
   })
 
   it('lists comments about the whole document last', () => {
     const output = render([general, box])
-    expect(output).toMatch(/## General\n### 2\. \[#c01d9e55\] General comment about the whole document\n> Consistent title capitalisation\n$/)
+    expect(output).toMatch(/## General\n### \[#c01d9e55\] General comment about the whole document\n> Consistent title capitalisation\n$/)
   })
 
   it('leaves out every path when the text is copied from the annotator', () => {
@@ -60,7 +60,7 @@ describe('exportDocumentFeedback', () => {
 
   it('says how many pages were reviewed when --pages picked a part of the document', () => {
     const doc = { ...document, pages: document.pages.slice(8, 11) }
-    expect(render([{ ...box, page: 9 }], { doc })).toMatch(/^1 annotation on 1 of 3 reviewed pages \(the document has 12\)\./)
+    expect(render([{ ...box, page: 9 }], { doc })).toMatch(/^1 annotation \(1 Change\) on 1 of 3 reviewed pages \(the document has 12\)\./)
   })
 
   it('keeps a bare carriage return from ending the quote', () => {
@@ -96,7 +96,7 @@ describe('text selections', () => {
 
   it('quotes the selected text under the heading', () => {
     const output = render([selection])
-    expect(output).toMatch(/### 1\. Selected text: [^\n]*\nQuote: "North grew 12%"\n> Say "rose"/)
+    expect(output).toMatch(/### 1\. Change · Selected text: [^\n]*\nQuote: "North grew 12%"\n> Say "rose"/)
     expect(output).toContain('Text and Quote lines are read from the PDF')
   })
 })
@@ -104,7 +104,7 @@ describe('text selections', () => {
 describe('formatDocumentApprovalWithNotes', () => {
   it('marks the notes as context, not change requests', () => {
     const output = render([box], { formatter: formatDocumentApprovalWithNotes })
-    expect(output).toMatch(/^APPROVED WITH NOTES: 1 note\. The document is approved as-is\./)
+    expect(output).toMatch(/^APPROVED WITH NOTES: 1 note \(1 Change\)\. The document is approved as-is\./)
     expect(output).toContain('## Page 3')
   })
 })

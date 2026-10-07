@@ -2,12 +2,17 @@ import { createCanvas, loadImage } from '@napi-rs/canvas'
 import {
   resolveArrowStyle, serverStrokeWidth, serverDashArray, serverHeadLength, serverDimensionTickLength
 } from './annotationStyles.js'
+import { isNumbered, intentOf, intentWord } from '../../core/notes.js'
 
 const PIN_RADIUS = 14
 const BADGE_RADIUS = 11
-// Matches ANNOTATION_COLORS[0] in client/image/src/utils/annotationColors.js
-// (client and server share no modules, so this duplication is deliberate).
-const DEFAULT_COLOR = '#bf616a'
+// The intent mark colours and the number on them, from client/shared/styles/tokens.css
+// (client and server share no modules, so this duplication is deliberate). Marks keep
+// these colours in both themes, so the rendered image matches the canvas.
+const INTENT_MARKS = { change: '#c04a00', add: '#e69f00', remove: '#a8457e', question: '#0072b2' }
+const ON_MARK = { add: '#16181d' }
+const ON_MARK_DEFAULT = '#fff'
+const MARK_HALO = 'rgba(255, 255, 255, 0.6)'
 const HIGHLIGHTER_OPACITY = 0.4
 
 const LEGEND_PADDING = 14
@@ -61,50 +66,65 @@ function drawDimensionCaps(ctx, x1, y1, x2, y2, color, tickLength, lineWidth) {
   ctx.stroke()
 }
 
-function drawBadge(ctx, x, y, number, color) {
+const markOf = (intent) => INTENT_MARKS[intent] ?? INTENT_MARKS.change
+
+/** The number on its intent's colour with a soft light halo, as the canvas draws it. */
+function drawNumber(ctx, x, y, number, intent, radius, fontSize) {
+  if (number === undefined || number === null) { return }
+  ctx.save()
+  ctx.setLineDash([])
+  ctx.globalAlpha = 1
   ctx.beginPath()
-  ctx.arc(x, y, BADGE_RADIUS, 0, Math.PI * 2)
-  ctx.fillStyle = color
+  ctx.arc(x, y, radius, 0, Math.PI * 2)
+  ctx.fillStyle = markOf(intent)
   ctx.fill()
-  ctx.fillStyle = '#fff'
-  ctx.font = 'bold 12px sans-serif'
+  ctx.lineWidth = 1
+  ctx.strokeStyle = MARK_HALO
+  ctx.stroke()
+  ctx.fillStyle = ON_MARK[intent] ?? ON_MARK_DEFAULT
+  ctx.font = `bold ${fontSize}px sans-serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(String(number), x, y)
+  ctx.restore()
 }
 
-function drawBox(ctx, geometry, number, color) {
+function drawBadge(ctx, x, y, number, intent) {
+  drawNumber(ctx, x, y, number, intent, BADGE_RADIUS, 12)
+}
+
+function drawBox(ctx, geometry, number, intent) {
   const { x, y, width, height } = geometry
   ctx.strokeRect(x, y, width, height)
-  drawBadge(ctx, x, y, number, color)
+  drawBadge(ctx, x, y, number, intent)
 }
 
 // The light fill tells a selected page element apart from a hand-drawn box.
 const ELEMENT_FILL_ALPHA = 0.15
 
-function drawElement(ctx, geometry, number, color) {
+function drawElement(ctx, geometry, number, intent) {
   const { x, y, width, height } = geometry
   ctx.save()
   ctx.globalAlpha = ELEMENT_FILL_ALPHA
   ctx.fillRect(x, y, width, height)
   ctx.restore()
-  drawBox(ctx, geometry, number, color)
+  drawBox(ctx, geometry, number, intent)
 }
 
 // A text selection is painted like a marker over its lines, so the words
 // stay readable underneath.
 const TEXT_FILL_ALPHA = 0.3
 
-function drawSelectedText(ctx, geometry, number, color) {
+function drawSelectedText(ctx, geometry, number, intent) {
   ctx.save()
   ctx.globalAlpha = TEXT_FILL_ALPHA
   for (const { x, y, width, height } of geometry.rects) { ctx.fillRect(x, y, width, height) }
   ctx.restore()
   const [first] = geometry.rects
-  drawBadge(ctx, first.x, first.y, number, color)
+  drawBadge(ctx, first.x, first.y, number, intent)
 }
 
-function drawArrow(ctx, annotation, number, color) {
+function drawArrow(ctx, annotation, number, color, intent) {
   const { x1, y1, x2, y2 } = annotation.geometry
   const style = resolveArrowStyle(annotation.arrowStyle)
   const lineWidth = serverStrokeWidth(annotation)
@@ -121,7 +141,7 @@ function drawArrow(ctx, annotation, number, color) {
   } else if (style === 'head') {
     drawArrowhead(ctx, x1, y1, x2, y2, color, serverHeadLength(annotation), lineWidth)
   }
-  drawBadge(ctx, x1, y1, number, color)
+  drawBadge(ctx, x1, y1, number, intent)
 }
 
 function strokePoints(ctx, points) {
@@ -133,14 +153,14 @@ function strokePoints(ctx, points) {
   ctx.stroke()
 }
 
-function drawFreehand(ctx, geometry, number, color) {
+function drawFreehand(ctx, geometry, number, intent) {
   const points = geometry.points
   if (points.length < 2) { return }
   strokePoints(ctx, points)
-  drawBadge(ctx, points[0].x, points[0].y, number, color)
+  drawBadge(ctx, points[0].x, points[0].y, number, intent)
 }
 
-function drawHighlighter(ctx, geometry, number, color) {
+function drawHighlighter(ctx, geometry, number, intent) {
   const points = geometry.points
   if (points.length < 2) { return }
   ctx.save()
@@ -151,23 +171,19 @@ function drawHighlighter(ctx, geometry, number, color) {
   // unconditionally by drawAnnotation's dispatch before this runs.
   strokePoints(ctx, points)
   ctx.restore()
-  drawBadge(ctx, points[0].x, points[0].y, number, color)
+  drawBadge(ctx, points[0].x, points[0].y, number, intent)
 }
 
-function drawPin(ctx, geometry, number) {
-  const { x, y } = geometry
-  ctx.beginPath()
-  ctx.arc(x, y, PIN_RADIUS, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.fillStyle = '#fff'
-  ctx.font = 'bold 16px sans-serif'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText(String(number), x, y)
+function drawPin(ctx, geometry, number, intent) {
+  drawNumber(ctx, geometry.x, geometry.y, number ?? '', intent, PIN_RADIUS, 16)
 }
+
+/** The colour a shape is drawn in: its ink when it has one, its intent's mark colour otherwise. */
+const shapeColor = (annotation) => annotation.color || markOf(intentOf(annotation))
 
 function drawAnnotation(ctx, annotation, number) {
-  const color = annotation.color || DEFAULT_COLOR
+  const color = shapeColor(annotation)
+  const intent = intentOf(annotation)
   ctx.strokeStyle = color
   ctx.fillStyle = color
   // Set unconditionally (never only inside a branch) so neither value can
@@ -178,13 +194,13 @@ function drawAnnotation(ctx, annotation, number) {
   ctx.lineWidth = serverStrokeWidth(annotation)
   ctx.setLineDash(serverDashArray(annotation))
 
-  if (annotation.type === 'box') { drawBox(ctx, annotation.geometry, number, color) }
-  else if (annotation.type === 'element') { drawElement(ctx, annotation.geometry, number, color) }
-  else if (annotation.type === 'text') { drawSelectedText(ctx, annotation.geometry, number, color) }
-  else if (annotation.type === 'arrow') { drawArrow(ctx, annotation, number, color) }
-  else if (annotation.type === 'freehand') { drawFreehand(ctx, annotation.geometry, number, color) }
-  else if (annotation.type === 'highlighter') { drawHighlighter(ctx, annotation.geometry, number, color) }
-  else if (annotation.type === 'pin') { drawPin(ctx, annotation.geometry, number) }
+  if (annotation.type === 'box') { drawBox(ctx, annotation.geometry, number, intent) }
+  else if (annotation.type === 'element') { drawElement(ctx, annotation.geometry, number, intent) }
+  else if (annotation.type === 'text') { drawSelectedText(ctx, annotation.geometry, number, intent) }
+  else if (annotation.type === 'arrow') { drawArrow(ctx, annotation, number, color, intent) }
+  else if (annotation.type === 'freehand') { drawFreehand(ctx, annotation.geometry, number, intent) }
+  else if (annotation.type === 'highlighter') { drawHighlighter(ctx, annotation.geometry, number, intent) }
+  else if (annotation.type === 'pin') { drawPin(ctx, annotation.geometry, number, intent) }
 }
 
 /** Greedy word-wrap of `text` to fit within `maxWidth`, using `ctx`'s current font. */
@@ -207,7 +223,7 @@ function wrapText(ctx, text, maxWidth) {
 }
 
 /** A comment pinned to a moment, a span or a page is not about the whole image. */
-function legendLabel(annotation) {
+function typeLabel(annotation) {
   if (annotation.type === 'comment' && Number.isInteger(annotation.page)) { return 'Page comment' }
   if (annotation.type === 'comment' && typeof annotation.time === 'number') {
     return typeof annotation.endTime === 'number' ? 'Span comment' : 'Comment'
@@ -215,12 +231,17 @@ function legendLabel(annotation) {
   return TYPE_LABELS[annotation.type] || annotation.type
 }
 
+/** "3. Question · Pin", as the feedback text heads the same note; a general comment has neither number nor intent. */
+function legendLabel(annotation, number) {
+  if (!isNumbered(annotation)) { return typeLabel(annotation) }
+  return `${number}. ${intentWord(intentOf(annotation))} · ${typeLabel(annotation)}`
+}
+
 function buildLegendEntries(ctx, annotations, numbers, maxWidth) {
   ctx.font = `${LEGEND_FONT_SIZE}px sans-serif`
   return annotations.map((annotation, index) => ({
-    number: numbers[index],
-    label: legendLabel(annotation),
-    color: annotation.color || DEFAULT_COLOR,
+    label: legendLabel(annotation, numbers[index]),
+    color: markOf(intentOf(annotation)),
     lines: wrapText(ctx, annotation.text?.trim() || '(no comment)', maxWidth)
   }))
 }
@@ -234,7 +255,7 @@ function buildLegendEntries(ctx, annotations, numbers, maxWidth) {
  * `numbers` are the labels drawn per annotation: a recording numbers across
  * all of its frames, so one frame's annotations need not start at 1.
  */
-export async function flattenAnnotations(imageBuffer, annotations, numbers = annotations.map((_, index) => index + 1)) {
+export async function flattenAnnotations(imageBuffer, annotations, numbers = annotations.map((a, index) => a.number ?? index + 1)) {
   const image = await loadImage(imageBuffer)
 
   // A throwaway context to measure legend text before the final canvas
@@ -269,7 +290,7 @@ export async function flattenAnnotations(imageBuffer, annotations, numbers = ann
 
       ctx.font = `bold ${LEGEND_FONT_SIZE}px sans-serif`
       ctx.fillStyle = LEGEND_HEADER_COLOR
-      ctx.fillText(`${entry.number}. ${entry.label}`, LEGEND_PADDING + 18, y)
+      ctx.fillText(entry.label, LEGEND_PADDING + 18, y)
       y += LEGEND_LINE_HEIGHT
 
       ctx.font = `${LEGEND_FONT_SIZE}px sans-serif`

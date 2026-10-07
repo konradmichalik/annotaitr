@@ -1,12 +1,16 @@
 import { annotationHandle } from '../annotationHandle.js'
 import { SCHEMA_VERSION } from './store.js'
 import { REPLY_STATUSES } from './reply.js'
+import { isNumbered } from '../notes.js'
 
-/** `annotations` must be in feedback order: the number is the one printed and baked into the output image. */
+/**
+ * `annotations` are the decided notes in feedback order. A thread keeps the
+ * number printed and baked into the output image; a general comment has none.
+ */
 export function buildThreads(annotations, describeElement = () => null) {
   return annotations.map((annotation, index) => ({
     handle: annotationHandle(annotation.id),
-    number: index + 1,
+    number: isNumbered(annotation) ? (annotation.number ?? index + 1) : null,
     annotation,
     element: describeElement(annotation),
     replies: []

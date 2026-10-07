@@ -6,6 +6,7 @@ import { flattenAnnotations } from '../common/render.js'
 import { writeAnnotatedImage } from './output.js'
 import { formatApprovalOutput, formatApprovalWithNotesOutput, exportFeedback } from '../common/feedback.js'
 import { parseCaptureSettings, describeCapture, VIEWPORT_PRESETS } from '../common/config.js'
+import { normalizeNotes } from '../../core/notes.js'
 
 /**
  * Sniff the actual image format from its magic bytes. The captured/loaded
@@ -36,9 +37,11 @@ function captureMeta(settings) {
 /** Everything a decision needs from the capture as it is right now, which a recapture may have replaced. */
 async function decisionInputs(state) {
   const { buffer, width, height, domMap, settings } = state.capture
-  const annotatedImagePath = await writeAnnotatedImage(await flattenAnnotations(buffer, state.annotations))
+  // Image, text and session take the numbers from the same list, so they always agree.
+  const notes = normalizeNotes(state.annotations)
+  const annotatedImagePath = await writeAnnotatedImage(await flattenAnnotations(buffer, notes))
   const note = settings ? describeCapture(settings) : null
-  return { width, height, annotatedImagePath, domMap, note }
+  return { notes, width, height, annotatedImagePath, domMap, note }
 }
 
 /**
@@ -78,7 +81,7 @@ function mountExport(router, { state }) {
     const { annotations, error } = annotationsFromBody(req.body)
     if (error) { return res.status(400).json(failure(error)) }
     try {
-      res.type('png').send(await flattenAnnotations(state.capture.buffer, annotations))
+      res.type('png').send(await flattenAnnotations(state.capture.buffer, normalizeNotes(annotations)))
     } catch (renderError) {
       res.status(500).json(failure(renderError.message))
     }
@@ -150,14 +153,14 @@ export function createApiRouter({ origin, targetLabel, state, voiceNotes = false
     }
     state.deciding = true
     try {
-      const { width, height, annotatedImagePath, domMap, note } = await decisionInputs(state)
-      const output = formatApprovalWithNotesOutput(state.annotations, width, height, annotatedImagePath, domMap, note)
+      const { notes, width, height, annotatedImagePath, domMap, note } = await decisionInputs(state)
+      const output = formatApprovalWithNotesOutput(notes, width, height, annotatedImagePath, domMap, note)
       state.decided = true
       const frozen = freezeReplies(replies)
       res.json(success({ message: 'Approved with notes' }))
       setTimeout(
         () => resolveDecision({
-          approved: true, output, annotationCount: state.annotations.length, annotations: state.annotations, domMap: state.capture.domMap, ...frozen
+          approved: true, output, annotationCount: notes.length, annotations: notes, domMap: state.capture.domMap, ...frozen
         }),
         100
       )
@@ -182,14 +185,14 @@ export function createApiRouter({ origin, targetLabel, state, voiceNotes = false
     }
     state.deciding = true
     try {
-      const { width, height, annotatedImagePath, domMap, note } = await decisionInputs(state)
-      const output = exportFeedback(state.annotations, width, height, annotatedImagePath, domMap, note)
+      const { notes, width, height, annotatedImagePath, domMap, note } = await decisionInputs(state)
+      const output = exportFeedback(notes, width, height, annotatedImagePath, domMap, note)
       state.decided = true
       const frozen = freezeReplies(replies)
       res.json(success({ message: 'Feedback submitted' }))
       setTimeout(
         () => resolveDecision({
-          approved: false, output, annotationCount: state.annotations.length, annotations: state.annotations, domMap: state.capture.domMap, ...frozen
+          approved: false, output, annotationCount: notes.length, annotations: notes, domMap: state.capture.domMap, ...frozen
         }),
         100
       )

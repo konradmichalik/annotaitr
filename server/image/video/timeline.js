@@ -1,3 +1,5 @@
+import { normalizeNotes } from '../../core/notes.js'
+
 /**
  * Pure time-axis helpers for annotating a video or GIF: timecode formatting,
  * annotation ordering and the plan of which frames the client has to grab.
@@ -44,7 +46,8 @@ export function isTimed(annotation) {
 export function orderVideoAnnotations(annotations) {
   const timed = annotations.filter(isTimed).sort((a, b) => a.time - b.time)
   const untimed = annotations.filter((a) => !isTimed(a))
-  return [...timed, ...untimed]
+  // Notes from before numbers were stored are numbered in time order, as they used to be.
+  return normalizeNotes([...timed, ...untimed])
 }
 
 function isValidTime(value) {
@@ -87,12 +90,11 @@ function overviewTileOf(time, duration) {
 
 /**
  * Which frames feed the output: one per distinct annotation time, a strip
- * per span and an overview across the whole recording. `ordered` must
- * already be in orderVideoAnnotations() order, since its index is the
- * annotation number.
+ * per span and an overview across the whole recording. `ordered` comes
+ * from orderVideoAnnotations(), which gives every note its number.
  */
 export function planFrames(ordered, duration) {
-  const entries = ordered.map((annotation, index) => ({ annotation, number: index + 1 })).filter((e) => isTimed(e.annotation))
+  const entries = ordered.map((annotation, index) => ({ annotation, number: annotation.number ?? index + 1 })).filter((e) => isTimed(e.annotation))
 
   const byTime = new Map()
   for (const entry of entries) {

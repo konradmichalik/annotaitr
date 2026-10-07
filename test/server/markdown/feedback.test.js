@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { exportFeedback, exportMultiFileFeedback, formatApprovalOutput } from '../../../server/markdown/feedback.js'
+import { exportFeedback, exportMultiFileFeedback, formatApprovalOutput, intentSummary } from '../../../server/markdown/feedback.js'
 
 const makeBlock = (overrides = {}) => ({
   id: 'block-0',
@@ -31,8 +31,8 @@ describe('exportFeedback', () => {
     const output = exportFeedback(annotations, blocks)
 
     expect(output).toContain('# Annotation Feedback')
-    expect(output).toContain('1 annotation:')
-    expect(output).toContain('## 1. Comment on (Line 1)')
+    expect(output).toContain('1 annotation (1 Change):')
+    expect(output).toContain('## 1. Change · Text (Line 1)')
     expect(output).toContain('```\nHello\n```')
     expect(output).toContain('> Fix this')
   })
@@ -42,7 +42,7 @@ describe('exportFeedback', () => {
     const annotations = [makeAnnotation({ type: 'DELETION', text: null, originalText: 'world' })]
     const output = exportFeedback(annotations, blocks)
 
-    expect(output).toContain('## 1. Remove this (Line 1)')
+    expect(output).toContain('## 1. Remove · Text (Line 1)')
     expect(output).toContain('```\nworld\n```')
     expect(output).toContain('> User wants this removed')
   })
@@ -54,7 +54,7 @@ describe('exportFeedback', () => {
       makeAnnotation({ id: 'ann-2', startOffset: 6, endOffset: 11, originalText: 'world' })
     ]
     const output = exportFeedback(annotations, blocks)
-    expect(output).toContain('2 annotations:')
+    expect(output).toContain('2 annotations (2 Change):')
   })
 
   it('calculates line numbers for selections with offset', () => {
@@ -96,14 +96,14 @@ describe('exportFeedback', () => {
       label: { id: 'unclear', emoji: '\u2753', text: 'Unclear', color: 'yellow' }
     })]
     const output = exportFeedback(annotations, blocks)
-    expect(output).toContain('Comment on (Line 1) [\u2753 Unclear]')
+    expect(output).toContain('Change · Text (Line 1) [\u2753 Unclear]')
   })
 
   it('omits label tag when label is absent', () => {
     const blocks = [makeBlock()]
     const annotations = [makeAnnotation()]
     const output = exportFeedback(annotations, blocks)
-    expect(output).toContain('Comment on (Line 1)\n')
+    expect(output).toContain('Change · Text (Line 1)\n')
     expect(output).not.toContain('[')
   })
 
@@ -146,7 +146,7 @@ describe('exportMultiFileFeedback', () => {
     const output = exportMultiFileFeedback(files)
     expect(output).toContain('## File: /a.md')
     expect(output).toContain('## File: /b.md')
-    expect(output).toContain('2 annotations across 2 files')
+    expect(output).toContain('2 annotations (2 Change) across 2 files')
   })
 
   it('uses global numbering across files', () => {
@@ -176,7 +176,7 @@ describe('exportMultiFileFeedback', () => {
       originalText: 'Some paragraph text here'
     })]
     const output = exportFeedback(annotations, blocks)
-    expect(output).toContain('Comment on block')
+    expect(output).toContain('## 1. Change · Block (Line 1)')
     expect(output).toContain('Some paragraph text here')
     expect(output).toContain('> This paragraph needs rewriting')
   })
@@ -189,7 +189,7 @@ describe('exportMultiFileFeedback', () => {
       originalText: 'Remove this block entirely'
     })]
     const output = exportFeedback(annotations, blocks)
-    expect(output).toContain('Remove block')
+    expect(output).toContain('## 1. Remove · Block (Line 1)')
     expect(output).toContain('User wants this block removed')
   })
 
@@ -204,7 +204,7 @@ describe('exportMultiFileFeedback', () => {
       endOffset: 18
     })]
     const output = exportFeedback(annotations, blocks)
-    expect(output).toContain('Comment on token')
+    expect(output).toContain('## 1. Change · Token (Line 10)')
     expect(output).toContain('Token: `processOrder`')
     expect(output).toContain('> Rename this function')
     expect(output).toContain('Line 10')
@@ -220,7 +220,7 @@ describe('exportMultiFileFeedback', () => {
       endOffset: 15
     })]
     const output = exportFeedback(annotations, blocks)
-    expect(output).toContain('Remove token')
+    expect(output).toContain('## 1. Remove · Token (Line 6)')
     expect(output).toContain('Line 6')
     expect(output).toContain('Token: `y`')
   })
@@ -248,7 +248,7 @@ describe('annotation handles', () => {
 
   it('appends the handle to a comment heading', () => {
     const output = exportFeedback([makeAnnotation({ id: UUID_A })], [makeBlock()])
-    expect(output).toContain('## 1. Comment on (Line 1) [#a3f19c2e]')
+    expect(output).toContain('## 1. Change · Text (Line 1) [#a3f19c2e]')
   })
 
   it('appends the handle after an existing quick-label tag', () => {
@@ -257,20 +257,20 @@ describe('annotation handles', () => {
       label: { id: 'unclear', emoji: '❓', text: 'Unclear', color: 'yellow' }
     })]
     const output = exportFeedback(annotations, [makeBlock()])
-    expect(output).toContain('Comment on (Line 1) [❓ Unclear] [#a3f19c2e]')
+    expect(output).toContain('Change · Text (Line 1) [❓ Unclear] [#a3f19c2e]')
   })
 
   it('appends the handle to a deletion heading', () => {
     const annotations = [makeAnnotation({ id: UUID_A, type: 'DELETION', text: null, originalText: 'world' })]
     const output = exportFeedback(annotations, [makeBlock()])
-    expect(output).toContain('## 1. Remove this (Line 1) [#a3f19c2e]')
+    expect(output).toContain('## 1. Remove · Text (Line 1) [#a3f19c2e]')
   })
 
   it('appends the handle to an element-level heading', () => {
     const blocks = [makeBlock({ type: 'code', content: 'graph TD', language: 'mermaid' })]
     const annotations = [makeAnnotation({ id: UUID_A, targetType: 'diagram', text: 'Redraw this' })]
     const output = exportFeedback(annotations, blocks)
-    expect(output).toContain('## 1. Comment on Mermaid diagram (Line 1) [#a3f19c2e]')
+    expect(output).toContain('## 1. Change · Mermaid diagram (Line 1) [#a3f19c2e]')
   })
 
   it('gives a global comment a heading carrying its handle', () => {
@@ -300,13 +300,76 @@ describe('annotation handles', () => {
     ]
     const output = exportMultiFileFeedback(files)
     expect(output).toContain('#### General comment [#a3f19c2e]')
-    expect(output).toContain('### 1. Comment on (Line 1) [#7b210e44]')
+    expect(output).toContain('### 1. Change · Text (Line 1) [#7b210e44]')
   })
 
   it('omits the handle when the id is not UUID-shaped', () => {
     const output = exportFeedback([makeAnnotation({ id: 'ann-1' })], [makeBlock()])
-    expect(output).toContain('## 1. Comment on (Line 1)\n')
+    expect(output).toContain('## 1. Change · Text (Line 1)\n')
     expect(output).not.toContain('[#')
+  })
+})
+
+describe('intents and stable numbers', () => {
+  it('prints each note under the number it carries, gaps included', () => {
+    const blocks = [makeBlock({ id: 'block-0', startLine: 1 }), makeBlock({ id: 'block-1', startLine: 5 })]
+    const output = exportFeedback([
+      makeAnnotation({ id: 'late', blockId: 'block-1', number: 1, originalText: 'Later' }),
+      makeAnnotation({ id: 'early', number: 3, intent: 'question', text: 'Why?' })
+    ], blocks)
+    expect(output).toContain('2 annotations (1 Change, 1 Question):')
+    expect(output).toContain('## 3. Question · Text (Line 1)')
+    expect(output).toContain('## 1. Change · Text (Line 5)')
+    expect(output).not.toContain('## 2.')
+    expect(output.indexOf('## 3.')).toBeLessThan(output.indexOf('## 1.'))
+  })
+
+  it('prints an insertion as Add with the text to insert', () => {
+    const output = exportFeedback([makeAnnotation({
+      type: 'INSERTION', text: 'new words', originalText: '', afterContext: 'Hello', startOffset: 5, endOffset: 5
+    })], [makeBlock()])
+    expect(output).toContain('## 1. Add · Insertion (Line 1)')
+    expect(output).toContain('After: `Hello`')
+    expect(output).toContain('```\nnew words\n```')
+  })
+
+  it('prints a comment marked Remove with its text', () => {
+    const output = exportFeedback([makeAnnotation({ intent: 'remove', text: 'Drop the greeting' })], [makeBlock()])
+    expect(output).toContain('## 1. Remove · Text (Line 1)')
+    expect(output).toContain('> Drop the greeting')
+  })
+
+  it('numbers old notes without numbers in document order and counts the general comment', () => {
+    const blocks = [makeBlock({ id: 'block-0', startLine: 1 }), makeBlock({ id: 'block-1', startLine: 5 })]
+    const output = exportFeedback([
+      makeAnnotation({ id: 'g', targetType: 'global', text: 'Overall fine' }),
+      makeAnnotation({ id: 'late', blockId: 'block-1', type: 'DELETION', originalText: 'Later' }),
+      makeAnnotation({ id: 'early' })
+    ], blocks)
+    expect(output).toContain('3 annotations (1 Change, 1 Remove, 1 General):')
+    expect(output).toContain('## 1. Change · Text (Line 1)')
+    expect(output).toContain('## 2. Remove · Text (Line 5)')
+  })
+
+  it('keeps the numbers across files and numbers old notes after them', () => {
+    const files = [
+      { path: '/a.md', annotations: [makeAnnotation({ id: 'a1', number: 4 }), makeAnnotation({ id: 'a2', startOffset: 6, originalText: 'world' })], blocks: [makeBlock()] },
+      { path: '/b.md', annotations: [makeAnnotation({ id: 'b1', number: 2, text: 'note b1' })], blocks: [makeBlock()] }
+    ]
+    const output = exportMultiFileFeedback(files)
+    expect(output).toContain('### 4. Change · Text (Line 1)')
+    expect(output).toContain('### 5. Change · Text (Line 1)')
+    expect(output).toMatch(/### 2\. Change · Text \(Line 1\)\n[^#]*note b1/)
+  })
+})
+
+describe('intentSummary', () => {
+  it('counts the notes of every file by intent, without agent notes', () => {
+    const files = [
+      { path: '/a.md', annotations: [makeAnnotation(), { type: 'NOTES', text: 'fyi' }], blocks: [] },
+      { path: '/b.md', annotations: [makeAnnotation({ type: 'DELETION' })], blocks: [] }
+    ]
+    expect(intentSummary(files)).toBe('1 Change, 1 Remove')
   })
 })
 
@@ -321,10 +384,11 @@ describe('formatApprovalOutput', () => {
     const output = formatApprovalOutput({
       approved: true,
       annotationCount: 2,
+      intents: '1 Change, 1 Question',
       feedback: '# Annotation Feedback\n\nsome notes\n'
     })
 
-    expect(output).toContain('APPROVED WITH NOTES: 2 notes.')
+    expect(output).toContain('APPROVED WITH NOTES: 2 notes (1 Change, 1 Question).')
     expect(output).toContain('approved as-is')
     expect(output).toContain('not as change requests')
     expect(output).toContain('# Annotation Feedback')

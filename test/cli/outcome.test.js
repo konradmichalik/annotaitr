@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { composeOutput } from '../../cli/outcome.js'
+import { exportFeedback } from '../../server/image/common/feedback.js'
 
 const carried = [{
   handle: 'b7210e44', number: null, origin: { round: 1, number: 2 }, element: null,
@@ -46,5 +47,16 @@ describe('composeOutput', () => {
     expect(text.indexOf('[1] Pin: tighten')).toBeLessThan(repliesIndex(text))
     expect(text.endsWith(line)).toBe(true)
     expect(text.indexOf(line)).toBeGreaterThan(repliesIndex(text))
+  })
+
+  it('prints round 2 with stable numbers and intents, and the round 1 thread from a session saved before intents', () => {
+    const box = { id: 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d', type: 'box', number: 1, intent: 'change', text: 'Wider', geometry: { x: 0, y: 0, width: 20, height: 20 } }
+    const decision = { approved: false, output: exportFeedback([box], 100, 100, '/tmp/a.png'), carried, replyCount: 1 }
+    const text = composeOutput(decision, opened, line)
+    expect(text).toMatch(/^1 annotation \(1 Change\) on the screenshot\./)
+    expect(text).toContain('### 1. [#a3f19c2e] Change · Boxed area: top left')
+    expect(text).toContain('### [#b7210e44] Question · Comment pin: bottom')
+    expect(text).toContain('> Round 1, mark 2: Button colour')
+    expect(text.indexOf('### 1. [#a3f19c2e]')).toBeLessThan(repliesIndex(text))
   })
 })

@@ -67,7 +67,7 @@ describe('formatAnnotationsForExport', () => {
   it('appends the handle to the heading, like the stdout feedback', () => {
     const ann = makeAnnotation({ id: 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d' })
     const output = formatAnnotationsForExport([ann], [makeBlock()], '/test.md')
-    expect(output).toContain('## 1. Comment (Line 1) [#a3f19c2e]\n')
+    expect(output).toContain('## 1. Change · Comment (Line 1) [#a3f19c2e]\n')
   })
 
   it('gives a global comment a heading that carries its handle', () => {

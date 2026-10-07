@@ -1,17 +1,5 @@
 import { annotationHandle } from '../core/annotationHandle.js'
-
-/**
- * Splice the annotation's handle into the end of a formatted block's first
- * line, whatever shape that line has. Every branch of formatAnnotation builds
- * its own heading, so tagging the line afterwards beats threading the handle
- * through all of them.
- */
-function withHandle(formatted, id) {
-  const handle = annotationHandle(id)
-  if (!handle) { return formatted }
-  const lineEnd = formatted.indexOf('\n')
-  return `${formatted.slice(0, lineEnd)} [#${handle}]${formatted.slice(lineEnd)}`
-}
+import { normalizeNotes, intentWord, intentCounts } from '../core/notes.js'
 
 /**
  * Format an approval decision for stdout.
@@ -25,140 +13,89 @@ export function formatApprovalOutput(decision) {
     return 'APPROVED: No changes requested.\n'
   }
   const count = decision.annotationCount
-  return `APPROVED WITH NOTES: ${count} note${count === 1 ? '' : 's'}. ` +
+  const intents = decision.intents ? ` (${decision.intents})` : ''
+  return `APPROVED WITH NOTES: ${count} note${count === 1 ? '' : 's'}${intents}. ` +
     'The document is approved as-is — treat the notes below as context, not as change requests.\n\n' +
     `${decision.feedback}\n`
 }
 
-/**
- * Format a single annotation as Markdown feedback.
- */
-function formatAnnotation(ann, block, heading) {
-  const blockStartLine = block?.startLine || 1
+const quoted = (text) => `> ${(text ?? '').replace(/\n/g, '\n> ')}\n`
 
-  // Element-level annotations (image or diagram)
+const lineRefOf = (startLine, endLine) => (startLine === endLine ? `Line ${startLine}` : `Lines ${startLine}-${endLine}`)
+
+const DIAGRAM_NAMES = { plantuml: 'PlantUML diagram' }
+
+/** The element a note points at, as named in its heading, and what a removal of it says. */
+const ELEMENTS = {
+  image: { name: () => 'Image', removed: 'image' },
+  math: { name: () => 'Formula', removed: 'formula' },
+  pinpoint: { name: () => 'Block', removed: 'block' },
+  diagram: { name: (block) => DIAGRAM_NAMES[block?.language] ?? 'Mermaid diagram', removed: 'diagram' }
+}
+
+function elementBody(ann, block) {
   if (ann.targetType === 'image') {
-    const isDeletion = ann.type === 'DELETION'
-    const label = isDeletion ? 'Remove image' : 'Comment on image'
-    let output = `${heading} ${label} (Line ${blockStartLine})\n`
-    output += `Image: \`${ann.originalText}\`\n`
+    let output = `Image: \`${ann.originalText}\`\n`
     if (ann.imageAlt) { output += `Alt text: "${ann.imageAlt}"\n` }
     if (ann.imageSrc) { output += `Source: ${ann.imageSrc}\n` }
-    if (isDeletion) {
-      output += `> User wants this image removed from the document.\n`
-    } else {
-      output += `> ${(ann.text ?? '').replace(/\n/g, '\n> ')}\n`
-    }
-    return output + '\n'
+    return output
   }
-
-  if (ann.targetType === 'math') {
-    const isDeletion = ann.type === 'DELETION'
-    const label = isDeletion ? 'Remove formula' : 'Comment on formula'
-    let output = `${heading} ${label} (Line ${blockStartLine})\n`
-    output += `\`\`\`latex\n${block?.content || ann.originalText}\n\`\`\`\n`
-    if (isDeletion) {
-      output += `> User wants this formula removed from the document.\n`
-    } else {
-      output += `> ${(ann.text ?? '').replace(/\n/g, '\n> ')}\n`
-    }
-    return output + '\n'
+  if (ann.targetType === 'math') { return `\`\`\`latex\n${block?.content || ann.originalText}\n\`\`\`\n` }
+  if (ann.targetType === 'diagram') {
+    const fence = block?.language === 'plantuml' ? 'plantuml' : 'mermaid'
+    return `\`\`\`${fence}\n${block?.content || ann.originalText}\n\`\`\`\n`
   }
+  return `\`\`\`\n${(block?.content || ann.originalText || '').slice(0, 200)}\n\`\`\`\n`
+}
 
-  if (ann.targetType === 'pinpoint') {
-    const isDeletion = ann.type === 'DELETION'
-    const label = isDeletion ? 'Remove block' : 'Comment on block'
-    let output = `${heading} ${label} (Line ${blockStartLine})\n`
-    const preview = (block?.content || ann.originalText || '').slice(0, 200)
-    output += `\`\`\`\n${preview}\n\`\`\`\n`
-    if (isDeletion) {
-      output += `> User wants this block removed from the document.\n`
-    } else {
-      output += `> ${(ann.text ?? '').replace(/\n/g, '\n> ')}\n`
-    }
-    return output + '\n'
+/** What the heading names and where it is, plus the body under the heading. */
+function describeAnnotation(ann, block) {
+  const blockStartLine = block?.startLine || 1
+  const element = ELEMENTS[ann.targetType]
+  if (element) {
+    const body = elementBody(ann, block) + (ann.type === 'DELETION'
+      ? `> User wants this ${element.removed} removed from the document.\n`
+      : quoted(ann.text))
+    return { what: element.name(block), where: `Line ${blockStartLine}`, body }
   }
 
   if (ann.targetType === 'token') {
-    const isDeletion = ann.type === 'DELETION'
-    const label = isDeletion ? 'Remove token' : 'Comment on token'
     const lineOffset = (block?.content || '').slice(0, ann.startOffset).split('\n').length - 1
-    const tokenLine = blockStartLine + lineOffset
-    let output = `${heading} ${label} (Line ${tokenLine})\n`
-    output += `Token: \`${ann.originalText}\`\n`
-    if (isDeletion) {
-      output += `> User wants this token removed.\n`
-    } else {
-      output += `> ${(ann.text ?? '').replace(/\n/g, '\n> ')}\n`
-    }
-    return output + '\n'
+    const body = `Token: \`${ann.originalText}\`\n` + (ann.type === 'DELETION' ? '> User wants this token removed.\n' : quoted(ann.text))
+    return { what: 'Token', where: `Line ${blockStartLine + lineOffset}`, body }
   }
 
-  if (ann.targetType === 'diagram') {
-    const isDeletion = ann.type === 'DELETION'
-    const diagramLang = block?.language === 'plantuml' ? 'PlantUML' : 'Mermaid'
-    const fence = block?.language === 'plantuml' ? 'plantuml' : 'mermaid'
-    const label = isDeletion ? `Remove ${diagramLang} diagram` : `Comment on ${diagramLang} diagram`
-    let output = `${heading} ${label} (Line ${blockStartLine})\n`
-    output += `\`\`\`${fence}\n${block?.content || ann.originalText}\n\`\`\`\n`
-    if (isDeletion) {
-      output += `> User wants this diagram removed from the document.\n`
-    } else {
-      output += `> ${(ann.text ?? '').replace(/\n/g, '\n> ')}\n`
+  // A source view note's blockId is "source-line-N" (0-indexed); any other selection counts lines inside its block.
+  const sourceMatch = ann.targetType === 'source' ? ann.blockId?.match(/^source-line-(\d+)$/) : null
+  const startLine = ann.targetType === 'source'
+    ? (sourceMatch ? parseInt(sourceMatch[1], 10) + 1 : 1)
+    : blockStartLine + ((block?.content || '').slice(0, ann.startOffset).match(/\n/g) || []).length
+  const endLine = startLine + ((ann.originalText ?? '').match(/\n/g) || []).length
+  const where = `${lineRefOf(startLine, endLine)}${ann.targetType === 'source' ? ', source' : ''}`
+
+  if (ann.type === 'INSERTION') {
+    const after = ann.afterContext ? `After: \`${ann.afterContext}\`\n` : ''
+    return {
+      what: 'Insertion', where,
+      body: `${after}\`\`\`\n${ann.text ?? ''}\n\`\`\`\n> User wants this text inserted at this point in the document.\n`
     }
-    return output + '\n'
   }
+  const selection = `\`\`\`\n${ann.originalText}\n\`\`\`\n`
+  if (ann.type === 'DELETION') { return { what: 'Text', where, body: `${selection}> User wants this removed from the document.\n` } }
+  const labelTag = ann.label && ann.targetType !== 'source' ? ` [${ann.label.emoji} ${ann.label.text}]` : ''
+  return { what: 'Text', where, tag: labelTag, body: selection + quoted(ann.text) }
+}
 
-  // Source view annotations — blockId is "source-line-N" (0-indexed)
-  if (ann.targetType === 'source') {
-    const lineMatch = ann.blockId?.match(/^source-line-(\d+)$/)
-    const startLine = lineMatch ? parseInt(lineMatch[1], 10) + 1 : 1
-    const newlinesInSelection = (ann.originalText.match(/\n/g) || []).length
-    const endLine = startLine + newlinesInSelection
-    const lineRef = startLine === endLine ? `Line ${startLine}` : `Lines ${startLine}-${endLine}`
-
-    let output = `${heading} `
-    if (ann.type === 'DELETION') {
-      output += `Remove this (${lineRef}, source)\n`
-      output += `\`\`\`\n${ann.originalText}\n\`\`\`\n`
-      output += `> User wants this removed from the document.\n`
-    } else if (ann.type === 'COMMENT') {
-      output += `Comment on (${lineRef}, source)\n`
-      output += `\`\`\`\n${ann.originalText}\n\`\`\`\n`
-      output += `> ${(ann.text ?? '').replace(/\n/g, '\n> ')}\n`
-    }
-    return output + '\n'
-  }
-
-  const blockContent = block?.content || ''
-  const textBeforeSelection = blockContent.slice(0, ann.startOffset)
-  const linesBeforeSelection = (textBeforeSelection.match(/\n/g) || []).length
-  const startLine = blockStartLine + linesBeforeSelection
-  const newlinesInSelection = (ann.originalText.match(/\n/g) || []).length
-  const endLine = startLine + newlinesInSelection
-  const lineRef = startLine === endLine ? `Line ${startLine}` : `Lines ${startLine}-${endLine}`
-
-  let output = `${heading} `
-
-  if (ann.type === 'DELETION') {
-    output += `Remove this (${lineRef})\n`
-    output += `\`\`\`\n${ann.originalText}\n\`\`\`\n`
-    output += `> User wants this removed from the document.\n`
-  } else if (ann.type === 'COMMENT') {
-    const labelTag = ann.label ? ` [${ann.label.emoji} ${ann.label.text}]` : ''
-    output += `Comment on (${lineRef})${labelTag}\n`
-    output += `\`\`\`\n${ann.originalText}\n\`\`\`\n`
-    output += `> ${(ann.text ?? '').replace(/\n/g, '\n> ')}\n`
-  } else if (ann.type === 'INSERTION') {
-    output += `Insert text (${lineRef})\n`
-    if (ann.afterContext) {
-      output += `After: \`${ann.afterContext}\`\n`
-    }
-    output += `\`\`\`\n${ann.text ?? ''}\n\`\`\`\n`
-    output += `> User wants this text inserted at this point in the document.\n`
-  }
-
-  return output + '\n'
+/**
+ * One numbered note: `## 3. Question · Text (Line 7)`, the handle at the end
+ * of the heading, then the quoted selection and the comment. The number is
+ * the one the note kept for the whole round, so it can have gaps.
+ */
+function formatAnnotation(ann, block, level) {
+  const { what, where, tag = '', body } = describeAnnotation(ann, block)
+  const handle = annotationHandle(ann.id)
+  const handleTag = handle ? ` [#${handle}]` : ''
+  return `${level} ${ann.number}. ${intentWord(ann.intent)} · ${what} (${where})${tag}${handleTag}\n${body}\n`
 }
 
 /**
@@ -189,85 +126,76 @@ function sortAnnotations(annotations, blocks) {
   })
 }
 
+// Agent notes (read-only, from the last round) never go back to the agent.
+const reviewerNotes = (annotations) => (annotations || []).filter(a => a.type !== 'NOTES')
+
+const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`
+
+/**
+ * The notes of every file in document order, each with its intent and the
+ * number it kept for the round. Numbers run across files; a note from before
+ * numbers were stored gets the next free one in document order.
+ */
+function numberedFiles(files) {
+  const sorted = files.map(f => ({ ...f, annotations: sortAnnotations(reviewerNotes(f.annotations), f.blocks || []) }))
+  const notes = normalizeNotes(sorted.flatMap(f => f.annotations))
+  let offset = 0
+  return sorted.map((f) => {
+    const own = notes.slice(offset, offset + f.annotations.length)
+    offset += f.annotations.length
+    return { ...f, annotations: own }
+  })
+}
+
+/** "2 Change, 1 Question": the notes of every file by intent, for the approval line. */
+export function intentSummary(files) {
+  return intentCounts(files.flatMap(f => reviewerNotes(f.annotations)))
+}
+
+function formatFileNotes(annotations, blocks, level) {
+  const general = annotations.filter(a => a.targetType === 'global')
+  const numbered = annotations.filter(a => a.targetType !== 'global')
+  let output = ''
+  if (general.length > 0) {
+    output += `${level} General Feedback\n\n`
+    general.forEach(ann => { output += formatGlobalComment(ann, `${level}#`) })
+  }
+  for (const ann of numbered) {
+    output += formatAnnotation(ann, blocks.find(blk => blk.id === ann.blockId), level)
+  }
+  return output
+}
+
 /**
  * Format annotations from multiple files as readable Markdown feedback.
  * Single file delegates to exportFeedback. Multi-file groups by file.
  */
 export function exportMultiFileFeedback(files) {
-  // Exclude NOTES (read-only AI notes) from feedback
-  const filesFiltered = files.map(f => ({
-    ...f,
-    annotations: (f.annotations || []).filter(a => a.type !== 'NOTES')
-  }))
-  const filesWithAnnotations = filesFiltered.filter(f => f.annotations.length > 0)
-
-  if (filesWithAnnotations.length === 0) {
+  const annotated = numberedFiles(files).filter(f => f.annotations.length > 0)
+  if (annotated.length === 0) {
     return 'No annotations.'
   }
-
-  if (filesWithAnnotations.length === 1) {
-    return exportFeedback(filesWithAnnotations[0].annotations, filesWithAnnotations[0].blocks)
+  if (annotated.length === 1) {
+    return exportFeedback(annotated[0].annotations, annotated[0].blocks)
   }
 
-  const totalCount = filesWithAnnotations.reduce((sum, f) => sum + f.annotations.length, 0)
+  const all = annotated.flatMap(f => f.annotations)
   let output = `# Annotation Feedback\n\n`
-  output += `${totalCount} annotation${totalCount > 1 ? 's' : ''} across ${filesWithAnnotations.length} file${filesWithAnnotations.length > 1 ? 's' : ''}:\n\n`
-
-  let globalIndex = 1
-  for (const file of filesWithAnnotations) {
-    output += `---\n\n## File: ${file.path}\n\n`
-    const sorted = sortAnnotations(file.annotations, file.blocks)
-    const globalComments = sorted.filter(a => a.targetType === 'global')
-    const regularAnnotations = sorted.filter(a => a.targetType !== 'global')
-
-    if (globalComments.length > 0) {
-      output += `### General Feedback\n\n`
-      globalComments.forEach(ann => {
-        output += formatGlobalComment(ann, '####')
-      })
-    }
-
-    for (const ann of regularAnnotations) {
-      const block = file.blocks.find(blk => blk.id === ann.blockId)
-      output += withHandle(formatAnnotation(ann, block, `### ${globalIndex}.`), ann.id)
-      globalIndex++
-    }
+  output += `${plural(all.length, 'annotation')} (${intentCounts(all)}) across ${plural(annotated.length, 'file')}:\n\n`
+  for (const file of annotated) {
+    output += `---\n\n## File: ${file.path}\n\n${formatFileNotes(file.annotations, file.blocks, '###')}`
   }
-
-  output += '---\n'
-  return output
+  return output + '---\n'
 }
 
 /**
  * Format annotations as readable Markdown feedback for Claude.
  */
 export function exportFeedback(annotations, blocks) {
-  // Exclude NOTES (read-only AI notes) from feedback
-  const filtered = annotations.filter(a => a.type !== 'NOTES')
-
-  if (filtered.length === 0) {
+  const [file] = numberedFiles([{ annotations, blocks }])
+  if (file.annotations.length === 0) {
     return 'No annotations.'
   }
-
-  const sorted = sortAnnotations(filtered, blocks)
-  const globalComments = sorted.filter(a => a.targetType === 'global')
-  const regularAnnotations = sorted.filter(a => a.targetType !== 'global')
-
-  let output = `# Annotation Feedback\n\n`
-  output += `${filtered.length} annotation${filtered.length > 1 ? 's' : ''}:\n\n`
-
-  if (globalComments.length > 0) {
-    output += `## General Feedback\n\n`
-    globalComments.forEach(ann => {
-      output += formatGlobalComment(ann, '###')
-    })
-  }
-
-  regularAnnotations.forEach((ann, index) => {
-    const block = blocks.find(blk => blk.id === ann.blockId)
-    output += withHandle(formatAnnotation(ann, block, `## ${index + 1}.`), ann.id)
-  })
-
-  output += '---\n'
-  return output
+  return `# Annotation Feedback\n\n${plural(file.annotations.length, 'annotation')} (${intentCounts(file.annotations)}):\n\n` +
+    formatFileNotes(file.annotations, blocks, '##') + '---\n'
 }
