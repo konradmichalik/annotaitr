@@ -1021,24 +1021,6 @@
 .toolbar-submit:disabled { opacity: 0.5; cursor: default; }
 .toolbar-submit:hover:not(:disabled) { background: var(--border); }
 
-/* === Comment Popover === */
-
-.comment-popover--dragged { animation: none; }
-
-.comment-popover-drag-handle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 0 0;
-  cursor: grab;
-  color: var(--text-muted);
-  transition: color var(--transition-fast);
-  user-select: none;
-}
-
-.comment-popover-drag-handle:hover { color: var(--text); }
-.comment-popover-drag-handle:active { cursor: grabbing; color: var(--text); }
-
 /* === Math === */
 .block-math-wrapper {
   position: relative;
@@ -1108,16 +1090,19 @@
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: var(--scrim);
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: popover-overlay-in 0.15s ease-out;
+  background: var(--scrim);
 }
 
 @keyframes popover-overlay-in {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .comment-popover-overlay { animation: popover-overlay-in 0.12s ease-out; }
 }
 
 .comment-popover--dialog {
@@ -1131,23 +1116,8 @@
   max-height: 40vh;
 }
 
-.comment-popover-expand-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.25rem;
-  border: none;
-  border-radius: 4px;
-  background: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.comment-popover-expand-btn:hover { background: var(--bg-secondary); }
-
 .comment-popover .textarea-backdrop-wrap { width: 100%; }
-.comment-popover .textarea-backdrop { width: 100%; }
+.comment-popover .textarea-backdrop { width: 100%; padding: 0; }
 
 /* === Pinpoint Mode === */
 .pinpoint-overlay {

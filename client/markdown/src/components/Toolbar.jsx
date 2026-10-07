@@ -126,6 +126,9 @@ export function Toolbar({ highlightElement, onAnnotate, onClose, onDelete, onQui
     }
   }
 
+  let composerTitle = 'Comment on selection'
+  if (editAnnotation) { composerTitle = 'Edit comment' } else if (insertionMode) { composerTitle = 'Text to insert' }
+
   const linkButton = linkUrl && (
     <>
       <span className="toolbar-divider" />
@@ -198,8 +201,10 @@ export function Toolbar({ highlightElement, onAnnotate, onClose, onDelete, onQui
       {step === 'input' && (
         <CommentPopover
           anchorEl={highlightElement}
+          title={composerTitle}
           initialText={initialText}
-          placeholder={insertionMode ? 'Text to insert...' : 'Add a comment...'}
+          draftBaseline={editAnnotation ? initialText : ''}
+          placeholder={insertionMode ? 'Text to insert…' : 'Add a comment…'}
           submitLabel={editAnnotation ? 'Save' : 'Add'}
           onSubmit={handlePopoverSubmit}
           onClose={handlePopoverClose}
