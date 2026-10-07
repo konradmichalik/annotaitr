@@ -142,6 +142,12 @@ export function CommentPopover({
   ) : null
 
   const isDialog = mode === 'dialog'
+  // Escape in the expanded editor only collapses it. The field it leaves is gone by the time the
+  // viewer's own Escape handler runs, which would otherwise close the whole selection as well.
+  const collapse = (event) => {
+    event.stopPropagation()
+    setMode('popover')
+  }
   if (!isDialog && !position) {return null}
 
   const popoverStyle = isDialog ? undefined : {
@@ -164,7 +170,7 @@ export function CommentPopover({
       tools={expandButton}
       onSave={handleSubmit}
       onDiscard={onClose}
-      onEscape={isDialog ? () => setMode('popover') : onClose}
+      onEscape={isDialog ? collapse : onClose}
     >
       <div className="comment-popover-body">
         <div className="textarea-backdrop-wrap">

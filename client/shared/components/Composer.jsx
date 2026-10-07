@@ -38,7 +38,7 @@ export function Composer({
     if (event.defaultPrevented) { return }
     if (event.key === 'Escape') {
       event.preventDefault()
-      onEscape()
+      onEscape(event)
     } else if (isSaveKey(event)) {
       event.preventDefault()
       save()
