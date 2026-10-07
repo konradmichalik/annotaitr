@@ -2,7 +2,7 @@
 
 These rules are binding for every change to the annotaitr UI: both clients, the done page and the settings. When a change needs to break one, change the rule here first, in the same pull request, and say why.
 
-The screens these rules produce are listed in [screens.md](screens.md). The current clients still use the Nord tokens in `client/shared/styles/base.css`; they move over screen by screen.
+The screens these rules produce are listed in [screens.md](screens.md). The tokens live in `client/shared/styles/tokens.css`. `client/shared/styles/base.css` still maps the older variable names (`--bg`, `--text`, `--primary` and so on) onto them until each screen uses the tokens directly.
 
 ## Principles
 
