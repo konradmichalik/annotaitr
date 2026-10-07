@@ -1,4 +1,3 @@
-/* global __APP_VERSION__ */
 import { useEffect, useReducer, useState, useCallback, useRef } from 'react'
 import { annotationReducer, initialAnnotationState } from './state/annotationReducer.js'
 import { createAnnotationId } from '../../shared/utils/annotationId.js'
@@ -18,11 +17,10 @@ import PageNav from './document/PageNav.jsx'
 import PageImage from './document/PageImage.jsx'
 import { usePreviousRound } from './threads/usePreviousRound.js'
 import { useThreadPopover } from './threads/useThreadPopover.js'
-import ApprovalGate from './threads/ApprovalGate.jsx'
-import { useApprovalGate } from './threads/useApprovalGate.js'
+import UnansweredQuestions from './threads/UnansweredQuestions.jsx'
 import PreviousRoundPanel from './threads/PreviousRoundPanel.jsx'
 import ThreadPopover from './threads/ThreadPopover.jsx'
-import { placedThreads, threadPageCounts, hasMark, pendingReplyCount } from './threads/threadView.js'
+import { placedThreads, threadPageCounts, hasMark, pendingReplyCount, openQuestions } from './threads/threadView.js'
 import { useSettings } from './hooks/useSettings.js'
 import { useMediaPlayer } from './video/useMediaPlayer.js'
 import { useVideoReview } from './video/useVideoReview.js'
@@ -37,14 +35,31 @@ import { useAutoClose } from '../../shared/hooks/useAutoClose.js'
 import { useServerConnection } from '../../shared/hooks/useServerConnection.js'
 import { useResizablePanel } from '../../shared/hooks/useResizablePanel.js'
 import { UpdateBanner } from '../../shared/components/UpdateBanner.jsx'
-import { Logo } from '../../shared/components/Logo.jsx'
+import { AppHeader } from '../../shared/components/AppHeader.jsx'
+import { DecisionDialog } from '../../shared/components/DecisionDialog.jsx'
+import { useDecisionShortcut } from '../../shared/hooks/useDecisionShortcut.js'
+import { agentName } from '../../shared/utils/origin.js'
+import { applySummary, plural } from '../../shared/utils/decision.js'
+import { sourceKind, targetFacts } from './utils/headerSource.js'
 import { DoneScreen, DoneAutoClose } from '../../shared/components/DoneScreen.jsx'
 import { getItem, setItem } from '../../shared/utils/storage.js'
 
-const ORIGIN_LABELS = {
-  'claude-code': 'Claude Code',
-  'opencode': 'OpenCode',
-  'vibe': 'Mistral Vibe'
+const NOTE_NOUNS = {
+  box: ['box', 'boxes'],
+  arrow: ['arrow'],
+  freehand: ['drawing'],
+  highlighter: ['highlight'],
+  pin: ['pin'],
+  comment: ['comment'],
+  text: ['text mark'],
+  element: ['element mark']
+}
+
+// The general comment has no shape, page or time: it is about the whole target.
+const isGeneralComment = (a) => a.type === 'comment' && !a.geometry && typeof a.page !== 'number' && typeof a.time !== 'number'
+
+function createGeneralComment(text) {
+  return { id: createAnnotationId(), createdAt: Date.now(), type: 'comment', geometry: null, text, color: null }
 }
 
 function getInitialSidebarCollapsed() {
@@ -71,9 +86,13 @@ export default function App() {
   const [decision, setDecision] = useState(null)
   const [activeTool, setActiveTool] = useState('select')
   const [showExport, setShowExport] = useState(false)
+  // The decision dialog, with the option it opens on (null: the default for the state).
+  const [decisionDialog, setDecisionDialog] = useState(null)
+  const primaryRef = useRef(null)
   const [editingAnnotationId, setEditingAnnotationId] = useState(null)
   const [zoom, setZoom] = useState(1)
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsTab, setSettingsTab] = useState(null)
+  const settingsOpen = settingsTab !== null
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialSidebarCollapsed)
   const [status, setStatus] = useState('')
   const [toast, setToast] = useState(null)
@@ -337,7 +356,7 @@ export default function App() {
     showToast(`Imported ${annotations.length} annotation${annotations.length === 1 ? '' : 's'}`)
   }, [showToast, isVideo, isDocument, doc.pages, setErrorStatus])
 
-  const submit = useCallback(async (endpoint) => {
+  const submit = useCallback(async (endpoint, annotations) => {
     if (submittingRef.current) { return }
     submittingRef.current = true
     try {
@@ -348,19 +367,21 @@ export default function App() {
       const flush = await fetch('/api/annotations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ annotations: state.annotations })
+        body: JSON.stringify({ annotations })
       })
       // Deciding on whatever the server last accepted would drop or alter
       // annotations without the reviewer noticing.
       if (!flush.ok) { throw new Error(`annotations were not saved: ${await readError(flush)}`) }
       // A recording's output is built from frames only the browser can
       // decode, so they are grabbed and uploaded before the decision.
-      if (controller && state.annotations.length > 0) {
+      if (controller && annotations.length > 0) {
         controller.pause()
         await uploadFrames(controller, (done, total) => setExportProgress({ done, total }))
       }
       const res = await fetch(`/api/${endpoint}`, { method: 'POST' })
       if (!res.ok) { throw new Error(await readError(res)) }
+      // The done screen counts what went out: a summary may have been added, an approval may have discarded the notes.
+      dispatch({ type: 'SET_ALL', annotations })
       setDecision(endpoint === 'approve' ? 'approved' : 'feedback')
     } catch (err) {
       setErrorStatus(`${endpoint === 'approve' ? 'Approve' : 'Submit'} failed: ${err.message}`)
@@ -368,11 +389,43 @@ export default function App() {
       setExportProgress(null)
       submittingRef.current = false
     }
-  }, [setErrorStatus, state.annotations, controller])
+  }, [setErrorStatus, controller])
 
-  const { gateOpen, unanswered, approveRef, requestApproval, answerQuestions, approveAnyway } = useApprovalGate({
-    threads: previous.threads, submit, showThread, showEntryThread
-  })
+  const unanswered = openQuestions(previous.threads)
+  // `summary` comes from the decision dialog and becomes the general comment; null keeps the notes as they are.
+  const finish = ({ choice, summary = null }) => {
+    const withSummary = summary === null
+      ? state.annotations
+      : applySummary(state.annotations, summary, { isGeneral: isGeneralComment, create: createGeneralComment })
+    submit(choice === 'feedback' ? 'feedback' : 'approve', choice === 'approve' ? [] : withSummary)
+  }
+  // Approving while the agent waits for an answer goes through the dialog, which lists the open questions.
+  const decidePrimary = (choice) => {
+    if (choice === 'approve' && unanswered.length > 0) {
+      setDecisionDialog({ choice: 'approve' })
+      return
+    }
+    finish({ choice })
+  }
+  const finishFromDialog = (result) => {
+    setDecisionDialog(null)
+    finish(result)
+  }
+  const answerQuestions = () => {
+    setDecisionDialog(null)
+    const button = primaryRef.current
+    const [thread] = unanswered
+    // A thread without a mark has no canvas popover, so it hangs off the primary button like a panel entry does.
+    if (hasMark(thread)) {
+      showThread(thread, button)
+    } else {
+      const rect = button.getBoundingClientRect()
+      showEntryThread(thread, { x: rect.left + rect.width / 2, y: rect.bottom }, button)
+    }
+  }
+  const openDecision = useCallback(() => setDecisionDialog({ choice: null }), [])
+  const closeDecision = useCallback(() => setDecisionDialog(null), [])
+  useDecisionShortcut(openDecision, !decision && !settingsOpen && !showExport && !exportProgress)
 
   const zoomBy = useCallback((delta) => {
     setZoom((z) => Math.round(Math.max(0.1, Math.min(3, z + delta)) * 100) / 100)
@@ -403,9 +456,17 @@ export default function App() {
   const annotationCount = state.annotations.length
   const replyCount = pendingReplyCount(previous.threads)
   const decisionItemCount = annotationCount + replyCount
+  const generalComment = state.annotations.find(isGeneralComment) ?? null
   const notesTitle = [annotationCount > 0 && `${annotationCount} annotation${annotationCount === 1 ? '' : 's'}`, replyCount > 0 && `${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`].filter(Boolean).join(' and ')
-  const submitTitle = decisionItemCount === 0 ? 'Add annotations first' : `Submit ${notesTitle}`
   const origin = meta?.origin
+  const source = sourceKind(meta)
+  const facts = meta ? targetFacts({
+    kind: source,
+    pageCount: meta.pageCount,
+    width: isVideo ? controller?.width : meta.width,
+    height: isVideo ? controller?.height : meta.height,
+    duration: controller?.duration
+  }) : null
 
   function statusText() {
     if (exportProgress) { return `Preparing frames ${exportProgress.done}/${exportProgress.total}...` }
@@ -476,11 +537,11 @@ export default function App() {
             ? (decisionItemCount > 0
               ? `Approved as-is. ${notesTitle} passed along as notes.`
               : `No changes requested. The ${subject} was approved as-is.`)
-            : `${notesTitle} ${ORIGIN_LABELS[origin] ? `sent to ${ORIGIN_LABELS[origin]}` : 'submitted'}.`}
+            : `${notesTitle} ${agentName(origin) ? `sent to ${agentName(origin)}` : 'submitted'}.`}
         >
           <p className="done-hint">
-            {decision === 'feedback' && ORIGIN_LABELS[origin]
-              ? `${ORIGIN_LABELS[origin]} is processing your feedback.`
+            {decision === 'feedback' && agentName(origin)
+              ? `${agentName(origin)} is processing your feedback.`
               : 'You can close this tab.'}
           </p>
           <DoneAutoClose
@@ -497,64 +558,26 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <header className="app-header">
-        <div className="header-left">
-          <Logo className="app-logo" />
-          <span className="version-badge">v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '?'}</span>
-          {ORIGIN_LABELS[origin] && (
-            <span className="origin-badge">{ORIGIN_LABELS[origin]}</span>
-          )}
-          {meta?.targetLabel && <span className="app-target" title={meta.targetLabel}>{meta.targetLabel}</span>}
-        </div>
-        <div className="header-right">
-          <button
-            type="button"
-            onClick={() => submit('feedback')}
-            className={`btn btn-feedback${decisionItemCount > 0 ? ' btn-primary' : ''}`}
-            disabled={decisionItemCount === 0 || !!exportProgress}
-            title={submitTitle}
-          >
-            Feedback
-            {decisionItemCount > 0 && <span className="btn-badge">{decisionItemCount}</span>}
-          </button>
-          <button
-            type="button"
-            ref={approveRef}
-            onClick={requestApproval}
-            className={`btn btn-approve${decisionItemCount === 0 ? ' btn-primary' : ''}`}
-            disabled={!!exportProgress}
-            title={decisionItemCount > 0
-              ? `Approve as-is and pass ${notesTitle} along as notes`
-              : `Approve the ${subject} as-is`}
-          >
-            {decisionItemCount > 0 ? 'Approve with Notes' : 'Approve'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-            className="btn btn-icon"
-            title="Settings"
-            aria-label="Settings"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={() => setSidebarCollapsed((prev) => !prev)}
-            className="btn btn-icon"
-            title={sidebarCollapsed ? 'Show annotations' : 'Hide annotations'}
-            aria-label={sidebarCollapsed ? 'Show annotations' : 'Hide annotations'}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <line x1="15" y1="3" x2="15" y2="21" />
-            </svg>
-          </button>
-        </div>
-      </header>
+      <AppHeader
+        source={source}
+        target={meta?.targetLabel}
+        facts={facts}
+        round={previous.round === null ? null : previous.round + 1}
+        origin={origin}
+        onOpenShortcuts={() => setSettingsTab('shortcuts')}
+        onOpenSettings={() => setSettingsTab('appearance')}
+        panelCollapsed={sidebarCollapsed}
+        onTogglePanel={() => setSidebarCollapsed((prev) => !prev)}
+        decision={{
+          itemCount: decisionItemCount,
+          title: decisionItemCount > 0 ? `Submit ${notesTitle}` : `Approve the ${subject} as-is`,
+          busy: !!exportProgress,
+          dialogOpen: !!decisionDialog,
+          primaryRef,
+          onPrimary: decidePrimary,
+          onOpenDialog: openDecision
+        }}
+      />
 
       <main className="app-body">
         {isDocument && <PageStrip pages={doc.pages} current={doc.current} counts={doc.counts} previousCounts={previousPageCounts} onSelect={goToPage} />}
@@ -691,7 +714,6 @@ export default function App() {
                 onDone={showToast}
               />
             </div>
-            {gateOpen && <ApprovalGate threads={unanswered} round={previous.round} onAnswer={answerQuestions} onApproveAnyway={approveAnyway} />}
             <PreviousRoundPanel round={previous.round} threads={previous.threads} showOnImage={showPrevious} onToggleShowOnImage={togglePrevious} onShow={showThread} onShowDetached={showEntryThread} />
             {entryPopoverThread && (
               <ThreadPopover key={entryPopoverThread.handle} thread={entryPopoverThread} round={previous.round} anchorPoint={entryThread.anchorPoint} onClose={closeThread} onReload={previous.reload} />
@@ -730,9 +752,27 @@ export default function App() {
         />
       )}
 
+      {decisionDialog && (
+        <DecisionDialog
+          origin={origin}
+          noteTypes={state.annotations.filter((a) => a !== generalComment).map((a) => a.type)}
+          nouns={NOTE_NOUNS}
+          generalType="comment"
+          generalText={generalComment ? generalComment.text : null}
+          replies={replyCount}
+          info={replyCount > 0 ? `${plural(replyCount, 'pending reply', 'pending replies')} to round ${previous.round} ${replyCount === 1 ? 'goes' : 'go'} out with this.` : null}
+          initialChoice={decisionDialog.choice}
+          approvalWarning={unanswered.length > 0 && <UnansweredQuestions threads={unanswered} round={previous.round} onAnswer={answerQuestions} />}
+          busy={!!exportProgress}
+          onSubmit={finishFromDialog}
+          onClose={closeDecision}
+        />
+      )}
+
       <SettingsModal
         isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
+        initialTab={settingsTab ?? undefined}
+        onClose={() => setSettingsTab(null)}
         settings={settings}
         updateSetting={updateSetting}
         resetSettings={resetSettings}

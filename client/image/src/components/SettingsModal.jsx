@@ -25,7 +25,15 @@ const SHORTCUT_GROUPS = [
       { keys: 'Drag a mark', desc: 'Move it' },
       { keys: 'Drag a corner handle', desc: 'Resize it' },
       { keys: 'Delete / Backspace', desc: 'Remove the selected mark' },
+      { keys: `${MOD} + Enter`, desc: 'Save the comment' },
       { keys: 'Escape', desc: 'Close the comment popover' }
+    ]
+  },
+  {
+    title: 'Review',
+    items: [
+      { keys: `${MOD} + Shift + Enter`, desc: 'Open the decision' },
+      { keys: `${MOD} + Enter`, desc: 'Submit the open decision' }
     ]
   },
   {
