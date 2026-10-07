@@ -33,6 +33,14 @@ describe('review sessions in the CLI', () => {
     expect((await open({ newSession: true })).replies.add('a3f19c2e', 'x').status).toBe(404)
   })
 
+  it('writes carried threads after the new marks', async () => {
+    const opened = await open()
+    const carried = [{ handle: 'b7210e44', number: null, origin: { round: 1, number: 2 }, annotation: pin, element: null, replies: [] }]
+    await recordSession(opened, { annotations: [pin], carried }, { now: 2000, dir, log })
+    const { session } = await readSession(opened.sessionId, dir)
+    expect(session.threads.map((t) => [t.handle, t.number])).toEqual([['a3f19c2e', 1], ['b7210e44', null]])
+  })
+
   it('records the decision and returns the line for the agent', async () => {
     const opened = await open()
     const line = await recordSession(opened, { annotations: [pin] }, { now: 2000, dir, log })

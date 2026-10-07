@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { buildVideoServer } from '../../../../server/image/video/adapter.js'
 import { makeFixturePng } from '../../../helpers/fixtureImage.js'
+import { createReplyStore } from '../../../../server/core/session/replyStore.js'
 
 const WIDTH = 40
 const HEIGHT = 30
@@ -226,5 +227,31 @@ describe('video annotator server', () => {
     const decision = await server.waitForDecision()
     expect(decision.output).toBe('APPROVED: No changes requested.\n')
     expect(decision.annotations).toEqual([])
+  })
+
+  const replySession = () => {
+    const previous = { round: 1, threads: [{ handle: 'a3f19c2e', number: 1, annotation: box('a', 1), element: null, replies: [] }] }
+    return { sessionId: '2f8c1a9e04b7', target: { kind: 'video', label: 'clip.webm' }, previous, fingerprint: null, replies: createReplyStore(previous) }
+  }
+
+  it('accepts feedback that only carries replies to last round', async () => {
+    const session = replySession()
+    await start(session)
+    session.replies.add('a3f19c2e', 'Green')
+    expect((await post('/api/feedback', {})).status).toBe(200)
+    expect(await server.waitForDecision()).toMatchObject({ approved: false, output: '', annotations: [], repliesOnly: true, annotationCount: 1 })
+  })
+
+  it('still rejects feedback without marks and without replies', async () => {
+    await start(replySession())
+    expect((await post('/api/feedback', {})).status).toBe(400)
+  })
+
+  it('approves with notes when only replies are pending', async () => {
+    const session = replySession()
+    await start(session)
+    session.replies.add('a3f19c2e', 'Green')
+    await post('/api/approve', {})
+    expect(await server.waitForDecision()).toMatchObject({ approved: true, repliesOnly: true, annotationCount: 1 })
   })
 })

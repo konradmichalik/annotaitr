@@ -7,6 +7,7 @@ import { buildDocumentServer } from '../../../../server/image/document/adapter.j
 import { openPdfDocument, createPageCache } from '../../../../server/image/document/pdfDocument.js'
 import { makePdf } from '../../../helpers/pdfFixtures.js'
 import { hashFile } from '../../../../server/image/common/fingerprint.js'
+import { createReplyStore } from '../../../../server/core/session/replyStore.js'
 
 const box = (id, page, extra = {}) => ({
   id, type: 'box', geometry: { x: 100, y: 100, width: 300, height: 200 }, text: `note ${id}`, color: '#bf616a', page, ...extra
@@ -293,5 +294,31 @@ describe('document annotator server', () => {
     const body = await (await post('/api/feedback-text', { annotations: [box('a', 2)] })).json()
     expect(body.data.text).toMatch(/^1 annotation on 1 of 3 pages\./)
     expect(body.data.text).not.toMatch(/\/tmp|annotaitr-/)
+  })
+
+  const replySession = () => {
+    const previous = { round: 1, threads: [{ handle: 'a3f19c2e', number: 1, annotation: box('a', 1), element: null, replies: [] }] }
+    return { sessionId: '2f8c1a9e04b7', target: { kind: 'document', label: 'x' }, previous, fingerprint: null, replies: createReplyStore(previous) }
+  }
+
+  it('accepts feedback that only carries replies to last round', async () => {
+    const session = replySession()
+    const { decided } = await start({ session })
+    session.replies.add('a3f19c2e', 'Green')
+    expect((await post('/api/feedback', {})).status).toBe(200)
+    expect(await decided).toMatchObject({ approved: false, output: '', annotations: [], repliesOnly: true, annotationCount: 1 })
+  })
+
+  it('still rejects feedback without marks and without replies', async () => {
+    await start({ session: replySession() })
+    expect((await post('/api/feedback', {})).status).toBe(400)
+  })
+
+  it('approves with notes when only replies are pending', async () => {
+    const session = replySession()
+    const { decided } = await start({ session })
+    session.replies.add('a3f19c2e', 'Green')
+    await post('/api/approve', {})
+    expect(await decided).toMatchObject({ approved: true, repliesOnly: true, annotationCount: 1 })
   })
 })

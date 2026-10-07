@@ -49,6 +49,7 @@ export async function buildImageServer(options) {
         state,
         voiceNotes,
         recapture,
+        replies: session?.replies ?? null,
         resolveDecision: safeResolve
       }))
       app.use(createThreadsRouter({

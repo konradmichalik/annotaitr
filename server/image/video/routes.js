@@ -42,7 +42,7 @@ function sameTimes(a, b) {
  * frames it needs (POST /api/frame-plan), stores them (PUT /api/frames) and
  * renders the output once a decision arrives.
  */
-export function createVideoApiRouter({ video, origin, targetLabel, state, voiceNotes = false, resolveDecision }) {
+export function createVideoApiRouter({ video, origin, targetLabel, state, replies = null, voiceNotes = false, resolveDecision }) {
   const router = Router()
 
   router.get('/api/meta', (_req, res) => {
@@ -164,8 +164,11 @@ export function createVideoApiRouter({ video, origin, targetLabel, state, voiceN
 
   router.post('/api/approve', rejectWhileDeciding, async (_req, res) => {
     if (state.annotations.length === 0) {
-      res.json(success({ message: 'Approved' }))
-      setTimeout(() => resolveDecision({ approved: true, output: formatApprovalOutput(), annotations: [] }), 100)
+      const pending = replies?.count() ?? 0
+      res.json(success({ message: pending > 0 ? 'Approved with notes' : 'Approved' }))
+      setTimeout(() => resolveDecision(pending > 0
+        ? { approved: true, output: '', annotationCount: pending, annotations: [], repliesOnly: true }
+        : { approved: true, output: formatApprovalOutput(), annotations: [] }), 100)
       return
     }
     await decide(res, { approved: true })
@@ -173,7 +176,11 @@ export function createVideoApiRouter({ video, origin, targetLabel, state, voiceN
 
   router.post('/api/feedback', rejectWhileDeciding, async (_req, res) => {
     if (state.annotations.length === 0) {
-      return res.status(400).json(failure('No annotations to submit: use Approve instead'))
+      const pending = replies?.count() ?? 0
+      if (pending === 0) { return res.status(400).json(failure('No annotations to submit: use Approve instead')) }
+      res.json(success({ message: 'Feedback submitted' }))
+      setTimeout(() => resolveDecision({ approved: false, output: '', annotationCount: pending, annotations: [], repliesOnly: true }), 100)
+      return
     }
     await decide(res, { approved: false })
   })

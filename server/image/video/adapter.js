@@ -34,7 +34,7 @@ export async function buildVideoServer({ video, origin = 'cli', targetLabel = nu
     staticDirs: [],
     onReady,
     mountRoutes(app, { safeResolve }) {
-      app.use(createVideoApiRouter({ video, origin, targetLabel, state, voiceNotes, resolveDecision: safeResolve }))
+      app.use(createVideoApiRouter({ video, origin, targetLabel, state, voiceNotes, replies: session?.replies ?? null, resolveDecision: safeResolve }))
       app.use(createThreadsRouter({
         session,
         current: (req) => ({ duration: videoDuration(req) })

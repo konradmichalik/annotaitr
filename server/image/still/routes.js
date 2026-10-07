@@ -97,7 +97,7 @@ function mountExport(router, { state }) {
   })
 }
 
-export function createApiRouter({ origin, targetLabel, state, voiceNotes = false, recapture = null, resolveDecision }) {
+export function createApiRouter({ origin, targetLabel, state, voiceNotes = false, recapture = null, replies = null, resolveDecision }) {
   const router = Router()
 
   router.get('/api/image', (_req, res) => {
@@ -132,8 +132,11 @@ export function createApiRouter({ origin, targetLabel, state, voiceNotes = false
 
   router.post('/api/approve', async (_req, res) => {
     if (state.annotations.length === 0) {
-      res.json(success({ message: 'Approved' }))
-      setTimeout(() => resolveDecision({ approved: true, output: formatApprovalOutput(), annotations: [], domMap: state.capture.domMap }), 100)
+      const pending = replies?.count() ?? 0
+      res.json(success({ message: pending > 0 ? 'Approved with notes' : 'Approved' }))
+      setTimeout(() => resolveDecision(pending > 0
+        ? { approved: true, output: '', annotationCount: pending, annotations: [], repliesOnly: true, domMap: state.capture.domMap }
+        : { approved: true, output: formatApprovalOutput(), annotations: [], domMap: state.capture.domMap }), 100)
       return
     }
     try {
@@ -154,7 +157,13 @@ export function createApiRouter({ origin, targetLabel, state, voiceNotes = false
 
   router.post('/api/feedback', async (_req, res) => {
     if (state.annotations.length === 0) {
-      return res.status(400).json(failure('No annotations to submit: use Approve instead'))
+      const pending = replies?.count() ?? 0
+      if (pending === 0) { return res.status(400).json(failure('No annotations to submit: use Approve instead')) }
+      res.json(success({ message: 'Feedback submitted' }))
+      setTimeout(() => resolveDecision({
+        approved: false, output: '', annotationCount: pending, annotations: [], repliesOnly: true, domMap: state.capture.domMap
+      }), 100)
+      return
     }
     try {
       const { width, height, annotatedImagePath, domMap, note } = await decisionInputs(state)

@@ -91,4 +91,33 @@ describe('a review session across rounds', () => {
     expect(round.stdout).toContain('[#a3f19c2e]')
     expect(round.stdout).not.toContain('Session:')
   }, 30_000)
+
+  it('carries a thread the reviewer answered into the next round and shows the exchange', async () => {
+    const first = await reviewRound(image, env)
+    const sessionId = first.stdout.match(/Session: ([0-9a-f]{12})/)[1]
+    spawnSync('node', ['index.js', 'reply', '--session', sessionId, '--to', 'a3f19c2e', '--status', 'question', '--text', 'Green or blue?'], {
+      env: { ...process.env, ...env }, encoding: 'utf-8'
+    })
+
+    const second = startCli([image], env)
+    const url = await second.url
+    const post = (path, body) => fetch(`${url}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    expect((await post('/api/threads/a3f19c2e/replies', { text: 'Green' })).status).toBe(200)
+    await post('/api/feedback', {})
+    expect(await second.exited).toBe(0)
+    const out = second.stdout()
+    expect(out).toMatch(/^Feedback: 1 reply to round 1, no new marks\./)
+    expect(out).toContain('## Replies to round 1')
+    expect(out).toContain('Agent (question): Green or blue?\nReviewer: Green\n')
+    expect(out).toContain(`Session: ${sessionId} (round 2)`)
+
+    const reply = spawnSync('node', ['index.js', 'reply', '--session', sessionId, '--to', 'a3f19c2e', '--status', 'applied', '--text', 'Now green'], {
+      env: { ...process.env, ...env }, encoding: 'utf-8'
+    })
+    expect(reply.status).toBe(0)
+
+    const third = await threadsOfNextRound(image, env)
+    expect(third).toMatchObject({ round: 2, threads: [{ handle: 'a3f19c2e', number: null, origin: { round: 1, number: 1 } }] })
+    expect(third.threads[0].replies.map((r) => r.author)).toEqual(['agent', 'human', 'agent'])
+  }, 45_000)
 })

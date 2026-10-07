@@ -93,7 +93,7 @@ function mountExportRoutes(router, { review, caches }) {
   })
 }
 
-function mountDecisionRoutes(router, { review, state, caches, document, resolveDecision }) {
+function mountDecisionRoutes(router, { review, state, caches, document, replies, resolveDecision }) {
   const rejectWhileDeciding = (_req, res, next) => {
     if (state.deciding || state.decided) { return res.status(409).json(failure('A decision is already being submitted')) }
     next()
@@ -120,8 +120,11 @@ function mountDecisionRoutes(router, { review, state, caches, document, resolveD
   router.post('/api/approve', rejectWhileDeciding, async (_req, res) => {
     if (state.annotations.length === 0) {
       state.decided = true
-      res.json(success({ message: 'Approved' }))
-      setTimeout(() => resolveDecision({ approved: true, output: formatApprovalOutput(), annotations: [] }), 100)
+      const pending = replies?.count() ?? 0
+      res.json(success({ message: pending > 0 ? 'Approved with notes' : 'Approved' }))
+      setTimeout(() => resolveDecision(pending > 0
+        ? { approved: true, output: '', annotationCount: pending, annotations: [], repliesOnly: true }
+        : { approved: true, output: formatApprovalOutput(), annotations: [] }), 100)
       return
     }
     await decide(res, { approved: true })
@@ -129,7 +132,12 @@ function mountDecisionRoutes(router, { review, state, caches, document, resolveD
 
   router.post('/api/feedback', rejectWhileDeciding, async (_req, res) => {
     if (state.annotations.length === 0) {
-      return res.status(400).json(failure('No annotations to submit: use Approve instead'))
+      const pending = replies?.count() ?? 0
+      if (pending === 0) { return res.status(400).json(failure('No annotations to submit: use Approve instead')) }
+      state.decided = true
+      res.json(success({ message: 'Feedback submitted' }))
+      setTimeout(() => resolveDecision({ approved: false, output: '', annotationCount: pending, annotations: [], repliesOnly: true }), 100)
+      return
     }
     await decide(res, { approved: false })
   })
@@ -141,7 +149,7 @@ function mountDecisionRoutes(router, { review, state, caches, document, resolveD
  * carry the page they belong to, and a decision writes one image per
  * annotated page plus an overview.
  */
-export function createDocumentApiRouter({ document, source, origin, targetLabel, state, caches, voiceNotes = false, resolveDecision }) {
+export function createDocumentApiRouter({ document, source, origin, targetLabel, state, caches, voiceNotes = false, replies = null, resolveDecision }) {
   const router = Router()
   const pageNumbers = new Set(document.pages.map((p) => p.number))
   const docInfo = { label: targetLabel, pageCount: document.pageCount, pages: document.pages }
@@ -182,6 +190,6 @@ export function createDocumentApiRouter({ document, source, origin, targetLabel,
   mountPageRoutes(router, { review, caches })
   mountAnnotationRoutes(router, { review, state })
   mountExportRoutes(router, { review, caches })
-  mountDecisionRoutes(router, { review, state, caches, document, resolveDecision })
+  mountDecisionRoutes(router, { review, state, caches, document, replies, resolveDecision })
   return router
 }

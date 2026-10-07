@@ -45,7 +45,7 @@ export async function openSession({
 /** Save the decided round. Returns the line telling the agent how to reply, or '' when there is nothing to reply to or saving failed. */
 export async function recordSession(opened, decision, { now = Date.now(), dir = sessionDir(), log = stderrLine } = {}) {
   const describeElement = (annotation) => describeMatch(matchAnnotation(decision.domMap, annotation))
-  const threads = buildThreads(decision.annotations ?? [], describeElement)
+  const threads = [...buildThreads(decision.annotations ?? [], describeElement), ...(decision.carried ?? [])]
   const session = nextSession(opened.previous, {
     sessionId: opened.sessionId, target: opened.target, fingerprint: await opened.fingerprint, threads, now
   })

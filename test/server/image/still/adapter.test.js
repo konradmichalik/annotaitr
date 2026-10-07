@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { buildImageServer } from '../../../../server/image/still/adapter.js'
 import { makeFixturePng } from '../../../helpers/fixtureImage.js'
+import { createReplyStore } from '../../../../server/core/session/replyStore.js'
 import { flattenAnnotations } from '../../../../server/image/common/render.js'
 import { writeAnnotatedImage } from '../../../../server/image/still/output.js'
 
@@ -379,5 +380,32 @@ describe('image annotator server', () => {
       body: JSON.stringify({ annotations: [{ id: 'a1', type: 'freehand', geometry: { points } }] })
     })
     expect(res.status).toBe(200)
+  })
+
+  const replySession = () => {
+    const previous = { round: 1, threads: [{ handle: 'a3f19c2e', number: 1, annotation: { type: 'pin', geometry: { x: 1, y: 1 }, text: 'x' }, element: null, replies: [] }] }
+    return { sessionId: '2f8c1a9e04b7', target: { kind: 'file', label: 'a.png' }, previous, fingerprint: null, replies: createReplyStore(previous) }
+  }
+
+  it('accepts feedback that only carries replies to last round', async () => {
+    const session = replySession()
+    await start({ session })
+    session.replies.add('a3f19c2e', 'Green')
+    const res = await fetch(`${server.url}/api/feedback`, { method: 'POST' })
+    expect(res.status).toBe(200)
+    expect(await server.waitForDecision()).toMatchObject({ approved: false, output: '', annotations: [], repliesOnly: true, annotationCount: 1 })
+  })
+
+  it('still rejects feedback without marks and without replies', async () => {
+    await start({ session: replySession() })
+    expect((await fetch(`${server.url}/api/feedback`, { method: 'POST' })).status).toBe(400)
+  })
+
+  it('approves with notes when only replies are pending', async () => {
+    const session = replySession()
+    await start({ session })
+    session.replies.add('a3f19c2e', 'Green')
+    await fetch(`${server.url}/api/approve`, { method: 'POST' })
+    expect(await server.waitForDecision()).toMatchObject({ approved: true, repliesOnly: true, annotationCount: 1 })
   })
 })
