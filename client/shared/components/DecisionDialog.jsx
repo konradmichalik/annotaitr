@@ -6,8 +6,7 @@ import {
   decisionOptions, defaultChoice, describeBreakdown, needsDiscardConfirm, plural, submitLabel
 } from '../utils/decision.js'
 import { MOD } from './SettingsModal.jsx'
-
-const isSubmitKey = (event) => event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.nativeEvent?.isComposing
+import { isSaveKey } from '../utils/keys.js'
 
 /**
  * Finish review: Send feedback, Approve with notes or Approve, plus an optional
@@ -53,7 +52,7 @@ export function DecisionDialog({
 
   const handleKeyDown = (event) => {
     trapTab(event, dialogRef.current)
-    if (isSubmitKey(event)) {
+    if (isSaveKey(event)) {
       event.preventDefault()
       submit()
     }

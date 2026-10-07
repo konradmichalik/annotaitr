@@ -4,6 +4,7 @@ import { useFileAutocomplete } from '../hooks/useFileAutocomplete.js'
 import { FileAutocomplete } from './FileAutocomplete.jsx'
 import { TextareaBackdrop } from './TextareaBackdrop.jsx'
 import { getOffscreenSide } from '../utils/popoverVisibility.js'
+import { isSaveKey } from '../../../shared/utils/keys.js'
 
 const POPOVER_WIDTH = 320
 const GAP = 8
@@ -176,7 +177,7 @@ export function CommentPopover({
       }
     }
 
-    if (e.key === 'Enter' && !e.nativeEvent?.isComposing && (e.metaKey || e.ctrlKey) && text.trim()) {
+    if (isSaveKey(e) && text.trim()) {
       e.preventDefault()
       handleSubmit()
     }

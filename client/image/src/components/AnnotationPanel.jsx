@@ -4,6 +4,7 @@ import { matchAnnotation, describeElements } from '../utils/elementMatch.js'
 import { noteType } from '../../../shared/utils/noteTypes.js'
 import { NoteCard } from '../../../shared/components/NoteCard.jsx'
 import { PanelEmpty } from '../../../shared/components/PanelEmpty.jsx'
+import { isSaveKey } from '../../../shared/utils/keys.js'
 
 // Ink numbers on light marks, white on dark ones, by the mark colour's luminance.
 function badgeStyle(color) {
@@ -31,7 +32,7 @@ function CommentText({ annotation, isEditing, onSave, onCancel }) {
   }
 
   const handleKeyDown = (event) => {
-    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+    if (isSaveKey(event)) {
       event.preventDefault()
       onSave(text)
     }

@@ -8,6 +8,7 @@ import {
 import { useDropdown } from '../../../shared/hooks/useDropdown.js'
 import { useOutsideClick } from '../../../shared/hooks/useOutsideClick.js'
 import VoiceNoteButton from './VoiceNoteButton.jsx'
+import { isSaveKey } from '../../../shared/utils/keys.js'
 
 const POPOVER_WIDTH = 320
 const POPOVER_HEIGHT_ESTIMATE = 150
@@ -296,7 +297,7 @@ export default function CommentPopover({
       event.preventDefault()
       onClose()
     }
-    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+    if (isSaveKey(event)) {
       event.preventDefault()
       handleSubmit()
     }

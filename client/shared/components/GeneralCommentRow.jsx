@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { isPlainKeyPress } from '../utils/keys.js'
+import { isPlainKeyPress, isSaveKey } from '../utils/keys.js'
 import { KeyCap } from './KeyCap.jsx'
 import { PlusIcon } from './HeaderIcons.jsx'
 
@@ -61,7 +61,7 @@ export function GeneralCommentRow({ text, onSave, disabled = false, Field = Plai
     close()
   }
   const handleKeyDown = (event) => {
-    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !event.nativeEvent?.isComposing) {
+    if (isSaveKey(event)) {
       event.preventDefault()
       save()
     } else if (event.key === 'Escape') {

@@ -22,3 +22,12 @@ export function isPlainKeyPress(event) {
   if (isTypingTarget(target)) { return false }
   return !target?.closest?.('[role="menu"], [role="dialog"], [role="listbox"]')
 }
+
+/**
+ * ⌘/Ctrl+Enter saves a note or submits the open dialog. Shift is left out on
+ * purpose: ⌘/Ctrl+Shift+Enter opens the decision, and it must never also save.
+ */
+export function isSaveKey(event) {
+  if (event.key !== 'Enter' || event.shiftKey || !(event.metaKey || event.ctrlKey)) { return false }
+  return !(event.isComposing || event.nativeEvent?.isComposing)
+}

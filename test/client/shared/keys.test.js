@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { isTypingTarget, isPlainKeyPress } from '../../../client/shared/utils/keys.js'
+import { isTypingTarget, isPlainKeyPress, isSaveKey } from '../../../client/shared/utils/keys.js'
 
 function keyOn(target, key, init = {}) {
   const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init })
@@ -67,5 +67,29 @@ describe('isPlainKeyPress', () => {
     const event = keyOn(document.body, 'r')
     event.preventDefault()
     expect(isPlainKeyPress(event)).toBe(false)
+  })
+})
+
+describe('isSaveKey', () => {
+  it('accepts Cmd or Ctrl with Enter', () => {
+    expect(isSaveKey(keyOn(document.body, 'Enter', { metaKey: true }))).toBe(true)
+    expect(isSaveKey(keyOn(document.body, 'Enter', { ctrlKey: true }))).toBe(true)
+  })
+
+  it('leaves Cmd+Shift+Enter to the decision shortcut', () => {
+    expect(isSaveKey(keyOn(document.body, 'Enter', { metaKey: true, shiftKey: true }))).toBe(false)
+    expect(isSaveKey(keyOn(document.body, 'Enter', { ctrlKey: true, shiftKey: true }))).toBe(false)
+  })
+
+  it('rejects a plain Enter, another key and a key during composition', () => {
+    expect(isSaveKey(keyOn(document.body, 'Enter'))).toBe(false)
+    expect(isSaveKey(keyOn(document.body, 's', { metaKey: true }))).toBe(false)
+    expect(isSaveKey(keyOn(document.body, 'Enter', { metaKey: true, isComposing: true }))).toBe(false)
+  })
+
+  it('reads composition from a React event as well', () => {
+    const reactEvent = { key: 'Enter', metaKey: true, nativeEvent: { isComposing: true } }
+    expect(isSaveKey(reactEvent)).toBe(false)
+    expect(isSaveKey({ ...reactEvent, nativeEvent: { isComposing: false } })).toBe(true)
   })
 })
