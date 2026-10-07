@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   STATUS_DISPLAY, statusDisplay, badgeShowsNumber, readPreviousRound, threadStatus, placedThreads, orphanThreads, threadPageCounts, threadsQuery,
-  threadTitle, threadNumber, pendingReplyCount, openQuestions
+  threadTitle, threadNumber, threadLabel, pendingReplyCount, openQuestions
 } from '../../../client/image/src/threads/threadView.js'
 
 const box = (extra = {}) => ({ type: 'box', geometry: { x: 1, y: 1, width: 5, height: 5 }, text: 'Fix', ...extra })
@@ -124,6 +124,12 @@ describe('thread labels', () => {
     const carried = thread(box(), { number: null, origin: { round: 1, number: 2 } })
     expect(threadTitle(carried, 2)).toBe('Round 1 · mark 2')
     expect(threadNumber(carried)).toBe(2)
+  })
+
+  it('labels a thread with its own number, and a carried one with its origin round so it cannot collide', () => {
+    expect(threadLabel(thread(box(), { number: 2 }), 2)).toBe('2')
+    expect(threadLabel(thread(box(), { number: null, origin: { round: 1, number: 2 } }), 2)).toBe('1·2')
+    expect(threadLabel(thread(box(), { number: null, origin: { round: 2, number: 2 } }), 2)).toBe('2')
   })
 })
 

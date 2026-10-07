@@ -20,4 +20,12 @@ describe('PreviousRoundPanel', () => {
   it('labels an agent last reply with the agent', () => {
     expect(render([{ author: 'agent', status: 'applied', text: 'Done' }])).toContain('Agent: Done')
   })
+
+  it('numbers a carried thread with its origin round', () => {
+    const carried = { ...entry([]), number: null, origin: { round: 1, number: 2 } }
+    const html = renderToStaticMarkup(
+      <PreviousRoundPanel round={2} threads={[carried]} showOnImage onToggleShowOnImage={() => {}} onShow={() => {}} onShowDetached={() => {}} />
+    )
+    expect(html).toContain('1·2.')
+  })
 })

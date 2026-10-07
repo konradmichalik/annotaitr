@@ -1,14 +1,14 @@
 import StatusChip from '../../../shared/components/StatusChip.jsx'
 import { ACTION_ICONS } from '../utils/icons.jsx'
-import { STATUS_DISPLAY, AUTHOR_LABELS, threadStatus, threadNumber, orphanThreads, hasMark, pendingReplies, pendingReplyCount } from './threadView.js'
+import { STATUS_DISPLAY, AUTHOR_LABELS, threadStatus, threadLabel, orphanThreads, hasMark, pendingReplies, pendingReplyCount } from './threadView.js'
 
-function ThreadEntry({ thread, onActivate }) {
+function ThreadEntry({ thread, round, onActivate }) {
   const lastReply = thread.replies.at(-1)
   const hasPending = pendingReplies(thread).length > 0
   return (
     <li>
       <button type="button" className="previous-round-entry" onClick={(event) => onActivate(thread, event.currentTarget)}>
-        <span className="previous-round-entry-number">{threadNumber(thread)}.</span>
+        <span className="previous-round-entry-number">{threadLabel(thread, round)}.</span>
         <StatusChip status={threadStatus(thread)} display={STATUS_DISPLAY} />
         <span className="previous-round-entry-text">{thread.annotation.text}</span>
         {lastReply && (
@@ -60,14 +60,14 @@ export default function PreviousRoundPanel({ round, threads, showOnImage, onTogg
         </summary>
         {placed.length > 0 && (
           <ul className="previous-round-list">
-            {placed.map((t) => <ThreadEntry key={t.handle} thread={t} onActivate={activate} />)}
+            {placed.map((t) => <ThreadEntry key={t.handle} thread={t} round={round} onActivate={activate} />)}
           </ul>
         )}
         {orphans.length > 0 && (
           <>
             <h3 className="previous-round-heading">No longer in the target</h3>
             <ul className="previous-round-list">
-              {orphans.map((t) => <ThreadEntry key={t.handle} thread={t} onActivate={activate} />)}
+              {orphans.map((t) => <ThreadEntry key={t.handle} thread={t} round={round} onActivate={activate} />)}
             </ul>
           </>
         )}
