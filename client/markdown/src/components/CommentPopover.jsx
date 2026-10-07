@@ -73,8 +73,10 @@ export function CommentPopover({
     }
   }, [anchorEl, mode])
 
-  // Focus textarea on mount and mode changes
+  // Focus the field once it is rendered (an anchored popover renders only after its position is known) and on mode changes.
+  const rendered = mode === 'dialog' || position !== null
   useEffect(() => {
+    if (!rendered) {return}
     const id = setTimeout(() => {
       const el = textareaRef.current
       if (el) {
@@ -83,7 +85,7 @@ export function CommentPopover({
       }
     }, 0)
     return () => clearTimeout(id)
-  }, [mode])
+  }, [mode, rendered])
 
   // Track whether the popover has scrolled out of view (anchored mode only)
   useEffect(() => {
