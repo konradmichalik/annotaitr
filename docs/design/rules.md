@@ -93,7 +93,7 @@ These replace the mixed px and rem values and the roughly 30 hardcoded radii in 
 Left to right, the same in every mode:
 
 1. Logo and wordmark.
-2. Source chip with icon: `PDF`, `Image`, `Clipboard`, `URL`, `Video`, `Markdown`.
+2. Source chip with icon: `PDF`, `Image`, `Clipboard`, `URL`, `Video`, `Markdown`, and `Text` for a plain-text file in markdown mode.
 3. Target in Geist Mono, then one line of facts (pages, size, duration, file position) and the round chip when there is an earlier round.
 4. Shortcuts, settings and panel toggle as icon buttons.
 5. The origin indicator, then the decision split button.

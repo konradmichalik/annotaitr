@@ -72,7 +72,7 @@ const SHORTCUT_GROUPS = [
       { keys: `${MOD} + D`, desc: 'Delete selected text' },
       { keys: `${MOD} + K`, desc: 'Comment on selected text' },
       { keys: 'Alt + 1\u20130', desc: 'Quick label on selected text' },
-      { keys: `${MOD} + Enter`, desc: 'Submit comment' },
+      { keys: `${MOD} + Enter`, desc: 'Save the comment' },
       { keys: 'Alt + Click', desc: 'Insert text at position' },
     ],
   },
@@ -89,6 +89,13 @@ const SHORTCUT_GROUPS = [
       { keys: 'Enter / F3', desc: 'Next match' },
       { keys: 'Shift + Enter / Shift + F3', desc: 'Previous match' },
       { keys: 'Escape', desc: 'Clear query or close search' },
+    ],
+  },
+  {
+    title: 'Review',
+    items: [
+      { keys: `${MOD} + Shift + Enter`, desc: 'Open the decision' },
+      { keys: `${MOD} + Enter`, desc: 'Submit the open decision' },
     ],
   },
   {

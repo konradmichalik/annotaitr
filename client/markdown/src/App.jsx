@@ -5,13 +5,16 @@ import { AnnotationPanel } from './components/AnnotationPanel.jsx'
 import { TableOfContents } from './components/TableOfContents.jsx'
 import { ExportModal } from './components/ExportModal.jsx'
 import { FeedbackNotesModal } from './components/FeedbackNotesModal.jsx'
-import { AppHeader } from './components/AppHeader.jsx'
+import { AppHeader } from '../../shared/components/AppHeader.jsx'
+import { DecisionDialog } from '../../shared/components/DecisionDialog.jsx'
+import { SidePanelIcon } from '../../shared/components/HeaderIcons.jsx'
+import { useDecisionShortcut } from '../../shared/hooks/useDecisionShortcut.js'
+import { useReviewDecision, isGeneralComment, createGeneralComment } from './hooks/useReviewDecision.js'
 import { DisconnectedScreen, SubmittedScreen } from './components/DoneScreens.jsx'
 import { HashMismatchBanner, DraftBanner } from './components/ReviewBanners.jsx'
 import { CanvasTopbar } from './components/CanvasTopbar.jsx'
 import { validateAnnotationImport } from './utils/export.js'
 import { getTextStats } from './utils/textStats.js'
-import { createAnnotationId } from '../../shared/utils/annotationId.js'
 import { UpdateBanner } from '../../shared/components/UpdateBanner.jsx'
 import { FileTabsBar } from './components/FileTabsBar.jsx'
 import { initialAnnotationState } from './state/annotationReducer.js'
@@ -29,6 +32,12 @@ import { SettingsModal } from './components/SettingsModal.jsx'
 import { getItem, setItem } from '../../shared/utils/storage.js'
 import 'katex/dist/katex.min.css'
 import './styles.css'
+
+const NOTE_NOUNS = {
+  COMMENT: ['comment'],
+  DELETION: ['deletion'],
+  INSERTION: ['insertion'],
+}
 
 function getInitialSidebarCollapsed() {
   return getItem('md-annotator-sidebar-collapsed') === 'true'
@@ -50,15 +59,13 @@ function FileStats({ content }) {
 export default function App() {
   const [selectedAnnotationId, setSelectedAnnotationId] = useState(null)
   const [status, setStatus] = useState('Loading...')
-  const [submitted, setSubmitted] = useState(false)
-  const [decision, setDecision] = useState(null) // 'approved' | 'feedback'
-  const [approvedNoteCount, setApprovedNoteCount] = useState(0)
   const { settings, updateSetting, resetSettings } = useSettings()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialSidebarCollapsed)
   const [tocCollapsed, setTocCollapsed] = useState(getInitialTocCollapsed)
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [notesModalOpen, setNotesModalOpen] = useState(false)
-  const [settingsModalOpen, setSettingsModalOpen] = useState(false)
+  const [settingsTab, setSettingsTab] = useState(null)
+  const [decisionOpen, setDecisionOpen] = useState(false)
   const [toast, setToast] = useState(null)
   const [pinpointMode, setPinpointMode] = useState(() => settings.defaultMode === 'pinpoint')
   const [viewMode, setViewMode] = useState('preview') // 'preview' | 'source'
@@ -112,20 +119,17 @@ export default function App() {
   const totalAnnotationCount = files.reduce((sum, f) =>
     sum + f.annState.annotations.filter(a => a.type !== 'NOTES').length, 0
   )
+  // The active file's general comment is what the decision dialog's summary edits.
+  const generalComment = annotations.find(isGeneralComment) ?? null
+  const decisionNoteTypes = files.flatMap(f => f.annState.annotations)
+    .filter(a => a.type !== 'NOTES' && a !== generalComment)
+    .map(a => a.type)
   const notesGroups = files
     .map(f => ({
       filePath: f.path,
       notes: f.annState.annotations.filter(a => a.type === 'NOTES')
     }))
     .filter(g => g.notes.length > 0)
-
-  // Draft auto-save and restore
-  const { draftBanner, restoreDraft, dismissDraft } = useAnnotationDraft({
-    annotations,
-    contentHash: activeFile?.contentHash,
-    submitted,
-    enabled: settings.autoSaveDrafts,
-  })
 
   // Cross-file search (only active for multi-file sessions)
   const crossFileSearchState = useCrossFileSearch(files)
@@ -156,6 +160,18 @@ export default function App() {
   const annDispatch = useCallback((annAction) => {
     filesDispatch({ type: 'ANN', fileIndex: activeFileIndex, annAction })
   }, [activeFileIndex, filesDispatch])
+
+  const { decision, submitted, approvedNoteCount, finish } = useReviewDecision({
+    files, activeFileIndex, annDispatch, setErrorStatus,
+  })
+
+  // Draft auto-save and restore
+  const { draftBanner, restoreDraft, dismissDraft } = useAnnotationDraft({
+    annotations,
+    contentHash: activeFile?.contentHash,
+    submitted,
+    enabled: settings.autoSaveDrafts,
+  })
 
   const clearSelection = useCallback(() => setSelectedAnnotationId(null), [])
 
@@ -223,20 +239,7 @@ export default function App() {
   }, [annDispatch])
 
   const handleAddGlobalComment = useCallback(() => {
-    const ann = {
-      id: createAnnotationId(),
-      blockId: '',
-      startOffset: 0,
-      endOffset: 0,
-      type: 'COMMENT',
-      targetType: 'global',
-      text: '',
-      originalText: '',
-      createdAt: Date.now(),
-      startMeta: null,
-      endMeta: null
-    }
-    annDispatch({ type: 'ADD', annotation: ann })
+    annDispatch({ type: 'ADD', annotation: createGeneralComment('') })
     setSidebarCollapsed(false)
   }, [annDispatch])
 
@@ -358,46 +361,13 @@ export default function App() {
 
   useReviewShortcuts({ onSearch: handleOpenSearch, onUndo: handleUndo, onRedo: handleRedo })
 
-  const collectAnnotatedFiles = () => files.map(f => ({
-    path: f.path,
-    annotations: f.annState.annotations.filter(a => a.type !== 'NOTES'),
-    blocks: f.blocks
-  }))
+  const openDecision = useCallback(() => setDecisionOpen(true), [])
+  const closeDecision = useCallback(() => setDecisionOpen(false), [])
+  useDecisionShortcut(openDecision, !submitted && settingsTab === null)
 
-  // Approving with annotations present keeps them as notes instead of discarding them
-  const handleApprove = async () => {
-    try {
-      const response = await fetch('/api/approve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(totalAnnotationCount > 0 ? { files: collectAnnotatedFiles() } : {})
-      })
-      if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}`)
-      }
-      setSubmitted(true)
-      setDecision('approved')
-      setApprovedNoteCount(totalAnnotationCount)
-    } catch (err) {
-      setErrorStatus('Approve failed: ' + err.message)
-    }
-  }
-
-  const handleSubmitFeedback = async () => {
-    try {
-      const response = await fetch('/api/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files: collectAnnotatedFiles() })
-      })
-      if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}`)
-      }
-      setSubmitted(true)
-      setDecision('feedback')
-    } catch (err) {
-      setErrorStatus('Submit failed: ' + err.message)
-    }
+  const finishFromDialog = (result) => {
+    setDecisionOpen(false)
+    finish(result)
   }
 
   const { serverGone, reconnectState } = useServerConnection({ submitted })
@@ -459,17 +429,34 @@ export default function App() {
         <DraftBanner draft={draftBanner} onRestore={handleRestoreDraft} onDismiss={dismissDraft} />
       )}
       <AppHeader
-        isPlainTextFile={isPlainTextFile}
-        tocCollapsed={tocCollapsed}
-        onToggleToc={toggleToc}
+        leading={!isPlainTextFile && (
+          <button
+            type="button"
+            onClick={toggleToc}
+            className="btn btn-icon header-icon-btn"
+            title={tocCollapsed ? 'Show table of contents' : 'Hide table of contents'}
+            aria-label={tocCollapsed ? 'Show table of contents' : 'Hide table of contents'}
+          >
+            <SidePanelIcon side="left" />
+          </button>
+        )}
+        source={isPlainTextFile ? 'text' : 'markdown'}
+        target={filePath}
+        facts={isMultiFile ? `file ${activeFileIndex + 1} of ${files.length}` : null}
         origin={origin}
-        filePath={filePath}
-        totalAnnotationCount={totalAnnotationCount}
-        onSubmitFeedback={handleSubmitFeedback}
-        onApprove={handleApprove}
-        onOpenSettings={() => setSettingsModalOpen(true)}
-        sidebarCollapsed={sidebarCollapsed}
-        onToggleSidebar={toggleSidebar}
+        onOpenShortcuts={() => setSettingsTab('shortcuts')}
+        onOpenSettings={() => setSettingsTab('appearance')}
+        panelCollapsed={sidebarCollapsed}
+        onTogglePanel={toggleSidebar}
+        decision={{
+          itemCount: totalAnnotationCount,
+          title: totalAnnotationCount > 0
+            ? `Send ${totalAnnotationCount} annotation${totalAnnotationCount === 1 ? '' : 's'}`
+            : 'Approve as-is',
+          dialogOpen: decisionOpen,
+          onPrimary: (choice) => finish({ choice }),
+          onOpenDialog: openDecision,
+        }}
       />
 
       <FileTabsBar
@@ -571,9 +558,22 @@ export default function App() {
         totalFiles={files.length}
       />
 
+      {decisionOpen && (
+        <DecisionDialog
+          origin={origin}
+          noteTypes={decisionNoteTypes}
+          nouns={NOTE_NOUNS}
+          generalType="COMMENT"
+          generalText={generalComment ? generalComment.text : null}
+          onSubmit={finishFromDialog}
+          onClose={closeDecision}
+        />
+      )}
+
       <SettingsModal
-        isOpen={settingsModalOpen}
-        onClose={() => setSettingsModalOpen(false)}
+        isOpen={settingsTab !== null}
+        initialTab={settingsTab ?? undefined}
+        onClose={() => setSettingsTab(null)}
         settings={settings}
         updateSetting={updateSetting}
         resetSettings={resetSettings}

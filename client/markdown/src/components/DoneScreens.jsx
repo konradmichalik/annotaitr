@@ -1,5 +1,5 @@
 import { DoneScreen, DoneAutoClose } from '../../../shared/components/DoneScreen.jsx'
-import { ORIGIN_LABELS } from '../utils/originLabels.js'
+import { agentName } from '../../../shared/utils/origin.js'
 
 export function DisconnectedScreen({ reconnectState, annotationCount, onExport }) {
   return (
@@ -39,10 +39,10 @@ export function SubmittedScreen({ decision, approvedNoteCount, totalAnnotationCo
         ? (approvedNoteCount > 0
           ? `Approved as-is. ${approvedNoteCount} annotation${approvedNoteCount !== 1 ? 's' : ''} passed along as notes.`
           : 'No changes requested. The file was approved as-is.')
-        : `${totalAnnotationCount} annotation${totalAnnotationCount !== 1 ? 's' : ''} ${ORIGIN_LABELS[origin] ? `sent to ${ORIGIN_LABELS[origin]}` : 'submitted'}.`}
+        : `${totalAnnotationCount} annotation${totalAnnotationCount !== 1 ? 's' : ''} ${agentName(origin) ? `sent to ${agentName(origin)}` : 'submitted'}.`}
     >
-      {decision === 'feedback' && ORIGIN_LABELS[origin]
-        ? <p className="done-hint">{ORIGIN_LABELS[origin]} is processing your feedback. A new browser tab will open with the next iteration.</p>
+      {decision === 'feedback' && agentName(origin)
+        ? <p className="done-hint">{agentName(origin)} is processing your feedback. A new browser tab will open with the next iteration.</p>
         : <p className="done-hint">You can close this tab.</p>}
       <DoneAutoClose state={autoCloseState} onEnable={onEnableAutoClose} />
     </DoneScreen>
