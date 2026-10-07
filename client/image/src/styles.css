@@ -8,7 +8,7 @@
 
 .image-stats {
   white-space: nowrap;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 /* The canvas scrolls, a recording's player stays docked below it. */
@@ -103,8 +103,8 @@
 
 .viewport-trigger-size {
   color: var(--text-muted);
-  font-family: monospace;
-  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
 }
 
 .viewport-trigger:focus-visible,
@@ -203,7 +203,7 @@
 }
 
 .viewport-readout > span {
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .viewport-rotate {
@@ -279,7 +279,7 @@
   background: var(--bg);
   color: var(--text);
   font: inherit;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .viewport-input--adorned input {
@@ -290,7 +290,7 @@
 
 .viewport-unit {
   color: var(--text-muted);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .viewport-delay {
@@ -386,7 +386,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: rgb(46 52 64 / 40%);
+  background: var(--scrim);
 }
 
 .capture-card {
@@ -595,10 +595,10 @@
 /* Page element a mark is (or would be) matched to, like a DevTools inspect
    outline. The white drop shadow keeps it visible on dark screenshots. */
 .element-highlight {
-  fill: rgb(94 129 172 / 12%);
-  stroke: var(--primary-strong);
+  fill: color-mix(in srgb, var(--focus) 12%, transparent);
+  stroke: var(--focus);
   stroke-width: 2;
-  filter: drop-shadow(0 0 1px #fff);
+  filter: drop-shadow(0 0 1px var(--mark-halo));
 }
 
 .element-highlight-label {
@@ -609,8 +609,8 @@
   border-radius: var(--radius-sm);
   background: var(--primary-strong);
   color: var(--on-primary-strong);
-  font-family: monospace;
-  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
   line-height: 20px;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -621,8 +621,8 @@
   margin-bottom: 0.25rem;
   overflow: hidden;
   color: var(--text-muted);
-  font-family: monospace;
-  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -712,7 +712,7 @@ button.voice-note:hover {
 
 .voice-note--recording {
   border-color: var(--danger);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .voice-note--busy {
@@ -729,7 +729,7 @@ button.voice-note:hover {
 }
 
 .voice-note-action {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
   font-weight: 600;
 }
 
@@ -773,8 +773,8 @@ button.voice-note:hover {
   white-space: nowrap;
   background: var(--warning-bg);
   color: var(--text);
-  font-family: monospace;
-  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
 }
 
 .comment-popover-element {
@@ -794,7 +794,7 @@ button.voice-note:hover {
 .comment-popover-element-name {
   overflow: hidden;
   color: var(--text);
-  font-family: monospace;
+  font-family: var(--font-mono);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -832,8 +832,8 @@ button.voice-note:hover {
 
 .thread-popover-handle {
   color: var(--text-muted);
-  font-family: monospace;
-  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
   font-weight: normal;
 }
 
@@ -956,7 +956,7 @@ button.voice-note:hover {
 }
 
 .annotation-toolbar-btn-remove { color: var(--text-muted); }
-.annotation-toolbar-btn-remove:hover { color: var(--danger); background: rgb(191 97 106 / 12%); }
+.annotation-toolbar-btn-remove:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) var(--tint), transparent); }
 .annotation-toolbar-btn-edit { color: var(--text-muted); }
 .annotation-toolbar-btn-edit:hover { color: var(--primary); background: var(--bg-secondary); }
 .annotation-toolbar-btn-cancel { color: var(--text-muted); }
@@ -1161,7 +1161,7 @@ button.voice-note:hover {
   padding: 10px 20px 12px;
   background: var(--bg-card);
   border-top: 1px solid var(--border);
-  box-shadow: 0 -4px 16px rgb(0 0 0 / 4%);
+  box-shadow: var(--elev-1);
 }
 
 /* --- Scrubber --- */
@@ -1346,8 +1346,8 @@ button.voice-note:hover {
   border-radius: var(--radius-sm);
   background: var(--text);
   color: var(--bg);
-  font-family: monospace;
-  font-size: 0.6875rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
   white-space: nowrap;
   pointer-events: none;
 }
@@ -1402,8 +1402,8 @@ button.voice-note:hover {
 }
 
 .timeline-time {
-  font-family: monospace;
-  font-size: 0.8125rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1582,7 +1582,7 @@ button.voice-note:hover {
 
 .timeline-span-text strong {
   color: var(--text);
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-weight: 600;
 }
 
@@ -1675,8 +1675,8 @@ button.voice-note:hover {
   border-radius: 9999px;
   background: var(--badge-bg);
   color: var(--badge-text);
-  font-family: monospace;
-  font-size: 0.6875rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
   font-weight: 500;
 }
 

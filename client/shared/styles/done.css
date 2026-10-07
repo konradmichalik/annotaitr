@@ -105,7 +105,7 @@
 }
 
 .done-autoclose-prompt input[type="checkbox"] {
-  accent-color: var(--primary);
+  accent-color: var(--focus);
 }
 
 .done-icon--disconnected {

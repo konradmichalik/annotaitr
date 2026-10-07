@@ -179,6 +179,7 @@
   box-shadow: inset 3px 0 0 var(--primary);
 }
 
+/* A label colour on a light tint of its intent, in sentence case. */
 .panel-type-badge {
   font-size: var(--fs-sm);
   font-weight: 600;
@@ -205,6 +206,7 @@
   transition: opacity var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
 }
 
+/* Card actions show on hover and on keyboard focus, never on hover only. */
 .panel-item:hover .panel-edit-btn,
 .panel-item.selected .panel-edit-btn,
 .panel-item:focus-within .panel-edit-btn {

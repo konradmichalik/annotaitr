@@ -16,6 +16,7 @@
   --line: #e2e5ea;
   --line-control: #8a909c;
   --focus: #2f55c8;
+  --on-focus: #fff;
   --brand: #767f9e;
 
   /* Status: darker than the intent marks, so they hold 4.5:1 as text and on their tint. */
@@ -42,6 +43,7 @@
   --intent-earlier-mark: #5a6170;
   --intent-earlier-label: var(--ink-muted);
   --mark-halo: rgb(255 255 255 / 60%);
+  --scrim: rgb(15 17 20 / 50%);
 
   /* Search hits in the reviewed text */
   --search-hit: #ffe48a;
@@ -85,6 +87,7 @@
   --line: #22262d;
   --line-control: #6b7280;
   --focus: #8fb0ff;
+  --on-focus: #16181d;
   --status-ok: #5fd38a;
   --status-warn: #e3b341;
   --status-danger: #ff8b8b;

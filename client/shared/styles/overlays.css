@@ -8,7 +8,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgb(0 0 0 / 50%);
+  background: var(--scrim);
 }
 
 .modal {
@@ -183,7 +183,7 @@
 .settings-segmented-btn.active {
   background: var(--bg-card);
   color: var(--text);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
+  box-shadow: var(--elev-1);
 }
 
 .settings-segmented-icon {
@@ -245,8 +245,8 @@
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   padding: 1rem;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: break-word;
@@ -263,7 +263,7 @@
 }
 
 .btn-export:hover:not(:disabled) {
-  background: rgb(94 129 172 / 10%);
+  background: color-mix(in srgb, var(--focus) var(--tint), transparent);
 }
 
 /* === Dropdown === */
@@ -279,7 +279,7 @@
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+  box-shadow: var(--elev-2);
   padding: 0.25rem;
   z-index: 10;
 }
@@ -398,7 +398,7 @@
   height: 16px;
   border-radius: 50%;
   background: var(--bg-card);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 15%);
+  box-shadow: var(--elev-1);
   transition: transform var(--transition-fast);
 }
 
