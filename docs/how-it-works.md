@@ -173,7 +173,12 @@ sessions](usage.md#review-sessions)). Reopening the same image file, URL, video
 or PDF within 24 hours starts the next round, while a clipboard image has no
 identity to be found by and continues only with `--session <id>`. The next round
 shows the previous round's marks, with the agent's
-replies, in a separate layer that a "Previous round" toggle hides. Marks whose
+replies, in a separate layer that a "Previous round" toggle hides. The reviewer
+can answer a thread there with a reply that travels with the next decision. The
+feedback lists the new marks first, then a "Replies to round N" section with
+each exchange, and threads that were answered continue on the same handle. An
+approval while the agent's questions are unanswered asks for confirmation
+first. Marks whose
 position no longer matches, for example after a page was re-captured, are drawn
 as ghosts. Markdown mode has no sessions yet.
 
