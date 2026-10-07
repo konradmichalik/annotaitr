@@ -45,9 +45,9 @@ labels it as page content. If collecting the map fails, the capture
 still works and the feedback simply has no element lines. Local images,
 clipboard images and recordings have no DOM, so their output is unchanged.
 
-Approving with annotations present becomes **Approve with Notes**: the
-target is accepted as-is, but the notes are passed along as context rather
-than discarded.
+**Approve with notes**, from the decision dialog, accepts the target as-is
+and passes the notes along as context. **Approve** discards them after one
+confirmation.
 
 ### Copying and saving
 
@@ -139,9 +139,8 @@ Once a file is open in the browser:
 
 On submit, each annotation is formatted as a Markdown block naming the
 affected line(s) and the requested change (remove / comment / insert); a
-multi-file session groups blocks by file. As in image mode, approving with
-annotations present becomes **Approve with Notes** instead of discarding
-them.
+multi-file session groups blocks by file. As in image mode, the decision
+dialog offers **Approve with notes** to pass the notes along as context.
 
 ## The review loop
 

@@ -211,8 +211,10 @@ Without a model, `whisper-cli` or ffmpeg the button is simply not shown.
 
 ## `--origin`
 
-Identifies the caller in the feedback output and to the client's origin
-badge. One of `cli` (default), `claude-code`, `opencode`, `vibe`. Set
+Identifies the caller in the feedback output and in the annotator header,
+which says who is waiting for the decision ("Claude Code is waiting",
+"Terminal is waiting"). One of `cli` (default), `claude-code`, `opencode`,
+`vibe`. Set
 automatically by the Claude Code, OpenCode and Vibe integrations; a plain
 terminal invocation never needs it.
 
@@ -326,12 +328,13 @@ stores the reply as "pending, sent with your decision". It can be removed
 until the decision is submitted. The panel shows the reviewer's reply as
 "You: ..." and counts them as "· N to send", and a thread with a pending reply
 carries a ↩ mark on its canvas badge. A decision may carry only replies and no
-new marks, so Feedback is enabled with replies alone.
+new marks, so the main button reads Send feedback with replies alone.
 
-Approving while the agent's questions are unanswered opens a warning: "The
-agent asked N questions you have not answered", with Answer and Approve
-anyway. It never blocks the approval. The decision's first line
-then reads `Feedback: 1 reply to round 1, no new marks.`, or
+Approving while the agent's questions are unanswered opens the decision
+dialog with Approve selected and the open questions listed ("The agent asked
+N questions you have not answered"), with an Answer button. It never blocks
+the approval. A round with only replies sent as feedback starts with
+`Feedback: 1 reply to round 1, no new marks.`, or
 `APPROVED WITH NOTES: 1 reply to round 1. ...` when the target is approved.
 
 The agent sees the exchange under "Replies to round N", after the feedback for
@@ -349,6 +352,24 @@ Reviewer: CI-Grün #2e7d32
 Answered threads continue into the next round on the same handle, so
 `annotaitr reply --to <handle>` works on them. All other threads end with the
 decision.
+
+## Finishing a review
+
+The split button at the top right is the only way out of a review. Its main
+part follows the state: **Approve** while there is nothing to send, **Send
+feedback** with the number of notes and pending replies otherwise. The chevron
+next to it, or Ctrl/Cmd+Shift+Enter from anywhere, opens the decision dialog:
+
+| Option | Output |
+| --- | --- |
+| Send feedback | The notes as change requests |
+| Approve with notes | `APPROVED WITH NOTES: ...`, the notes are context |
+| Approve | `APPROVED: ...`, the notes are discarded after one confirmation |
+
+The dialog's optional summary is the general comment: it is prefilled with an
+existing one and replaces it. Ctrl/Cmd+Enter submits the dialog. Outside the
+dialog Ctrl/Cmd+Enter only saves the note being written, it never sends the
+review.
 
 ## Environment variables
 
