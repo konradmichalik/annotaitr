@@ -13,7 +13,7 @@ export function BlockHoverHint({ target }) {
         height: el.offsetHeight,
       }}
     >
-      <span className="block-hover-hint-badge">⇧ + Klick: Block annotieren</span>
+      <span className="block-hover-hint-badge">Shift+click: annotate a block</span>
     </div>
   )
 }
