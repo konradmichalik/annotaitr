@@ -1,6 +1,6 @@
 import { DoneScreen } from '../../../shared/components/DoneScreen.jsx'
 import { intentOf } from '../../../shared/utils/intents.js'
-import { copyToClipboard, downloadAsJsonFile, formatAnnotationsForExport, formatAnnotationsForJsonExport } from '../utils/export.js'
+import { copyToClipboard, downloadAsJsonFile, formatAnnotationsForExport, formatAnnotationsForJsonExport, shortFileNames } from '../utils/export.js'
 
 // Agent notes from --feedback-notes are context the agent wrote, not the reviewer's notes.
 const ownNotes = (file) => file.annState.annotations.filter((a) => a.type !== 'NOTES')
@@ -15,11 +15,12 @@ const baseName = (path) => path.split(/[\\/]/).pop().replace(/\.[^.]+$/, '') || 
 /** Every file's notes as Markdown, and one JSON export per file, for the next session. */
 function rescueActions(files) {
   const withNotes = files.filter((file) => ownNotes(file).length > 0)
+  const names = shortFileNames(withNotes.map((file) => file.path))
   return [
     {
       label: 'Copy as Markdown',
       done: 'Copied as Markdown',
-      run: () => copyToClipboard(withNotes.map((file) => formatAnnotationsForExport(ownNotes(file), file.blocks, file.path)).join('\n\n'))
+      run: () => copyToClipboard(withNotes.map((file, i) => formatAnnotationsForExport(ownNotes(file), file.blocks, names[i])).join('\n\n'))
     },
     {
       label: 'Export JSON',

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatAnnotationsForExport, formatAnnotationsForJsonExport, validateAnnotationImport } from '../../../client/markdown/src/utils/export.js'
+import { formatAnnotationsForExport, formatAnnotationsForJsonExport, validateAnnotationImport, shortFileNames } from '../../../client/markdown/src/utils/export.js'
 
 const makeBlock = (overrides = {}) => ({
   id: 'block-0',
@@ -252,5 +252,17 @@ describe('validateAnnotationImport', () => {
     expect(result.valid).toBe(true)
     expect(result.filePath).toBeNull()
     expect(result.contentHash).toBeNull()
+  })
+})
+
+describe('shortFileNames', () => {
+  it('names each file by its file name', () => {
+    expect(shortFileNames(['../../../var/tmp/a/README.md', '../docs/usage.md'])).toEqual(['README.md', 'usage.md'])
+  })
+
+  it('keeps as many folders as it takes to tell files with the same name apart', () => {
+    expect(shortFileNames(['../x/docs/README.md', '../y/docs/README.md', 'notes.md']))
+      .toEqual(['x/docs/README.md', 'y/docs/README.md', 'notes.md'])
+    expect(shortFileNames(['a\\README.md', 'b\\README.md'])).toEqual(['a/README.md', 'b/README.md'])
   })
 })

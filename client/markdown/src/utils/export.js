@@ -12,6 +12,26 @@ function handleTag(id) {
 }
 
 /**
+ * Each path as its file name, with as many parent folders as it takes to tell
+ * files of the same name apart. The relative paths the CLI passes can climb
+ * far up, which says nothing to someone reading a copied export.
+ */
+export function shortFileNames(paths) {
+  const parts = paths.map((path) => path.split(/[\\/]/).filter((part) => part && part !== '.' && part !== '..'))
+  const depths = parts.map(() => 1)
+  const nameAt = (i) => parts[i].slice(-depths[i]).join('/')
+  for (let changed = true; changed;) {
+    changed = false
+    const names = parts.map((_, i) => nameAt(i))
+    names.forEach((name, i) => {
+      const clash = names.some((other, j) => j !== i && other === name)
+      if (clash && depths[i] < parts[i].length) { depths[i] += 1; changed = true }
+    })
+  }
+  return parts.map((_, i) => nameAt(i))
+}
+
+/**
  * Format annotations as exportable markdown.
  */
 export function formatAnnotationsForExport(annotations, blocks, filePath) {
