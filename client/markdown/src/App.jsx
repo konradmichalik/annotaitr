@@ -240,14 +240,15 @@ export default function App() {
     annDispatch({ type: 'ADD', annotation: ann })
   }, [annDispatch])
 
-  const handleAddGlobalComment = useCallback(() => {
-    annDispatch({ type: 'ADD', annotation: createGeneralComment('') })
-    setSidebarCollapsed(false)
-  }, [annDispatch])
-
-  const handleEditGlobalComment = useCallback((id, text) => {
-    annDispatch({ type: 'EDIT', id, annotationType: 'COMMENT', text })
-  }, [annDispatch])
+  const handleSaveGeneralComment = useCallback((text) => {
+    if (!generalComment) {
+      if (text) { annDispatch({ type: 'ADD', annotation: createGeneralComment(text) }) }
+    } else if (text) {
+      annDispatch({ type: 'EDIT', id: generalComment.id, annotationType: 'COMMENT', text })
+    } else {
+      annDispatch({ type: 'DELETE', id: generalComment.id })
+    }
+  }, [annDispatch, generalComment])
 
   const handleDeleteAnnotation = useCallback((id) => {
     annDispatch({ type: 'DELETE', id })
@@ -353,6 +354,12 @@ export default function App() {
     filesDispatch({ type: 'MARK_REVIEWED', fileIndex: index })
   }, [activeFileIndex, setActiveFileIndex, filesDispatch])
 
+  // A card from another file opens that file first; the selection follows once it is shown.
+  const handleOpenNote = useCallback((fileIndex, id) => {
+    handleSelectFile(fileIndex)
+    setTimeout(() => setSelectedAnnotationId(id), 150)
+  }, [handleSelectFile])
+
   const handleOpenSearch = useCallback(() => {
     if (crossFileSearchProps) {
       crossFileSearchState.openSearch()
@@ -377,7 +384,7 @@ export default function App() {
   const { serverGone, reconnectState } = useServerConnection({ submitted })
 
   const { state: autoCloseState, enableAndStart } = useAutoClose(submitted, settings.autoCloseDelay)
-  const { width: panelWidth, handleMouseDown: handlePanelResize } = useResizablePanel('md-annotator-panel-width', 300, 1)
+  const { width: panelWidth, handleMouseDown: handlePanelResize } = useResizablePanel('md-annotator-panel-width', 340, 1)
   const { width: tocWidth, handleMouseDown: handleTocResize } = useResizablePanel('md-annotator-toc-width', 220, -1)
 
   const exportModal = (
@@ -534,15 +541,21 @@ export default function App() {
           />
         )}
         <AnnotationPanel
+          files={files}
+          activeFileIndex={activeFileIndex}
           annotations={annotations}
+          blocks={blocks}
           selectedAnnotationId={selectedAnnotationId}
           onSelect={handleSelectAnnotation}
+          onOpenNote={handleOpenNote}
           onEdit={handlePanelEdit}
           onDelete={handleDeleteAnnotation}
           onExport={() => setExportModalOpen(true)}
           onImport={handleImportAnnotations}
-          onAddGlobalComment={handleAddGlobalComment}
-          onEditGlobalComment={handleEditGlobalComment}
+          generalComment={generalComment}
+          onSaveGeneralComment={handleSaveGeneralComment}
+          generalDisabled={settingsTab !== null || decisionOpen || exportModalOpen}
+          approves={totalAnnotationCount === 0}
           collapsed={sidebarCollapsed}
           width={panelWidth}
         />

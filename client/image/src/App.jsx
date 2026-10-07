@@ -45,6 +45,8 @@ import { applySummary, plural } from '../../shared/utils/decision.js'
 import { sourceKind, targetFacts } from './utils/headerSource.js'
 import { DoneScreen, DoneAutoClose } from '../../shared/components/DoneScreen.jsx'
 import { getItem, setItem } from '../../shared/utils/storage.js'
+import { PanelSwitch } from '../../shared/components/PanelSwitch.jsx'
+import { GeneralCommentRow } from '../../shared/components/GeneralCommentRow.jsx'
 
 const NOTE_NOUNS = {
   box: ['box', 'boxes'],
@@ -63,6 +65,12 @@ const isGeneralComment = (a) => a.type === 'comment' && !a.geometry && typeof a.
 function createGeneralComment(text) {
   return { id: createAnnotationId(), createdAt: Date.now(), type: 'comment', geometry: null, text, color: null }
 }
+
+const EMPTY_KEYS = [
+  { key: 'R', label: 'Box around an area' },
+  { key: 'A', label: 'Arrow to point at something' },
+  { key: 'C', label: 'Pin a comment to a spot' }
+]
 
 function getInitialSidebarCollapsed() {
   return getItem('img-annotator-sidebar-collapsed') === 'true'
@@ -92,6 +100,9 @@ export default function App() {
   const [decisionDialog, setDecisionDialog] = useState(null)
   const primaryRef = useRef(null)
   const [editingAnnotationId, setEditingAnnotationId] = useState(null)
+  // The mark selected on the canvas, whose card the panel selects and scrolls to.
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState(null)
+  const [panelTab, setPanelTab] = useState('round')
   const [zoom, setZoom] = useState(1)
   const [settingsTab, setSettingsTab] = useState(null)
   const settingsOpen = settingsTab !== null
@@ -149,7 +160,7 @@ export default function App() {
   const subject = isVideo ? 'recording' : (isDocument ? 'document' : 'image')
   const { state: autoCloseState, enableAndStart } = useAutoClose(!!decision, settings.autoCloseDelay)
   const { serverGone, reconnectState } = useServerConnection({ submitted: !!decision })
-  const { width: panelWidth, handleMouseDown: handlePanelResize } = useResizablePanel('img-annotator-panel-width', 300, 1)
+  const { width: panelWidth, handleMouseDown: handlePanelResize } = useResizablePanel('img-annotator-panel-width', 340, 1)
   const toastTimerRef = useRef(null)
   // Guards submit() synchronously: the buttons only disable once frame
   // export reports progress, which is too late to stop a double click.
@@ -260,7 +271,6 @@ export default function App() {
     setSidebarCollapsed(false)
   }, [])
 
-  const addGlobalComment = useCallback(() => addComment({}), [addComment])
   const pageShown = doc.current
   const addPageComment = useCallback(() => addComment({ page: pageShown }), [addComment, pageShown])
   const clearAutoEdit = useCallback(() => setAutoEditId(null), [])
@@ -329,6 +339,19 @@ export default function App() {
     if (!before) { return }
     dispatch({ type: 'EDIT', id, before, after: { ...before, text } })
   }, [state.annotations])
+
+  const generalComment = state.annotations.find(isGeneralComment) ?? null
+  const saveGeneralComment = useCallback((text) => {
+    if (!generalComment) {
+      if (text) { dispatch({ type: 'ADD', annotation: createGeneralComment(text) }) }
+      return
+    }
+    if (text) {
+      dispatch({ type: 'EDIT', id: generalComment.id, before: generalComment, after: { ...generalComment, text } })
+    } else {
+      dispatch({ type: 'REMOVE', id: generalComment.id })
+    }
+  }, [generalComment])
 
   const removeAnnotation = useCallback((id) => {
     dispatch({ type: 'REMOVE', id })
@@ -459,7 +482,17 @@ export default function App() {
   const annotationCount = state.annotations.length
   const replyCount = pendingReplyCount(previous.threads)
   const decisionItemCount = annotationCount + replyCount
-  const generalComment = state.annotations.find(isGeneralComment) ?? null
+  const cardCount = annotationCount - (generalComment ? 1 : 0)
+  // A round that opens on replies shows them first; a new note brings its card into view.
+  const hasThreads = previous.threads.length > 0
+  const cardCountRef = useRef(cardCount)
+  useEffect(() => {
+    if (hasThreads && cardCountRef.current === 0) { setPanelTab('replies') }
+  }, [hasThreads])
+  useEffect(() => {
+    if (cardCount > cardCountRef.current) { setPanelTab('round') }
+    cardCountRef.current = cardCount
+  }, [cardCount])
   const notesTitle = [annotationCount > 0 && `${annotationCount} annotation${annotationCount === 1 ? '' : 's'}`, replyCount > 0 && `${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`].filter(Boolean).join(' and ')
   const origin = meta?.origin
   const source = sourceKind(meta)
@@ -633,6 +666,7 @@ export default function App() {
                 onCommitEdit={commitEditAnnotation}
                 onRemoveAnnotation={removeAnnotation}
                 onRequestEdit={setEditingAnnotationId}
+                onSelectionChange={setSelectedAnnotationId}
                 onUndo={undo}
                 onRedo={redo}
                 colorMode={settings.colorMode}
@@ -678,21 +712,7 @@ export default function App() {
         {!sidebarCollapsed && (
           <aside className="app-sidebar" style={{ width: panelWidth }}>
             <div className="panel-header">
-              <h2>Annotations</h2>
-              <span className="panel-badge">{annotationCount}</span>
-              <button
-                type="button"
-                className="panel-icon-btn"
-                onClick={addGlobalComment}
-                title="Add general comment"
-                aria-label="Add general comment"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="16" />
-                  <line x1="8" y1="12" x2="16" y2="12" />
-                </svg>
-              </button>
+              <h2>Feedback</h2>
               {isDocument && (
                 <button
                   type="button"
@@ -718,21 +738,50 @@ export default function App() {
                 onDone={showToast}
               />
             </div>
-            <PreviousRoundPanel round={previous.round} threads={previous.threads} showOnImage={showPrevious} onToggleShowOnImage={togglePrevious} onShow={showThread} onShowDetached={showEntryThread} />
+            {previous.threads.length > 0 && (
+              <PanelSwitch
+                label="Feedback"
+                panelId="feedback-tabpanel"
+                value={panelTab}
+                onChange={setPanelTab}
+                options={[
+                  { id: 'round', label: `This round · ${cardCount}` },
+                  { id: 'replies', label: `Replies · ${previous.threads.length}` }
+                ]}
+              />
+            )}
             {entryPopoverThread && (
               <ThreadPopover key={entryPopoverThread.handle} thread={entryPopoverThread} round={previous.round} anchorPoint={entryThread.anchorPoint} onClose={closeThread} onReload={previous.reload} />
             )}
-            <AnnotationPanel
-              annotations={review.ordered}
-              onRemove={removeAnnotation}
-              onEdit={editAnnotation}
-              onEditGlobalComment={editGlobalComment}
-              elements={elements}
-              timeLabelFor={isVideo ? formatTimes : (isDocument ? pageLabel : null)}
-              subject={subject}
-              autoEditId={autoEditId}
-              onAutoEditConsumed={clearAutoEdit}
-              selectedId={editingAnnotationId}
+            <div
+              className="panel-body"
+              id="feedback-tabpanel"
+              {...(previous.threads.length > 0 ? { role: 'tabpanel', 'aria-labelledby': `panel-tab-${panelTab}` } : {})}
+            >
+              {previous.threads.length > 0 && panelTab === 'replies' ? (
+                <PreviousRoundPanel round={previous.round} threads={previous.threads} showOnImage={showPrevious} onToggleShowOnImage={togglePrevious} onShow={showThread} onShowDetached={showEntryThread} />
+              ) : (
+                <AnnotationPanel
+                  annotations={review.ordered}
+                  hidden={generalComment}
+                  onRemove={removeAnnotation}
+                  onEdit={editAnnotation}
+                  onEditComment={editGlobalComment}
+                  elements={elements}
+                  timeLabelFor={isVideo ? formatTimes : (isDocument ? pageLabel : null)}
+                  subject={subject}
+                  autoEditId={autoEditId}
+                  onAutoEditConsumed={clearAutoEdit}
+                  selectedId={selectedAnnotationId}
+                  emptyKeys={EMPTY_KEYS}
+                  approves={decisionItemCount === 0}
+                />
+              )}
+            </div>
+            <GeneralCommentRow
+              text={generalComment?.text || null}
+              onSave={saveGeneralComment}
+              disabled={settingsOpen || showExport || !!decisionDialog}
             />
           </aside>
         )}

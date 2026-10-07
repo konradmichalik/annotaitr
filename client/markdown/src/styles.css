@@ -1301,13 +1301,12 @@
 
 /* === Annotation Panel === */
 .annotation-panel {
-  width: var(--sidebar-width);
-  flex-shrink: 0;
-  border-left: 1px solid var(--border);
-  background: var(--bg-sidebar);
-  overflow-y: auto;
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
+  overflow: hidden;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
 }
 
 .panel-toggle-btn {

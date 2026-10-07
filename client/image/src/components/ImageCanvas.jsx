@@ -240,7 +240,7 @@ export default function ImageCanvas({
   // A PDF page's words in reading order, for the Text tool.
   voiceNotes = false, elements = [], words = [],
   // Last round's marks (placed threads only), drawn read-only and opened with the Select tool.
-  previousThreads = [], previousRound = null, showPrevious = false, openThreadHandle = null, onOpenThread = null, onCloseThread = null, onReloadThreads = null
+  previousThreads = [], previousRound = null, showPrevious = false, openThreadHandle = null, onOpenThread = null, onCloseThread = null, onReloadThreads = null, onSelectionChange = null
 }) {
   const wrapperRef = useRef(null)
   // A thread opened from the panel on another page mounts this canvas with its popover already due, before the wrapper exists to anchor it to.
@@ -298,6 +298,8 @@ export default function ImageCanvas({
   const [strokePoints, setStrokePoints] = useState([])
   const [pending, setPending] = useState(null)
   const [selectedId, setSelectedId] = useState(null)
+  // The panel follows the selection, so the mark's card is selected and scrolled into view.
+  useEffect(() => { onSelectionChange?.(selectedId) }, [selectedId, onSelectionChange])
   const [hoveringAnnotation, setHoveringAnnotation] = useState(false)
   // Where the pointer rests over the image, for outlining the page element a
   // mark placed there would be matched to. Only tracked for a captured page.

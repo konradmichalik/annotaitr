@@ -64,18 +64,17 @@
 
 .panel-header {
   display: flex;
+  flex-shrink: 0;
+  gap: var(--space-2);
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  background: var(--bg-sidebar);
-  z-index: 1;
+  min-height: 52px;
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface);
 }
 
 .panel-header h2 {
-  font-size: 0.875rem;
+  margin-right: auto;
+  font-size: var(--fs-lg);
   font-weight: 600;
 }
 
@@ -100,10 +99,57 @@
 }
 
 .panel-empty {
-  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-4);
+  color: var(--ink);
   font-size: var(--fs-md);
-  color: var(--text-muted);
-  text-align: center;
+}
+
+.panel-empty-title {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.panel-empty-lead {
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+
+.panel-empty-keys {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.panel-empty-keys li {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.panel-empty-note {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+
+.panel-empty-note svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.panel-empty-note strong {
+  color: var(--ink);
 }
 
 .panel-list {
@@ -252,10 +298,6 @@
   gap: 0.375rem;
 }
 
-.panel-empty-hint {
-  margin-top: 0.5rem;
-  font-size: var(--fs-sm);
-}
 
 /* A shape on the image: its number, tool icon and color, as in the canvas marker. */
 .panel-type-badge.shape {
@@ -470,4 +512,273 @@
 .reply-list-time {
   color: var(--text-muted);
   font-size: var(--fs-sm);
+}
+
+/* The scrolling part of the panel, between the switch and the general comment. */
+.panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* === Two-way switch === */
+.panel-switch {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+  margin: 0 var(--space-4) var(--space-2);
+  padding: 2px;
+  border-radius: var(--radius-card);
+  background: var(--surface-sunken);
+}
+
+.panel-switch-tab {
+  flex: 1;
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.panel-switch-tab.active {
+  background: var(--card);
+  color: var(--ink);
+  font-weight: 500;
+  box-shadow: var(--elev-1);
+}
+
+.panel-switch-tab:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* === Cards === */
+.note-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-4) var(--space-4);
+  list-style: none;
+}
+
+.note-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--card);
+  cursor: pointer;
+}
+
+.note-card.selected {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 1px var(--focus);
+}
+
+.note-card-head {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 24px;
+}
+
+.note-card-select {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.note-card-select:focus-visible,
+.note-card-action:focus-visible,
+.general-comment-row:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.note-number {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 var(--space-1);
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.note-type {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  color: var(--ink);
+  font-size: var(--fs-md);
+  font-weight: 500;
+}
+
+.note-type svg {
+  width: 14px;
+  height: 14px;
+}
+
+.note-type--change { color: var(--intent-change-label); }
+.note-type--add { color: var(--intent-add-label); }
+.note-type--remove { color: var(--intent-remove-label); }
+.note-type--question { color: var(--intent-question-label); }
+
+.note-location {
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-card-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+}
+
+.note-location + .note-card-actions {
+  margin-left: 0;
+}
+
+.note-card-select + .note-card-actions {
+  margin-left: auto;
+}
+
+.note-card:hover .note-card-actions,
+.note-card:focus-within .note-card-actions {
+  opacity: 1;
+}
+
+.note-card-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.note-card-action svg {
+  width: 14px;
+  height: 14px;
+}
+
+.note-card-action:hover {
+  background: var(--surface-sunken);
+  color: var(--ink);
+}
+
+.note-card-action--remove:hover {
+  color: var(--status-danger);
+}
+
+.note-quote {
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.note-text {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* === General comment === */
+.general-comment {
+  flex-shrink: 0;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.general-comment--open {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.general-comment-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px dashed var(--line-control);
+  border-radius: var(--radius-card);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-md);
+  text-align: left;
+  cursor: pointer;
+}
+
+.general-comment-row:hover {
+  background: var(--surface-sunken);
+}
+
+.general-comment-label {
+  flex-shrink: 0;
+}
+
+.general-comment-preview {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.general-comment-row .key-cap {
+  margin-left: auto;
+  color: var(--ink-muted);
+}
+
+.general-comment-field-label {
+  font-size: var(--fs-sm);
+  font-weight: 600;
 }

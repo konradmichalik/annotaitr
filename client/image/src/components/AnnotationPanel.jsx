@@ -1,17 +1,34 @@
 import { useState, useRef, useEffect } from 'react'
 import { TOOL_ICONS, ACTION_ICONS } from '../utils/icons.jsx'
 import { matchAnnotation, describeElements } from '../utils/elementMatch.js'
+import { noteType } from '../../../shared/utils/noteTypes.js'
+import { NoteCard } from '../../../shared/components/NoteCard.jsx'
+import { PanelEmpty } from '../../../shared/components/PanelEmpty.jsx'
 
-const TYPE_LABELS = { box: 'Box', element: 'Element', text: 'Text', arrow: 'Arrow', freehand: 'Freehand', highlighter: 'Highlight', pin: 'Pin' }
+// Ink numbers on light marks, white on dark ones, by the mark colour's luminance.
+function badgeStyle(color) {
+  const match = /^#([0-9a-f]{6})$/i.exec(color ?? '')
+  if (!match) { return undefined }
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(match[1].slice(i, i + 2), 16) / 255)
+  const light = 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.55
+  return { background: color, color: light ? 'var(--intent-add-on-mark)' : 'var(--intent-change-on-mark)' }
+}
 
-/** A general comment about the whole image (no geometry, no canvas presence): edited inline right here, not via the canvas popover. */
-function GlobalCommentItem({ annotation, title = 'General', timeLabel = null, isEditing, onStartEdit, onSave, onCancel, onRemove }) {
+/** A comment without a shape (on a page, a time or the whole target), typed and edited right in its card. */
+function CommentText({ annotation, isEditing, onSave, onCancel }) {
   const [text, setText] = useState(annotation.text || '')
   const textareaRef = useRef(null)
 
   useEffect(() => {
-    if (isEditing) { textareaRef.current?.focus() }
-  }, [isEditing])
+    if (isEditing) {
+      setText(annotation.text || '')
+      textareaRef.current?.focus()
+    }
+  }, [isEditing, annotation.text])
+
+  if (!isEditing) {
+    return <p className="note-text">{annotation.text || <span className="panel-comment-empty">No comment</span>}</p>
+  }
 
   const handleKeyDown = (event) => {
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
@@ -25,181 +42,95 @@ function GlobalCommentItem({ annotation, title = 'General', timeLabel = null, is
   }
 
   return (
-    <li className="panel-item panel-global-comment">
-      <div className="panel-item-header">
-        <span className="panel-type-badge global">{title}</span>
-        {timeLabel && <span className="panel-time-chip">{timeLabel}</span>}
-        <div className="panel-item-actions">
-          {!isEditing && (
-            <button
-              type="button"
-              className="panel-edit-btn"
-              onClick={() => { setText(annotation.text || ''); onStartEdit() }}
-              title="Edit comment"
-              aria-label="Edit comment"
-            >
-              {ACTION_ICONS.edit}
-            </button>
-          )}
-          <button
-            type="button"
-            className="panel-delete-btn"
-            onClick={() => onRemove(annotation.id)}
-            title="Remove comment"
-            aria-label="Remove comment"
-          >
-            &times;
-          </button>
-        </div>
+    <div className="panel-global-edit" onClick={(event) => event.stopPropagation()}>
+      <textarea
+        ref={textareaRef}
+        className="panel-global-textarea"
+        aria-label="Comment"
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Add your comment..."
+      />
+      <div className="panel-global-edit-actions">
+        <button type="button" className="comment-popover-cancel-btn" onClick={onCancel}>Cancel</button>
+        <button type="button" className="panel-global-save-btn" onClick={() => onSave(text)}>Save</button>
       </div>
-      {isEditing ? (
-        <div className="panel-global-edit">
-          <textarea
-            ref={textareaRef}
-            className="panel-global-textarea"
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Add your comment..."
-          />
-          <div className="panel-global-edit-actions">
-            <button type="button" className="comment-popover-cancel-btn" onClick={onCancel}>Cancel</button>
-            <button type="button" className="panel-global-save-btn" onClick={() => onSave(text)}>Save</button>
-          </div>
-        </div>
-      ) : (
-        <p className="panel-comment-text">
-          {annotation.text || <span className="panel-comment-empty">No comment</span>}
-        </p>
-      )}
-    </li>
+    </div>
   )
-}
-
-function ShapeItem({ annotation, number, timeLabel, elementHint = null, selected, onEdit, onRemove }) {
-  const activate = () => onEdit(annotation.id)
-  return (
-    <li className={`panel-item${selected ? ' selected' : ''}`} onClick={activate}>
-      <div className="panel-item-header">
-        <button type="button" className="panel-item-select" aria-pressed={selected} onClick={(event) => { event.stopPropagation(); activate() }}>
-          <span className="panel-type-badge shape">
-            <span className="panel-type-icon" style={{ color: annotation.color }}>{TOOL_ICONS[annotation.type]}</span>
-            {number}. {TYPE_LABELS[annotation.type] || annotation.type}
-          </span>
-        </button>
-        {timeLabel && <span className="panel-time-chip">{timeLabel}</span>}
-        <div className="panel-item-actions">
-          <button
-            type="button"
-            className="panel-edit-btn"
-            onClick={(event) => { event.stopPropagation(); onEdit(annotation.id) }}
-            title="Edit annotation"
-            aria-label="Edit annotation"
-          >
-            {ACTION_ICONS.edit}
-          </button>
-          <button
-            type="button"
-            className="panel-delete-btn"
-            onClick={(event) => { event.stopPropagation(); onRemove(annotation.id) }}
-            title="Remove annotation"
-            aria-label="Remove annotation"
-          >
-            &times;
-          </button>
-        </div>
-      </div>
-      {elementHint && <p className="panel-element" title={elementHint}>{elementHint}</p>}
-      <p className="panel-comment-text">
-        {annotation.text || <span className="panel-comment-empty">No comment</span>}
-      </p>
-    </li>
-  )
-}
-
-function commentTitle(annotation, number) {
-  if (Number.isInteger(annotation.page)) { return `${number}. Page comment` }
-  if (typeof annotation.time !== 'number') { return `${number}. General` }
-  return `${number}. ${typeof annotation.endTime === 'number' ? 'Span comment' : 'Comment'}`
 }
 
 /**
- * `timeLabelFor` switches to the recording and document layout: one list in
- * the given (time or page) order, every entry numbered as in the feedback
- * and tagged with its time or page. Without it, the still-image layout lists
- * general comments first. `subject` names what is being marked up.
- * `autoEditId` opens a just-added comment for typing straight away;
- * `onAutoEditConsumed` lets the parent clear it, so a panel mounted again
- * later (the sidebar shown again) does not reopen that comment.
+ * The cards of this round. `annotations` comes in feedback order, so a
+ * card's number is its position, as in the output and on the canvas.
+ * `hidden` is the general comment, which has its own row at the bottom.
+ * `timeLabelFor` names the time or page of a note in a recording or PDF.
+ * `autoEditId` opens a just-added comment for typing straight away.
  */
 export default function AnnotationPanel({
-  annotations, onRemove, onEdit, onEditGlobalComment, timeLabelFor = null, autoEditId = null, onAutoEditConsumed = null,
-  elements = [], subject = 'image', selectedId = null
+  annotations, hidden = null, onRemove, onEdit, onEditComment, timeLabelFor = null, autoEditId = null, onAutoEditConsumed = null,
+  elements = [], subject = 'image', selectedId = null, emptyKeys, approves = false
 }) {
-  const [editingGlobalId, setEditingGlobalId] = useState(null)
+  const [editingId, setEditingId] = useState(null)
+  const listRef = useRef(null)
 
   useEffect(() => {
     if (!autoEditId) { return }
-    setEditingGlobalId(autoEditId)
+    setEditingId(autoEditId)
     onAutoEditConsumed?.()
   }, [autoEditId, onAutoEditConsumed])
 
-  const handleSaveGlobal = (id, text) => {
-    onEditGlobalComment(id, text)
-    setEditingGlobalId(null)
-  }
+  useEffect(() => {
+    if (!selectedId) { return }
+    listRef.current?.querySelector(`[data-annotation-id="${selectedId}"]`)?.scrollIntoView({ block: 'nearest' })
+  }, [selectedId])
 
-  if (annotations.length === 0) {
+  const cards = annotations.filter((a) => a !== hidden)
+  if (cards.length === 0) {
     return (
-      <div className="panel-empty">
-        <p>No annotations yet. Pick a tool above and mark up the {subject}.</p>
-        <p className="panel-empty-hint">Use + to add a general comment.</p>
-      </div>
+      <PanelEmpty
+        lead={`Every mark becomes a numbered note the agent can find on the ${subject}.`}
+        keys={emptyKeys}
+        approves={approves}
+      />
     )
   }
 
-  const renderComment = (annotation, extra = {}) => (
-    <GlobalCommentItem
-      key={annotation.id}
-      annotation={annotation}
-      isEditing={editingGlobalId === annotation.id}
-      onStartEdit={() => setEditingGlobalId(annotation.id)}
-      onSave={(text) => handleSaveGlobal(annotation.id, text)}
-      onCancel={() => setEditingGlobalId(null)}
-      onRemove={onRemove}
-      {...extra}
-    />
-  )
-
-  if (timeLabelFor) {
-    return (
-      <ul className="panel-list">
-        {annotations.map((annotation, index) => (annotation.type === 'comment'
-          ? renderComment(annotation, { title: commentTitle(annotation, index + 1), timeLabel: timeLabelFor(annotation) })
-          : (
-            <ShapeItem
-              key={annotation.id} annotation={annotation} number={index + 1}
-              timeLabel={timeLabelFor(annotation)} selected={annotation.id === selectedId} onEdit={onEdit} onRemove={onRemove}
-              elementHint={annotation.quote ? `"${annotation.quote}"` : null}
-            />
-          )))}
-      </ul>
-    )
+  const saveComment = (id, text) => {
+    onEditComment(id, text)
+    setEditingId(null)
   }
 
   return (
-    <ul className="panel-list">
-      {annotations.filter((a) => a.type === 'comment').map((annotation) => renderComment(annotation))}
-      {annotations.filter((a) => a.type !== 'comment').map((annotation) => (
-        // Index into the full (unfiltered) list - it has to match the
-        // canvas's badge numbers, which count over every annotation
-        // including general comments.
-        <ShapeItem
-          key={annotation.id} annotation={annotation} number={annotations.indexOf(annotation) + 1}
-          elementHint={describeElements(matchAnnotation(elements, annotation))} selected={annotation.id === selectedId}
-          onEdit={onEdit} onRemove={onRemove}
-        />
-      ))}
+    <ul className="note-list" ref={listRef}>
+      {annotations.map((annotation, index) => {
+        if (annotation === hidden) { return null }
+        const { word } = noteType(annotation)
+        const isComment = annotation.type === 'comment'
+        const elementHint = !isComment && !timeLabelFor ? describeElements(matchAnnotation(elements, annotation)) : null
+        const quote = annotation.quote ? `“${annotation.quote}”` : elementHint
+        const startEdit = () => (isComment ? setEditingId(annotation.id) : onEdit(annotation.id))
+        return (
+          <NoteCard
+            key={annotation.id}
+            id={annotation.id}
+            number={index + 1}
+            badgeStyle={isComment ? undefined : badgeStyle(annotation.color)}
+            word={word}
+            icon={isComment ? ACTION_ICONS.comment : TOOL_ICONS[annotation.type]}
+            location={timeLabelFor?.(annotation) ?? null}
+            quote={quote}
+            selected={annotation.id === selectedId}
+            onActivate={startEdit}
+            onEdit={startEdit}
+            onRemove={() => onRemove(annotation.id)}
+          >
+            {isComment
+              ? <CommentText annotation={annotation} isEditing={editingId === annotation.id} onSave={(text) => saveComment(annotation.id, text)} onCancel={() => setEditingId(null)} />
+              : <p className="note-text">{annotation.text || <span className="panel-comment-empty">No comment</span>}</p>}
+          </NoteCard>
+        )
+      })}
     </ul>
   )
 }

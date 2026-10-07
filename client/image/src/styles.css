@@ -29,12 +29,11 @@
 }
 
 .app-sidebar {
-  width: var(--sidebar-width);
-  background: var(--bg-sidebar);
-  border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
 }
 
 .toolbar-zoom-level {

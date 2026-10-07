@@ -65,7 +65,7 @@ export function AppHeader({
       <div className="header-end">
         {onOpenShortcuts && <IconButton label="Keyboard shortcuts" onClick={onOpenShortcuts}><KeyboardIcon /></IconButton>}
         <IconButton label="Settings" onClick={onOpenSettings}><SettingsIcon /></IconButton>
-        <IconButton label={panelCollapsed ? 'Show annotations' : 'Hide annotations'} onClick={onTogglePanel}>
+        <IconButton label={panelCollapsed ? 'Show feedback panel' : 'Hide feedback panel'} onClick={onTogglePanel}>
           <SidePanelIcon side="right" />
         </IconButton>
         {origin && <OriginIndicator origin={origin} />}
