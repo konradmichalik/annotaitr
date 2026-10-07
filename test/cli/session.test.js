@@ -23,7 +23,14 @@ describe('review sessions in the CLI', () => {
   afterEach(async () => { await rm(dir, { recursive: true, force: true }) })
 
   it('starts round 1 for a target seen for the first time', async () => {
-    expect(await open()).toEqual({ sessionId: sessionIdFor('/abs/shot.png'), target, previous: null })
+    expect(await open()).toMatchObject({ sessionId: sessionIdFor('/abs/shot.png'), target, previous: null })
+  })
+
+  it('attaches a reply store for last round to every opened session', async () => {
+    await recordSession(await open(), { annotations: [pin] }, { now: 2000, dir, log })
+    const opened = await open({ now: 3000 })
+    expect(opened.replies.add('a3f19c2e', 'Green').reply).toBeTruthy()
+    expect((await open({ newSession: true })).replies.add('a3f19c2e', 'x').status).toBe(404)
   })
 
   it('records the decision and returns the line for the agent', async () => {

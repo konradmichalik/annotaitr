@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import express from 'express'
+import { createReplyStore } from '../../../../server/core/session/replyStore.js'
 import { createThreadsRouter, videoDuration } from '../../../../server/image/common/threadsRoute.js'
 
 const box = { type: 'box', geometry: { x: 1, y: 1, width: 5, height: 5 }, text: 'Fix' }
@@ -16,6 +17,7 @@ describe('threads route', () => {
 
   async function serve(router) {
     const app = express()
+    app.use(express.json())
     app.use(router)
     server = await new Promise((resolve) => { const s = app.listen(0, '127.0.0.1', () => resolve(s)) })
     return `http://127.0.0.1:${server.address().port}`
@@ -25,6 +27,45 @@ describe('threads route', () => {
     const url = await serve(createThreadsRouter({ session, current: () => ({ width: 50, height: 50 }) }))
     const body = await (await fetch(`${url}/api/threads`)).json()
     expect(body).toEqual({ success: true, data: { sessionId: '2f8c1a9e04b7', round: 1, threads: [{ ...session.previous.threads[0], anchor: 'exact', reason: null }] } })
+  })
+
+  it('stores a reviewer reply and serves it as pending', async () => {
+    const withStore = { ...session, replies: createReplyStore(session.previous) }
+    const url = await serve(createThreadsRouter({ session: withStore, current: () => ({ width: 50, height: 50 }) }))
+    const res = await fetch(`${url}/api/threads/a3f19c2e/replies`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: 'Green' })
+    })
+    expect(res.status).toBe(200)
+    const { data } = await (await fetch(`${url}/api/threads`)).json()
+    expect(data.threads[0].replies).toMatchObject([{ author: 'human', text: 'Green', pending: true }])
+  })
+
+  it('rejects a reply for a handle that is not in the last round', async () => {
+    const withStore = { ...session, replies: createReplyStore(session.previous) }
+    const url = await serve(createThreadsRouter({ session: withStore, current: () => ({}) }))
+    const res = await fetch(`${url}/api/threads/deadbeef/replies`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: 'x' })
+    })
+    expect(res.status).toBe(404)
+    expect(withStore.replies.count()).toBe(0)
+  })
+
+  it('removes a pending reply', async () => {
+    const withStore = { ...session, replies: createReplyStore(session.previous) }
+    const url = await serve(createThreadsRouter({ session: withStore, current: () => ({}) }))
+    const posted = await (await fetch(`${url}/api/threads/a3f19c2e/replies`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: 'x' })
+    })).json()
+    expect((await fetch(`${url}/api/threads/a3f19c2e/replies/${posted.data.reply.id}`, { method: 'DELETE' })).status).toBe(200)
+    expect((await fetch(`${url}/api/threads/a3f19c2e/replies/${posted.data.reply.id}`, { method: 'DELETE' })).status).toBe(404)
+  })
+
+  it('rejects replies when there is no session', async () => {
+    const url = await serve(createThreadsRouter({ session: null, current: () => ({}) }))
+    const res = await fetch(`${url}/api/threads/a3f19c2e/replies`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: 'x' })
+    })
+    expect(res.status).toBe(404)
   })
 
   it('answers an empty list without a previous round', async () => {
