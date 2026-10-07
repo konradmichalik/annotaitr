@@ -36,10 +36,11 @@ const SHORTCUT_GROUPS = [
     title: 'Annotations',
     items: [
       { keys: 'Click a mark', desc: 'Select it (shows resize handles)' },
-      { keys: 'Click again', desc: 'Edit its comment and color' },
+      { keys: 'Click again', desc: 'Edit its comment, intent and ink' },
       { keys: 'Drag a mark', desc: 'Move it' },
       { keys: 'Drag a corner handle', desc: 'Resize it' },
-      { keys: 'Delete / Backspace', desc: 'Remove the selected mark' },
+      { keys: 'Delete / Backspace', desc: 'Delete the selected mark' },
+      { keys: 'Tab, then 1\u20134', desc: 'Intent of the comment: Change, Add, Remove, Question' },
       { keys: `${MOD} + Enter`, desc: 'Save the comment' },
       { keys: 'Escape', desc: 'Discard the comment being written' }
     ]

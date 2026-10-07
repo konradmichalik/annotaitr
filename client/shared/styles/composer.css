@@ -132,3 +132,86 @@
   border-color: color-mix(in srgb, var(--on-ink) 45%, transparent);
   color: var(--on-ink);
 }
+
+/* Intent chip: icon and word in the intent's label colour, the menu lists all four with their keys. */
+.intent-chip {
+  position: relative;
+}
+
+.intent-chip-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 28px;
+  padding: 0 var(--space-1) 0 var(--space-2);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-control);
+  background: transparent;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.intent-chip-trigger:hover,
+.intent-chip-trigger[aria-expanded="true"] {
+  background: var(--surface-sunken);
+}
+
+.intent-chip-trigger--change,
+.intent-chip-item--change svg { color: var(--intent-change-label); }
+
+.intent-chip-trigger--add,
+.intent-chip-item--add svg { color: var(--intent-add-label); }
+
+.intent-chip-trigger--remove,
+.intent-chip-item--remove svg { color: var(--intent-remove-label); }
+
+.intent-chip-trigger--question,
+.intent-chip-item--question svg { color: var(--intent-question-label); }
+
+.intent-chip-trigger svg:last-child {
+  color: var(--ink-muted);
+}
+
+.intent-chip-menu {
+  position: absolute;
+  bottom: calc(100% + var(--space-1));
+  left: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: var(--space-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--card);
+  box-shadow: var(--elev-2);
+}
+
+.intent-chip-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.intent-chip-item:hover,
+.intent-chip-item[aria-checked="true"] {
+  background: var(--surface-sunken);
+}
+
+.intent-chip-item[aria-checked="true"] .intent-chip-word {
+  font-weight: 600;
+}
+
+.intent-chip-item .key-cap {
+  margin-left: auto;
+}

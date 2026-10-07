@@ -29,6 +29,7 @@ function computePosition(anchorRect) {
  * The comment composer on a text selection. `draftBaseline` is the text it
  * counts as untouched: the stored comment when editing, nothing for a new one
  * (even when typing a key opened it with that key already in the field).
+ * `initialIntent` shows the intent chip; an insertion has none, it is always Add.
  */
 export function CommentPopover({
   anchorEl,
@@ -37,11 +38,13 @@ export function CommentPopover({
   draftBaseline = '',
   placeholder = 'Add a comment…',
   submitLabel = 'Save',
+  initialIntent = null,
   onSubmit,
   onClose,
 }) {
   const [mode, setMode] = useState('popover')
   const [text, setText] = useState(initialText)
+  const [intent, setIntent] = useState(initialIntent)
   const [cursorPos, setCursorPos] = useState(initialText.length)
   const [position, setPosition] = useState(null)
   const [offscreenSide, setOffscreenSide] = useState(null)
@@ -118,9 +121,9 @@ export function CommentPopover({
 
   const handleSubmit = useCallback(() => {
     if (text.trim()) {
-      onSubmit(text)
+      onSubmit(text, intent ?? undefined)
     }
-  }, [text, onSubmit])
+  }, [text, intent, onSubmit])
 
   // Accepting a suggestion takes Enter and Tab, the composer around the field handles Escape and ⌘↵.
   const handleKeyDown = (e) => {
@@ -164,9 +167,11 @@ export function CommentPopover({
       titleId={titleId}
       className={isDialog ? 'comment-popover--dialog' : ''}
       style={popoverStyle}
-      dirty={hasDraft(text, draftBaseline)}
+      dirty={hasDraft(text, draftBaseline, intent !== initialIntent)}
       submitLabel={submitLabel}
       submitDisabled={!hasText}
+      intent={intent}
+      onIntentChange={initialIntent ? setIntent : null}
       tools={expandButton}
       onSave={handleSubmit}
       onDiscard={onClose}

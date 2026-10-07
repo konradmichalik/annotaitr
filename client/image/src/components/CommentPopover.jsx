@@ -1,6 +1,5 @@
 import { useState, useEffect, useId, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { ANNOTATION_COLORS } from '../utils/annotationColors.js'
 import { TOOL_ICONS } from '../utils/icons.jsx'
 import { resolveArrowStyle, strokeWidthOf } from '../utils/annotationStyles.js'
 import { Composer } from '../../../shared/components/Composer.jsx'
@@ -36,21 +35,22 @@ function computePosition(anchorPoint) {
  * assistive tech ("Note 3, box").
  */
 export default function CommentPopover({
-  anchorPoint, title, initialText = '', initialColor, annotationType, initialArrowStyle,
+  anchorPoint, title, initialText = '', initialIntent, initialColor, annotationType, initialArrowStyle,
   initialStrokeWidth, initialDashStyle, isEditing = false, timeBadge = null, voiceNotes = false, elementHint = null,
-  onSubmit, onClose
+  onIntentChange = null, onSubmit, onClose
 }) {
   const [text, setText] = useState(initialText)
   const [initialStyle] = useState(() => ({
-    color: initialColor || ANNOTATION_COLORS[0].hex,
+    color: initialColor || null,
     arrowStyle: resolveArrowStyle(initialArrowStyle),
     strokeWidth: strokeWidthOf({ type: annotationType, strokeWidth: initialStrokeWidth }),
     dashStyle: initialDashStyle || 'solid'
   }))
   const [style, setStyle] = useState(initialStyle)
+  const [intent, setIntent] = useState(initialIntent)
   const textareaRef = useRef(null)
   const titleId = useId()
-  const styleChanged = Object.keys(style).some((key) => style[key] !== initialStyle[key])
+  const styleChanged = intent !== initialIntent || Object.keys(style).some((key) => style[key] !== initialStyle[key])
 
   useEffect(() => {
     const id = setTimeout(() => textareaRef.current?.focus(), 0)
@@ -65,8 +65,8 @@ export default function CommentPopover({
   }, [])
 
   const handleSubmit = useCallback(() => {
-    onSubmit({ text: text.trim(), ...style })
-  }, [text, style, onSubmit])
+    onSubmit({ text: text.trim(), intent, ...style })
+  }, [text, intent, style, onSubmit])
 
   const tools = (
     <>
@@ -83,6 +83,11 @@ export default function CommentPopover({
       style={{ ...computePosition(anchorPoint), width: POPOVER_WIDTH }}
       dirty={hasDraft(text, initialText, styleChanged)}
       submitLabel={isEditing ? 'Save' : 'Add'}
+      intent={intent}
+      onIntentChange={(picked) => {
+        setIntent(picked)
+        onIntentChange?.(picked)
+      }}
       tools={tools}
       onSave={handleSubmit}
       onDiscard={onClose}

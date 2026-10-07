@@ -1,6 +1,11 @@
 import { useEffect, useId, useRef } from 'react'
 import { isSaveKey } from '../utils/keys.js'
+import { intentForKey } from '../utils/intents.js'
 import { MOD } from './SettingsModal.jsx'
+import { IntentChip } from './IntentChip.jsx'
+
+// Digits typed into a field are text; only outside of it do they pick an intent.
+const isTextEntry = (target) => target.isContentEditable || ['TEXTAREA', 'INPUT', 'SELECT'].includes(target.tagName)
 
 /**
  * The shell every note composer shares: a dialog named by a visually hidden
@@ -8,11 +13,13 @@ import { MOD } from './SettingsModal.jsx'
  * tools, Cancel and the only filled button. `⌘↵` saves, `Esc` discards. A click
  * outside closes an untouched composer but keeps one that holds a draft
  * (`dirty`), so a stray click never loses text. `fieldLabelId` lets the caller
- * name its field by the heading.
+ * name its field by the heading. With `onIntentChange` the footer starts with
+ * the intent chip, and the keys 1 to 4 switch the intent while focus is in
+ * the composer but not in a text field.
  */
 export function Composer({
   title, titleId, className = '', style, dirty, submitLabel, submitDisabled = false,
-  tools = null, children, onSave, onDiscard, onEscape = onDiscard, rootRef
+  intent = null, onIntentChange = null, tools = null, children, onSave, onDiscard, onEscape = onDiscard, rootRef
 }) {
   const ownRef = useRef(null)
   const ref = rootRef ?? ownRef
@@ -42,6 +49,11 @@ export function Composer({
     } else if (isSaveKey(event)) {
       event.preventDefault()
       save()
+    } else if (onIntentChange && !event.metaKey && !event.ctrlKey && !event.altKey && !isTextEntry(event.target)) {
+      const picked = intentForKey(event.key)
+      if (!picked) { return }
+      event.preventDefault()
+      onIntentChange(picked)
     }
   }
 
@@ -58,7 +70,12 @@ export function Composer({
       <h2 id={headingId} className="visually-hidden">{title}</h2>
       {children}
       <div className="composer-footer">
-        {tools && <div className="composer-tools">{tools}</div>}
+        {(onIntentChange || tools) && (
+          <div className="composer-tools">
+            {onIntentChange && <IntentChip intent={intent} onChange={onIntentChange} />}
+            {tools}
+          </div>
+        )}
         <button type="button" className="composer-cancel" onClick={onDiscard}>Cancel</button>
         <button type="button" className="composer-submit" disabled={submitDisabled} aria-keyshortcuts="Meta+Enter Control+Enter" onClick={save}>
           {submitLabel}
