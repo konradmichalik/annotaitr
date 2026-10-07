@@ -330,10 +330,10 @@ until the decision is submitted. The panel shows the reviewer's reply as
 carries a ↩ mark on its canvas badge. A decision may carry only replies and no
 new marks, so the main button reads Send feedback with replies alone.
 
-Approving while the agent's questions are unanswered opens the decision
-dialog with Approve selected and the open questions listed ("The agent asked
-N questions you have not answered"), with an Answer button. It never blocks
-the approval. A round with only replies sent as feedback starts with
+While the agent's questions are unanswered, the main button (Approve or Send
+feedback) opens the decision dialog first, with that option selected and the
+open questions listed ("The agent asked N questions you have not answered"),
+with an Answer button. It never blocks the decision. A round with only replies sent as feedback starts with
 `Feedback: 1 reply to round 1, no new marks.`, or
 `APPROVED WITH NOTES: 1 reply to round 1. ...` when the target is approved.
 
@@ -343,7 +343,7 @@ any new marks and before the `Session:` line:
 ```
 ## Replies to round 1
 
-### [#b7210e44] Comment pin: bottom (~80% from top, ~50% from left)
+### [#b7210e44] Question · Comment pin: bottom (~80% from top, ~50% from left)
 > Round 1, mark 2: Button-Farbe passt nicht zur CI
 Agent (question): Soll es das CI-Grün #2e7d32 sein oder das Blau aus dem Header?
 Reviewer: CI-Grün #2e7d32
@@ -375,7 +375,10 @@ with a modifier held:
 | `G` | General comment | General comment |
 
 The status bar names what the active tool does and its keys. The feedback
-panel lists one card per note with the number the agent reads in the output.
+panel lists one card per note: its number on the intent's colour, the intent
+as icon and word, the location with the kind of mark (`Page 1 · Box`), then
+the quote and the comment. The number is the one the agent reads in the output
+and the one on the mark.
 Selecting a mark selects its card and the other way round. With an earlier
 round the panel switches between **This round** and **Replies**; with several
 markdown files between **This file** and **All files**. The general comment is
@@ -385,16 +388,56 @@ the row at the bottom of the panel.
 
 A new mark or text selection opens the comment box with its text field
 focused. Ctrl/Cmd+Enter or **Add** saves the note, `Esc` or **Cancel**
-discards it. A click outside keeps a box that holds a draft (typed text, or in
-image mode a changed ink or stroke) open, so a stray click never loses it; an
-untouched box closes, and a mark that was just drawn goes with it. In image
-mode the palette button next to the text holds the ink colour, line width,
-line style and arrow end. In markdown mode `@` suggests files to reference and
+discards it. A click outside keeps a box that holds a draft (typed text, a
+changed intent, or in image mode a changed ink or stroke) open, so a stray click never loses it; an
+untouched box closes, and a mark that was just drawn goes with it. The footer
+starts with the [intent](#intents-and-numbers) chip. In image mode the palette
+button next to it holds the ink colour, line width, line style and arrow end. In markdown mode `@` suggests files to reference and
 the expand button opens a larger editor, which `Esc` collapses again.
 
-Selecting text in markdown mode shows a bar with **Delete** (Ctrl/Cmd+D),
-**Comment** (Ctrl/Cmd+K), **Label** (Alt+1 to 0) and, on a link, **Open**. The
-arrow keys move between its buttons.
+Selecting text in markdown mode shows a bar with **Change** (`1` or
+Ctrl/Cmd+K), **Add** (`2`, inserts text after the selection), **Remove** (`3`
+or Ctrl/Cmd+D), **Ask** (`4`, a comment with the intent Question), **Label**
+(Alt+1 to 0) and, on a link, **Open**. Any other key starts a Change comment
+with that key. **Add** is offered on text selections only; Alt+click still
+inserts text at any position. The arrow keys move between the bar's buttons.
+
+### Intents and numbers
+
+Every note says what the agent should do with it. The intent is shown as an
+icon and a word on the card, in the composer and in the output, and the mark
+takes its colour:
+
+| Intent | Meaning for the agent | Default for |
+| --- | --- | --- |
+| Change | Apply the comment to what the note points at | Shapes, text selections, comments on a page or a time, markdown comments |
+| Add | Add something there; a markdown insertion carries the text | Markdown insertions |
+| Remove | Remove what the note points at | Markdown deletions |
+| Question | The reviewer asks, no edit is requested | Pins |
+
+The composer's footer starts with the intent chip (`✎ Change ▾`), which opens
+a menu of the four. The keys `1` to `4` switch it while focus is in the
+composer but not in its text field, for example after `Tab` from the field
+onto the chip, so digits typed into a comment stay text. A markdown deletion
+is always Remove and an insertion always Add. The general comment has no
+intent.
+
+A note gets its number when it is made and keeps it for the whole round.
+Deleting a note never renumbers the others, so the output can have gaps. The
+same number is on the mark, on its card, in the rendered image and in the
+output, which lists the notes by position (line, page or time), not by
+number. The next round starts at 1 again; earlier marks keep the round and
+number they were raised with (`Round 1, mark 2`).
+
+Notes saved before intents and numbers existed (a JSON export, a restored
+draft, a session file from an earlier round) load as they are: the intent
+comes from the type (a pin is a Question, a markdown deletion a Remove), the
+number from the order the earlier version used.
+
+Marks take their intent's colour. A shape can carry its own ink instead, for
+visibility on a busy image: pick it in the composer's palette, or fix one for
+new marks with the dock's colour button (**Intent colour** is the default).
+The number badge always shows the intent's colour.
 
 ## Finishing a review
 
@@ -450,7 +493,29 @@ review.
 ## Output and exit codes
 
 The server starts on an available port and opens the browser; a status line
-goes to stderr, the decision goes to stdout on exit:
+goes to stderr, the decision goes to stdout on exit. Feedback opens with the
+count per intent, and every numbered note states its intent after its number
+and handle:
+
+```
+3 annotations (1 Change, 1 Remove, 1 Question):
+
+## 1. Change · Text (Line 3) [#a3f19c2e]
+## 4. Remove · Text (Line 9) [#7b210e44]
+## 2. Question · Text (Line 12) [#c01d9e55]
+```
+
+```
+2 annotations (1 Change, 1 Question) on the screenshot.
+
+### 1. [#a3f19c2e] Change · Boxed area: top left (~10% from top, ~12% from left)
+### 3. [#7b210e44] Question · Comment pin: bottom (~80% from top, ~50% from left)
+```
+
+PDF and video feedback use the image form, a general comment has neither
+number nor intent (`### [#c01d9e55] General comment about the whole image`).
+`APPROVED WITH NOTES:` names the count per intent the same way
+(`APPROVED WITH NOTES: 2 notes (1 Change, 1 Question). ...`).
 
 | Exit code | Meaning |
 |-----------|---------|

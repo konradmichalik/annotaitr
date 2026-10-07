@@ -46,7 +46,7 @@ All colours come from tokens in `client/shared/styles/tokens.css`, with a light 
 - The palette is derived from Okabe-Ito and stays distinct under protanopia and deuteranopia. White numbers hold at least 4.98:1 on the mark colours.
 - **Marks follow the image, not the theme.** The marks on the canvas use the same colours in light and dark theme, because the image under them does not change. Only labels in the chrome switch to the dark values.
 - A mark gets a soft 1px light halo (`rgba(255,255,255,0.6)`) that only shows where the image under it is dark. No hard dark outline.
-- The ink colour of a shape is a separate, optional style for visibility on busy images. It never replaces the intent.
+- The ink colour of a shape is a separate, optional style for visibility on busy images. It never replaces the intent: the number badge keeps the intent colour. New marks have no ink unless one is fixed in the dock (`Intent colour` is the default).
 
 ## Typography
 
@@ -138,11 +138,12 @@ A status dot plus the words, never the dot alone. The tooltip names the caller (
 - **PDF:** the page strip shows a count badge on pages with notes and a dashed dot on pages with replies from an earlier round.
 - **Web capture:** the capture control is collapsed to `Desktop · 1440 ▾` plus an icon button `Capture again`. Viewport and delay live in its popover. The Element tool labels the hovered element with its selector and size. `Tab` walks the element tree, `↑` selects the parent.
 - **Video:** the timeline sits under the work area with two lanes. `Notes` holds point notes, `Spans` holds ranges. Notes closer than a marker width merge into a cluster chip that shows both colours and the count, and opens a list on click or `Enter`. The list opens above the lanes and never covers the transport controls. Overlapping spans each get their own row. A playhead line runs across both lanes. Spans are set with `I` and `O`, never only by dragging.
-- **Markdown:** the left sidebar starts with `Files`: every file with its note count, a reviewed check or `not opened`, and `n of m reviewed`. Below it the contents of the active file with note counts per section, and `Mark file as reviewed` at the bottom. Selecting text opens a dark bar with Change, Add, Remove and Ask, keys `1` to `4`. Until intents exist the bar keeps Delete (`⌘D`), Comment (`⌘K`), Label (`⌥1` to `0`) and Open, each with its key as a hint. The bar is ink, so it turns light in the dark theme like the primary button, and its focus ring uses the bar's text colour, because `--focus` does not reach 3:1 on ink.
+- **Markdown:** the left sidebar starts with `Files`: every file with its note count, a reviewed check or `not opened`, and `n of m reviewed`. Below it the contents of the active file with note counts per section, and `Mark file as reviewed` at the bottom. Selecting text opens a dark bar with Change, Add, Remove and Ask, keys `1` to `4`, then Label (`⌥1` to `0`) and Open, each with its key as a hint. `⌘K` (Change) and `⌘D` (Remove) still work. Add inserts text after the selection and is offered on text selections only; `⌥`-click inserts at any position. Any other key starts a Change comment with that key. The bar is ink, so it turns light in the dark theme like the primary button, and its focus ring uses the bar's text colour, because `--focus` does not reach 3:1 on ink.
 
 ## Notes
 
-- Numbers are stable for the whole review. Deleting a note never renumbers the others, or the agent's references break.
+- Numbers are stable for the whole round. Deleting a note never renumbers the others, or the agent's references break. The output lists notes by position, so their numbers need not ascend. The next round starts at 1.
+- The general comment has no number and no intent.
 - Selecting a mark selects its card and scrolls it into view, and the other way round.
 - Marks from an earlier round are grey and dashed so they never compete with new notes.
 
@@ -150,7 +151,7 @@ A status dot plus the words, never the dot alone. The tooltip names the caller (
 
 - **Text first.** The popover opens with the text field focused, placeholder `Add a comment…`. Nothing sits above it.
 - One footer row: the intent chip (`✎ Change ▾`), a palette icon for ink and stroke, `Cancel` as text and `Add ⌘↵` as the only filled button.
-- Default intent: Change for shapes and text selections, Question for pins. Keys `1` to `4` switch it without opening the menu. The default is configurable in Settings.
+- Default intent: Change for shapes and text selections, Question for pins. Keys `1` to `4` switch it without opening the menu while focus is in the composer but outside its text field (on the chip after `Tab`, for example), so digits typed into a comment stay text. A markdown insertion has no chip, it is always Add. The default is configurable in Settings.
 - The focused popover border is the focus indicator: 1.5px `--focus` plus a soft ring while focus is inside. The field itself has no outline. Buttons inside keep the 2px ring.
 - A voice note, where available, is its own microphone button next to the palette, not behind it: closing the palette must not stop a recording.
 - A draft survives a click outside in every mode. A draft is typed text that differs from what the composer opened with, or a changed ink or stroke. An untouched composer closes on a click outside, and a mark drawn just before goes with it. `Esc` and `Cancel` discard.
@@ -165,7 +166,7 @@ A status dot plus the words, never the dot alone. The tooltip names the caller (
 
 ## Decision
 
-- The split button's main action follows the state: `Approve` with no notes, `Send feedback n` with notes. The chevron opens the decision dialog.
+- The split button's main action follows the state: `Approve` with no notes, `Send feedback n` with notes. The chevron opens the decision dialog. While the agent waits for answers to its questions, the main action opens the dialog first, with that option selected and the open questions listed.
 - The dialog offers three options with one sentence each: Send feedback, Approve with notes, Approve. It shows the note count by intent, an optional summary for the agent and how many pending replies go out.
 - Choosing Approve while notes exist asks once before discarding them.
 - `⌘⇧↵` opens the decision from anywhere. `⌘↵` only saves a note or submits the open dialog, so a composer can never send the review by accident.
@@ -193,7 +194,7 @@ The countdown is one line with a progress bar. No duplicated close hints.
 | Key | Action |
 | --- | --- |
 | `V` `E` `T` `R` `A` `P` `H` `C` | Select, Element, Text, Box, Arrow, Freehand, Highlighter, Pin |
-| `1` to `4` | Intent of the selected note or selection |
+| `1` to `4` | Intent in the composer (outside its text field) or of the markdown selection |
 | `G` | General comment |
 | `⌘↵` | Save note, submit the open dialog |
 | `⌘⇧↵` | Open the decision |

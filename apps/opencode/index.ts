@@ -34,7 +34,7 @@ export const MdAnnotatorPlugin: Plugin = async (ctx) => {
     tool: {
       annotate_markdown: tool({
         description:
-          "Open markdown file(s) for interactive user annotation and review. The user can highlight text to mark deletions or add comments, then submit feedback. Optionally pass feedbackNotes to display AI notes about changes made.",
+          "Open markdown file(s) for interactive user annotation and review. The user can highlight text to mark deletions or add comments, then submit feedback. Every numbered note states its intent after the number (`## 3. Question · Text (Line 7)`): Change applies the comment, Add inserts text or adds what the comment asks, Remove deletes, Question asks without requesting an edit. Numbers stay fixed for the round, so they can have gaps. Optionally pass feedbackNotes to display AI notes about changes made.",
         args: {
           filePath: tool.schema
             .string()

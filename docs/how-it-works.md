@@ -11,8 +11,10 @@ click to drop a numbered comment pin; add an optional comment to each. An
 arrow can also be switched to a dimension-line style (perpendicular ticks
 instead of an arrowhead) for marking distance or spacing between two points.
 
-On submit, the annotations are baked into a copy of the image (with a
-numbered legend) and written to a fresh temp file. The feedback text sent to
+Every note carries an intent (Change, Add, Remove, Question) and a number it
+keeps for the whole round. On submit, the annotations are baked into a copy of
+the image, each number on its intent's colour, with a legend such as
+`3. Question · Pin`, and written to a fresh temp file. The feedback text sent to
 the agent lists, per annotation, a plain-language position (e.g. "top
 right, ~15% from top") derived from the annotation's bounding point as a
 percentage of image width/height, and calls out other annotations
@@ -78,7 +80,8 @@ streams the file with range requests, and the browser plays it (a GIF is
 decoded in the browser and composited onto a canvas). Every annotation
 carries a `time`, a span also an `endTime`, and the geometry is in the
 video's own pixels, so the position wording works as for a still image.
-Annotations are numbered in time order, with general comments last.
+The feedback lists annotations in time order, general comments last, each
+under the number it got when it was made.
 
 On submit the browser asks the server which frames the output needs
 (`POST /api/frame-plan`), seeks a hidden copy of the player to each time,
@@ -102,8 +105,9 @@ cookie, so a reload (or reopening the same PDF) returns to it, while a
 regenerated PDF starts on its first page.
 
 Every annotation carries a `page`, a page comment is a comment with a
-`page`, a general comment has none. Annotations are numbered by page, in the
-order they were made within a page, with general comments last. On submit
+`page`, a general comment has none. The feedback lists annotations by page,
+general comments last, each under the number it got when it was made, so the
+numbers run across the whole document but need not ascend. On submit
 the server bakes each annotated page's marks into its own image, lays the
 annotated pages out in an overview and prints feedback grouped by page. With
 `--source`, the feedback names the file the agent edits and warns when that
@@ -128,18 +132,20 @@ feedback prints as a `Quote:` line.
 
 Once a file is open in the browser:
 
-- **Select text** to see the annotation toolbar
-- **Delete** marks text as struck-through
-- **Comment** highlights text and adds a comment
+- **Select text** to see the selection bar
+- **Change** (`1`) and **Ask** (`4`) highlight text and add a comment with that intent
+- **Add** (`2`) inserts new text after the selection
+- **Remove** (`3`) marks text as struck-through
 - **Quick Label** (`Alt+1`-`0`) categorizes a selection instantly
-- **Insert** places the cursor to add new text at that position
+- **Alt+click** places the cursor to add new text at that position
 - **Global Comment** adds general feedback not tied to a selection
 - Images, Mermaid, PlantUML and Kroki diagrams can be commented on or
   marked for deletion the same way as text
 
-On submit, each annotation is formatted as a Markdown block naming the
-affected line(s) and the requested change (remove / comment / insert); a
-multi-file session groups blocks by file. As in image mode, the decision
+On submit, each annotation is formatted as a Markdown block headed by its
+number and intent and naming the affected line(s), such as
+`## 3. Question · Text (Line 7)`; a multi-file session groups blocks by file
+and numbers across all files. As in image mode, the decision
 dialog offers **Approve with notes** to pass the notes along as context.
 
 ## The review loop
@@ -155,8 +161,13 @@ isn't looking at a blank slate.
 Every annotation carries a short handle in the feedback output, written as
 `[#a3f19c2e]`. It is the first group of the annotation's internal UUID, so it
 stays fixed for as long as the annotation exists, including across a JSON
-export and re-import or a restored draft. The numbering is positional and is
-recomputed on every export. The handle gives an agent something unambiguous to
+export and re-import or a restored draft. Its number is stable for the round
+too: it is stored with the note when the note is made, deleting a note never
+renumbers the others (the gap stays), and the same number shows on the
+canvas, the card, the rendered image and in the output. A new round starts at
+1 again. Data from before numbers and intents were stored (a JSON export, a
+draft, a session file) gets them on load: the number in the order that
+version used, the intent from the note's type. The handle gives an agent something unambiguous to
 quote back, as in "fixed `#a3f19c2e` (the intro), left `#7b210e44` alone
 because …". The annotator does not display handles, so agents are told to pair
 each one with a few words naming the passage. Annotations are not carried into
