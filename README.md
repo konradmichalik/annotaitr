@@ -157,6 +157,7 @@ Full flag and environment variable reference: [docs/usage.md](docs/usage.md).
 | [Usage](docs/usage.md) | Every flag, environment variable, exit code, and the mode-detection rules |
 | [How it works](docs/how-it-works.md) | The annotation and review-loop mechanism behind each mode |
 | [Development](docs/development.md) | Local setup, build commands, plugin testing |
+| [Design](docs/design/rules.md) | Design rules for the UI and the [reference screens](docs/design/screens.md) |
 
 ## 🧑‍💻 Contributing
 

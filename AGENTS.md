@@ -28,7 +28,7 @@ Stdout is the contract with the calling agent:
 - `.claude-plugin/marketplace.json`: plugin marketplace manifest
 - `test/`: unit and integration tests (vitest) and `test/e2e/` (Playwright)
 - `scripts/`: install script and Vite helper plugin
-- `docs/`: usage, development, how-it-works, migration and release docs
+- `docs/`: usage, development, how-it-works, migration and release docs, plus `docs/design/` with the binding UI design rules and reference screens
 
 ## Development commands
 
