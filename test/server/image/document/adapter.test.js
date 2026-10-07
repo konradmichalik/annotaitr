@@ -6,6 +6,7 @@ import { loadImage } from '@napi-rs/canvas'
 import { buildDocumentServer } from '../../../../server/image/document/adapter.js'
 import { openPdfDocument, createPageCache } from '../../../../server/image/document/pdfDocument.js'
 import { makePdf } from '../../../helpers/pdfFixtures.js'
+import { hashFile } from '../../../../server/image/common/fingerprint.js'
 
 const box = (id, page, extra = {}) => ({
   id, type: 'box', geometry: { x: 100, y: 100, width: 300, height: 200 }, text: `note ${id}`, color: '#bf616a', page, ...extra
@@ -57,6 +58,16 @@ describe('openPdfDocument', () => {
       expect(c.hash).not.toBe(a.hash)
     } finally {
       await Promise.all([a, b, c].map((d) => d.renderer.close()))
+    }
+  })
+
+  it('fingerprints the bytes it renders and derives the page hash from the same digest', async () => {
+    const document = await openPdfDocument(pdfPath)
+    try {
+      expect(document.fingerprint).toBe(await hashFile(pdfPath))
+      expect(document.hash).toBe(document.fingerprint.slice('sha256:'.length, 'sha256:'.length + 16))
+    } finally {
+      await document.renderer.close()
     }
   })
 

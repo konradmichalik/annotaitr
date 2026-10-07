@@ -2,6 +2,11 @@ import { createHash } from 'node:crypto'
 import { createReadStream } from 'node:fs'
 import { pipeline } from 'node:stream/promises'
 
+/** For bytes already read for review, so the fingerprint describes exactly what was shown. */
+export function hashBuffer(buffer) {
+  return `sha256:${createHash('sha256').update(buffer).digest('hex')}`
+}
+
 /** Identifies the reviewed content across runs: an unchanged file anchors last round's marks exactly. */
 export async function hashFile(path) {
   const hash = createHash('sha256')

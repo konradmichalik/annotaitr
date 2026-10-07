@@ -2,7 +2,7 @@ import { resolve as resolvePath } from 'node:path'
 import { isSupportedCaptureUrl } from '../server/image/common/fileTypes.js'
 import { parseViewportSpec, parseDelay, describeCapture, MAX_DELAY_MS } from '../server/image/common/config.js'
 import { saveClipboardImage } from '../server/image/still/clipboard.js'
-import { fingerprintInBackground } from '../server/image/common/fingerprint.js'
+import { hashBuffer } from '../server/image/common/fingerprint.js'
 import { captureFlagError } from './args.js'
 import { fileExists, isPdfTarget, isVideoTarget } from './detect.js'
 import { fail, printHelpAndExit } from './help.js'
@@ -103,7 +103,8 @@ export async function runImage({
   )
   if (error) { fail(error); return }
 
-  const reviewed = { ...opened, fingerprint: imagePath ? fingerprintInBackground(imagePath) : null }
+  // Hashed from the bytes being reviewed, not a second read of a file that may have changed since.
+  const reviewed = { ...opened, fingerprint: imagePath ? hashBuffer(capture.buffer) : null }
 
   await serveUntilDecision(await buildImageServer({
     imageBuffer: capture.buffer,
