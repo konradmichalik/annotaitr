@@ -9,6 +9,9 @@ import { PaletteIcon } from '../../../shared/components/HeaderIcons.jsx'
 // proportional dash math used for real rendering: they only need to read at 16px.
 const DASH_ICON_PATTERN = { solid: undefined, dashed: '4 2', dotted: '1 2' }
 
+// Thin, medium and thick as they read at 16px, whatever the real widths of the mark type are.
+const PREVIEW_WIDTHS = [1.5, 3, 5]
+
 const capitalize = (word) => word.charAt(0).toUpperCase() + word.slice(1)
 
 function LinePreviewIcon({ width, dash }) {
@@ -55,8 +58,6 @@ export default function StylePalette({ annotationType, style, onChange }) {
   const panelId = useId()
   const fields = STYLE_FIELDS[annotationType] || []
   const presets = presetsFor(annotationType)
-  // Presets range from 2 to 26, capped so the option icons stay legible at 16px.
-  const previewWidth = (value) => Math.max(1, Math.min(8, value / 3))
 
   const handleKeyDown = (event) => {
     if (event.key !== 'Escape' || !open) { return }
@@ -92,8 +93,8 @@ export default function StylePalette({ annotationType, style, onChange }) {
           {fields.includes('strokeWidth') && (
             <OptionRow
               label={annotationType === 'highlighter' ? 'Stripe size' : 'Line width'}
-              options={presets.map((preset) => ({
-                key: preset.id, label: preset.label, icon: <LinePreviewIcon width={previewWidth(preset.value)} />,
+              options={presets.map((preset, index) => ({
+                key: preset.id, label: preset.label, icon: <LinePreviewIcon width={PREVIEW_WIDTHS[index]} />,
                 active: style.strokeWidth === preset.value, onSelect: () => onChange({ strokeWidth: preset.value })
               }))}
             />

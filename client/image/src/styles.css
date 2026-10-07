@@ -747,7 +747,7 @@ button.voice-note:hover {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  width: 296px;
+  width: 304px;
   padding: var(--space-3);
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
