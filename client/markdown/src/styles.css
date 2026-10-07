@@ -302,7 +302,8 @@
   transition: opacity 0.15s;
 }
 
-.block-table-wrapper:hover .table-toolbar {
+.block-table-wrapper:hover .table-toolbar,
+.block-table-wrapper:focus-within .table-toolbar {
   opacity: 1;
 }
 
@@ -352,7 +353,8 @@
   transition: opacity 0.15s;
 }
 
-.table-toolbar-btn:hover::after {
+.table-toolbar-btn:hover::after,
+.table-toolbar-btn:focus-visible::after {
   opacity: 1;
 }
 
@@ -670,7 +672,8 @@
   z-index: 2;
 }
 
-.diagram-block:hover .diagram-controls {
+.diagram-block:hover .diagram-controls,
+.diagram-block:focus-within .diagram-controls {
   opacity: 1;
 }
 
@@ -974,6 +977,12 @@
   height: 1.25rem;
   background: var(--border);
   margin: 0 0.125rem;
+}
+
+/* The field has no outline of its own: the toolbar border is its focus indicator. */
+.annotation-toolbar:has(.toolbar-textarea:focus-visible) {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 1px var(--focus), var(--elev-2);
 }
 
 .toolbar-input {
@@ -1993,6 +2002,12 @@ a:hover { opacity: 0.8; }
   box-shadow: var(--shadow);
   padding: 4px 6px;
   width: min(320px, calc(100% - 6rem));
+/* The field has no outline of its own: the bar border is its focus indicator. */
+.search-bar:has(.search-bar-input:focus-visible) {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 1px var(--focus), var(--elev-1);
+}
+
   min-width: 0;
 }
 

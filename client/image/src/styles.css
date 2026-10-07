@@ -111,7 +111,7 @@
 .viewport-panel button:focus-visible,
 .viewport-panel input:focus-visible,
 .viewport-panel label:has(input.visually-hidden:focus-visible) {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -708,7 +708,7 @@ button.voice-note:hover {
 }
 
 .voice-note:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -802,7 +802,7 @@ button.voice-note:hover {
 }
 
 .thread-popover:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -900,7 +900,7 @@ button.voice-note:hover {
 }
 
 .reply-form-field:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus);
   outline-offset: 1px;
 }
 
@@ -928,7 +928,7 @@ button.voice-note:hover {
 }
 
 .reply-form-send:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -1036,7 +1036,7 @@ button.voice-note:hover {
 }
 
 .page-strip-item:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -1498,7 +1498,7 @@ button.voice-note:hover {
 }
 
 .timeline-volume-slider:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus);
   outline-offset: 4px;
 }
 
@@ -1655,7 +1655,7 @@ button.voice-note:hover {
 .timeline-chip:focus-visible,
 .timeline-track:focus-visible,
 .timeline-marker:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -1760,7 +1760,7 @@ button.voice-note:hover {
 }
 
 .previous-round-panel summary:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus);
   outline-offset: -2px;
 }
 
@@ -1785,7 +1785,7 @@ button.voice-note:hover {
 }
 
 .previous-round-switch:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -1894,7 +1894,7 @@ button.voice-note:hover {
 }
 
 .previous-round-entry:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus);
   outline-offset: -2px;
 }
 
@@ -1968,7 +1968,7 @@ button.voice-note:hover {
 }
 
 .timeline-marker--previous:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
   opacity: 1;
 }

@@ -46,7 +46,6 @@
   line-height: 1.5;
   resize: vertical;
   min-height: 2.5rem;
-  outline: none;
   margin-top: 0.25rem;
 }
 
@@ -147,7 +146,9 @@
 }
 
 .panel-global-textarea:focus {
-  border-color: var(--primary);
+  border-color: var(--focus);
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
 }
 
 .panel-global-edit {
@@ -206,12 +207,14 @@
 }
 
 .panel-item:hover .panel-edit-btn,
-.panel-item.selected .panel-edit-btn {
+.panel-item.selected .panel-edit-btn,
+.panel-item:focus-within .panel-edit-btn {
   opacity: 1;
 }
 
 .panel-item:hover .panel-delete-btn,
-.panel-item.selected .panel-delete-btn {
+.panel-item.selected .panel-delete-btn,
+.panel-item:focus-within .panel-delete-btn {
   opacity: 1;
 }
 
@@ -459,7 +462,7 @@
 }
 
 .reply-list-remove:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
