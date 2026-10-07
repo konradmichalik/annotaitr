@@ -418,94 +418,147 @@
   cursor: pointer;
 }
 
-/* Agent reply status. The text always uses the body colour, so contrast holds in both themes, and the status colour only tints the background and border. */
+/* Agent reply status: icon and word in the status colour on its own tint. The status tokens hold 4.5:1 on that tint in both themes. */
 .status-chip {
   display: inline-flex;
-  gap: 0.25rem;
+  gap: var(--space-1);
   align-items: center;
-  padding: 0 0.5rem;
-  border: 1px solid var(--status-fg, var(--border));
+  padding: 0 var(--space-2);
   border-radius: 9999px;
-  background: var(--status-bg, var(--bg-secondary));
-  color: var(--text);
+  background: color-mix(in srgb, var(--chip-fg) var(--tint), transparent);
+  color: var(--chip-fg);
   font-size: var(--fs-sm);
-  line-height: 1.5;
+  font-weight: 500;
+  line-height: 20px;
   white-space: nowrap;
+
+  --chip-fg: var(--ink-muted);
 }
 
-/* One palette per status. The chip, the reply rule and the badge on the image all read these two properties. */
-.status-chip--applied,
-.status--applied,
-.reply-list-item:has(.status-chip--applied) {
+/* The labels are lower case in the data and in aria text, sentence case on screen. */
+.status-chip-label {
+  display: inline-block;
+}
+
+.status-chip-label::first-letter {
+  text-transform: uppercase;
+}
+
+.status-chip--applied {
+  --chip-fg: var(--status-ok);
+}
+
+.status-chip--partial,
+.status-chip--deferred {
+  --chip-fg: var(--status-warn);
+}
+
+.status-chip--declined {
+  --chip-fg: var(--status-danger);
+}
+
+.status-chip--question {
+  --chip-fg: var(--status-info);
+}
+
+.status--applied {
   --status-fg: var(--success);
   --status-bg: var(--success-bg);
 }
 
-.status-chip--partial,
-.status-chip--deferred,
 .status--partial,
-.status--deferred,
-.reply-list-item:has(.status-chip--partial),
-.reply-list-item:has(.status-chip--deferred) {
+.status--deferred {
   --status-fg: var(--comment-border);
   --status-bg: var(--comment-bg);
 }
 
-.status-chip--declined,
-.status--declined,
-.reply-list-item:has(.status-chip--declined) {
+.status--declined {
   --status-fg: var(--danger);
   --status-bg: var(--deletion-bg);
 }
 
-.status-chip--question,
-.status--question,
-.reply-list-item:has(.status-chip--question) {
+.status--question {
   --status-fg: var(--warning);
   --status-bg: var(--warning-bg);
-}
-
-.status-chip--none {
-  color: var(--text-muted);
 }
 
 .reply-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-/* Agent replies are indented behind a rule in the status colour, so they read as an answer to the quote above them. */
 .reply-list-item {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--space-2);
   align-items: flex-start;
-  padding-left: 0.625rem;
-  border-left: 3px solid var(--status-fg, var(--border));
+}
+
+.reply-list-avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface-sunken);
+  color: var(--ink);
+  font-size: var(--fs-key);
+  font-weight: 600;
+}
+
+.reply-list-item--agent .reply-list-avatar {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+.reply-list-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.reply-list-item--pending .reply-list-body {
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--line-control);
+  border-radius: var(--radius-card);
+  background: var(--surface-sunken);
+}
+
+.reply-list-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
 }
 
 .reply-list-author {
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .reply-list-text {
   margin: 0;
-  color: var(--text);
+  color: var(--ink);
   font-size: var(--fs-md);
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
 
 .reply-list-pending {
-  color: var(--text-muted);
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  color: var(--ink-muted);
   font-size: var(--fs-sm);
-  font-style: italic;
 }
 
 .reply-list-remove {
@@ -513,19 +566,15 @@
   padding: 0 0.25rem;
   border: 0;
   background: none;
-  color: var(--text-muted);
+  color: var(--ink-muted);
+  font: inherit;
   font-size: var(--fs-sm);
   text-decoration: underline;
   cursor: pointer;
 }
 
-.reply-list-remove:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
-
 .reply-list-time {
-  color: var(--text-muted);
+  color: var(--ink-muted);
   font-size: var(--fs-sm);
 }
 

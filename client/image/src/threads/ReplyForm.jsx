@@ -59,7 +59,9 @@ export default function ReplyForm({ handle, onSent, error, onError, fieldRef }) 
         onKeyDown={handleKeyDown}
       />
       {error && <p id={errorId} className="reply-form-error" role="alert">{error}</p>}
-      <button type="button" className="reply-form-send" disabled={sending} onClick={send}>Send</button>
+      <div className="reply-form-actions">
+        <button type="button" className="composer-submit reply-form-send" disabled={sending} onClick={send}>Reply</button>
+      </div>
     </div>
   )
 }

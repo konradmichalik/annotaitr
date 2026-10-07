@@ -802,49 +802,55 @@ button.voice-note:hover {
   background: var(--swatch);
 }
 
+/* The dialog itself takes focus on open; the shell's border and ring already show it. */
 .thread-popover:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+  outline: none;
+}
+
+.thread-popover-header {
+  display: flex;
+  flex: none;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-3) var(--space-2) var(--space-2) var(--space-4);
+}
+
+.thread-popover-title {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.thread-popover-handle {
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thread-popover-close {
+  margin-left: auto;
 }
 
 .thread-popover-body {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
-  gap: 0.375rem;
+  gap: var(--space-3);
   min-height: 0;
-  padding: 0.75rem;
+  padding: var(--space-1) var(--space-4) var(--space-3);
   overflow-y: auto;
-  color: var(--text);
-  font-size: var(--fs-md);
-}
-
-.thread-popover-footer {
-  flex: none;
-  padding: 0.5rem 0.75rem 0.75rem;
-  border-top: 1px solid var(--border);
-}
-
-.thread-popover-title {
-  display: flex;
-  gap: 0.5rem;
-  align-items: baseline;
-  margin: 0;
-  font-size: 0.875rem;
-}
-
-.thread-popover-handle {
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  font-weight: normal;
 }
 
 .thread-popover-note {
   margin: 0;
-  padding: 0.375rem 0.5rem;
-  border-left: 3px solid var(--comment-border);
-  background: var(--comment-bg);
+  padding: var(--space-2);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--status-warn) var(--tint), transparent);
+  color: var(--ink);
   font-size: var(--fs-sm);
 }
 
@@ -852,85 +858,50 @@ button.voice-note:hover {
   padding: 0;
 }
 
-.thread-popover-author {
-  font-size: var(--fs-sm);
-  font-weight: 600;
-}
-
-.thread-popover-quote {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  margin: 0.25rem 0;
-  padding: 0.375rem 0.5rem;
-  border-left: 3px solid var(--border);
-  background: var(--bg-secondary);
-  color: var(--text-muted);
-}
-
-.thread-popover-text,
 .thread-popover-empty {
   margin: 0;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
-}
-
-.thread-popover-empty {
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
 
 .reply-form {
   display: flex;
+  flex: none;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border-top: 1px solid var(--line);
 }
 
 .reply-form-label {
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .reply-form-field {
-  padding: 0.375rem 0.5rem;
+  min-height: 52px;
+  padding: var(--space-2);
   border: 1px solid var(--line-control);
-  border-radius: 4px;
-  background: var(--bg-card);
-  color: var(--text);
+  border-radius: var(--radius-control);
+  background: var(--card);
+  color: var(--ink);
   font: inherit;
   resize: vertical;
 }
 
-.reply-form-field:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
-}
-
 .reply-form-error {
   margin: 0;
-  color: var(--danger);
+  color: var(--status-danger);
   font-size: var(--fs-sm);
 }
 
-.reply-form-send {
-  align-self: flex-end;
-  min-height: 2.75rem;
-  padding: 0.25rem 1rem;
-  border: 1px solid var(--ink);
-  border-radius: 4px;
-  background: var(--ink);
-  color: var(--on-ink);
-  font: inherit;
-  cursor: pointer;
+.reply-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-1);
 }
 
-.reply-form-send:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.reply-form-send:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+.reply-form .reply-form-send {
+  padding: 0 var(--space-3);
 }
 
 .resize-handle {

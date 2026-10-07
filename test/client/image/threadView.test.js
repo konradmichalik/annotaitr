@@ -117,12 +117,12 @@ describe('badgeShowsNumber', () => {
 
 describe('thread labels', () => {
   it('names a thread of last round by round and number', () => {
-    expect(threadTitle(thread(box(), { number: 2 }), 1)).toBe('Round 1 · mark 2')
+    expect(threadTitle(thread(box(), { number: 2 }), 1)).toBe('Round 1 · note 2')
   })
 
   it('names a carried thread by its origin, never "mark null"', () => {
     const carried = thread(box(), { number: null, origin: { round: 1, number: 2 } })
-    expect(threadTitle(carried, 2)).toBe('Round 1 · mark 2')
+    expect(threadTitle(carried, 2)).toBe('Round 1 · note 2')
     expect(threadNumber(carried)).toBe(2)
   })
 

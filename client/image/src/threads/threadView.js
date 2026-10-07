@@ -2,6 +2,7 @@ import { isVisibleAt } from '../video/timeline.js'
 
 /** Visible names for the two sides of a thread. */
 export const AUTHOR_LABELS = { agent: 'Agent', human: 'You' }
+export const AUTHOR_AVATARS = { agent: 'AI', human: 'You' }
 
 // Icon plus text, so a status never depends on colour alone.
 export const STATUS_DISPLAY = {
@@ -24,7 +25,7 @@ export const threadRound = (thread, round) => thread.origin?.round ?? round
 export const threadNumber = (thread) => thread.origin?.number ?? thread.number
 // The panel lists carried threads beside this round's own, so a number from another round carries its round.
 export const threadLabel = (thread, round) => (threadRound(thread, round) === round ? `${threadNumber(thread)}` : `${threadRound(thread, round)}·${threadNumber(thread)}`)
-export const threadTitle = (thread, round) => `Round ${threadRound(thread, round)} · mark ${threadNumber(thread)}`
+export const threadTitle = (thread, round) => `Round ${threadRound(thread, round)} · note ${threadNumber(thread)}`
 
 export const pendingReplies = (thread) => thread.replies.filter((r) => r.pending)
 export const pendingReplyCount = (threads) => threads.reduce((sum, t) => sum + pendingReplies(t).length, 0)

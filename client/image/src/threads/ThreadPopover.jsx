@@ -1,12 +1,14 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useOutsideClick } from '../../../shared/hooks/useOutsideClick.js'
 import { useModalDismiss } from '../../../shared/hooks/useModalDismiss.js'
 import { TOOL_ICONS } from '../utils/icons.jsx'
 import ReplyList from '../../../shared/components/ReplyList.jsx'
+import StatusChip from '../../../shared/components/StatusChip.jsx'
+import { CloseIcon } from '../../../shared/components/CloseIcon.jsx'
 import ReplyForm from './ReplyForm.jsx'
 import { removeReply } from './replyApi.js'
-import { STATUS_DISPLAY, AUTHOR_LABELS, threadTitle, threadRound, threadNumber } from './threadView.js'
+import { STATUS_DISPLAY, AUTHOR_LABELS, AUTHOR_AVATARS, threadTitle, threadRound, threadStatus } from './threadView.js'
 
 const POPOVER_WIDTH = 320
 const GAP = 12
@@ -33,7 +35,15 @@ function computeLayout(anchorPoint, naturalHeight) {
   }
 }
 
-export function ThreadPopoverContent({ thread, round, onReload }) {
+// The reviewer's note opens the list, so the thread reads top to bottom: note, the agent's answers, the reviewer's replies.
+function threadMessages(thread, round) {
+  const r = threadRound(thread, round)
+  const note = { id: 'note', author: 'human', text: thread.annotation.text, meta: `round ${r}` }
+  const replies = thread.replies.map((reply) => ((reply.author ?? 'agent') === 'agent' ? { ...reply, meta: `after round ${r}` } : reply))
+  return [note, ...replies]
+}
+
+export function ThreadPopoverContent({ thread, round, titleId, onClose, onReload }) {
   const [error, setError] = useState(null)
   const fieldRef = useRef(null)
   const removingRef = useRef(false)
@@ -48,14 +58,19 @@ export function ThreadPopoverContent({ thread, round, onReload }) {
     fieldRef.current?.focus()
     onReload()
   }
-
   return (
     <>
+      <div className="thread-popover-header">
+        <h2 id={titleId} className="thread-popover-title">{threadTitle(thread, round)}</h2>
+        <StatusChip status={threadStatus(thread)} display={STATUS_DISPLAY} />
+        {thread.handle && <span className="thread-popover-handle">#{thread.handle}</span>}
+        {onClose && (
+          <button type="button" className="composer-icon-button thread-popover-close" aria-label="Close" onClick={onClose}>
+            <CloseIcon />
+          </button>
+        )}
+      </div>
       <div className="thread-popover-body">
-        <h2 className="thread-popover-title">
-          {threadTitle(thread, round)}
-          {thread.handle && <span className="thread-popover-handle">#{thread.handle}</span>}
-        </h2>
         {thread.anchor === 'ghost' && thread.reason && <p className="thread-popover-note">{thread.reason}</p>}
         {thread.element && (
           <p className="comment-popover-element" title={thread.element}>
@@ -63,29 +78,20 @@ export function ThreadPopoverContent({ thread, round, onReload }) {
             <span className="comment-popover-element-name">{thread.element}</span>
           </p>
         )}
-        <blockquote className="thread-popover-quote">
-          <span className="thread-popover-author">{AUTHOR_LABELS.human}</span>
-          <p className="thread-popover-text">{thread.annotation.text}</p>
-        </blockquote>
-        {thread.replies.length > 0
-          ? <ReplyList
-              replies={thread.replies} display={STATUS_DISPLAY} labels={AUTHOR_LABELS}
-              pendingLabel="pending, sent with your decision" onRemove={onReload && handleRemove}
-            />
-          : <p className="thread-popover-empty">No reply from the agent yet.</p>}
+        <ReplyList
+          replies={threadMessages(thread, round)} display={STATUS_DISPLAY} labels={AUTHOR_LABELS} avatars={AUTHOR_AVATARS}
+          pendingLabel="Pending, sent with your decision" onRemove={onReload && handleRemove}
+        />
+        {thread.replies.length === 0 && <p className="thread-popover-empty">No reply from the agent yet.</p>}
       </div>
-      {/* Outside the scrolling body, so the field stays in reach however long the thread gets. */}
-      {onReload && (
-        <div className="thread-popover-footer">
-          <ReplyForm handle={thread.handle} error={error} onError={setError} fieldRef={fieldRef} onSent={onReload} />
-        </div>
-      )}
+      {onReload && <ReplyForm handle={thread.handle} error={error} onError={setError} fieldRef={fieldRef} onSent={onReload} />}
     </>
   )
 }
 
 export default function ThreadPopover({ thread, round, anchorPoint, onClose, onReload }) {
   const popoverRef = useRef(null)
+  const titleId = useId()
   useOutsideClick(popoverRef, onClose)
   // The owner puts focus back on whatever opened the visible popover; a restore of its own would return to the one before a switch.
   useModalDismiss(true, onClose, popoverRef, { restoreFocus: false })
@@ -101,9 +107,11 @@ export default function ThreadPopover({ thread, round, anchorPoint, onClose, onR
   }, [])
   useLayoutEffect(() => {
     const el = popoverRef.current
-    const body = el.querySelector('.thread-popover-body')
-    const footer = el.querySelector('.thread-popover-footer')
-    const natural = body.scrollHeight + (footer?.offsetHeight ?? 0) + el.offsetHeight - el.clientHeight
+    const parts = ['.thread-popover-header', '.thread-popover-body', '.reply-form']
+    const natural = parts.reduce((sum, selector) => {
+      const part = el.querySelector(selector)
+      return sum + (part ? (selector === '.thread-popover-body' ? part.scrollHeight : part.offsetHeight) : 0)
+    }, el.offsetHeight - el.clientHeight)
     setLayout(computeLayout({ x: anchorX, y: anchorY }, natural))
   }, [thread, anchorX, anchorY, viewportTick])
 
@@ -112,12 +120,12 @@ export default function ThreadPopover({ thread, round, anchorPoint, onClose, onR
       ref={popoverRef}
       className="comment-popover thread-popover"
       role="dialog"
-      aria-label={`Round ${threadRound(thread, round)}, mark ${threadNumber(thread)}`}
+      aria-labelledby={titleId}
       tabIndex={-1}
       style={{ ...layout, width: POPOVER_WIDTH }}
       onMouseDown={(event) => event.stopPropagation()}
     >
-      <ThreadPopoverContent thread={thread} round={round} onReload={onReload} />
+      <ThreadPopoverContent thread={thread} round={round} titleId={titleId} onClose={onClose} onReload={onReload} />
     </div>,
     document.body
   )
