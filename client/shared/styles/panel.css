@@ -711,14 +711,15 @@
 .note-type--remove { color: var(--intent-remove-label); }
 .note-type--question { color: var(--intent-question-label); }
 
+/* A long location (a deep section, a selector) wraps instead of hiding behind the actions. */
 .note-location {
-  margin-left: auto;
-  overflow: hidden;
+  flex: 1 1 0;
+  min-width: 0;
   color: var(--ink-muted);
   font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 
 .note-card-actions {
