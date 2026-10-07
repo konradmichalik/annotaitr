@@ -470,13 +470,13 @@ export default function App() {
         <DoneScreen
           variant={decision}
           title={decision === 'approved'
-            ? (annotationCount > 0 ? 'Approved with Notes' : 'Approved')
+            ? (decisionItemCount > 0 ? 'Approved with Notes' : 'Approved')
             : 'Feedback Submitted'}
           message={decision === 'approved'
-            ? (annotationCount > 0
-              ? `Approved as-is. ${annotationCount} annotation${annotationCount === 1 ? '' : 's'} passed along as notes.`
+            ? (decisionItemCount > 0
+              ? `Approved as-is. ${notesTitle} passed along as notes.`
               : `No changes requested. The ${subject} was approved as-is.`)
-            : `${annotationCount} annotation${annotationCount === 1 ? '' : 's'} ${ORIGIN_LABELS[origin] ? `sent to ${ORIGIN_LABELS[origin]}` : 'submitted'}.`}
+            : `${notesTitle} ${ORIGIN_LABELS[origin] ? `sent to ${ORIGIN_LABELS[origin]}` : 'submitted'}.`}
         >
           <p className="done-hint">
             {decision === 'feedback' && ORIGIN_LABELS[origin]

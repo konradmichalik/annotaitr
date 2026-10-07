@@ -82,6 +82,7 @@ test.describe('replies from the last round', () => {
       await expect(feedback).toHaveAttribute('title', 'Submit 1 reply')
       await feedback.click()
       await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
+      await expect(page.getByText(/^1 reply (sent to|submitted)/)).toBeVisible()
       await cli.exited
       const out = cli.stdout()
       expect(out).toMatch(/^Feedback: 1 reply to round 1, no new marks\./)
@@ -582,7 +583,8 @@ test.describe('replies from the last round', () => {
       await page.keyboard.press('Escape')
       await page.getByRole('button', { name: /^Approve/ }).click()
       await expect(page.getByRole('dialog', { name: /not answered/ })).toHaveCount(0)
-      await expect(page.getByRole('heading', { name: /Approved/ })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Approved with Notes' })).toBeVisible()
+      await expect(page.getByText(/1 reply passed along as notes/)).toBeVisible()
       await cli.exited
       expect(cli.stdout()).toMatch(/^APPROVED WITH NOTES: 1 reply to round 1\./)
     } finally {
