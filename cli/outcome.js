@@ -46,19 +46,20 @@ export async function serveUntilDecision(started, opened = null) {
 
   const decision = await server.waitForDecision()
   const decided = !decision.aborted && !decision.disconnected
-  const carried = opened && decided ? opened.replies?.carried() ?? [] : []
-  const line = opened && decided ? await recordSession(opened, { ...decision, carried }) : ''
-  await handleOutcome(server, decision, () => decisionText(decision, carried, opened) + line)
+  const line = opened && decided ? await recordSession(opened, decision) : ''
+  await handleOutcome(server, decision, () => composeOutput(decision, opened, line))
 }
 
-// The verdict first, then last round's exchanges, so the agent's first line stays the decision.
-function decisionText(decision, carried, opened) {
-  if (carried.length === 0) { return decision.output }
+/** What goes to stdout: the verdict first, then last round's exchanges, then the session line. */
+export function composeOutput(decision, opened, line) {
+  const carried = decision.carried ?? []
+  if (!opened || carried.length === 0) { return decision.output + line }
   const round = opened.previous.round
   const view = { round, kind: opened.target.kind, ...opened.imageSize }
+  // The replies were frozen when the reviewer decided, so a request landing afterwards cannot change what is printed.
   // Only this round's replies count: a thread carried twice also holds earlier rounds' reviewer replies.
   const head = decision.repliesOnly
-    ? formatRepliesOnlyHeader({ approved: decision.approved, count: opened.replies.count(), round })
+    ? formatRepliesOnlyHeader({ approved: decision.approved, count: decision.replyCount, round })
     : decision.output
-  return head + formatRepliesSection(carried, view)
+  return head + formatRepliesSection(carried, view) + line
 }
