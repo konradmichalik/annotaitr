@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  STATUS_DISPLAY, statusDisplay, readPreviousRound, threadStatus, placedThreads, orphanThreads, threadPageCounts, threadsQuery
+  STATUS_DISPLAY, statusDisplay, badgeShowsNumber, readPreviousRound, threadStatus, placedThreads, orphanThreads, threadPageCounts, threadsQuery
 } from '../../../client/image/src/threads/threadView.js'
 
 const box = (extra = {}) => ({ type: 'box', geometry: { x: 1, y: 1, width: 5, height: 5 }, text: 'Fix', ...extra })
@@ -98,5 +98,18 @@ describe('readPreviousRound', () => {
   ])('is empty for %s', (_, body) => {
     expect(readPreviousRound(body).threads).toEqual([])
     if (body === null) { expect(readPreviousRound(body)).toEqual(empty) }
+  })
+})
+
+describe('badgeShowsNumber', () => {
+  it('is false for marks that already draw their number', () => {
+    expect(badgeShowsNumber(thread({ type: 'pin', geometry: { x: 1, y: 1 } }))).toBe(false)
+    expect(badgeShowsNumber(thread({ type: 'text', geometry: { x: 1, y: 1, width: 5, height: 5 } }))).toBe(false)
+  })
+
+  it('is true for marks without a number of their own', () => {
+    for (const type of ['box', 'arrow', 'freehand', 'highlighter', 'element']) {
+      expect(badgeShowsNumber(thread({ type }))).toBe(true)
+    }
   })
 })

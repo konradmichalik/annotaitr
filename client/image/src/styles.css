@@ -1646,19 +1646,58 @@ button.voice-note:hover {
   stroke-dasharray: 6 4;
 }
 
-.previous-round-badge rect {
-  fill: var(--text);
-  stroke: var(--bg);
+.previous-round-badge-plate {
+  fill: var(--bg);
+}
+
+.previous-round-badge-chip {
+  fill: var(--bg-secondary);
+  stroke: var(--border);
   stroke-width: 1;
 }
 
-.previous-round-badge text {
-  fill: var(--bg);
+.previous-round-badge--applied .previous-round-badge-chip {
+  fill: var(--success-bg);
+  stroke: var(--success);
+}
+
+.previous-round-badge--partial .previous-round-badge-chip,
+.previous-round-badge--deferred .previous-round-badge-chip {
+  fill: var(--comment-bg);
+  stroke: var(--comment-border);
+}
+
+.previous-round-badge--declined .previous-round-badge-chip {
+  fill: var(--deletion-bg);
+  stroke: var(--danger);
+}
+
+.previous-round-badge--question .previous-round-badge-chip {
+  fill: var(--warning-bg);
+  stroke: var(--warning);
+}
+
+.previous-round-badge-label {
+  fill: var(--text);
   font-size: 11px;
-  font-weight: 600;
+}
+
+.previous-round-badge--none .previous-round-badge-label {
+  fill: var(--text-muted);
+}
+
+.previous-round-badge-marker {
+  fill: var(--text);
+}
+
+.previous-round-badge-number {
+  fill: var(--bg);
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .previous-round-panel {
+  position: relative;
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--border-light);
   background: var(--bg-secondary);
@@ -1669,7 +1708,7 @@ button.voice-note:hover {
   display: flex;
   gap: 0.375rem;
   align-items: center;
-  padding: 0.25rem 1rem;
+  padding: 0.25rem 9.5rem 0.25rem 1rem;
   font-weight: 600;
   cursor: pointer;
 }
@@ -1677,6 +1716,81 @@ button.voice-note:hover {
 .previous-round-panel summary:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: -2px;
+}
+
+.previous-round-switch {
+  position: absolute;
+  top: 0.5rem;
+  right: 1rem;
+  z-index: 1;
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.25rem 0;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.previous-round-switch:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.previous-round-switch-track {
+  position: relative;
+  flex: none;
+  width: 1.75rem;
+  height: 1rem;
+  border: 1px solid var(--text-muted);
+  border-radius: 9999px;
+  background: var(--bg);
+}
+
+.previous-round-switch-knob {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.previous-round-switch[aria-checked="true"] .previous-round-switch-track {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+.previous-round-switch[aria-checked="true"] .previous-round-switch-knob {
+  left: calc(100% - 0.75rem - 1px);
+  background: var(--bg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .previous-round-switch-track,
+  .previous-round-switch-knob {
+    transition: left 0.15s, background-color 0.15s;
+  }
+}
+
+@media (forced-colors: active) {
+  .previous-round-switch-track,
+  .previous-round-switch-knob {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+  }
+
+  .previous-round-switch-knob {
+    background: CanvasText;
+  }
+
+  .previous-round-switch[aria-checked="true"] .previous-round-switch-track {
+    background: Highlight;
+  }
 }
 
 .previous-round-list {

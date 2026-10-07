@@ -69,6 +69,7 @@ test.describe('replies from the last round', () => {
       await page.goto(await cli.url)
       const layer = page.locator('.previous-round')
       await expect(layer.getByText('applied')).toBeVisible()
+      await expect(layer.locator('.previous-round-badge').first()).toHaveText('1applied')
 
       await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: 'Select' }).click()
       const box = await page.locator('.image-canvas-wrapper').boundingBox()
@@ -79,10 +80,13 @@ test.describe('replies from the last round', () => {
       await page.keyboard.press('Escape')
       await expect(dialog).toBeHidden()
 
-      const toggle = page.getByRole('button', { name: 'Previous round' })
+      const toggle = page.getByRole('switch', { name: 'Show on image' })
+      await expect(toggle).toHaveAttribute('aria-checked', 'true')
+      await expect(page.getByRole('button', { name: 'Previous round' })).toHaveCount(0)
       await toggle.click()
-      await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+      await expect(toggle).toHaveAttribute('aria-checked', 'false')
       await expect(layer).toHaveCount(0)
+      await expect(page.locator('.previous-round-panel details')).toHaveAttribute('open', '')
     } finally {
       cli.child.kill()
     }
@@ -126,6 +130,10 @@ test.describe('replies from the last round', () => {
       const fill = await circle.evaluate((el) => getComputedStyle(el).fill)
       const probe = await page.evaluate((c) => { const d = document.createElement('i'); d.style.color = c; document.body.append(d); const v = getComputedStyle(d).color; d.remove(); return v }, muted)
       expect(fill).toBe(probe)
+      // The pin draws its own number, so the badge is the chip alone, without a leading glyph, and it is not faded with the shape.
+      const badge = page.locator('.previous-round--ghost .previous-round-badge')
+      await expect(badge).toHaveText('applied')
+      expect(await badge.evaluate((el) => getComputedStyle(el.closest('.previous-round-mark')).opacity)).toBe('1')
     } finally {
       cli.child.kill()
     }
@@ -205,7 +213,7 @@ test.describe('replies from the last round', () => {
       await page.getByRole('region', { name: /Round 1 replies/ }).getByRole('button', { name: /1\./ }).click()
       const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
       await expect(dialog).toBeVisible()
-      const toggle = page.getByRole('button', { name: 'Previous round' })
+      const toggle = page.getByRole('switch', { name: 'Show on image' })
       await toggle.click()
       await expect(dialog).toBeHidden()
       await toggle.click()
@@ -279,7 +287,7 @@ test.describe('replies from the last round', () => {
       await page.getByRole('region', { name: /Round 1 replies/ }).getByRole('button', { name: /Corner/ }).click()
       await expect(page.getByRole('dialog')).toHaveCount(1)
       // A mouse press on the toggle is an outside click, so activate it from the keyboard.
-      await page.getByRole('button', { name: 'Previous round' }).focus()
+      await page.getByRole('switch', { name: 'Show on image' }).focus()
       await page.keyboard.press('Enter')
       await expect(page.getByRole('dialog')).toHaveCount(0)
     } finally {
