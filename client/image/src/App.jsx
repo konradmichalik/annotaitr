@@ -18,9 +18,10 @@ import PageNav from './document/PageNav.jsx'
 import PageImage from './document/PageImage.jsx'
 import { usePreviousRound } from './threads/usePreviousRound.js'
 import { useThreadPopover } from './threads/useThreadPopover.js'
+import ApprovalGate from './threads/ApprovalGate.jsx'
 import PreviousRoundPanel from './threads/PreviousRoundPanel.jsx'
 import ThreadPopover from './threads/ThreadPopover.jsx'
-import { placedThreads, threadPageCounts, hasMark, pendingReplyCount } from './threads/threadView.js'
+import { placedThreads, threadPageCounts, hasMark, pendingReplyCount, openQuestions } from './threads/threadView.js'
 import { useSettings } from './hooks/useSettings.js'
 import { useMediaPlayer } from './video/useMediaPlayer.js'
 import { useVideoReview } from './video/useVideoReview.js'
@@ -69,6 +70,8 @@ export default function App() {
   const [decision, setDecision] = useState(null)
   const [activeTool, setActiveTool] = useState('select')
   const [showExport, setShowExport] = useState(false)
+  const [gateOpen, setGateOpen] = useState(false)
+  const approveRef = useRef(null)
   const [editingAnnotationId, setEditingAnnotationId] = useState(null)
   const [zoom, setZoom] = useState(1)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -368,6 +371,19 @@ export default function App() {
     }
   }, [setErrorStatus, state.annotations, controller])
 
+  const unanswered = openQuestions(previous.threads)
+  const requestApproval = () => {
+    if (unanswered.length > 0) { setGateOpen(true) } else { submit('approve') }
+  }
+  const answerQuestions = () => {
+    setGateOpen(false)
+    showThread(unanswered[0], approveRef.current)
+  }
+  const approveAnyway = () => {
+    setGateOpen(false)
+    submit('approve')
+  }
+
   const zoomBy = useCallback((delta) => {
     setZoom((z) => Math.round(Math.max(0.1, Math.min(3, z + delta)) * 100) / 100)
   }, [])
@@ -513,7 +529,8 @@ export default function App() {
           </button>
           <button
             type="button"
-            onClick={() => submit('approve')}
+            ref={approveRef}
+            onClick={requestApproval}
             className="btn btn-approve"
             disabled={!!exportProgress}
             title={decisionItemCount > 0
@@ -684,6 +701,7 @@ export default function App() {
                 onDone={showToast}
               />
             </div>
+            {gateOpen && <ApprovalGate threads={unanswered} round={previous.round} onAnswer={answerQuestions} onApproveAnyway={approveAnyway} />}
             <PreviousRoundPanel round={previous.round} threads={previous.threads} showOnImage={showPrevious} onToggleShowOnImage={togglePrevious} onShow={showThread} onShowDetached={showEntryThread} />
             {entryPopoverThread && (
               <ThreadPopover key={entryPopoverThread.handle} thread={entryPopoverThread} round={previous.round} anchorPoint={entryThread.anchorPoint} onClose={closeThread} onReload={previous.reload} />

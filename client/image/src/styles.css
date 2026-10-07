@@ -1981,3 +1981,23 @@ button.voice-note:hover {
     border: 1px solid CanvasText;
   }
 }
+
+.approval-gate-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.approval-gate-text,
+.approval-gate-question {
+  margin: 0.25rem 0 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.approval-gate-question {
+  color: var(--text-muted);
+  font-style: italic;
+}

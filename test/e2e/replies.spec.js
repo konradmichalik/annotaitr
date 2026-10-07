@@ -479,6 +479,50 @@ test.describe('replies from the last round', () => {
     }
   })
 
+  test('warns before approving with an unanswered question and lets the reviewer answer or approve anyway', async ({ page }) => {
+    await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Button colour', color: '#bf616a' }, 'question', 'Green or blue?')
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      const approve = page.getByRole('button', { name: /^Approve/ })
+      await approve.click()
+      const gate = page.getByRole('dialog', { name: /question.*not answered/ })
+      await expect(gate.getByText('Green or blue?')).toBeVisible()
+      await expect(gate.getByRole('button', { name: 'Answer' })).toBeFocused()
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' })).toBeVisible()
+      await page.keyboard.press('Escape')
+      await approve.click()
+      await page.getByRole('dialog', { name: /question.*not answered/ }).getByRole('button', { name: 'Approve anyway' }).click()
+      await expect(page.getByRole('heading', { name: /Approved/ })).toBeVisible()
+      await cli.exited
+      expect(cli.stdout()).toMatch(/^APPROVED/)
+    } finally {
+      cli.child.kill()
+    }
+  })
+
+  test('does not warn when every question has a pending reply', async ({ page }) => {
+    await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Button colour', color: '#bf616a' }, 'question', 'Green or blue?')
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      await page.getByRole('region', { name: /Round 1 replies/ }).getByRole('button', { name: /1\..*question/ }).click()
+      const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
+      await dialog.getByLabel('Reply to the agent').fill('Green')
+      await dialog.getByRole('button', { name: 'Send' }).click()
+      await expect(dialog.getByText('pending, sent with your decision')).toBeVisible()
+      await page.keyboard.press('Escape')
+      await page.getByRole('button', { name: /^Approve/ }).click()
+      await expect(page.getByRole('dialog', { name: /not answered/ })).toHaveCount(0)
+      await expect(page.getByRole('heading', { name: /Approved/ })).toBeVisible()
+      await cli.exited
+      expect(cli.stdout()).toMatch(/^APPROVED WITH NOTES: 1 reply to round 1\./)
+    } finally {
+      cli.child.kill()
+    }
+  })
+
   test('anchors last round again after the page is captured at another viewport', async ({ page }) => {
     const server = createServer((_req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/html' })
