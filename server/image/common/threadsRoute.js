@@ -42,9 +42,9 @@ export function createThreadsRouter({ session, current }) {
   })
 
   router.delete('/api/threads/:handle/replies/:id', (req, res) => {
-    if (!session?.replies?.remove(req.params.handle, req.params.id)) {
-      return res.status(404).json(failure(`No pending reply ${req.params.id}`))
-    }
+    if (!session?.replies) { return res.status(404).json(failure('No review session to reply in')) }
+    const result = session.replies.remove(req.params.handle, req.params.id)
+    if (result.error) { return res.status(result.status).json(failure(result.error)) }
     res.json(success({ removed: true }))
   })
   return router

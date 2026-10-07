@@ -12,10 +12,13 @@ function normalizeHandle(value) {
  */
 export function createReplyStore(previous) {
   const pendingByHandle = new Map()
+  let frozen = null
+  const closed = () => ({ error: 'The round is already decided', status: 409 })
 
   const threadFor = (handle) => previous?.threads.find((t) => t.handle === handle)
 
   function add(rawHandle, text, { now = Date.now(), id = randomUUID() } = {}) {
+    if (frozen) { return closed() }
     const handle = normalizeHandle(rawHandle)
     if (!threadFor(handle)) { return { error: `No thread #${handle} in round ${previous?.round ?? 0}`, status: 404 } }
     const trimmed = typeof text === 'string' ? text.trim() : ''
@@ -28,13 +31,13 @@ export function createReplyStore(previous) {
   }
 
   function remove(rawHandle, id) {
+    if (frozen) { return closed() }
     const handle = normalizeHandle(rawHandle)
     const list = pendingByHandle.get(handle)
-    if (!list) { return false }
-    const kept = list.filter((r) => r.id !== id)
-    if (kept.length === list.length) { return false }
+    const kept = list?.filter((r) => r.id !== id)
+    if (!list || kept.length === list.length) { return { error: `No pending reply ${id}`, status: 404 } }
     if (kept.length === 0) { pendingByHandle.delete(handle) } else { pendingByHandle.set(handle, kept) }
-    return true
+    return { removed: true }
   }
 
   const pending = (rawHandle) => pendingByHandle.get(normalizeHandle(rawHandle)) ?? []
@@ -49,10 +52,25 @@ export function createReplyStore(previous) {
         origin: thread.origin ?? { round: previous.round, number: thread.number },
         annotation: thread.annotation,
         element: thread.element,
+        // Its geometry belongs to the round it was first drawn in, not to the one before this.
+        fingerprint: thread.fingerprint ?? previous.fingerprint ?? null,
         replies: [...thread.replies, ...replies]
       }
     })
   }
 
-  return { add, remove, pending, count, carried }
+  /**
+   * Called the moment a decision is made: from then on the store rejects
+   * changes, so what the output is built from cannot differ from what the
+   * reviewer saw when deciding. The snapshot travels with the decision.
+   */
+  function freeze() {
+    frozen ??= { carried: carried(), replyCount: count() }
+    return frozen
+  }
+
+  return { add, remove, pending, count, carried: () => frozen?.carried ?? carried(), freeze }
 }
+
+/** The decision fields for sessions without replies, so routes can spread the result either way. */
+export const freezeReplies = (replies) => replies?.freeze() ?? { carried: [], replyCount: 0 }
