@@ -124,7 +124,7 @@
 .btn-muted {
   background: none;
   color: var(--text-muted);
-  border-color: var(--border);
+  border-color: var(--line-control);
 }
 
 .btn-muted:hover {
@@ -317,7 +317,7 @@
   font-weight: 600;
   color: var(--text-muted);
   background: var(--bg-card);
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--line-control);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
@@ -327,7 +327,7 @@
 
 .table-toolbar-btn:hover {
   color: var(--text);
-  border-color: var(--border);
+  border-color: var(--ink);
 }
 
 .table-toolbar-btn--annotate:hover {
@@ -880,8 +880,8 @@
 }
 
 .annotation-highlight.notes {
-  background: rgb(163 190 140 / 12%);
-  border-bottom-color: #a3be8c;
+  background: var(--notes-bg);
+  border-bottom-color: var(--notes-text);
   cursor: default;
 }
 
@@ -954,10 +954,10 @@
 
 .toolbar-btn-delete { color: var(--danger); }
 .toolbar-btn-delete:hover { background: var(--deletion-bg); }
-.toolbar-btn-comment { color: var(--comment-border); }
+.toolbar-btn-comment { color: var(--comment-text); }
 .toolbar-btn-comment:hover { background: var(--comment-bg); }
-.toolbar-btn-insert { color: #88c0d0; }
-.toolbar-btn-insert:hover { background: rgb(136 192 208 / 12%); }
+.toolbar-btn-insert { color: var(--insertion-text); }
+.toolbar-btn-insert:hover { background: var(--insertion-bg); }
 .toolbar-btn-edit-remove { color: var(--text-muted); }
 .toolbar-btn-edit-remove:hover { color: var(--danger); background: var(--deletion-bg); }
 .toolbar-btn-edit-action { color: var(--text-muted); }
@@ -1012,7 +1012,7 @@
 
 .toolbar-submit {
   padding: 0.375rem 0.75rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line-control);
   border-radius: 4px;
   background: var(--bg-secondary);
   color: var(--text);
@@ -1037,13 +1037,12 @@
   padding: 4px 0 0;
   cursor: grab;
   color: var(--text-muted);
-  opacity: 0.4;
-  transition: opacity var(--transition-fast);
+  transition: color var(--transition-fast);
   user-select: none;
 }
 
-.comment-popover-drag-handle:hover { opacity: 0.7; }
-.comment-popover-drag-handle:active { cursor: grabbing; opacity: 0.7; }
+.comment-popover-drag-handle:hover { color: var(--text); }
+.comment-popover-drag-handle:active { cursor: grabbing; color: var(--text); }
 
 /* === Math === */
 .block-math-wrapper {
@@ -1067,8 +1066,8 @@
   outline-offset: 2px;
 }
 
-.block-math.annotated-comment { background: rgb(250 204 21 / 18%); }
-.block-math.annotated-deletion { background: rgb(248 113 113 / 18%); }
+.block-math.annotated-comment { background: var(--comment-bg); }
+.block-math.annotated-deletion { background: var(--deletion-bg); }
 
 .inline-math { white-space: nowrap; }
 
@@ -1300,7 +1299,6 @@
   padding: 0 1rem 0 1.25rem;
   text-align: right;
   color: var(--text-muted);
-  opacity: 0.45;
   user-select: none;
   vertical-align: top;
   white-space: nowrap;
@@ -1352,7 +1350,7 @@
 }
 
 .panel-item-insertion.selected {
-  box-shadow: inset 3px 0 0 var(--success);
+  box-shadow: inset 3px 0 0 var(--insertion-border);
 }
 
 .panel-type-badge.deletion {
@@ -1362,17 +1360,17 @@
 
 .panel-type-badge.comment {
   background: var(--comment-bg);
-  color: var(--comment-border);
+  color: var(--comment-text);
 }
 
 .panel-type-badge.insertion {
-  background: rgb(136 192 208 / 15%);
-  color: #88c0d0;
+  background: var(--insertion-bg);
+  color: var(--insertion-text);
 }
 
 .panel-type-badge.notes {
-  background: rgb(163 190 140 / 15%);
-  color: #a3be8c;
+  background: var(--notes-bg);
+  color: var(--notes-text);
 }
 
 .panel-original-text {
@@ -1561,7 +1559,6 @@
 
 .toc-item--intro .toc-item-text {
   font-style: italic;
-  opacity: 0.7;
 }
 
 .toc-badge {
@@ -1615,7 +1612,7 @@ a {
   text-underline-offset: 2px;
 }
 
-a:hover { opacity: 0.8; }
+a:hover { text-decoration-thickness: 2px; }
 
 /* === AI Notes Section === */
 .panel-notes-section {
@@ -1683,7 +1680,6 @@ a:hover { opacity: 0.8; }
   font-size: var(--fs-sm);
   color: var(--text-muted);
   font-style: italic;
-  opacity: 0.7;
 }
 
 /* === AI Notes Modal === */
@@ -1755,7 +1751,7 @@ a:hover { opacity: 0.8; }
 /* === Insertion Marker === */
 .insertion-marker {
   display: inline;
-  border-left: 2px solid #88c0d0;
+  border-left: 2px solid var(--insertion-text);
   cursor: pointer;
   position: relative;
 }
@@ -1767,7 +1763,7 @@ a:hover { opacity: 0.8; }
   left: -0.4em;
   font-size: 0.65em;
   font-weight: 700;
-  color: #88c0d0;
+  color: var(--insertion-text);
   pointer-events: none;
   line-height: 1;
 }
@@ -1782,7 +1778,7 @@ a:hover { opacity: 0.8; }
 
 .insertion-marker-temp {
   display: inline;
-  border-left: 2px solid #88c0d0;
+  border-left: 2px solid var(--insertion-text);
   animation: insertion-blink 1s step-end infinite;
   pointer-events: none;
 }
@@ -1957,12 +1953,12 @@ a:hover { opacity: 0.8; }
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 0.625rem;
   padding: 0.075rem 0.3rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line-control);
   border-radius: 3px;
   background: var(--bg-secondary);
   color: var(--text-muted);
   white-space: nowrap;
-  box-shadow: 0 1px 0 var(--border);
+  box-shadow: 0 1px 0 var(--line-control);
   flex-shrink: 0;
 }
 
@@ -2032,7 +2028,7 @@ a:hover { opacity: 0.8; }
 
 .search-bar-input::placeholder {
   color: var(--text-muted);
-  opacity: 0.6;
+  opacity: 1;
 }
 
 .search-count {

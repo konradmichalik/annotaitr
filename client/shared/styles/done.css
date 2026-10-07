@@ -109,7 +109,7 @@
 }
 
 .done-icon--disconnected {
-  background: var(--deletion-bg, rgb(191 97 106 / 12%));
+  background: color-mix(in srgb, var(--danger) var(--tint), transparent);
   color: var(--danger);
 }
 
