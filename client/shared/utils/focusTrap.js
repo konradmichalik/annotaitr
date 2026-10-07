@@ -1,7 +1,7 @@
 const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
 
-// Tab reaches only the checked radio of a group, so the others are no stop on the way round.
-const isTabStop = (el) => !(el.type === 'radio' && !el.checked)
+// Tab reaches only the checked radio of a group and skips what a roving tabindex took out of the order.
+const isTabStop = (el) => !(el.type === 'radio' && !el.checked) && el.tabIndex >= 0
 
 /** Keeps Tab and Shift+Tab inside `container` while a modal dialog is open. */
 export function trapTab(event, container) {

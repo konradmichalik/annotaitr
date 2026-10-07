@@ -9,6 +9,7 @@ import { AppHeader } from '../../shared/components/AppHeader.jsx'
 import { DecisionDialog } from '../../shared/components/DecisionDialog.jsx'
 import { SidePanelIcon } from '../../shared/components/HeaderIcons.jsx'
 import { useDecisionShortcut } from '../../shared/hooks/useDecisionShortcut.js'
+import { useShortcutListKey } from '../../shared/hooks/useShortcutListKey.js'
 import { useReviewDecision, isGeneralComment, createGeneralComment } from './hooks/useReviewDecision.js'
 import { DisconnectedScreen, SubmittedScreen } from './components/DoneScreens.jsx'
 import { HashMismatchBanner, DraftBanner } from './components/ReviewBanners.jsx'
@@ -370,6 +371,8 @@ export default function App() {
   const openDecision = useCallback(() => setDecisionOpen(true), [])
   const closeDecision = useCallback(() => setDecisionOpen(false), [])
   useDecisionShortcut(openDecision, !submitted && settingsTab === null)
+  const openShortcuts = useCallback(() => setSettingsTab('shortcuts'), [])
+  useShortcutListKey(openShortcuts, !submitted && settingsTab === null && !decisionOpen)
 
   const finishFromDialog = (result) => {
     setDecisionOpen(false)
@@ -450,8 +453,8 @@ export default function App() {
         target={filePath}
         facts={isMultiFile ? `file ${activeFileIndex + 1} of ${files.length}` : null}
         origin={origin}
-        onOpenShortcuts={() => setSettingsTab('shortcuts')}
-        onOpenSettings={() => setSettingsTab('appearance')}
+        onOpenShortcuts={openShortcuts}
+        onOpenSettings={() => setSettingsTab('general')}
         panelCollapsed={sidebarCollapsed}
         onTogglePanel={toggleSidebar}
         decision={{
@@ -557,7 +560,7 @@ export default function App() {
       </main>
 
       <footer className="app-status">
-        <span className="status-help" role="status">{status || <ModeHelp pinpoint={effectivePinpointMode} />}</span>
+        <span className="status-help" role="status">{status || (settings.toolHints && <ModeHelp pinpoint={effectivePinpointMode} />)}</span>
         {activeFile?.content && (
           <FileStats content={activeFile.content} />
         )}
@@ -584,7 +587,7 @@ export default function App() {
 
       <SettingsModal
         isOpen={settingsTab !== null}
-        initialTab={settingsTab ?? undefined}
+        initialSection={settingsTab ?? undefined}
         onClose={() => setSettingsTab(null)}
         settings={settings}
         updateSetting={updateSetting}

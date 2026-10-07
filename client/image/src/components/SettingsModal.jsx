@@ -1,65 +1,9 @@
-import { SettingsModal as SharedSettingsModal, ThemeRow, AutoCloseRow, MOD } from '../../../shared/components/SettingsModal.jsx'
+import { SettingsModal as SharedSettingsModal } from '../../../shared/components/SettingsModal.jsx'
 
-function AppearanceTab(props) {
-  return (
-    <div className="settings-tab-content">
-      <ThemeRow {...props} />
-    </div>
-  )
-}
+// The clipboard is an image like any other as far as the keys go.
+const SHORTCUT_KINDS = { clipboard: 'image', image: 'image', url: 'url', pdf: 'pdf', video: 'video' }
 
-function BehaviorTab(props) {
-  return (
-    <div className="settings-tab-content">
-      <AutoCloseRow {...props} />
-    </div>
-  )
-}
-
-const SHORTCUT_GROUPS = [
-  {
-    title: 'Tools',
-    items: [
-      { keys: 'V', desc: 'Select' },
-      { keys: 'E', desc: 'Element (captured pages and PDFs with text)' },
-      { keys: 'T', desc: 'Text (PDFs with text)' },
-      { keys: 'R', desc: 'Box' },
-      { keys: 'A', desc: 'Arrow' },
-      { keys: 'P', desc: 'Freehand' },
-      { keys: 'H', desc: 'Highlighter' },
-      { keys: 'C', desc: 'Pin' },
-      { keys: 'Escape', desc: 'Back to Select' },
-      { keys: 'G', desc: 'General comment' }
-    ]
-  },
-  {
-    title: 'Annotations',
-    items: [
-      { keys: 'Click a mark', desc: 'Select it (shows resize handles)' },
-      { keys: 'Click again', desc: 'Edit its comment, intent and ink' },
-      { keys: 'Drag a mark', desc: 'Move it' },
-      { keys: 'Drag a corner handle', desc: 'Resize it' },
-      { keys: 'Delete / Backspace', desc: 'Delete the selected mark' },
-      { keys: 'Tab, then 1\u20134', desc: 'Intent of the comment: Change, Add, Remove, Question' },
-      { keys: `${MOD} + Enter`, desc: 'Save the comment' },
-      { keys: 'Escape', desc: 'Discard the comment being written' }
-    ]
-  },
-  {
-    title: 'Review',
-    items: [
-      { keys: `${MOD} + Shift + Enter`, desc: 'Open the decision' },
-      { keys: `${MOD} + Enter`, desc: 'Submit the open decision' }
-    ]
-  },
-  {
-    title: 'View',
-    items: [
-      { keys: `${MOD} + Scroll`, desc: 'Zoom in / out' }
-    ]
-  }
-]
-
-export default function SettingsModal(props) {
-  return <SharedSettingsModal {...props} appearance={AppearanceTab} behavior={BehaviorTab} shortcuts={SHORTCUT_GROUPS} />
+/** The image modes keep no drafts: the server holds every note until the decision. */
+export default function SettingsModal({ source, ...props }) {
+  return <SharedSettingsModal {...props} kind={SHORTCUT_KINDS[source] ?? 'image'} />
 }

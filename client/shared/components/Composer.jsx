@@ -1,7 +1,6 @@
 import { useEffect, useId, useRef } from 'react'
-import { isSaveKey } from '../utils/keys.js'
+import { isSaveKey, MOD } from '../utils/keys.js'
 import { intentForKey } from '../utils/intents.js'
-import { MOD } from './SettingsModal.jsx'
 import { IntentChip } from './IntentChip.jsx'
 
 // Digits typed into a field are text; only outside of it do they pick an intent.

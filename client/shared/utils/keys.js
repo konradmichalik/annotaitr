@@ -1,3 +1,9 @@
+const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent)
+
+/** The modifier key caps of the platform. */
+export const MOD = isMac ? '⌘' : 'Ctrl'
+export const ALT = isMac ? '⌥' : 'Alt'
+
 const NON_TEXT_INPUTS = new Set(['button', 'checkbox', 'color', 'file', 'image', 'radio', 'range', 'reset', 'submit'])
 
 /** Whether a key pressed on `target` is typed into it: a text field, a select or editable content. */
@@ -30,4 +36,15 @@ export function isPlainKeyPress(event) {
 export function isSaveKey(event) {
   if (event.key !== 'Enter' || event.shiftKey || !(event.metaKey || event.ctrlKey)) { return false }
   return !(event.isComposing || event.nativeEvent?.isComposing)
+}
+
+/**
+ * `?` opens the shortcut list: no Ctrl, Cmd or Alt (Shift is how most
+ * layouts type it), not typed into a field and not inside a menu or dialog.
+ */
+export function isShortcutListKey(event) {
+  if (event.key !== '?' || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) { return false }
+  const target = event.target
+  if (isTypingTarget(target)) { return false }
+  return !target?.closest?.('[role="menu"], [role="dialog"], [role="listbox"]')
 }

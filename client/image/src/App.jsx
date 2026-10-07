@@ -41,6 +41,7 @@ import { UpdateBanner } from '../../shared/components/UpdateBanner.jsx'
 import { AppHeader } from '../../shared/components/AppHeader.jsx'
 import { DecisionDialog } from '../../shared/components/DecisionDialog.jsx'
 import { useDecisionShortcut } from '../../shared/hooks/useDecisionShortcut.js'
+import { useShortcutListKey } from '../../shared/hooks/useShortcutListKey.js'
 import { agentName } from '../../shared/utils/origin.js'
 import { applySummary, plural } from '../../shared/utils/decision.js'
 import { sourceKind, targetFacts } from './utils/headerSource.js'
@@ -445,6 +446,8 @@ export default function App() {
   const openDecision = useCallback(() => setDecisionDialog({ choice: null }), [])
   const closeDecision = useCallback(() => setDecisionDialog(null), [])
   useDecisionShortcut(openDecision, !decision && !settingsOpen && !showExport && !exportProgress)
+  const openShortcuts = useCallback(() => setSettingsTab('shortcuts'), [])
+  useShortcutListKey(openShortcuts, !decision && !settingsOpen && !showExport && !decisionDialog && !exportProgress)
   useToolShortcuts({ tools, disabled: settingsOpen || showExport || !!decisionDialog || !!decision || !!exportProgress, onSelect: setActiveTool })
 
   const zoomBy = useCallback((delta) => {
@@ -502,7 +505,7 @@ export default function App() {
     if (status) { return status }
     if (video.spanComplete) { return 'Span marked. Pick a tool and click the frame to mark something in it, or click "Comment span" to comment without drawing.' }
     if (video.range.start !== null) { return 'Span started. Move to where it ends (play, scrub or use the arrows), then click "Set end here".' }
-    return <ToolHelp tool={activeTool} isVideo={isVideo} isDocument={isDocument} />
+    return settings.toolHints ? <ToolHelp tool={activeTool} isVideo={isVideo} isDocument={isDocument} /> : null
   }
 
   function pageMedia() {
@@ -589,8 +592,8 @@ export default function App() {
         facts={facts}
         round={previous.round === null ? null : previous.round + 1}
         origin={origin}
-        onOpenShortcuts={() => setSettingsTab('shortcuts')}
-        onOpenSettings={() => setSettingsTab('appearance')}
+        onOpenShortcuts={openShortcuts}
+        onOpenSettings={() => setSettingsTab('general')}
         panelCollapsed={sidebarCollapsed}
         onTogglePanel={() => setSidebarCollapsed((prev) => !prev)}
         decision={{
@@ -814,7 +817,8 @@ export default function App() {
 
       <SettingsModal
         isOpen={settingsOpen}
-        initialTab={settingsTab ?? undefined}
+        initialSection={settingsTab ?? undefined}
+        source={source}
         onClose={() => setSettingsTab(null)}
         settings={settings}
         updateSetting={updateSetting}

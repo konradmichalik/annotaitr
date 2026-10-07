@@ -5,8 +5,7 @@ import { decisionLegend } from '../utils/origin.js'
 import {
   decisionOptions, defaultChoice, describeIntents, needsDiscardConfirm, plural, submitLabel
 } from '../utils/decision.js'
-import { MOD } from './SettingsModal.jsx'
-import { isSaveKey } from '../utils/keys.js'
+import { isSaveKey, MOD } from '../utils/keys.js'
 
 /**
  * Finish review: Send feedback, Approve with notes or Approve, plus an optional
