@@ -69,7 +69,7 @@ All colours come from tokens in `client/shared/styles/tokens.css`, with a light 
 | Element | Value |
 | --- | --- |
 | Spacing scale | 4, 8, 12, 16, 24, 32px |
-| Radius | 6px controls, 10px cards, 14px dock and dialogs |
+| Radius | 6px controls, 10px cards, 12px popovers (composer, thread), 14px dock and dialogs |
 | Elevation e1 | Panels: `0 1px 2px rgb(22 24 29 / 6%)` |
 | Elevation e2 | Dock, popovers: `0 2px 4px rgb(22 24 29 / 6%), 0 12px 32px rgb(22 24 29 / 12%)` |
 
@@ -138,7 +138,7 @@ A status dot plus the words, never the dot alone. The tooltip names the command 
 - **PDF:** the page strip shows a count badge on pages with notes and a dashed dot on pages with replies from an earlier round.
 - **Web capture:** the capture control is collapsed to `Desktop · 1440 ▾` plus an icon button `Capture again`. Viewport and delay live in its popover. The Element tool labels the hovered element with its selector and size. `Tab` walks the element tree, `↑` selects the parent.
 - **Video:** the timeline sits under the work area with two lanes. `Notes` holds point notes, `Spans` holds ranges. Notes closer than a marker width merge into a cluster chip that shows both colours and the count, and opens a list on click or `Enter`. The list opens above the lanes and never covers the transport controls. Overlapping spans each get their own row. A playhead line runs across both lanes. Spans are set with `I` and `O`, never only by dragging.
-- **Markdown:** the left sidebar starts with `Files`: every file with its note count, a reviewed check or `not opened`, and `n of m reviewed`. Below it the contents of the active file with note counts per section, and `Mark file as reviewed` at the bottom. Selecting text opens a dark bar with Change, Add, Remove and Ask, keys `1` to `4`.
+- **Markdown:** the left sidebar starts with `Files`: every file with its note count, a reviewed check or `not opened`, and `n of m reviewed`. Below it the contents of the active file with note counts per section, and `Mark file as reviewed` at the bottom. Selecting text opens a dark bar with Change, Add, Remove and Ask, keys `1` to `4`. Until intents exist the bar keeps Delete (`⌘D`), Comment (`⌘K`), Label (`⌥1` to `0`) and Open, each with its key as a hint. The bar is ink, so it turns light in the dark theme like the primary button, and its focus ring uses the bar's text colour, because `--focus` does not reach 3:1 on ink.
 
 ## Notes
 
@@ -151,8 +151,10 @@ A status dot plus the words, never the dot alone. The tooltip names the command 
 - **Text first.** The popover opens with the text field focused, placeholder `Add a comment…`. Nothing sits above it.
 - One footer row: the intent chip (`✎ Change ▾`), a palette icon for ink and stroke, `Cancel` as text and `Add ⌘↵` as the only filled button.
 - Default intent: Change for shapes and text selections, Question for pins. Keys `1` to `4` switch it without opening the menu. The default is configurable in Settings.
-- The focused popover border is the focus indicator. The field itself has no outline.
-- A draft survives a click outside in every mode. `Esc` discards it.
+- The focused popover border is the focus indicator: 1.5px `--focus` plus a soft ring while focus is inside. The field itself has no outline. Buttons inside keep the 2px ring.
+- A voice note, where available, is its own microphone button next to the palette, not behind it: closing the palette must not stop a recording.
+- A draft survives a click outside in every mode. A draft is typed text that differs from what the composer opened with, or a changed ink or stroke. An untouched composer closes on a click outside, and a mark drawn just before goes with it. `Esc` and `Cancel` discard.
+- Both clients use the shared shell in `client/shared/components/Composer.jsx`. The markdown composer keeps `@` file suggestions and an expand button in the footer. It has no drag handle, because nothing may sit above the field.
 - The popover is `role="dialog"`. The field gets its accessible name from a visually hidden heading (`Note 3, box`). This is the only place a field goes without a visible label.
 
 ### Threads

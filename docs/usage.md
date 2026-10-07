@@ -323,8 +323,8 @@ saved, a warning goes to stderr and the decision is printed as usual. Several
 
 In round 2 the reviewer can answer a thread from the previous round in the
 annotator. Opening a thread, from its badge on the canvas or from the "Round 1
-replies" section under the panel's **Replies** tab, shows a "Reply to the agent" field. Send, or Ctrl/Cmd+Enter,
-stores the reply as "pending, sent with your decision". It can be removed
+replies" section under the panel's **Replies** tab, shows a "Reply to the agent" field. **Reply**, or Ctrl/Cmd+Enter,
+stores the reply as "Pending, sent with your decision". It can be removed
 until the decision is submitted. The panel shows the reviewer's reply as
 "You: ..." and counts them as "· N to send", and a thread with a pending reply
 carries a ↩ mark on its canvas badge. A decision may carry only replies and no
@@ -380,6 +380,21 @@ Selecting a mark selects its card and the other way round. With an earlier
 round the panel switches between **This round** and **Replies**; with several
 markdown files between **This file** and **All files**. The general comment is
 the row at the bottom of the panel.
+
+### Writing a note
+
+A new mark or text selection opens the comment box with its text field
+focused. Ctrl/Cmd+Enter or **Add** saves the note, `Esc` or **Cancel**
+discards it. A click outside keeps a box that holds a draft (typed text, or in
+image mode a changed ink or stroke) open, so a stray click never loses it; an
+untouched box closes, and a mark that was just drawn goes with it. In image
+mode the palette button next to the text holds the ink colour, line width,
+line style and arrow end. In markdown mode `@` suggests files to reference and
+the expand button opens a larger editor, which `Esc` collapses again.
+
+Selecting text in markdown mode shows a bar with **Delete** (Ctrl/Cmd+D),
+**Comment** (Ctrl/Cmd+K), **Label** (Alt+1 to 0) and, on a link, **Open**. The
+arrow keys move between its buttons.
 
 ## Finishing a review
 

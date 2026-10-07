@@ -73,6 +73,7 @@ const SHORTCUT_GROUPS = [
       { keys: `${MOD} + K`, desc: 'Comment on selected text' },
       { keys: 'Alt + 1\u20130', desc: 'Quick label on selected text' },
       { keys: `${MOD} + Enter`, desc: 'Save the comment' },
+      { keys: 'Escape', desc: 'Discard the comment being written' },
       { keys: 'Alt + Click', desc: 'Insert text at position' },
     ],
   },

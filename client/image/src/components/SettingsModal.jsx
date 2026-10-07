@@ -41,7 +41,7 @@ const SHORTCUT_GROUPS = [
       { keys: 'Drag a corner handle', desc: 'Resize it' },
       { keys: 'Delete / Backspace', desc: 'Remove the selected mark' },
       { keys: `${MOD} + Enter`, desc: 'Save the comment' },
-      { keys: 'Escape', desc: 'Close the comment popover' }
+      { keys: 'Escape', desc: 'Discard the comment being written' }
     ]
   },
   {
