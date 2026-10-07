@@ -91,7 +91,8 @@ export default function App() {
   // A video is asked only once its duration is known, so marks past the end arrive as orphans.
   const previous = usePreviousRound({
     ready: isStill || isDocument || (isVideo && !!controller),
-    duration: isVideo ? controller?.duration : undefined
+    duration: isVideo ? controller?.duration : undefined,
+    captureKey: imageUrl
   })
   const previousView = isVideo
     ? { kind: 'video', time: playerState?.currentTime ?? 0, tolerance: (playerState?.frameDuration ?? 1 / 30) / 2 }

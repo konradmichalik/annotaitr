@@ -4,6 +4,7 @@ import { writeFile, rm, mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
+import { createServer } from 'node:http'
 import { test, expect } from '@playwright/test'
 import { startCli } from '../helpers/cli.js'
 import { makeFixturePng } from '../helpers/fixtureImage.js'
@@ -366,6 +367,44 @@ test.describe('replies from the last round', () => {
       await expect(entry).not.toBeFocused()
     } finally {
       cli.child.kill()
+    }
+  })
+
+  test('anchors last round again after the page is captured at another viewport', async ({ page }) => {
+    const server = createServer((_req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/html' })
+      res.end('<!doctype html><body style="margin:0;height:600px;background:#eceff4"><h1>Pricing</h1></body>')
+    })
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+    const target = `http://127.0.0.1:${server.address().port}/`
+    try {
+      const first = startCli([target, '--viewport', '800x600'], env)
+      const firstUrl = await first.url
+      const post = (path, body) => fetch(`${firstUrl}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      await post('/api/annotations', { annotations: [{ id: UUID, type: 'pin', geometry: { x: 700, y: 100 }, text: 'Right edge', color: '#bf616a' }] })
+      await post('/api/feedback', {})
+      await first.exited
+
+      const cli = startCli([target, '--viewport', '800x600'], env)
+      try {
+        await page.goto(await cli.url)
+        const section = page.getByRole('region', { name: /Round 1 replies/ })
+        await expect(section).toBeVisible()
+        await expect(section.getByText('No longer in the target')).toHaveCount(0)
+
+        // A phone capture (375 px) is narrower than the pin's x position, so the mark now lies outside the image.
+        await page.locator('.viewport-trigger').click()
+        await page.locator('label', { has: page.getByRole('radio', { name: 'Phone', exact: true }) }).click()
+        await Promise.all([
+          page.waitForResponse('**/api/recapture'),
+          page.getByRole('button', { name: 'Capture again' }).click()
+        ])
+        await expect(section.getByText('No longer in the target')).toBeVisible()
+      } finally {
+        cli.child.kill()
+      }
+    } finally {
+      await new Promise((resolve) => server.close(resolve))
     }
   })
 })
