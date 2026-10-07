@@ -57,7 +57,7 @@
 }
 
 .file-tab-badge {
-  font-size: 0.6875rem;
+  font-size: var(--fs-sm);
   min-width: 1.125rem;
   height: 1.125rem;
   padding: 0 0.25rem;
@@ -68,6 +68,7 @@
   align-items: center;
   justify-content: center;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .app-main {
@@ -117,7 +118,7 @@
 
 .btn-sm {
   padding: 0.25rem 0.75rem;
-  font-size: 0.75rem;
+  font-size: var(--fs-sm);
 }
 
 .btn-muted {
@@ -137,7 +138,7 @@
   padding: 0.5rem 1.5rem;
   background: var(--success-bg);
   border-bottom: 1px solid var(--success);
-  font-size: 0.8125rem;
+  font-size: var(--fs-md);
   color: var(--text);
   flex-shrink: 0;
 }
@@ -312,7 +313,7 @@
   align-items: center;
   justify-content: center;
   padding: 0.2rem 0.5rem;
-  font-size: 0.7rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-muted);
   background: var(--bg-card);
@@ -342,7 +343,7 @@
   left: 50%;
   transform: translateX(-50%);
   padding: 0.2rem 0.5rem;
-  font-size: 0.65rem;
+  font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--bg-card);
   background: var(--text);
@@ -728,7 +729,7 @@
 }
 
 .diagram-zoom-display {
-  font-size: 0.625rem;
+  font-size: var(--fs-sm);
   text-align: center;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
@@ -833,7 +834,7 @@
   background: rgb(191 97 106 / 15%);
   border-bottom: 1px solid rgb(191 97 106 / 20%);
   color: var(--danger);
-  font-size: 0.75rem;
+  font-size: var(--fs-sm);
   font-weight: 500;
 }
 
@@ -967,7 +968,7 @@
 .toolbar-btn-cancel:hover { background: var(--bg-secondary); }
 
 .toolbar-label {
-  font-size: 0.6875rem;
+  font-size: var(--fs-sm);
   font-weight: 500;
   margin-left: 0.25rem;
 }
@@ -996,7 +997,7 @@
   background: transparent;
   border: none;
   outline: none;
-  font-size: 0.8125rem;
+  font-size: var(--fs-md);
   font-family: inherit;
   color: var(--text);
   min-width: 11rem;
@@ -1015,7 +1016,7 @@
   border-radius: 4px;
   background: var(--bg-secondary);
   color: var(--text);
-  font-size: 0.75rem;
+  font-size: var(--fs-sm);
   font-weight: 500;
   cursor: pointer;
   align-self: stretch;
@@ -1169,7 +1170,7 @@
   position: absolute;
   top: -1.5rem;
   left: 0;
-  font-size: 0.6875rem;
+  font-size: var(--fs-sm);
   color: var(--primary);
   background: var(--bg-card);
   border: 1px solid var(--primary);
@@ -1201,7 +1202,7 @@
   position: absolute;
   top: -1.5rem;
   right: 0;
-  font-size: 0.6875rem;
+  font-size: var(--fs-sm);
   color: var(--primary);
   background: var(--bg-card);
   border: 1px solid var(--primary);
@@ -1375,7 +1376,7 @@
 }
 
 .panel-original-text {
-  font-size: 0.75rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   font-style: italic;
   line-height: 1.4;
@@ -1571,7 +1572,8 @@
   border-radius: 9999px;
   background: var(--badge-bg);
   color: var(--badge-text);
-  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-sm);
   font-weight: 600;
   line-height: 1.125rem;
   text-align: center;
@@ -1671,14 +1673,14 @@ a:hover { opacity: 0.8; }
 }
 
 .panel-note-line-ref {
-  font-size: 0.6875rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   margin-top: 0.125rem;
 }
 
 .panel-notes-hint {
   padding: 0.375rem 1rem 0.625rem;
-  font-size: 0.6875rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   font-style: italic;
   opacity: 0.7;
@@ -1743,7 +1745,7 @@ a:hover { opacity: 0.8; }
   align-items: center;
   gap: 0.375rem;
   padding: 0.5rem 1rem 0.25rem;
-  font-size: 0.6875rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1817,7 +1819,7 @@ a:hover { opacity: 0.8; }
   align-items: center;
   gap: 0.375rem;
   padding: 0.375rem 0.625rem;
-  font-size: 0.75rem;
+  font-size: var(--fs-sm);
   color: var(--text);
   cursor: pointer;
 }
@@ -1865,7 +1867,7 @@ a:hover { opacity: 0.8; }
   white-space: pre-wrap;
   overflow-wrap: break-word;
   color: transparent;
-  font-size: 0.8125rem;
+  font-size: var(--fs-md);
   font-family: inherit;
   line-height: 1.5;
   padding: 0.375rem 0.5rem;
@@ -1893,7 +1895,7 @@ a:hover { opacity: 0.8; }
 
 .quick-label-picker-header {
   padding: 0.5rem 0.75rem 0.25rem;
-  font-size: 0.6875rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -1945,7 +1947,7 @@ a:hover { opacity: 0.8; }
 }
 
 .quick-label-text {
-  font-size: 0.8125rem;
+  font-size: var(--fs-md);
   color: var(--text);
   flex: 1;
   min-width: 0;
@@ -1973,7 +1975,7 @@ a:hover { opacity: 0.8; }
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  font-size: 0.625rem;
+  font-size: var(--fs-sm);
   font-weight: 500;
   padding: 0.125rem 0.375rem;
   border-radius: 3px;
@@ -2022,7 +2024,7 @@ a:hover { opacity: 0.8; }
   border: none;
   background: transparent;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--fs-md);
   outline: none;
   min-width: 0;
   padding: 2px 0;
@@ -2034,7 +2036,7 @@ a:hover { opacity: 0.8; }
 }
 
 .search-count {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   white-space: nowrap;
   padding: 0 4px;
@@ -2072,7 +2074,7 @@ a:hover { opacity: 0.8; }
 }
 
 .search-files-total {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--primary);
 }
@@ -2102,7 +2104,7 @@ a:hover { opacity: 0.8; }
   border: none;
   background: transparent;
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   cursor: pointer;
   text-align: left;
 }
@@ -2129,7 +2131,7 @@ a:hover { opacity: 0.8; }
 }
 
 .search-file-match-count {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   min-width: 1.125rem;
   height: 1.125rem;
   padding: 0 0.25rem;
@@ -2182,7 +2184,7 @@ mark.search-match-active {
   overflow-y: auto;
   border-top: 1px solid var(--border);
   padding: 4px 0;
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 .search-cross-group-header {
@@ -2233,7 +2235,7 @@ mark.search-match-active {
   font-variant-numeric: tabular-nums;
   color: var(--fg-muted);
   min-width: 30px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 
 .search-cross-context {

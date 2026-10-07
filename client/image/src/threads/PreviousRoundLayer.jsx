@@ -4,9 +4,9 @@ import { statusDisplay, threadStatus, badgeShowsNumber, threadNumber, pendingRep
 const BADGE_HEIGHT = 20
 const MARKER_SIZE = 16
 const GAP = 4
-// SVG text cannot be measured before it renders, so the chip is sized from the character count: about 6.5px per
-// glyph at the 11px badge font, plus 16px of padding.
-const CHAR_WIDTH = 6.5
+// SVG text cannot be measured before it renders, so the chip is sized from the character count: about 7px per
+// glyph at the 12px badge font, plus 16px of padding.
+const CHAR_WIDTH = 7
 const PADDING = 16
 
 function Badge({ thread, anchor }) {

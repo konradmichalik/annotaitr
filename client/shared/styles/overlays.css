@@ -99,7 +99,7 @@
   border-bottom: 2px solid transparent;
   background: none;
   color: var(--text-muted);
-  font-size: 0.8125rem;
+  font-size: var(--fs-md);
   font-weight: 500;
   cursor: pointer;
   transition: color var(--transition-fast), border-color var(--transition-fast);
@@ -136,13 +136,13 @@
 }
 
 .settings-row-label {
-  font-size: 0.8125rem;
+  font-size: var(--fs-md);
   font-weight: 500;
   color: var(--text);
 }
 
 .settings-row-desc {
-  font-size: 0.7rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
@@ -169,7 +169,7 @@
   border-radius: 4px;
   background: none;
   color: var(--text-muted);
-  font-size: 0.6875rem;
+  font-size: var(--fs-sm);
   font-weight: 500;
   cursor: pointer;
   transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
@@ -197,7 +197,7 @@
 }
 
 .settings-reset-btn {
-  font-size: 0.75rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   border-color: transparent;
 }
@@ -213,7 +213,7 @@
 }
 
 .shortcuts-group-title {
-  font-size: 0.6875rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -235,7 +235,7 @@
 }
 
 .shortcut-desc {
-  font-size: 0.8125rem;
+  font-size: var(--fs-md);
   color: var(--text-muted);
   text-align: right;
 }
@@ -302,13 +302,13 @@
 }
 
 .dropdown-item-label {
-  font-size: 0.8125rem;
+  font-size: var(--fs-md);
   font-weight: 500;
   color: var(--text);
 }
 
 .dropdown-item-hint {
-  font-size: 0.7rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
@@ -322,7 +322,7 @@
 
 .modal-error {
   margin-top: 0.5rem;
-  font-size: 0.8125rem;
+  font-size: var(--fs-md);
   color: var(--danger);
 }
 
@@ -352,19 +352,19 @@
 }
 
 .about-version {
-  font-size: 0.75rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
 .about-description {
-  font-size: 0.8125rem;
+  font-size: var(--fs-md);
   color: var(--text-muted);
   line-height: 1.5;
   max-width: 320px;
 }
 
 .about-link {
-  font-size: 0.8125rem;
+  font-size: var(--fs-md);
   color: var(--primary);
   text-decoration: none;
 }
@@ -438,7 +438,7 @@
   background: transparent;
   border: none;
   outline: none;
-  font-size: 0.8125rem;
+  font-size: var(--fs-md);
   font-family: inherit;
   line-height: 1.5;
   color: var(--text);
@@ -463,7 +463,7 @@
 }
 
 .comment-popover-hint {
-  font-size: 0.6875rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
@@ -479,7 +479,7 @@
   border-radius: var(--radius-sm);
   background: none;
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: var(--fs-sm);
   cursor: pointer;
   transition: background var(--transition-fast);
 }
@@ -494,7 +494,7 @@
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
   color: var(--text);
-  font-size: 0.75rem;
+  font-size: var(--fs-sm);
   font-weight: 500;
   cursor: pointer;
   transition: background var(--transition-fast), border-color var(--transition-fast);
