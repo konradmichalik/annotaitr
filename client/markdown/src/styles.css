@@ -850,6 +850,7 @@
 }
 
 /* === Annotation Highlights === */
+
 .annotation-highlight {
   background: var(--comment-bg);
   border-bottom: 2px solid var(--comment-border);
@@ -881,19 +882,47 @@
 }
 
 .annotation-highlight.intent-add {
+  --note-badge-bg: var(--intent-add-mark);
+  --note-badge-fg: var(--intent-add-on-mark);
+
   background: color-mix(in srgb, var(--intent-add-mark) 18%, transparent);
   border-bottom-color: var(--intent-add-mark);
 }
 
 .annotation-highlight.intent-remove {
+  --note-badge-bg: var(--intent-remove-mark);
+  --note-badge-fg: var(--intent-remove-on-mark);
+
   background: color-mix(in srgb, var(--intent-remove-mark) 14%, transparent);
   border-bottom-color: var(--intent-remove-mark);
   text-decoration-color: var(--intent-remove-mark);
 }
 
 .annotation-highlight.intent-question {
+  --note-badge-bg: var(--intent-question-mark);
+  --note-badge-fg: var(--intent-question-on-mark);
+
   background: color-mix(in srgb, var(--intent-question-mark) 14%, transparent);
   border-bottom-color: var(--intent-question-mark);
+}
+
+/* The stable number at the start of a note, on its intent colour like the card's badge. */
+.annotation-highlight[data-note-number]::before,
+.insertion-marker[data-note-number]::after {
+  display: inline-block;
+  min-width: 16px;
+  height: 16px;
+  margin-right: 2px;
+  padding: 0 var(--space-1);
+  border-radius: 8px;
+  background: var(--note-badge-bg, var(--intent-change-mark));
+  color: var(--note-badge-fg, var(--intent-change-on-mark));
+  content: attr(data-note-number);
+  font: 600 var(--fs-sm)/16px var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  text-decoration: none;
+  vertical-align: 1px;
 }
 
 /* The agent's notes from the earlier round: dashed grey, never competing with new notes. */
@@ -1697,6 +1726,9 @@ a:hover { text-decoration-thickness: 2px; }
 
 /* === Insertion Marker === */
 .insertion-marker {
+  --note-badge-bg: var(--intent-add-mark);
+  --note-badge-fg: var(--intent-add-on-mark);
+
   display: inline;
   border-left: 2px solid var(--intent-add-mark);
   cursor: pointer;
@@ -1713,6 +1745,12 @@ a:hover { text-decoration-thickness: 2px; }
   color: var(--intent-add-label);
   pointer-events: none;
   line-height: 1;
+}
+
+.insertion-marker[data-note-number]::after {
+  position: static;
+  margin: 0 2px;
+  line-height: 16px;
 }
 
 .insertion-marker:hover {

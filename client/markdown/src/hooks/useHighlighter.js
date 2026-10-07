@@ -5,6 +5,16 @@ import { INTENTS, intentOf } from '../../../shared/utils/intents.js'
 const INTENT_CLASSES = INTENTS.map(({ id }) => `intent-${id}`)
 
 /**
+ * The note's stable number sits on the first mark that is its own (overlaps
+ * nest marks of other notes inside it), where CSS draws it as a badge.
+ */
+function showNoteNumber(doms, ann) {
+  doms.forEach((dom) => { if (dom.dataset.highlightId === ann.id) { delete dom.dataset.noteNumber } })
+  const first = doms.find((dom) => dom.dataset.highlightId === ann.id)
+  if (first && Number.isInteger(ann.number)) { first.dataset.noteNumber = String(ann.number) }
+}
+
+/**
  * Shared web-highlighter integration for annotation views.
  *
  * Handles: highlighter lifecycle, CREATE/CLICK events, toolbar state,
@@ -137,6 +147,7 @@ export function useHighlighter({
           const intent = intentOf(ann)
           INTENT_CLASSES.forEach((name) => highlighter.removeClass(name, ann.id))
           if (intent) { highlighter.addClass(`intent-${intent}`, ann.id) }
+          showNoteNumber(doms, ann)
         }
       } catch (_e) { /* ignore */ }
     })
@@ -255,6 +266,9 @@ export function useHighlighter({
     try {
       highlighter.fromStore(ann.startMeta, ann.endMeta, ann.originalText, ann.id)
       highlighter.addClass(ann.type.toLowerCase(), ann.id)
+      const intent = intentOf(ann)
+      if (intent) { highlighter.addClass(`intent-${intent}`, ann.id) }
+      showNoteNumber(highlighter.getDoms(ann.id) ?? [], ann)
       return true
     } catch (_e) {
       return false

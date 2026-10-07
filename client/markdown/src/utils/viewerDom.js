@@ -14,11 +14,12 @@ export function removeInsertionMarker(el) {
   }
 }
 
-export function createPersistentInsertionMarker(id, blockEl, offset) {
+export function createPersistentInsertionMarker(id, blockEl, offset, number) {
   const marker = document.createElement('span')
   marker.className = 'insertion-marker'
   marker.dataset.highlightId = id
   marker.dataset.insertionId = id
+  if (Number.isInteger(number)) { marker.dataset.noteNumber = String(number) }
   return placeMarker(marker, blockEl, offset)
 }
 

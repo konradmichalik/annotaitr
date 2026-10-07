@@ -85,6 +85,17 @@ export const Viewer = forwardRef(function Viewer({
   const onEditAnnotationRef = useRef(onEditAnnotation)
   onEditAnnotationRef.current = onEditAnnotation
 
+  // A new insertion gets its number from the reducer, after its marker exists.
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) { return }
+    annotations.forEach((ann) => {
+      if (ann.type !== 'INSERTION' || !Number.isInteger(ann.number)) { return }
+      const marker = container.querySelector(`[data-insertion-id="${CSS.escape(ann.id)}"]`)
+      if (marker) { marker.dataset.noteNumber = String(ann.number) }
+    })
+  }, [annotations, containerRef])
+
   // A pending text selection is dropped as soon as the user targets an element instead
   const clearPendingSource = useCallback(() => {
     if (pendingSourceRef.current && highlighterRef.current) {
@@ -191,7 +202,7 @@ export const Viewer = forwardRef(function Viewer({
         if (!blockEl) { return false }
         const existing = blockEl.querySelector(`[data-insertion-id="${ann.id}"]`)
         if (!existing) {
-          createPersistentInsertionMarker(ann.id, blockEl, ann.startOffset)
+          createPersistentInsertionMarker(ann.id, blockEl, ann.startOffset, ann.number)
         }
         return true
       }
