@@ -1,7 +1,7 @@
-import { useEffect, useReducer, useState, useCallback, useRef } from 'react'
+import { useEffect, useReducer, useState, useCallback, useRef, useMemo } from 'react'
 import { annotationReducer, initialAnnotationState } from './state/annotationReducer.js'
 import { createAnnotationId } from '../../shared/utils/annotationId.js'
-import Toolbar from './components/Toolbar.jsx'
+import Toolbar, { offeredTools } from './components/Toolbar.jsx'
 import ZoomControls from './components/ZoomControls.jsx'
 import ViewportControl from './components/ViewportControl.jsx'
 import CaptureOverlay from './components/CaptureOverlay.jsx'
@@ -22,6 +22,7 @@ import PreviousRoundPanel from './threads/PreviousRoundPanel.jsx'
 import ThreadPopover from './threads/ThreadPopover.jsx'
 import { placedThreads, threadPageCounts, hasMark, pendingReplyCount, openQuestions } from './threads/threadView.js'
 import { useSettings } from './hooks/useSettings.js'
+import { useToolShortcuts } from './hooks/useToolShortcuts.js'
 import { useMediaPlayer } from './video/useMediaPlayer.js'
 import { useVideoReview } from './video/useVideoReview.js'
 import { useTimelineShortcuts } from './video/useTimelineShortcuts.js'
@@ -137,6 +138,7 @@ export default function App() {
   const textPending = isDocument && !doc.textLoaded
   const offersElementTool = elements.length > 0 || textPending
   const offersTextTool = words.length > 0 || textPending
+  const tools = useMemo(() => offeredTools({ elementTool: offersElementTool, textTool: offersTextTool }), [offersElementTool, offersTextTool])
   useEffect(() => {
     const unavailable = (activeTool === 'element' && !offersElementTool) || (activeTool === 'text' && !offersTextTool)
     if (unavailable) { setActiveTool('select') }
@@ -426,6 +428,7 @@ export default function App() {
   const openDecision = useCallback(() => setDecisionDialog({ choice: null }), [])
   const closeDecision = useCallback(() => setDecisionDialog(null), [])
   useDecisionShortcut(openDecision, !decision && !settingsOpen && !showExport && !exportProgress)
+  useToolShortcuts({ tools, disabled: settingsOpen || showExport || !!decisionDialog || !!decision || !!exportProgress, onSelect: setActiveTool })
 
   const zoomBy = useCallback((delta) => {
     setZoom((z) => Math.round(Math.max(0.1, Math.min(3, z + delta)) * 100) / 100)
@@ -437,12 +440,11 @@ export default function App() {
     if (!mediaWidth) { return }
     const appMain = document.querySelector('.app-main')
     if (!appMain) { return }
-    // Reserve room for .app-main's own padding (12px each side) plus, on the
-    // vertical axis, the sticky .canvas-topbar toolbar row above the image.
-    const APP_MAIN_PADDING = 24
-    const TOPBAR_RESERVED_HEIGHT = 76
-    const availableWidth = appMain.clientWidth - APP_MAIN_PADDING
-    const availableHeight = appMain.clientHeight - TOPBAR_RESERVED_HEIGHT
+    // Reserve .app-main's own padding, which keeps the floating controls
+    // above and the dock below clear of the image.
+    const style = getComputedStyle(appMain)
+    const availableWidth = appMain.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+    const availableHeight = appMain.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom)
     const fit = Math.min(availableWidth / mediaWidth, availableHeight / mediaHeight)
     setZoom(Math.round(Math.max(0.1, Math.min(3, fit)) * 100) / 100)
   }, [mediaWidth, mediaHeight])
@@ -582,26 +584,30 @@ export default function App() {
       <main className="app-body">
         {isDocument && <PageStrip pages={doc.pages} current={doc.current} counts={doc.counts} previousCounts={previousPageCounts} onSelect={goToPage} />}
         <div className="app-stage">
-          <div className="app-main canvas-surface">
-            <div className="canvas-topbar">
-              <Toolbar
-                activeTool={activeTool}
-                onSelectTool={setActiveTool}
-                elementTool={offersElementTool}
-                textTool={offersTextTool}
-                colorMode={settings.colorMode}
-                fixedColor={settings.fixedColor}
-                onChangeColorMode={(mode) => updateSetting('colorMode', mode)}
-                onChangeFixedColor={(color) => updateSetting('fixedColor', color)}
-              />
-              <div className="canvas-topbar-end">
-                {meta?.capture && (
-                  <ViewportControl capture={meta.capture} busy={!!recapturing} annotationCount={state.annotations.length} onApply={recapture} />
-                )}
-                {isDocument && <PageNav pages={doc.pages} current={doc.current} pageCount={meta.pageCount} onStep={stepPage} />}
-                <ZoomControls zoom={zoom} onZoomBy={zoomBy} onZoomReset={zoomReset} onZoomFit={zoomFit} />
-              </div>
+          <div className="work-area">
+          {meta?.capture && (
+            <div className="floating floating--top-left">
+              <ViewportControl capture={meta.capture} busy={!!recapturing} annotationCount={state.annotations.length} onApply={recapture} />
             </div>
+          )}
+          <div className="floating floating--top-right">
+            {isDocument && <PageNav pages={doc.pages} current={doc.current} pageCount={meta.pageCount} onStep={stepPage} />}
+            <ZoomControls zoom={zoom} onZoomBy={zoomBy} onZoomReset={zoomReset} onZoomFit={zoomFit} />
+          </div>
+          <div className="floating floating--bottom">
+            <Toolbar
+              activeTool={activeTool}
+              onSelectTool={setActiveTool}
+              tools={tools}
+              colorMode={settings.colorMode}
+              fixedColor={settings.fixedColor}
+              onChangeColorMode={(mode) => updateSetting('colorMode', mode)}
+              onChangeFixedColor={(color) => updateSetting('fixedColor', color)}
+              onUndo={undo}
+              canUndo={state.history.length > 0}
+            />
+          </div>
+          <div className="app-main canvas-surface">
             {mediaError && <p className="media-error" role="alert">{mediaError}</p>}
             {doc.pageError && <p className="media-error" role="alert">Page {doc.current} could not be rendered: {doc.pageError}</p>}
             {recapturing && <CaptureOverlay label={recapturing} />}
@@ -643,6 +649,7 @@ export default function App() {
                 onCloseThread={closeThread}
               />
             )}
+          </div>
           </div>
             {meta?.sourceIsNewer && (
               <p className="document-banner" role="status">

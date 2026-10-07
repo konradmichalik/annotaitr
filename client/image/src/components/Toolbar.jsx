@@ -1,47 +1,62 @@
+import { Fragment } from 'react'
 import { TOOL_ICONS } from '../utils/icons.jsx'
+import { TOOL_KEYS } from '../utils/toolShortcuts.js'
+import { Dock, DockButton, DockSeparator } from '../../../shared/components/Dock.jsx'
+import { UndoIcon } from '../../../shared/components/HeaderIcons.jsx'
 import ColorModePicker from './ColorModePicker.jsx'
 
-const TOOLS = [
-  { id: 'select', label: 'Select' },
-  { id: 'element', label: 'Element' },
-  { id: 'text', label: 'Text' },
-  { id: 'box', label: 'Box' },
-  { id: 'arrow', label: 'Arrow' },
-  { id: 'freehand', label: 'Freehand' },
-  { id: 'highlighter', label: 'Highlighter' },
-  { id: 'pin', label: 'Pin' }
-]
+export const TOOL_LABELS = {
+  select: 'Select',
+  element: 'Element',
+  text: 'Text',
+  box: 'Box',
+  arrow: 'Arrow',
+  freehand: 'Freehand',
+  highlighter: 'Highlighter',
+  pin: 'Pin'
+}
+
+const GROUPS = [['select', 'element', 'text'], ['box', 'arrow', 'freehand', 'highlighter'], ['pin']]
 
 /**
- * `elementTool` offers picking a page element, which a captured web page and
- * a PDF page with a text layer have; `textTool` offers selecting text, which
- * only a PDF page with a text layer has.
+ * The tools a mode offers. `elementTool` adds picking a page element, which a
+ * captured web page and a PDF page with a text layer have; `textTool` adds
+ * selecting text, which only a PDF page with a text layer has.
  */
+export function offeredTools({ elementTool = false, textTool = false }) {
+  return GROUPS.flat().filter((id) => (id !== 'element' || elementTool) && (id !== 'text' || textTool))
+}
+
+/** The dock: select tools, drawing tools, pin, then the ink colour and undo. */
 export default function Toolbar({
-  activeTool, onSelectTool, colorMode, fixedColor, onChangeColorMode, onChangeFixedColor, elementTool = false, textTool = false
+  activeTool, onSelectTool, colorMode, fixedColor, onChangeColorMode, onChangeFixedColor, tools, onUndo, canUndo
 }) {
-  const tools = TOOLS.filter((tool) => (tool.id !== 'element' || elementTool) && (tool.id !== 'text' || textTool))
+  const groups = GROUPS.map((group) => group.filter((id) => tools.includes(id))).filter((group) => group.length > 0)
   return (
-    <div className="toolbar" role="toolbar" aria-label="Annotation tools">
-      {tools.map((tool) => (
-        <button
-          key={tool.id}
-          type="button"
-          className={activeTool === tool.id ? 'active' : ''}
-          aria-pressed={activeTool === tool.id}
-          onClick={() => onSelectTool(tool.id)}
-        >
-          {TOOL_ICONS[tool.id]}
-          {tool.label}
-        </button>
+    <Dock label="Annotation tools">
+      {groups.map((group, index) => (
+        <Fragment key={group[0]}>
+          {index > 0 && <DockSeparator />}
+          {group.map((id) => (
+            <DockButton
+              key={id}
+              label={TOOL_LABELS[id]}
+              keyCap={TOOL_KEYS[id]}
+              icon={TOOL_ICONS[id]}
+              pressed={activeTool === id}
+              onClick={() => onSelectTool(id)}
+            />
+          ))}
+        </Fragment>
       ))}
-      <div className="toolbar-divider" />
+      <DockSeparator />
       <ColorModePicker
         colorMode={colorMode}
         fixedColor={fixedColor}
         onChangeMode={onChangeColorMode}
         onChangeColor={onChangeFixedColor}
       />
-    </div>
+      <DockButton label="Undo" keyCap={null} icon={<UndoIcon />} onClick={onUndo} disabled={!canUndo} />
+    </Dock>
   )
 }

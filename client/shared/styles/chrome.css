@@ -12,18 +12,6 @@
   justify-content: center;
 }
 
-.app-status {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.375rem 1.5rem;
-  font-size: var(--fs-sm);
-  color: var(--ink-muted);
-  border-top: 1px solid var(--line);
-  background: var(--surface);
-  flex-shrink: 0;
-}
-
 /* === Buttons === */
 .btn {
   padding: 0.5rem 1rem;
@@ -121,43 +109,6 @@
   height: 100vh;
   width: 100%;
   overflow: hidden;
-}
-
-/* === Tool Groups === */
-.toolbar,
-.zoom-controls {
-  display: flex;
-  gap: 4px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow);
-  padding: 4px;
-}
-
-.toolbar button,
-.zoom-controls button {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: none;
-  background: transparent;
-  border-radius: var(--radius-sm);
-  padding: 6px 10px;
-  cursor: pointer;
-  color: var(--text);
-  font-size: var(--fs-md);
-  transition: background var(--transition-fast);
-}
-
-.toolbar button:hover:not(.active, :disabled),
-.zoom-controls button:hover:not(:disabled) {
-  background: var(--bg-secondary);
-}
-
-.toolbar button.active {
-  background: var(--primary-strong);
-  color: var(--on-primary-strong);
 }
 
 .toast {

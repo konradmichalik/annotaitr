@@ -28,6 +28,7 @@ import { useHighlightSync } from './hooks/useHighlightSync.js'
 import { useReviewFiles } from './hooks/useReviewFiles.js'
 import { useReviewShortcuts } from './hooks/useReviewShortcuts.js'
 import { useShiftHeld } from './hooks/useShiftHeld.js'
+import { useModeShortcuts } from './hooks/useModeShortcuts.js'
 import { SettingsModal } from './components/SettingsModal.jsx'
 import { getItem, setItem } from '../../shared/utils/storage.js'
 import 'katex/dist/katex.min.css'
@@ -360,6 +361,8 @@ export default function App() {
   }, [crossFileSearchProps, crossFileSearchState])
 
   useReviewShortcuts({ onSearch: handleOpenSearch, onUndo: handleUndo, onRedo: handleRedo })
+  const pickMode = useCallback((mode) => setPinpointMode(mode === 'pinpoint'), [])
+  useModeShortcuts({ disabled: submitted || settingsTab !== null || decisionOpen || exportModalOpen, onChange: pickMode })
 
   const openDecision = useCallback(() => setDecisionOpen(true), [])
   const closeDecision = useCallback(() => setDecisionOpen(false), [])
@@ -490,6 +493,8 @@ export default function App() {
             showViewToggle={!isPlainTextFile}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
+            onUndo={handleUndo}
+            canUndo={activeAnnState.history.length > 0}
           />
           {effectiveViewMode === 'preview' ? (
             <Viewer

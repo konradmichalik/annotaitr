@@ -1243,21 +1243,14 @@
 .viewer-wrapper > .viewer-container {
   flex: 1;
   min-height: 0;
-  padding-top: 0.75rem;
+
+  /* Keeps the end of the file clear of the dock. */
+  padding-bottom: 96px;
 }
 
-/* The same tool row the image client shows above its canvas. */
-.canvas-topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 12px 1.5rem 0 12px;
-}
-
-.toolbar--temp {
-  outline: 1.5px dashed var(--primary);
+/* Holding Shift switches the mode for a moment. */
+.dock--temp {
+  outline: 2px dashed var(--focus);
   outline-offset: 2px;
 }
 

@@ -19,7 +19,8 @@ export default function ColorModePicker({ colorMode, fixedColor, onChangeMode, o
     <div className="color-mode-picker" ref={wrapperRef}>
       <button
         type="button"
-        className="color-mode-trigger"
+        data-dock-item=""
+        className="color-mode-trigger dock-button"
         onClick={toggle}
         title="New annotation color"
         aria-label="New annotation color"

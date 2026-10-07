@@ -94,3 +94,27 @@ export function CheckIcon() {
 export function ChevronDownIcon() {
   return <Icon size={14}><polyline points="6 9 12 15 18 9" /></Icon>
 }
+
+export function UndoIcon() {
+  return <Icon><path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></Icon>
+}
+
+export function PlusIcon({ size = 14 }) {
+  return <Icon size={size}><path d="M12 5v14M5 12h14" /></Icon>
+}
+
+export function MinusIcon({ size = 14 }) {
+  return <Icon size={size}><path d="M5 12h14" /></Icon>
+}
+
+export function PenIcon({ size = 14 }) {
+  return <Icon size={size}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></Icon>
+}
+
+export function CommentIcon({ size = 14 }) {
+  return <Icon size={size}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></Icon>
+}
+
+export function InfoIcon({ size = 16 }) {
+  return <Icon size={size}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></Icon>
+}
