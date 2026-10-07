@@ -14,8 +14,8 @@ export function buildThreads(annotations, describeElement = () => null) {
 }
 
 // Only the last round's marks are kept: round N shows round N-1 and its replies.
-export function nextSession(previous, { sessionId, target, threads, now }) {
-  return { schemaVersion: SCHEMA_VERSION, sessionId, round: (previous?.round ?? 0) + 1, writtenAt: now, target, threads }
+export function nextSession(previous, { sessionId, target, fingerprint = null, threads, now }) {
+  return { schemaVersion: SCHEMA_VERSION, sessionId, round: (previous?.round ?? 0) + 1, writtenAt: now, target, fingerprint, threads }
 }
 
 export function sessionLine(session) {

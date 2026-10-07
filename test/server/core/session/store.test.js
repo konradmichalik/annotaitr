@@ -112,6 +112,11 @@ describe('session store', () => {
     expect((await readSession(ID, dir)).error).toMatch(/malformed/)
   })
 
+  it('reports a thread without an annotation as malformed', async () => {
+    await writeSession(session({ threads: [{ handle: 'a3f19c2e', number: 1, annotation: null, replies: [] }] }), dir)
+    expect((await readSession(ID, dir)).error).toMatch(/malformed/)
+  })
+
   it('waits for a running reply before writing a new round over it', async () => {
     await writeSession(session(), dir)
     const lock = join(dir, `${ID}.json.lock`)

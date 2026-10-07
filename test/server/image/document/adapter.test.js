@@ -6,6 +6,7 @@ import { loadImage } from '@napi-rs/canvas'
 import { buildDocumentServer } from '../../../../server/image/document/adapter.js'
 import { openPdfDocument, createPageCache } from '../../../../server/image/document/pdfDocument.js'
 import { makePdf } from '../../../helpers/pdfFixtures.js'
+import { hashFile } from '../../../../server/image/common/fingerprint.js'
 
 const box = (id, page, extra = {}) => ({
   id, type: 'box', geometry: { x: 100, y: 100, width: 300, height: 200 }, text: `note ${id}`, color: '#bf616a', page, ...extra
@@ -57,6 +58,16 @@ describe('openPdfDocument', () => {
       expect(c.hash).not.toBe(a.hash)
     } finally {
       await Promise.all([a, b, c].map((d) => d.renderer.close()))
+    }
+  })
+
+  it('fingerprints the bytes it renders and derives the page hash from the same digest', async () => {
+    const document = await openPdfDocument(pdfPath)
+    try {
+      expect(document.fingerprint).toBe(await hashFile(pdfPath))
+      expect(document.hash).toBe(document.fingerprint.slice('sha256:'.length, 'sha256:'.length + 16))
+    } finally {
+      await document.renderer.close()
     }
   })
 
@@ -146,11 +157,11 @@ describe('document annotator server', () => {
     server = null
   })
 
-  async function start({ source = null, pageRanges = null } = {}) {
+  async function start({ source = null, pageRanges = null, session = null } = {}) {
     const document = await openPdfDocument(pdfPath, { pageRanges })
     let resolveOutput
     const decided = new Promise((resolve) => { resolveOutput = resolve })
-    server = await buildDocumentServer({ document, source, origin: 'cli', targetLabel: 'deck.pdf' })
+    server = await buildDocumentServer({ document, source, origin: 'cli', targetLabel: 'deck.pdf', session })
     server.waitForDecision().then(resolveOutput)
     return { decided }
   }
@@ -240,6 +251,24 @@ describe('document annotator server', () => {
     const pin = { id: 'p', type: 'pin', geometry: { x: heading.x + 10, y: heading.y + 10 }, text: 'Shorter', page: 1 }
     const body = await (await post('/api/feedback-text', { annotations: [pin] })).json()
     expect(body.data.text).toContain('Text: heading "Revenue by region"\n> Shorter')
+  })
+
+  it('serves last round with marks on pages outside this review as orphans', async () => {
+    const thread = (id, page) => ({ handle: id, number: 1, annotation: box(id, page), element: null, replies: [] })
+    await start({
+      pageRanges: [{ from: 1, to: 2 }],
+      session: {
+        sessionId: '2f8c1a9e04b7',
+        target: { kind: 'document', label: 'deck.pdf' },
+        fingerprint: 'sha256:b',
+        previous: { round: 1, fingerprint: 'sha256:a', threads: [thread('a1a1a1a1', 1), thread('b2b2b2b2', 3)] }
+      }
+    })
+    const { data } = await (await fetch(`${server.url}/api/threads`)).json()
+    expect(data.threads.map((t) => [t.anchor, t.reason])).toEqual([
+      ['ghost', 'The target changed since round 1, the mark shows where it was then'],
+      ['orphan', 'Page 3 is not part of this review']
+    ])
   })
 
   it('approves without notes when nothing was annotated', async () => {

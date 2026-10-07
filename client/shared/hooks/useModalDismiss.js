@@ -3,8 +3,9 @@ import { useEffect } from 'react'
 /**
  * While a modal is open: Escape closes it, focus moves into `dialogRef`, and
  * on close focus goes back to whatever had it before the modal opened.
+ * A caller that knows better where focus belongs passes `restoreFocus: false`.
  */
-export function useModalDismiss(isOpen, onClose, dialogRef) {
+export function useModalDismiss(isOpen, onClose, dialogRef, { restoreFocus = true } = {}) {
   useEffect(() => {
     if (!isOpen) { return }
     const previouslyFocused = document.activeElement
@@ -15,7 +16,7 @@ export function useModalDismiss(isOpen, onClose, dialogRef) {
     dialogRef.current?.focus()
     return () => {
       document.removeEventListener('keydown', handleEscape)
-      previouslyFocused?.focus?.()
+      if (restoreFocus) { previouslyFocused?.focus?.() }
     }
-  }, [isOpen, onClose, dialogRef])
+  }, [isOpen, onClose, dialogRef, restoreFocus])
 }

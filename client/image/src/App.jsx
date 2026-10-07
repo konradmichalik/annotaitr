@@ -16,6 +16,12 @@ import MediaSlot from './video/MediaSlot.jsx'
 import PageStrip from './document/PageStrip.jsx'
 import PageNav from './document/PageNav.jsx'
 import PageImage from './document/PageImage.jsx'
+import { usePreviousRound } from './threads/usePreviousRound.js'
+import { useThreadPopover } from './threads/useThreadPopover.js'
+import PreviousRoundPanel from './threads/PreviousRoundPanel.jsx'
+import ThreadPopover from './threads/ThreadPopover.jsx'
+import { placedThreads, threadPageCounts, hasMark } from './threads/threadView.js'
+import { ACTION_ICONS } from './utils/icons.jsx'
 import { useSettings } from './hooks/useSettings.js'
 import { useMediaPlayer } from './video/useMediaPlayer.js'
 import { useVideoReview } from './video/useVideoReview.js'
@@ -80,6 +86,26 @@ export default function App() {
   // Ordering, numbering and what the canvas shows follow the time axis of a
   // recording or the page axis of a PDF; a still image passes straight through.
   const review = isDocument ? doc : video
+  // Videos and PDFs draw last round in their own views, a still image has a single one.
+  const isStill = !!meta && !isVideo && !isDocument
+  // A video is asked only once its duration is known, so marks past the end arrive as orphans.
+  const previous = usePreviousRound({
+    ready: isStill || isDocument || (isVideo && !!controller),
+    duration: isVideo ? controller?.duration : undefined,
+    captureKey: imageUrl
+  })
+  const previousView = isVideo
+    ? { kind: 'video', time: playerState?.currentTime ?? 0, tolerance: (playerState?.frameDuration ?? 1 / 30) / 2 }
+    : (isDocument ? { kind: 'document', page: doc.current } : { kind: 'still' })
+  const previousThreads = placedThreads(previous.threads, previousView)
+  const seekTo = isDocument ? doc.seekTo : video.seekTo
+  const {
+    showPrevious, openThreadHandle, entryThread,
+    openCanvasThread, showThread, showEntryThread, showTimelineThread, togglePrevious, closeThread
+  } = useThreadPopover({ previousThreads, seekTo })
+  const markedThreads = previous.threads.filter(hasMark)
+  const previousPageCounts = isDocument && showPrevious ? threadPageCounts(markedThreads) : undefined
+  const timelineThreads = isVideo && showPrevious ? previous.threads.filter((t) => t.anchor !== 'orphan' && typeof t.annotation.time === 'number') : []
   // A PDF's text layer is per page; a captured web page has one element map.
   const elements = isDocument ? doc.elements : capturedElements
   const words = isDocument ? doc.words : []
@@ -219,7 +245,6 @@ export default function App() {
     clearRange()
   }, [addComment, range, clearRange])
 
-  const seekTo = isDocument ? doc.seekTo : video.seekTo
   const editAnnotation = useCallback((id) => {
     const annotation = state.annotations.find((a) => a.id === id)
     if (annotation) { seekTo(annotation) }
@@ -520,7 +545,7 @@ export default function App() {
       </header>
 
       <main className="app-body">
-        {isDocument && <PageStrip pages={doc.pages} current={doc.current} counts={doc.counts} onSelect={goToPage} />}
+        {isDocument && <PageStrip pages={doc.pages} current={doc.current} counts={doc.counts} previousCounts={previousPageCounts} onSelect={goToPage} />}
         <div className="app-stage">
           <div className="app-main canvas-surface">
             <div className="canvas-topbar">
@@ -539,6 +564,18 @@ export default function App() {
                   <ViewportControl capture={meta.capture} busy={!!recapturing} annotationCount={state.annotations.length} onApply={recapture} />
                 )}
                 {isDocument && <PageNav pages={doc.pages} current={doc.current} pageCount={meta.pageCount} onStep={stepPage} />}
+                {markedThreads.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={togglePrevious}
+                    className="btn btn-icon"
+                    aria-pressed={showPrevious}
+                    aria-label="Previous round"
+                    title="Show or hide last round's marks and replies"
+                  >
+                    {ACTION_ICONS.history}
+                  </button>
+                )}
                 <ZoomControls zoom={zoom} onZoomBy={zoomBy} onZoomReset={zoomReset} onZoomFit={zoomFit} />
               </div>
             </div>
@@ -574,6 +611,12 @@ export default function App() {
                 onRedo={redo}
                 colorMode={settings.colorMode}
                 fixedColor={settings.fixedColor}
+                previousThreads={previousThreads}
+                previousRound={previous.round}
+                showPrevious={showPrevious}
+                openThreadHandle={openThreadHandle}
+                onOpenThread={openCanvasThread}
+                onCloseThread={closeThread}
               />
             )}
           </div>
@@ -595,6 +638,9 @@ export default function App() {
               onChangeMarkerTimes={changeMarkerTimes}
               activeTool={activeTool}
               onPickTool={setActiveTool}
+              previousThreads={timelineThreads}
+              previousRound={previous.round}
+              onShowThread={showTimelineThread}
               />
             )}
         </div>
@@ -644,6 +690,10 @@ export default function App() {
                 onDone={showToast}
               />
             </div>
+            <PreviousRoundPanel round={previous.round} threads={previous.threads} onShow={showThread} onShowDetached={showEntryThread} />
+            {entryThread && (
+              <ThreadPopover key={entryThread.thread.handle} thread={entryThread.thread} round={previous.round} anchorPoint={entryThread.anchorPoint} onClose={closeThread} />
+            )}
             <AnnotationPanel
               annotations={review.ordered}
               onRemove={removeAnnotation}

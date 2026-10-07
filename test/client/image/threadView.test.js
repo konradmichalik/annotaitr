@@ -1,0 +1,102 @@
+import { describe, it, expect } from 'vitest'
+import {
+  STATUS_DISPLAY, statusDisplay, readPreviousRound, threadStatus, placedThreads, orphanThreads, threadPageCounts, threadsQuery
+} from '../../../client/image/src/threads/threadView.js'
+
+const box = (extra = {}) => ({ type: 'box', geometry: { x: 1, y: 1, width: 5, height: 5 }, text: 'Fix', ...extra })
+const thread = (annotation, extra = {}) => ({ handle: 'a3f19c2e', number: 1, annotation, element: null, replies: [], anchor: 'exact', reason: null, ...extra })
+const reply = (status) => ({ author: 'agent', status, text: 'Done', createdAt: 1 })
+
+describe('threadStatus', () => {
+  it('is the status of the last reply', () => {
+    expect(threadStatus(thread(box(), { replies: [reply('partial'), reply('applied')] }))).toBe('applied')
+  })
+
+  it('is none without replies', () => {
+    expect(threadStatus(thread(box()))).toBe('none')
+  })
+
+  it('has an icon and a text label for every status, so colour is never the only signal', () => {
+    for (const status of ['applied', 'partial', 'declined', 'deferred', 'question', 'none']) {
+      expect(STATUS_DISPLAY[status].icon).toBeTruthy()
+      expect(STATUS_DISPLAY[status].label).toBeTruthy()
+    }
+    expect(STATUS_DISPLAY.none.label).toBe('no reply')
+  })
+})
+
+describe('placedThreads', () => {
+  it('draws exact and ghost marks on a still image, never orphans or general comments', () => {
+    const threads = [
+      thread(box()), thread(box(), { anchor: 'ghost' }), thread(box(), { anchor: 'orphan' }),
+      thread({ type: 'comment', geometry: null, text: 'Overall' })
+    ]
+    expect(placedThreads(threads, { kind: 'still' }).map((t) => t.anchor)).toEqual(['exact', 'ghost'])
+  })
+
+  it('shows a video mark only inside its time window, spans included', () => {
+    const point = thread(box({ time: 2 }))
+    const span = thread(box({ time: 3, endTime: 6 }))
+    const at = (time) => placedThreads([point, span], { kind: 'video', time, tolerance: 0.02 })
+    expect(at(2)).toEqual([point])
+    expect(at(4.5)).toEqual([span])
+    expect(at(8)).toEqual([])
+  })
+
+  it('shows a PDF mark only on its page', () => {
+    const one = thread(box({ page: 1 }))
+    const two = thread(box({ page: 2 }))
+    expect(placedThreads([one, two], { kind: 'document', page: 2 })).toEqual([two])
+  })
+})
+
+describe('orphanThreads', () => {
+  it('lists the threads whose place no longer exists', () => {
+    const orphan = thread(box(), { anchor: 'orphan', reason: 'Page 3 is not part of this review' })
+    expect(orphanThreads([thread(box()), orphan])).toEqual([orphan])
+  })
+})
+
+describe('threadPageCounts', () => {
+  it('counts placed threads per page', () => {
+    const threads = [thread(box({ page: 2 })), thread(box({ page: 2 })), thread(box({ page: 3 }), { anchor: 'orphan' })]
+    expect([...threadPageCounts(threads)]).toEqual([[2, 2]])
+  })
+})
+
+describe('threadsQuery', () => {
+  it('passes a known video duration and nothing otherwise', () => {
+    expect(threadsQuery(12.5)).toBe('?duration=12.5')
+    expect(threadsQuery(undefined)).toBe('')
+    expect(threadsQuery(Number.NaN)).toBe('')
+  })
+})
+
+describe('statusDisplay', () => {
+  it('looks up the display of the last reply status', () => {
+    expect(statusDisplay(thread(box(), { replies: [reply('declined')] }))).toBe(STATUS_DISPLAY.declined)
+  })
+
+  it('falls back to the no-reply display for a status a hand-edited session invented', () => {
+    expect(statusDisplay(thread(box(), { replies: [reply('wontfix')] }))).toBe(STATUS_DISPLAY.none)
+  })
+})
+
+describe('readPreviousRound', () => {
+  const empty = { round: null, threads: [] }
+
+  it('reads round and threads from a well-formed body', () => {
+    const t = thread(box())
+    expect(readPreviousRound({ data: { round: 2, threads: [t] } })).toEqual({ round: 2, threads: [t] })
+  })
+
+  it.each([
+    ['a failed response', null],
+    ['a body without data', {}],
+    ['threads that are not an array', { data: { round: 2, threads: 'nope' } }],
+    ['threads missing', { data: { round: 2 } }]
+  ])('is empty for %s', (_, body) => {
+    expect(readPreviousRound(body).threads).toEqual([])
+    if (body === null) { expect(readPreviousRound(body)).toEqual(empty) }
+  })
+})

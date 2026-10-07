@@ -1,5 +1,6 @@
 import { Worker } from 'node:worker_threads'
 import { readFile } from 'node:fs/promises'
+import { hashBuffer } from '../../common/fingerprint.js'
 import { basename } from 'node:path'
 
 const RENDER_TIMEOUT_MS = 10_000
@@ -168,6 +169,8 @@ export async function createPdfRenderer(pdfPath, { timeoutMs = RENDER_TIMEOUT_MS
   const { meta } = await liveWorker()
 
   return {
+    // Taken from the bytes the workers parse, so it names exactly the PDF that is rendered.
+    fingerprint: hashBuffer(data),
     pageCount: meta.pageCount,
     /** `{ width, height }` of a page in PDF points, without rendering it. */
     pageSize(page) {

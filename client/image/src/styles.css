@@ -801,6 +801,76 @@ button.voice-note:hover {
   text-overflow: ellipsis;
 }
 
+.thread-popover:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.thread-popover-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  max-height: 60vh;
+  padding: 0.75rem;
+  overflow-y: auto;
+  color: var(--text);
+  font-size: 0.8125rem;
+}
+
+.thread-popover-title {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.thread-popover-handle {
+  color: var(--text-muted);
+  font-family: monospace;
+  font-size: 0.75rem;
+  font-weight: normal;
+}
+
+.thread-popover-note {
+  margin: 0;
+  padding: 0.375rem 0.5rem;
+  border-left: 3px solid var(--comment-border);
+  background: var(--comment-bg);
+  font-size: 0.75rem;
+}
+
+.thread-popover .comment-popover-element {
+  padding: 0;
+}
+
+.thread-popover-author {
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.thread-popover-quote {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin: 0.25rem 0;
+  padding: 0.375rem 0.5rem;
+  border-left: 3px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+}
+
+.thread-popover-text,
+.thread-popover-empty {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.thread-popover-empty {
+  color: var(--text-muted);
+}
+
 .resize-handle {
   fill: var(--bg-card);
   stroke: var(--primary);
@@ -1554,6 +1624,185 @@ button.voice-note:hover {
   .timeline-marker,
   .timeline-knob,
   .timeline-progress {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+  }
+}
+
+.previous-round--exact .previous-round-shape {
+  opacity: 0.55;
+}
+
+.previous-round--ghost .previous-round-shape {
+  opacity: 0.45;
+}
+
+.previous-round--ghost .previous-round-shape :is(rect, circle, path, line, polyline, polygon, ellipse):not([fill="none"]) {
+  fill: var(--text-muted);
+}
+
+.previous-round--ghost .previous-round-shape :is(rect, circle, path, line, polyline, polygon, ellipse):not([stroke="none"]) {
+  stroke: var(--text-muted);
+  stroke-dasharray: 6 4;
+}
+
+.previous-round-badge rect {
+  fill: var(--text);
+  stroke: var(--bg);
+  stroke-width: 1;
+}
+
+.previous-round-badge text {
+  fill: var(--bg);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.previous-round-panel {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+  font-size: 0.8125rem;
+}
+
+.previous-round-panel summary {
+  display: flex;
+  gap: 0.375rem;
+  align-items: center;
+  padding: 0.25rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.previous-round-panel summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.previous-round-list {
+  list-style: none;
+}
+
+.previous-round-heading {
+  padding: 0.5rem 1rem 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.previous-round-entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  width: 100%;
+  padding: 0.375rem 1rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* display: flex drops the native marker, so the open state is drawn here and never animated. */
+.previous-round-panel summary::before {
+  content: "\25B8";
+  content: "\25B8" / "";
+}
+
+.previous-round-panel details[open] > summary::before {
+  content: "\25BE";
+  content: "\25BE" / "";
+}
+
+.previous-round-icon {
+  display: inline-flex;
+  color: var(--text-muted);
+}
+
+.previous-round-entry:hover {
+  background: var(--bg-card);
+}
+
+.previous-round-entry:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.previous-round-entry-text {
+  flex: 1 1 6rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.previous-round-entry-reply {
+  flex-basis: 100%;
+  min-width: 0;
+  padding-left: 1rem;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.previous-round-entry-reason {
+  flex-basis: 100%;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Last round's ticks sit above the current markers, read-only and quieter. */
+.timeline-markers--previous {
+  margin-bottom: 4px;
+}
+
+.timeline-marker--previous {
+  min-width: 0;
+  height: 18px;
+  padding: 0 7px;
+  border-color: var(--bg-card);
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 600;
+  line-height: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+/* The dashed border marks a ghost, so it needs no fading: the opacity would pull the text below 4.5:1. */
+.timeline-marker--previous.timeline-marker--ghost {
+  border: 2px dashed var(--bg-card);
+  background: var(--text-muted);
+  opacity: 1;
+}
+
+.timeline-marker--previous:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  opacity: 1;
+}
+
+.page-strip-previous {
+  position: absolute;
+  right: 0.25rem;
+  bottom: 0.25rem;
+  width: 0.625rem;
+  height: 0.625rem;
+  border: 2px solid var(--bg-card);
+  border-radius: 9999px;
+  background: var(--text);
+}
+
+@media (forced-colors: active) {
+  .timeline-marker--previous,
+  .page-strip-previous {
     forced-color-adjust: none;
     border: 1px solid CanvasText;
   }

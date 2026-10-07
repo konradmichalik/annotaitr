@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { formatTimecode, formatTimes, isSpan, layoutMarkerLanes, dragMarkerTimes, MARKER_SIZE_PX } from './timeline.js'
 import { TOOL_ICONS, ACTION_ICONS, PLAYER_ICONS } from '../utils/icons.jsx'
 import SpanControls from './SpanControls.jsx'
+import PreviousTimelineMarks from '../threads/PreviousTimelineMarks.jsx'
 
 const RATES = [1, 0.5, 0.25]
 const LANE_GAP_PX = 2
@@ -205,7 +206,7 @@ function Markers({ markers, controller, onSelect, onChangeTimes, rowRef }) {
  */
 export default function Timeline({
   controller, playerState, markers, range, onMarkStart, onMarkEnd, onClearRange, onCommentRange, onChangeMarkerTimes,
-  activeTool, onPickTool
+  activeTool, onPickTool, previousThreads = [], previousRound = null, onShowThread
 }) {
   const trackRef = useRef(null)
   const markersRef = useRef(null)
@@ -248,6 +249,9 @@ export default function Timeline({
   return (
     <div className="timeline">
       <div className="timeline-scrubber">
+        {previousThreads.length > 0 && (
+          <PreviousTimelineMarks threads={previousThreads} round={previousRound} duration={duration} onShow={onShowThread} />
+        )}
         <Markers
           markers={markers} controller={controller}
           onSelect={controller.seek} onChangeTimes={onChangeMarkerTimes} rowRef={markersRef}

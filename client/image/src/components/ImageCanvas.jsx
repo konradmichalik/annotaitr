@@ -11,6 +11,8 @@ import { wordIndexAt, selectWords } from '../document/textSelection.js'
 import { ANNOTATION_COLORS } from '../utils/annotationColors.js'
 import { ACTION_ICONS } from '../utils/icons.jsx'
 import CommentPopover from './CommentPopover.jsx'
+import PreviousRoundLayer from '../threads/PreviousRoundLayer.jsx'
+import ThreadPopover from '../threads/ThreadPopover.jsx'
 
 const DEFAULT_COLOR = ANNOTATION_COLORS[0].hex
 const MOVE_THRESHOLD = 4
@@ -236,9 +238,15 @@ export default function ImageCanvas({
   // time, null meaning the one being drawn.
   media = null, numberFor = null, nextNumber = annotations.length + 1, onBeforeInteract = null, describeTime = null,
   // A PDF page's words in reading order, for the Text tool.
-  voiceNotes = false, elements = [], words = []
+  voiceNotes = false, elements = [], words = [],
+  // Last round's marks (placed threads only), drawn read-only and opened with the Select tool.
+  previousThreads = [], previousRound = null, showPrevious = false, openThreadHandle = null, onOpenThread = null, onCloseThread = null
 }) {
   const wrapperRef = useRef(null)
+  // A thread opened from the panel on another page mounts this canvas with its popover already due, before the wrapper exists to anchor it to.
+  const [wrapperMounted, setWrapperMounted] = useState(false)
+  useEffect(() => { setWrapperMounted(true) }, [])
+  const previousClickRef = useRef(null)
   // Set by the wheel handler just before onZoomBy fires, and consumed by the
   // effect below once `zoom` actually changes - carries the point that
   // should stay fixed under the cursor across the zoom change.
@@ -356,11 +364,11 @@ export default function ImageCanvas({
   // scroll on any ancestor (namely `.app-main`), not just the window itself.
   const [, forceRerenderOnScroll] = useReducer((n) => n + 1, 0)
   useEffect(() => {
-    if (!pending && !selectedId) { return }
+    if (!pending && !selectedId && !openThreadHandle) { return }
     const onScroll = () => forceRerenderOnScroll()
     window.addEventListener('scroll', onScroll, true)
     return () => window.removeEventListener('scroll', onScroll, true)
-  }, [pending, selectedId])
+  }, [pending, selectedId, openThreadHandle])
 
   const handleHandleMouseDown = useCallback((event, handle) => {
     event.preventDefault()
@@ -413,6 +421,8 @@ export default function ImageCanvas({
     ? fixedColor
     : ANNOTATION_COLORS[createdCountRef.current % ANNOTATION_COLORS.length].hex
 
+  const previousVisible = showPrevious && previousThreads.length > 0
+
   const handleMouseDown = useCallback((event) => {
     // A mousedown that closes the open popover (see CommentPopover's own
     // outside-click handler) reaches this handler too, since the popover's
@@ -423,6 +433,7 @@ export default function ImageCanvas({
     // already called setPending(null) via onClose in the same event.
     if (pending) { return }
     event.preventDefault()
+    previousClickRef.current = null
     onBeforeInteract?.()
     // A drag takes over from here; the outline at the press point would
     // otherwise stay behind while an existing mark is moved away from it.
@@ -445,6 +456,11 @@ export default function ImageCanvas({
 
     if (activeTool === 'select') {
       setSelectedId(null)
+      const previousHit = previousVisible
+        ? findAnnotationAt(point, previousThreads.map((t) => t.annotation))
+        : null
+      // Opened on mouseup: a popover mounted during this mousedown would see the same event as an outside click.
+      previousClickRef.current = previousHit ? previousThreads.find((t) => t.annotation === previousHit).handle : null
       return
     }
 
@@ -466,7 +482,7 @@ export default function ImageCanvas({
 
     setDragStart(point)
     setDragPoint(point)
-  }, [activeTool, imageWidth, imageHeight, zoom, pending, annotations, selectedId, onBeforeInteract])
+  }, [activeTool, imageWidth, imageHeight, zoom, pending, annotations, selectedId, onBeforeInteract, previousVisible, previousThreads])
 
   const handleMouseMove = useCallback((event) => {
     if (resizeState.current) {
@@ -570,6 +586,11 @@ export default function ImageCanvas({
   const handleMouseUp = useCallback((event) => {
     if (pending) { return }
     if (!wrapperRef.current) { return }
+    if (previousClickRef.current) {
+      onOpenThread?.(previousClickRef.current)
+      previousClickRef.current = null
+      return
+    }
     if (resizeState.current) {
       const { id, moved, startAnnotation } = resizeState.current
       resizeState.current = null
@@ -600,7 +621,7 @@ export default function ImageCanvas({
     }
 
     handleCreateAnnotation(pointFromEvent(event, wrapperRef, imageWidth, imageHeight, zoom))
-  }, [imageWidth, imageHeight, zoom, annotations, openEditPopover, onCommitEdit, pending, handleCreateAnnotation])
+  }, [imageWidth, imageHeight, zoom, annotations, openEditPopover, onCommitEdit, pending, handleCreateAnnotation, onOpenThread])
 
   // A window-level listener (not a React handler on the wrapper) so a drag,
   // move, or resize still finishes correctly when the button is released
@@ -637,6 +658,8 @@ export default function ImageCanvas({
   // Computed fresh every render (not stored in state) so the scroll-triggered
   // re-render above actually moves it - see the effect that owns forceRerenderOnScroll.
   const pendingAnchorPoint = pending ? toClientPoint(wrapperRef, annotationBottomAnchor(pending), zoom) : null
+
+  const openThread = previousVisible && openThreadHandle ? previousThreads.find((t) => t.handle === openThreadHandle) : null
 
   let livePreview = null
   if (activeTool === 'box' && dragStart && dragPoint) {
@@ -696,6 +719,7 @@ export default function ImageCanvas({
             x={box.x} y={box.y} width={box.width} height={box.height} vectorEffect="non-scaling-stroke"
           />
         ))}
+        {previousVisible && <PreviousRoundLayer threads={previousThreads} Shape={AnnotationShape} fallbackColor={DEFAULT_COLOR} />}
         {annotations.map((annotation, index) => (
           <AnnotationShape
             key={annotation.id} annotation={annotation} number={numberFor ? numberFor(annotation) : index + 1}
@@ -726,6 +750,14 @@ export default function ImageCanvas({
             setSelectedId(null)
           }}
           onClose={() => setSelectedId(null)}
+        />
+      )}
+      {openThread && wrapperMounted && (
+        <ThreadPopover
+          key={openThread.handle}
+          thread={openThread} round={previousRound}
+          anchorPoint={toClientPoint(wrapperRef, annotationBottomAnchor(openThread.annotation), zoom)}
+          onClose={onCloseThread}
         />
       )}
       {pending && (

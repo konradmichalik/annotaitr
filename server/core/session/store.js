@@ -37,7 +37,7 @@ async function assertPrivateDir(dir) {
 
 function isWellFormed(session) {
   return Array.isArray(session.threads) &&
-    session.threads.every((t) => Array.isArray(t?.replies)) &&
+    session.threads.every((t) => Array.isArray(t?.replies) && t.annotation !== null && typeof t.annotation === 'object') &&
     Number.isInteger(session.round) &&
     Number.isFinite(session.writtenAt)
 }

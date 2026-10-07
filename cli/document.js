@@ -76,6 +76,8 @@ export async function runDocument({ target, origin, viewportSpec, delaySpec, sou
     return
   }
 
+  const reviewed = { ...opened, fingerprint: document.fingerprint }
+
   const freshness = sourcePath ? await isSourceNewer(sourcePath, pdfPath) : { newer: false }
   const source = sourcePath ? { label: basename(sourcePath), newer: freshness.newer === true } : null
   if (source?.newer) {
@@ -83,5 +85,5 @@ export async function runDocument({ target, origin, viewportSpec, delaySpec, sou
   }
   if (freshness.skipped) { process.stderr.write(`Note: ${freshness.skipped}.\n`) }
 
-  await serveUntilDecision(await buildDocumentServer({ document, source, origin, targetLabel: basename(pdfPath) }), opened)
+  await serveUntilDecision(await buildDocumentServer({ document, source, origin, targetLabel: basename(pdfPath), session: reviewed }), reviewed)
 }

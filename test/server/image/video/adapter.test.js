@@ -34,11 +34,12 @@ describe('video annotator server', () => {
     server = null
   })
 
-  async function start() {
+  async function start(session = null) {
     server = await buildVideoServer({
       video: { path: videoPath, kind: 'video', mimeType: 'video/webm' },
       origin: 'cli',
-      targetLabel: 'clip.webm'
+      targetLabel: 'clip.webm',
+      session
     })
     return server
   }
@@ -205,6 +206,18 @@ describe('video annotator server', () => {
     server = null
     const remaining = (await readdir(tmpdir())).filter((name) => name.startsWith('annotaitr-frames-'))
     expect(remaining.length).toBe(rawDirs.length - 1)
+  })
+
+  it('serves last round, orphaning marks past the duration the client reports', async () => {
+    await start({
+      sessionId: '2f8c1a9e04b7',
+      target: { kind: 'video', label: 'clip.webm' },
+      fingerprint: 'sha256:a',
+      previous: { round: 1, fingerprint: 'sha256:a', threads: [{ handle: 'a1a1a1a1', number: 1, annotation: box('a', 12), element: null, replies: [] }] }
+    })
+    const anchorAt = async (query) => (await (await fetch(`${server.url}/api/threads${query}`)).json()).data.threads[0].anchor
+    expect(await anchorAt('')).toBe('exact')
+    expect(await anchorAt('?duration=10')).toBe('orphan')
   })
 
   it('approves without annotations and without any frames', async () => {
