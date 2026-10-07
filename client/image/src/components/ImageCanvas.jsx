@@ -8,14 +8,14 @@ import { resolveArrowStyle, strokeWidthOf, dashArrayFor, pickStyleFields } from 
 import { cursorForTool } from '../utils/cursors.js'
 import { matchAnnotation, matchPoint, describeElements } from '../utils/elementMatch.js'
 import { wordIndexAt, selectWords } from '../document/textSelection.js'
-import { ANNOTATION_COLORS } from '../utils/annotationColors.js'
+import { markColor, intentMark, intentOnMark } from '../utils/annotationColors.js'
 import { ACTION_ICONS } from '../utils/icons.jsx'
 import CommentPopover from './CommentPopover.jsx'
 import { noteType } from '../../../shared/utils/noteTypes.js'
+import { defaultIntent, intentOf } from '../../../shared/utils/intents.js'
 import PreviousRoundLayer from '../threads/PreviousRoundLayer.jsx'
 import ThreadPopover from '../threads/ThreadPopover.jsx'
 
-const DEFAULT_COLOR = ANNOTATION_COLORS[0].hex
 const MOVE_THRESHOLD = 4
 
 /** Tools that draw by capturing a continuous stream of points while dragging. */
@@ -103,15 +103,29 @@ function HighlighterShape({ geometry, color, strokeWidth, dash, selectionProps }
   )
 }
 
-function PinShape({ geometry, color, number, selectionProps }) {
+/**
+ * The number on its intent's colour, with a soft light halo that only shows
+ * on dark images. The same badge sits on every mark, as in the image the
+ * server renders (server/image/common/render.js).
+ */
+function NumberBadge({ x, y, number, intent, r = 11, fontSize = 12 }) {
+  if (number === undefined || number === null) { return null }
+  return (
+    <>
+      <circle cx={x} cy={y} r={r} fill={intentMark(intent)} stroke="var(--mark-halo)" strokeWidth="1" />
+      <text x={x} y={y} textAnchor="middle" dominantBaseline="central" fill={intentOnMark(intent)} fontSize={fontSize} fontWeight="700">
+        {number}
+      </text>
+    </>
+  )
+}
+
+function PinShape({ geometry, intent, number, selectionProps }) {
   const { x, y } = geometry
   return (
     <>
       {selectionProps && <circle cx={x} cy={y} r="18" fill="none" {...selectionProps} />}
-      <circle cx={x} cy={y} r="14" fill={color} />
-      <text x={x} y={y} textAnchor="middle" dominantBaseline="central" fill="#fff" fontSize="13" fontWeight="700">
-        {number}
-      </text>
+      <NumberBadge x={x} y={y} number={number ?? ''} intent={intent} r={14} fontSize={13} />
     </>
   )
 }
@@ -130,21 +144,36 @@ function ElementShape({ geometry, color, selectionProps }) {
 
 // Painted like a marker over the selected lines, matching the server's
 // rendering in server/image/common/render.js.
-function TextShape({ geometry, color, number, selectionProps }) {
-  const [first] = geometry.rects
+function TextShape({ geometry, color, selectionProps }) {
+  return geometry.rects.map(({ x, y, width, height }) => (
+    <rect key={`${x}-${y}`} x={x} y={y} width={width} height={height} fill={color} fillOpacity={0.3} {...(selectionProps ?? {})} />
+  ))
+}
+
+/** Where a shape's number badge sits, matching the server's rendering. */
+function badgePoint({ type, geometry }) {
+  if (type === 'text') { return geometry.rects[0] }
+  if (type === 'arrow') { return { x: geometry.x1, y: geometry.y1 } }
+  if (type === 'freehand' || type === 'highlighter') { return geometry.points[0] }
+  return { x: geometry.x, y: geometry.y }
+}
+
+// `badge` is off for an earlier round's mark, whose number sits in its status badge instead.
+function AnnotationShape({ annotation, number, markerId, dashed = false, selected = false, badge = true }) {
+  const color = markColor(annotation)
+  const intent = intentOf(annotation)
+  const shape = <ShapeBody annotation={annotation} color={color} intent={intent} number={number} markerId={markerId} dashed={dashed} selected={selected} />
+  if (!badge || annotation.type === 'pin' || !annotation.geometry) { return shape }
+  const point = badgePoint(annotation)
   return (
     <>
-      {geometry.rects.map(({ x, y, width, height }) => (
-        <rect key={`${x}-${y}`} x={x} y={y} width={width} height={height} fill={color} fillOpacity={0.3} {...(selectionProps ?? {})} />
-      ))}
-      <circle cx={first.x} cy={first.y} r="11" fill={color} />
-      <text x={first.x} y={first.y} textAnchor="middle" dominantBaseline="central" fill="#fff" fontSize="12" fontWeight="700">{number}</text>
+      {shape}
+      {point && <NumberBadge x={point.x} y={point.y} number={number} intent={intent} />}
     </>
   )
 }
 
-function AnnotationShape({ annotation, number, markerId, dashed = false, selected = false }) {
-  const color = annotation.color || DEFAULT_COLOR
+function ShapeBody({ annotation, color, intent, number, markerId, dashed, selected }) {
   const strokeWidth = strokeWidthOf(annotation)
   // The live "uncommitted preview" dash always wins over a stored dashStyle:
   // a not-yet-drawn annotation has no dashStyle chosen yet, and this is the
@@ -154,12 +183,12 @@ function AnnotationShape({ annotation, number, markerId, dashed = false, selecte
   const { type, geometry } = annotation
 
   if (type === 'element') { return <ElementShape geometry={geometry} color={color} selectionProps={selectionProps} /> }
-  if (type === 'text') { return <TextShape geometry={geometry} color={color} number={number} selectionProps={selectionProps} /> }
+  if (type === 'text') { return <TextShape geometry={geometry} color={color} selectionProps={selectionProps} /> }
   if (type === 'box') { return <BoxShape geometry={geometry} color={color} strokeWidth={strokeWidth} dash={dash} selectionProps={selectionProps} /> }
   if (type === 'arrow') { return <ArrowShape annotation={annotation} color={color} strokeWidth={strokeWidth} dash={dash} markerId={markerId} selectionProps={selectionProps} /> }
   if (type === 'freehand') { return <FreehandShape geometry={geometry} color={color} strokeWidth={strokeWidth} dash={dash} selectionProps={selectionProps} /> }
   if (type === 'highlighter') { return <HighlighterShape geometry={geometry} color={color} strokeWidth={strokeWidth} dash={dash} selectionProps={selectionProps} /> }
-  if (type === 'pin') { return <PinShape geometry={geometry} color={color} number={number} selectionProps={selectionProps} /> }
+  if (type === 'pin') { return <PinShape geometry={geometry} intent={intent} number={number} selectionProps={selectionProps} /> }
   return null
 }
 
@@ -211,7 +240,7 @@ function SelectionToolbar({ point, onEdit, onRemove, onClose }) {
       onMouseDown={(event) => event.stopPropagation()}
     >
       <div className="annotation-toolbar-menu">
-        <button type="button" onClick={onRemove} className="annotation-toolbar-btn annotation-toolbar-btn-remove" title="Remove annotation">
+        <button type="button" onClick={onRemove} className="annotation-toolbar-btn annotation-toolbar-btn-remove" title="Delete annotation">
           {ACTION_ICONS.remove}
           <span className="annotation-toolbar-label">Remove</span>
         </button>
@@ -231,13 +260,13 @@ function SelectionToolbar({ point, onEdit, onRemove, onClose }) {
 export default function ImageCanvas({
   imageUrl, imageAlt = 'Image being annotated', imageWidth, imageHeight, activeTool, annotations, zoom, onZoomBy,
   editingAnnotationId, onAddAnnotation, onUpdateAnnotation, onCommitEdit, onRemoveAnnotation, onRequestEdit,
-  onUndo, onRedo, colorMode = 'rotate', fixedColor = DEFAULT_COLOR,
+  onUndo, onRedo, colorMode = 'intent', fixedColor = null,
   // A video passes its player element, the frame-visible subset of its
-  // annotations, their recording-wide numbers, and a hook to pause playback
-  // before any pointer interaction.
+  // annotations and a hook to pause playback before any pointer interaction.
+  // `nextNumber` is the number the note being drawn will keep.
   // describeTime(annotation | null) names what an annotation is pinned to in
   // time, null meaning the one being drawn.
-  media = null, numberFor = null, nextNumber = annotations.length + 1, onBeforeInteract = null, describeTime = null,
+  media = null, nextNumber = 1, onBeforeInteract = null, describeTime = null,
   // A PDF page's words in reading order, for the Text tool.
   voiceNotes = false, elements = [], words = [],
   // Last round's marks (placed threads only), drawn read-only and opened with the Select tool.
@@ -308,9 +337,6 @@ export default function ImageCanvas({
   const [isGrabbing, setIsGrabbing] = useState(false)
   const moveState = useRef(null)
   const resizeState = useRef(null)
-  // Ever-incrementing count of annotations created this session, seeded from
-  // whatever was already restored - see nextColor below.
-  const createdCountRef = useRef(annotations.length)
 
   // Delete/Backspace removes the selected annotation, so it doesn't require
   // opening the sidebar. Skipped while the comment popover is open (so
@@ -412,17 +438,9 @@ export default function ImageCanvas({
     onRequestEdit(null)
   }, [editingAnnotationId, annotations, onRequestEdit, zoom, openEditPopover])
 
-  // The starting color for a new annotation: either the next color in the
-  // palette, cycling by how many annotations have been CREATED this session
-  // (createdCountRef - not annotations.length, which would repeat a color
-  // that's still in use as soon as an earlier annotation is deleted) - or a
-  // fixed color the user picked in Settings. Either way it's just a starting
-  // point - the comment popover still lets the color be changed per
-  // annotation, and editing an existing annotation keeps its stored color
-  // untouched.
-  const nextColor = colorMode === 'fixed'
-    ? fixedColor
-    : ANNOTATION_COLORS[createdCountRef.current % ANNOTATION_COLORS.length].hex
+  // A new mark has no ink of its own and takes its intent's colour, unless
+  // the reviewer fixed an ink in the dock. The composer can still change it.
+  const nextColor = colorMode === 'fixed' ? fixedColor : null
 
   const previousVisible = showPrevious && previousThreads.length > 0
 
@@ -532,15 +550,12 @@ export default function ImageCanvas({
     }
   }, [activeTool, strokePoints.length, dragStart, imageWidth, imageHeight, zoom, onUpdateAnnotation, pending, annotations, elements])
 
-  // Wraps every `setPending` call that starts a brand-new annotation (as
-  // opposed to editing an existing one) so the created-count increment can't
-  // drift out of sync with it - see nextColor above for why the count exists.
+  // Every `setPending` call that starts a brand-new annotation (as opposed to editing an existing one).
   const createPending = useCallback((partial) => {
     setPending(partial)
     // The pointer now rests on the new mark, so the hover outline would
     // otherwise linger over it until the next mouse move.
     setHoverPoint(null)
-    createdCountRef.current += 1
   }, [])
 
   // The tool-specific dispatch for "a drag/click just finished, and it was a
@@ -637,15 +652,15 @@ export default function ImageCanvas({
 
   const handleCommentSubmit = useCallback((fields) => {
     if (pending) {
-      const { text, color } = fields
+      const { text, color, intent } = fields
       const styleFields = pickStyleFields(pending.type, fields)
       if (pending.id) {
-        const after = { ...pending.before, text, color, ...styleFields }
+        const after = { ...pending.before, text, color, intent, ...styleFields }
         onCommitEdit(pending.id, pending.before, after)
       } else {
         // A text selection carries the words it selected along with its geometry.
         const quote = pending.type === 'text' ? { quote: pending.quote } : {}
-        onAddAnnotation({ type: pending.type, geometry: pending.geometry, text, color, ...styleFields, ...quote })
+        onAddAnnotation({ type: pending.type, geometry: pending.geometry, text, color, intent, ...styleFields, ...quote })
       }
     }
     setPending(null)
@@ -659,9 +674,7 @@ export default function ImageCanvas({
   // Computed fresh every render (not stored in state) so the scroll-triggered
   // re-render above actually moves it - see the effect that owns forceRerenderOnScroll.
   const pendingAnchorPoint = pending ? toClientPoint(wrapperRef, annotationBottomAnchor(pending), zoom) : null
-  const pendingNumber = pending?.id
-    ? (numberFor ? numberFor(pending.before) : annotations.findIndex((a) => a.id === pending.id) + 1)
-    : nextNumber
+  const pendingNumber = pending?.id ? pending.before.number : nextNumber
 
   const openThread = previousVisible && openThreadHandle ? previousThreads.find((t) => t.handle === openThreadHandle) : null
 
@@ -704,7 +717,7 @@ export default function ImageCanvas({
       >
         <defs>
           <marker id="arrowhead-preview" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 Z" fill={nextColor} />
+            <path d="M0,0 L10,5 L0,10 Z" fill={pending ? markColor(pending) : (nextColor ?? intentMark(defaultIntent('arrow')))} />
           </marker>
           {annotations.map((annotation) => annotation.type === 'arrow'
             && ['head', 'double'].includes(resolveArrowStyle(annotation.arrowStyle)) && (
@@ -713,7 +726,7 @@ export default function ImageCanvas({
               id={`arrowhead-${annotation.id}`}
               markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse"
             >
-              <path d="M0,0 L10,5 L0,10 Z" fill={annotation.color || DEFAULT_COLOR} />
+              <path d="M0,0 L10,5 L0,10 Z" fill={markColor(annotation)} />
             </marker>
           ))}
         </defs>
@@ -723,10 +736,10 @@ export default function ImageCanvas({
             x={box.x} y={box.y} width={box.width} height={box.height} vectorEffect="non-scaling-stroke"
           />
         ))}
-        {previousVisible && <PreviousRoundLayer threads={previousThreads} Shape={AnnotationShape} fallbackColor={DEFAULT_COLOR} />}
-        {annotations.map((annotation, index) => (
+        {previousVisible && <PreviousRoundLayer threads={previousThreads} Shape={AnnotationShape} />}
+        {annotations.map((annotation) => (
           <AnnotationShape
-            key={annotation.id} annotation={annotation} number={numberFor ? numberFor(annotation) : index + 1}
+            key={annotation.id} annotation={annotation} number={annotation.number}
             markerId={`arrowhead-${annotation.id}`} selected={annotation.id === selectedId}
           />
         ))}
@@ -768,8 +781,9 @@ export default function ImageCanvas({
       {pending && (
         <CommentPopover
           anchorPoint={pendingAnchorPoint}
-          title={`Note ${pendingNumber}, ${noteType(pending).word.toLowerCase()}`}
+          title={`Note ${pendingNumber}, ${noteType(pending).shape.toLowerCase()}`}
           initialText={pending.text || ''}
+          initialIntent={pending.id ? intentOf(pending.before) : defaultIntent(pending.type)}
           initialColor={pending.color}
           annotationType={pending.type}
           initialArrowStyle={pending.arrowStyle}
@@ -779,6 +793,7 @@ export default function ImageCanvas({
           timeBadge={describeTime ? describeTime(pending.id ? pending.before : null) : null}
           voiceNotes={voiceNotes}
           elementHint={elementHint}
+          onIntentChange={(intent) => setPending((current) => (current && !current.id ? { ...current, intent } : current))}
           onSubmit={handleCommentSubmit}
           onClose={handleCommentClose}
         />

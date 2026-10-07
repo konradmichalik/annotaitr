@@ -111,6 +111,10 @@ export function PenIcon({ size = 14 }) {
   return <Icon size={size}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></Icon>
 }
 
+export function QuestionIcon({ size = 14 }) {
+  return <Icon size={size}><circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></Icon>
+}
+
 export function CommentIcon({ size = 14 }) {
   return <Icon size={size}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></Icon>
 }

@@ -510,7 +510,7 @@ test.describe('replies from the last round', () => {
       await page.goto(await cli.url)
       await page.getByRole('button', { name: 'Approve', exact: true }).click()
       await page.getByRole('dialog', { name: 'Finish review' }).getByRole('button', { name: 'Answer' }).click()
-      await expect(page.getByRole('dialog', { name: 'Round 1 · note 1' })).toBeVisible()
+      await expect(page.getByRole('dialog', { name: 'Round 1 · general comment' })).toBeVisible()
     } finally {
       cli.child.kill()
     }

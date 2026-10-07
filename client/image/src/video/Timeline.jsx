@@ -3,6 +3,7 @@ import { formatTimecode, formatTimes, isSpan, layoutMarkerLanes, dragMarkerTimes
 import { TOOL_ICONS, ACTION_ICONS, PLAYER_ICONS } from '../utils/icons.jsx'
 import SpanControls from './SpanControls.jsx'
 import PreviousTimelineMarks from '../threads/PreviousTimelineMarks.jsx'
+import { intentMark, intentOnMark } from '../utils/annotationColors.js'
 
 const RATES = [1, 0.5, 0.25]
 const LANE_GAP_PX = 2
@@ -176,7 +177,8 @@ function Markers({ markers, controller, onSelect, onChangeTimes, rowRef }) {
             top: (lanes.get(marker.id) ?? 0) * (MARKER_SIZE_PX + LANE_GAP_PX),
             left: percent(marker.time, duration),
             width: isSpan(marker) ? `calc(${percent(marker.endTime, duration)} - ${percent(marker.time, duration)})` : undefined,
-            '--marker-color': marker.color
+            '--marker-color': intentMark(marker.intent),
+            '--marker-on-color': intentOnMark(marker.intent)
           }}
           onPointerDown={(event) => handlePointerDown(event, marker)}
           onPointerMove={handlePointerMove}

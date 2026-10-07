@@ -6,7 +6,7 @@ const FALLBACK_FRAME_DURATION = 1 / 30
 
 /**
  * Everything the annotation UI needs to know about time on a recording:
- * numbering in time order, which annotations belong on the frame shown,
+ * the order of the notes in time, which annotations belong on the frame shown,
  * the timeline markers, the span being marked, and the time stamped onto
  * a new annotation. With no controller (a still image) it passes the
  * annotations through untouched.
@@ -20,20 +20,18 @@ export function useVideoReview({ controller, playerState, annotations }) {
     () => (controller ? orderVideoAnnotations(annotations) : annotations),
     [controller, annotations]
   )
-  const numbers = useMemo(() => new Map(ordered.map((a, index) => [a.id, index + 1])), [ordered])
-  const numberFor = useCallback((annotation) => numbers.get(annotation.id), [numbers])
 
   const visible = controller ? ordered.filter((a) => isVisibleAt(a, currentTime, halfFrame)) : annotations
 
   const markers = useMemo(() => ordered.filter(isTimed).map((a) => ({
     id: a.id,
-    number: numbers.get(a.id),
+    number: a.number,
+    intent: a.intent,
     type: a.type,
     text: a.text,
     time: a.time,
-    endTime: isSpan(a) ? a.endTime : undefined,
-    color: a.color
-  })), [ordered, numbers])
+    endTime: isSpan(a) ? a.endTime : undefined
+  })), [ordered])
 
   const markStart = useCallback(() => {
     const time = controller.getState().currentTime
@@ -76,17 +74,13 @@ export function useVideoReview({ controller, playerState, annotations }) {
     return times
   }, [controller, drawTimes])
 
-  const nextNumber = drawTimes
-    ? ordered.filter((a) => isTimed(a) && a.time <= drawTimes.time).length + 1
-    : ordered.length + 1
-
   const seekTo = useCallback((annotation) => {
     if (!controller || !isTimed(annotation)) { return }
     controller.seek(annotation.time)
   }, [controller])
 
   return {
-    ordered, numberFor, nextNumber, visible, markers, range, spanComplete, drawTimes,
+    ordered, visible, markers, range, spanComplete, drawTimes,
     markStart, markEnd, clearRange, captureTimes, takeTimes, seekTo
   }
 }

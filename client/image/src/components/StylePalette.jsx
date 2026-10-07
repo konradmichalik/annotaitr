@@ -14,6 +14,9 @@ const PREVIEW_WIDTHS = [1.5, 3, 5]
 
 const capitalize = (word) => word.charAt(0).toUpperCase() + word.slice(1)
 
+// No ink: the mark takes its intent's colour.
+const INTENT_SWATCH = 'conic-gradient(var(--intent-change-mark) 0 25%, var(--intent-add-mark) 0 50%, var(--intent-remove-mark) 0 75%, var(--intent-question-mark) 0)'
+
 function LinePreviewIcon({ width, dash }) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
@@ -79,16 +82,19 @@ export default function StylePalette({ annotationType, style, onChange }) {
         onClick={toggle}
       >
         <PaletteIcon />
-        <span className="style-palette-current" style={{ '--swatch': style.color }} aria-hidden="true" />
+        <span className="style-palette-current" style={{ '--swatch': style.color || INTENT_SWATCH }} aria-hidden="true" />
       </button>
       {open && (
         <div id={panelId} className="style-palette-panel" role="group" aria-label="Ink and stroke">
           <OptionRow
             label="Ink"
-            options={ANNOTATION_COLORS.map((swatch) => ({
-              key: swatch.id, label: capitalize(swatch.id), swatch: swatch.hex,
-              active: style.color === swatch.hex, onSelect: () => onChange({ color: swatch.hex })
-            }))}
+            options={[
+              { key: 'intent', label: 'Intent colour', swatch: INTENT_SWATCH, active: !style.color, onSelect: () => onChange({ color: null }) },
+              ...ANNOTATION_COLORS.map((swatch) => ({
+                key: swatch.id, label: capitalize(swatch.id), swatch: swatch.hex,
+                active: style.color === swatch.hex, onSelect: () => onChange({ color: swatch.hex })
+              }))
+            ]}
           />
           {fields.includes('strokeWidth') && (
             <OptionRow

@@ -1,6 +1,6 @@
 import StatusChip from '../../../shared/components/StatusChip.jsx'
 import { ACTION_ICONS } from '../utils/icons.jsx'
-import { STATUS_DISPLAY, AUTHOR_LABELS, threadStatus, threadLabel, orphanThreads, hasMark, pendingReplies, pendingReplyCount } from './threadView.js'
+import { STATUS_DISPLAY, AUTHOR_LABELS, threadStatus, threadNumber, threadLabel, orphanThreads, hasMark, pendingReplies, pendingReplyCount } from './threadView.js'
 
 function ThreadEntry({ thread, round, onActivate }) {
   const lastReply = thread.replies.at(-1)
@@ -8,7 +8,7 @@ function ThreadEntry({ thread, round, onActivate }) {
   return (
     <li>
       <button type="button" className="previous-round-entry" onClick={(event) => onActivate(thread, event.currentTarget)}>
-        <span className="previous-round-entry-number">{threadLabel(thread, round)}.</span>
+        {threadNumber(thread) !== null && <span className="previous-round-entry-number">{threadLabel(thread, round)}.</span>}
         <StatusChip status={threadStatus(thread)} display={STATUS_DISPLAY} />
         <span className="previous-round-entry-text">{thread.annotation.text}</span>
         {lastReply && (

@@ -1,5 +1,5 @@
-// Mirrors getBlockOrder and sortAnnotations in server/markdown/feedback.js, so a
-// card shows the number its note gets in the feedback the agent reads.
+// Mirrors getBlockOrder and sortAnnotations in server/markdown/feedback.js, so the
+// cards list the notes in the order the feedback the agent reads lists them.
 function sourceLine(blockId) {
   const match = blockId?.match(/^source-line-(\d+)$/)
   return match ? parseInt(match[1], 10) + 1 : null
@@ -22,15 +22,13 @@ export function sortNotes(annotations, blocks) {
   })
 }
 
-/** Numbered notes: everything but agent notes and comments about the whole file. */
-export const isNumbered = (a) => a.type !== 'NOTES' && a.targetType !== 'global'
-
-/** Card number per note id, counted across `files` in order, as the multi-file feedback counts them. */
+/** Card number per note id: the stable number each note got when it was added. */
 export function noteNumbers(files) {
   const numbers = new Map()
   for (const file of files) {
-    const sorted = sortNotes(file.annotations.filter(isNumbered), file.blocks || [])
-    sorted.forEach((annotation) => numbers.set(annotation.id, numbers.size + 1))
+    for (const annotation of file.annotations) {
+      if (Number.isInteger(annotation.number)) { numbers.set(annotation.id, annotation.number) }
+    }
   }
   return numbers
 }

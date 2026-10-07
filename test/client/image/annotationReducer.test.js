@@ -19,8 +19,9 @@ describe('annotationReducer', () => {
   it('ADD appends an annotation and records history', () => {
     const ann = makeAnnotation()
     const next = annotationReducer(initialAnnotationState, { type: 'ADD', annotation: ann })
-    expect(next.annotations).toEqual([ann])
-    expect(next.history).toEqual([{ action: 'add', annotation: ann }])
+    const numbered = { ...ann, intent: 'question', number: 1 }
+    expect(next.annotations).toEqual([numbered])
+    expect(next.history).toEqual([{ action: 'add', annotation: numbered }])
     expect(next.redo).toEqual([])
   })
 
@@ -85,7 +86,7 @@ describe('annotationReducer', () => {
       expect(undone.redo).toHaveLength(1)
 
       const redone = annotationReducer(undone, { type: 'REDO' })
-      expect(redone.annotations).toEqual([ann])
+      expect(redone.annotations).toEqual([{ ...ann, intent: 'question', number: 1 }])
       expect(redone.redo).toEqual([])
     })
 
@@ -126,6 +127,52 @@ describe('annotationReducer', () => {
       const undone = annotationReducer(added, { type: 'UNDO' })
       const readded = annotationReducer(undone, { type: 'ADD', annotation: makeAnnotation({ id: 'ann-2' }) })
       expect(readded.redo).toEqual([])
+    })
+  })
+
+  describe('intent and stable numbers', () => {
+    const add = (state, annotation) => annotationReducer(state, { type: 'ADD', annotation })
+
+    it('numbers new notes in the order they are added and gives them the default intent', () => {
+      let state = add(initialAnnotationState, makeAnnotation({ id: 'a', type: 'box', geometry: { x: 0, y: 0, width: 5, height: 5 } }))
+      state = add(state, makeAnnotation({ id: 'b' }))
+      expect(state.annotations.map((a) => [a.id, a.number, a.intent])).toEqual([['a', 1, 'change'], ['b', 2, 'question']])
+    })
+
+    it('keeps the intent the composer picked', () => {
+      const state = add(initialAnnotationState, makeAnnotation({ intent: 'remove' }))
+      expect(state.annotations[0].intent).toBe('remove')
+    })
+
+    it('never renumbers after a delete and never hands out a deleted number again', () => {
+      let state = add(initialAnnotationState, makeAnnotation({ id: 'a' }))
+      state = add(state, makeAnnotation({ id: 'b' }))
+      state = add(state, makeAnnotation({ id: 'c' }))
+      state = annotationReducer(state, { type: 'REMOVE', id: 'b' })
+      state = annotationReducer(state, { type: 'REMOVE', id: 'c' })
+      expect(state.annotations.map((a) => a.number)).toEqual([1])
+      state = add(state, makeAnnotation({ id: 'd' }))
+      expect(state.annotations.map((a) => a.number)).toEqual([1, 4])
+      state = annotationReducer(annotationReducer(state, { type: 'UNDO' }), { type: 'UNDO' })
+      expect(state.annotations.map((a) => [a.id, a.number])).toEqual([['a', 1], ['c', 3]])
+    })
+
+    it('leaves the general comment unnumbered', () => {
+      const state = add(initialAnnotationState, { id: 'g', type: 'comment', geometry: null, text: 'overall' })
+      expect(state.annotations[0].number).toBeUndefined()
+    })
+
+    it('gives loaded data without intent or number both, in the order the mode numbered it before', () => {
+      const byTime = (list) => [...list].sort((a, b) => a.time - b.time)
+      const state = annotationReducer(initialAnnotationState, {
+        type: 'SET_ALL',
+        order: byTime,
+        annotations: [
+          makeAnnotation({ id: 'late', time: 4 }),
+          makeAnnotation({ id: 'early', type: 'box', time: 1 })
+        ]
+      })
+      expect(state.annotations.map((a) => [a.id, a.number, a.intent])).toEqual([['late', 2, 'question'], ['early', 1, 'change']])
     })
   })
 })

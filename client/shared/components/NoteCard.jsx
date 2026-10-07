@@ -35,7 +35,7 @@ export function NoteCard({
               </button>
             )}
             {onRemove && (
-              <button type="button" className="note-card-action note-card-action--remove" title="Remove annotation" aria-label="Remove annotation"
+              <button type="button" className="note-card-action note-card-action--remove" title="Delete annotation" aria-label="Delete annotation"
                 onClick={(event) => { event.stopPropagation(); onRemove() }}>
                 <CloseIcon />
               </button>

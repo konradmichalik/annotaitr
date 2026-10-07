@@ -5,18 +5,19 @@ import { LabelIcon } from './LabelIcon.jsx'
 import { AgentNotes } from './AgentNotes.jsx'
 import { GeneralCommentField } from './GeneralCommentField.jsx'
 import { flashElement } from '../utils/flashElement.js'
-import { noteNumbers, noteLocation, sortNotes, isNumbered } from '../utils/noteNumbers.js'
+import { noteNumbers, noteLocation, sortNotes } from '../utils/noteNumbers.js'
+import { isNumbered } from '../../../shared/utils/intents.js'
 import { noteType } from '../../../shared/utils/noteTypes.js'
 import { PanelMenu } from '../../../shared/components/PanelMenu.jsx'
 import { NoteCard } from '../../../shared/components/NoteCard.jsx'
 import { PanelSwitch } from '../../../shared/components/PanelSwitch.jsx'
 import { PanelEmpty } from '../../../shared/components/PanelEmpty.jsx'
 import { GeneralCommentRow } from '../../../shared/components/GeneralCommentRow.jsx'
-import { CommentIcon, MinusIcon, PlusIcon } from '../../../shared/components/HeaderIcons.jsx'
+import { IntentIcon } from '../../../shared/components/IntentIcon.jsx'
+import { intentBadgeStyle } from '../../../shared/utils/intents.js'
 
 const MAX_IMPORT_SIZE = 5 * 1024 * 1024 // 5 MB
 const ALT = navigator.platform?.includes('Mac') ? '⌥' : 'Alt'
-const INTENT_ICONS = { remove: <MinusIcon />, add: <PlusIcon />, change: <CommentIcon /> }
 const EMPTY_KEYS = [
   { key: 'V', label: 'Select text to comment on it or remove it' },
   { key: `${ALT}+click`, label: 'Insert text at a position' },
@@ -53,16 +54,18 @@ function CardText({ ann }) {
 }
 
 function Card({ ann, number, blocks, selected, onActivate, onEdit, onRemove }) {
-  const { word, intent } = noteType(ann)
+  const { word, intent, shape } = noteType(ann)
+  // A plain text selection says nothing a quote does not; an insertion or an image does.
+  const location = [noteLocation(ann, blocks), shape === 'Text' ? null : shape].filter(Boolean).join(' · ')
   return (
     <NoteCard
       id={ann.id}
       number={number ?? null}
-      badgeStyle={intent ? { background: `var(--intent-${intent}-mark)`, color: `var(--intent-${intent}-on-mark)` } : undefined}
+      badgeStyle={intentBadgeStyle(intent)}
       word={word}
       intent={intent}
-      icon={INTENT_ICONS[intent] ?? null}
-      location={noteLocation(ann, blocks)}
+      icon={<IntentIcon intent={intent} />}
+      location={location || null}
       quote={quoteOf(ann)}
       selected={selected}
       onActivate={onActivate}

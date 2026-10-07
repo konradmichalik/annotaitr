@@ -21,29 +21,29 @@ describe('sortNotes', () => {
 })
 
 describe('noteNumbers', () => {
-  it('numbers the notes of one file in document order, skipping general comments and agent notes', () => {
+  it('reads the stable number of every numbered note, gaps included', () => {
     const numbers = noteNumbers([{
       blocks,
       annotations: [
-        note('late', 'block-3', 0),
+        note('late', 'block-3', 0, { number: 1 }),
         { id: 'general', type: 'COMMENT', targetType: 'global', text: 'overall' },
         { id: 'agent', type: 'NOTES', text: 'fyi', blockId: 'block-1' },
-        note('early', 'block-1', 0)
+        note('early', 'block-1', 0, { number: 4 })
       ]
     }])
-    expect(Object.fromEntries(numbers)).toEqual({ early: 1, late: 2 })
+    expect(Object.fromEntries(numbers)).toEqual({ late: 1, early: 4 })
   })
 
-  it('continues the count across files, as the multi-file feedback does', () => {
+  it('reads the numbers of every file, as the multi-file feedback prints them', () => {
     const files = [
-      { path: 'a.md', blocks, annotations: [note('a1', 'block-1', 0), note('a2', 'block-3', 0)] },
+      { path: 'a.md', blocks, annotations: [note('a1', 'block-1', 0, { number: 1 }), note('a2', 'block-3', 0, { number: 3 })] },
       { path: 'empty.md', blocks, annotations: [] },
-      { path: 'b.md', blocks, annotations: [note('b1', 'block-1', 0)] }
+      { path: 'b.md', blocks, annotations: [note('b1', 'block-1', 0, { number: 2 })] }
     ]
     const numbers = noteNumbers(files)
-    expect(Object.fromEntries(numbers)).toEqual({ a1: 1, a2: 2, b1: 3 })
+    expect(Object.fromEntries(numbers)).toEqual({ a1: 1, a2: 3, b1: 2 })
     const output = exportMultiFileFeedback(files)
-    expect(output).toMatch(/### 3\.[^\n]*\n[\s\S]*note b1/)
+    expect(output).toMatch(/### 2\.[^\n]*\n[\s\S]*note b1/)
   })
 })
 

@@ -874,9 +874,32 @@
   border-bottom-color: var(--comment-border);
 }
 
+/* The underline and the tint follow the note's intent (docs/design/rules.md, Intents). */
+.annotation-highlight.intent-change {
+  background: color-mix(in srgb, var(--intent-change-mark) 14%, transparent);
+  border-bottom-color: var(--intent-change-mark);
+}
+
+.annotation-highlight.intent-add {
+  background: color-mix(in srgb, var(--intent-add-mark) 18%, transparent);
+  border-bottom-color: var(--intent-add-mark);
+}
+
+.annotation-highlight.intent-remove {
+  background: color-mix(in srgb, var(--intent-remove-mark) 14%, transparent);
+  border-bottom-color: var(--intent-remove-mark);
+  text-decoration-color: var(--intent-remove-mark);
+}
+
+.annotation-highlight.intent-question {
+  background: color-mix(in srgb, var(--intent-question-mark) 14%, transparent);
+  border-bottom-color: var(--intent-question-mark);
+}
+
+/* The agent's notes from the earlier round: dashed grey, never competing with new notes. */
 .annotation-highlight.notes {
-  background: var(--notes-bg);
-  border-bottom-color: var(--notes-text);
+  background: transparent;
+  border-bottom: 2px dashed var(--intent-earlier-mark);
   cursor: default;
 }
 
@@ -1675,7 +1698,7 @@ a:hover { text-decoration-thickness: 2px; }
 /* === Insertion Marker === */
 .insertion-marker {
   display: inline;
-  border-left: 2px solid var(--insertion-text);
+  border-left: 2px solid var(--intent-add-mark);
   cursor: pointer;
   position: relative;
 }
@@ -1687,7 +1710,7 @@ a:hover { text-decoration-thickness: 2px; }
   left: -0.4em;
   font-size: 0.65em;
   font-weight: 700;
-  color: var(--insertion-text);
+  color: var(--intent-add-label);
   pointer-events: none;
   line-height: 1;
 }
@@ -1702,9 +1725,14 @@ a:hover { text-decoration-thickness: 2px; }
 
 .insertion-marker-temp {
   display: inline;
-  border-left: 2px solid var(--insertion-text);
-  animation: insertion-blink 1s step-end infinite;
+  border-left: 2px solid var(--intent-add-mark);
   pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .insertion-marker-temp {
+    animation: insertion-blink 1s step-end infinite;
+  }
 }
 
 @keyframes insertion-blink {

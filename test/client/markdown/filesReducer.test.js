@@ -104,6 +104,36 @@ describe('filesReducer', () => {
     })
   })
 
+  describe('ANN numbering', () => {
+    const blocks = [{ id: 'block-0', type: 'paragraph', content: 'Hello world', startLine: 1 }, { id: 'block-1', type: 'paragraph', content: 'Later', startLine: 3 }]
+    const two = () => filesReducer([], { type: 'INIT_FILES', files: [makeFile({ path: '/a.md', blocks }), makeFile({ path: '/b.md', blocks })] })
+    const note = (id, extra = {}) => ({ id, blockId: 'block-0', startOffset: 0, endOffset: 5, type: 'COMMENT', text: id, originalText: 'Hello', ...extra })
+    const ann = (state, fileIndex, annAction) => filesReducer(state, { type: 'ANN', fileIndex, annAction })
+
+    it('numbers new notes across files and keeps the gap of a deleted one', () => {
+      let state = ann(two(), 0, { type: 'ADD', annotation: note('a') })
+      state = ann(state, 1, { type: 'ADD', annotation: note('b', { type: 'DELETION' }) })
+      state = ann(state, 0, { type: 'DELETE', id: 'a' })
+      state = ann(state, 0, { type: 'ADD', annotation: note('c', { intent: 'question' }) })
+      expect(state[1].annState.annotations.map((a) => [a.id, a.number, a.intent])).toEqual([['b', 2, 'remove']])
+      expect(state[0].annState.annotations.map((a) => [a.id, a.number, a.intent])).toEqual([['c', 3, 'question']])
+    })
+
+    it('leaves a general comment unnumbered', () => {
+      const state = ann(two(), 0, { type: 'ADD', annotation: { id: 'g', type: 'COMMENT', targetType: 'global', text: 'overall' } })
+      expect(state[0].annState.annotations[0].number).toBeUndefined()
+    })
+
+    it('numbers restored notes without numbers in document order, after the other files', () => {
+      let state = ann(two(), 1, { type: 'ADD', annotation: note('other') })
+      state = ann(state, 0, {
+        type: 'RESTORE',
+        annotations: [note('late', { blockId: 'block-1' }), note('early', { type: 'DELETION' })]
+      })
+      expect(state[0].annState.annotations.map((a) => [a.id, a.number, a.intent])).toEqual([['late', 3, 'change'], ['early', 2, 'remove']])
+    })
+  })
+
   describe('MARK_REVIEWED', () => {
     it('marks a file as reviewed', () => {
       const initial = filesReducer([], {

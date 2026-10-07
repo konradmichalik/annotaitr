@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { orderDocumentAnnotations, nextNumberOnPage, pageAnnotationCounts, stepPage, isPaged } from './documentPages.js'
+import { orderDocumentAnnotations, pageAnnotationCounts, stepPage, isPaged } from './documentPages.js'
 import { readLastPage, rememberLastPage } from './lastPage.js'
 import { readError } from '../utils/readError.js'
 
@@ -30,12 +30,9 @@ export function useDocumentReview({ meta, annotations }) {
     () => (isDocument ? orderDocumentAnnotations(annotations) : annotations),
     [isDocument, annotations]
   )
-  const numbers = useMemo(() => new Map(ordered.map((a, index) => [a.id, index + 1])), [ordered])
-  const numberFor = useCallback((annotation) => numbers.get(annotation.id), [numbers])
   const counts = useMemo(() => pageAnnotationCounts(annotations), [annotations])
 
   const visible = isDocument ? ordered.filter((a) => a.page === current && a.type !== 'comment') : annotations
-  const nextNumber = isDocument ? nextNumberOnPage(ordered, current) : annotations.length + 1
 
   const goTo = useCallback((page) => {
     setSelected(page)
@@ -90,7 +87,7 @@ export function useDocumentReview({ meta, annotations }) {
   }, [current])
 
   return {
-    isDocument, pages, current, currentPage, ordered, numberFor, counts, visible, nextNumber, imageUrl, loading, markLoaded,
+    isDocument, pages, current, currentPage, ordered, counts, visible, imageUrl, loading, markLoaded,
     elements: pageText.elements, words: pageText.words, textLoaded: text.page === current,
     pageError: pageError?.page === current ? pageError.message : null,
     goTo, step, takePage, seekTo, reportImageError

@@ -1,19 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
-import { TOOL_ICONS, ACTION_ICONS } from '../utils/icons.jsx'
 import { matchAnnotation, describeElements } from '../utils/elementMatch.js'
 import { noteType } from '../../../shared/utils/noteTypes.js'
 import { NoteCard } from '../../../shared/components/NoteCard.jsx'
+import { IntentIcon } from '../../../shared/components/IntentIcon.jsx'
+import { intentBadgeStyle } from '../../../shared/utils/intents.js'
 import { PanelEmpty } from '../../../shared/components/PanelEmpty.jsx'
 import { isSaveKey } from '../../../shared/utils/keys.js'
-
-// Ink numbers on light marks, white on dark ones, by the mark colour's luminance.
-function badgeStyle(color) {
-  const match = /^#([0-9a-f]{6})$/i.exec(color ?? '')
-  if (!match) { return undefined }
-  const [r, g, b] = [0, 2, 4].map((i) => parseInt(match[1].slice(i, i + 2), 16) / 255)
-  const light = 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.55
-  return { background: color, color: light ? 'var(--intent-add-on-mark)' : 'var(--intent-change-on-mark)' }
-}
 
 /** A comment without a shape (on a page, a time or the whole target), typed and edited right in its card. */
 function CommentText({ annotation, isEditing, onSave, onCancel }) {
@@ -62,8 +54,8 @@ function CommentText({ annotation, isEditing, onSave, onCancel }) {
 }
 
 /**
- * The cards of this round. `annotations` comes in feedback order, so a
- * card's number is its position, as in the output and on the canvas.
+ * The cards of this round, in feedback order. A card shows the number its
+ * note keeps for the round, as the canvas, the image and the output do.
  * `hidden` is the general comment, which has its own row at the bottom.
  * `timeLabelFor` names the time or page of a note in a recording or PDF.
  * `autoEditId` opens a just-added comment for typing straight away.
@@ -104,9 +96,9 @@ export default function AnnotationPanel({
 
   return (
     <ul className="note-list" ref={listRef}>
-      {annotations.map((annotation, index) => {
+      {annotations.map((annotation) => {
         if (annotation === hidden) { return null }
-        const { word } = noteType(annotation)
+        const { word, intent, shape } = noteType(annotation)
         const isComment = annotation.type === 'comment'
         const elementHint = !isComment && !timeLabelFor ? describeElements(matchAnnotation(elements, annotation)) : null
         const quote = annotation.quote ? `“${annotation.quote}”` : elementHint
@@ -115,11 +107,12 @@ export default function AnnotationPanel({
           <NoteCard
             key={annotation.id}
             id={annotation.id}
-            number={index + 1}
-            badgeStyle={isComment ? undefined : badgeStyle(annotation.color)}
+            number={annotation.number ?? null}
+            badgeStyle={intentBadgeStyle(intent)}
             word={word}
-            icon={isComment ? ACTION_ICONS.comment : TOOL_ICONS[annotation.type]}
-            location={timeLabelFor?.(annotation) ?? null}
+            intent={intent}
+            icon={<IntentIcon intent={intent} />}
+            location={[timeLabelFor?.(annotation), shape].filter(Boolean).join(' · ')}
             quote={quote}
             selected={annotation.id === selectedId}
             onActivate={startEdit}

@@ -1155,7 +1155,7 @@ button.voice-note:hover {
   border: 2px solid var(--bg-card);
   border-radius: 9999px;
   background: var(--marker-color, var(--danger));
-  color: #fff;
+  color: var(--marker-on-color, var(--intent-change-on-mark));
   font-size: var(--fs-sm);
   font-weight: 700;
   line-height: 16px;
@@ -1664,20 +1664,28 @@ button.voice-note:hover {
 }
 
 .previous-round--exact .previous-round-shape {
-  opacity: 0.55;
+  opacity: 0.8;
 }
 
 .previous-round--ghost .previous-round-shape {
   opacity: 0.45;
 }
 
-.previous-round--ghost .previous-round-shape :is(rect, circle, path, line, polyline, polygon, ellipse):not([fill="none"]) {
-  fill: var(--text-muted);
+/* Marks from an earlier round are a dashed grey outline, never filled, so they never compete with new notes. */
+.previous-round-shape :is(rect, circle, path, line, polyline, polygon, ellipse) {
+  fill: none;
+  stroke: var(--intent-earlier-mark);
+  stroke-dasharray: 6 4;
 }
 
-.previous-round--ghost .previous-round-shape :is(rect, circle, path, line, polyline, polygon, ellipse):not([stroke="none"]) {
-  stroke: var(--text-muted);
-  stroke-dasharray: 6 4;
+.previous-round-shape .previous-round-arrowhead,
+.previous-round .previous-round-arrowhead {
+  fill: var(--intent-earlier-mark);
+  stroke: none;
+}
+
+.previous-round-shape text {
+  fill: var(--intent-earlier-mark);
 }
 
 .previous-round-badge-plate {

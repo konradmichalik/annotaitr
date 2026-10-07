@@ -1,5 +1,8 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import Highlighter from 'web-highlighter'
+import { INTENTS, intentOf } from '../../../shared/utils/intents.js'
+
+const INTENT_CLASSES = INTENTS.map(({ id }) => `intent-${id}`)
 
 /**
  * Shared web-highlighter integration for annotation views.
@@ -130,13 +133,17 @@ export function useHighlighter({
         if (doms?.length > 0) {
           if (ann.type === 'DELETION') { highlighter.addClass('deletion', ann.id) }
           else if (ann.type === 'COMMENT') { highlighter.addClass('comment', ann.id) }
+          // The underline and tint follow the intent; an edit can change it.
+          const intent = intentOf(ann)
+          INTENT_CLASSES.forEach((name) => highlighter.removeClass(name, ann.id))
+          if (intent) { highlighter.addClass(`intent-${intent}`, ann.id) }
         }
       } catch (_e) { /* ignore */ }
     })
   }, [annotations])
 
   // --- Create annotation from text selection ---
-  const createAnnotationFromSource = useCallback((type, text, label) => {
+  const createAnnotationFromSource = useCallback((type, text, label, intent) => {
     const highlighter = highlighterRef.current
     const source = r.current.toolbarState?.source
     if (!highlighter || !source) { return }
@@ -170,6 +177,7 @@ export function useHighlighter({
       startMeta: source.startMeta,
       endMeta: source.endMeta,
       label: label || null,
+      ...(intent ? { intent } : {}),
       ...r.current.extraAnnotationFields,
     }
 
@@ -180,7 +188,7 @@ export function useHighlighter({
   }, [])
 
   // --- Handle text annotation (edit or new) ---
-  const handleTextAnnotate = useCallback((type, text, label) => {
+  const handleTextAnnotate = useCallback((type, text, label, intent) => {
     if (!toolbarState) { return }
     const highlighter = highlighterRef.current
     if (!highlighter) { return }
@@ -190,9 +198,9 @@ export function useHighlighter({
       highlighter.removeClass('deletion', annotation.id)
       highlighter.removeClass('comment', annotation.id)
       highlighter.addClass(type.toLowerCase(), annotation.id)
-      r.current.onEditAnnotation(annotation.id, type, text, label)
+      r.current.onEditAnnotation(annotation.id, type, text, label, intent)
     } else {
-      createAnnotationFromSource(type, text, label)
+      createAnnotationFromSource(type, text, label, intent)
       pendingSourceRef.current = null
     }
 

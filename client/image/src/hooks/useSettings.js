@@ -3,7 +3,7 @@ import { useSettings as useStoredSettings, SHARED_DEFAULTS } from '../../../shar
 
 const DEFAULTS = {
   ...SHARED_DEFAULTS,
-  colorMode: 'rotate',
+  colorMode: 'intent',
   fixedColor: DEFAULT_ANNOTATION_COLOR
 }
 
