@@ -408,4 +408,42 @@ describe('image annotator server', () => {
     await fetch(`${server.url}/api/approve`, { method: 'POST' })
     expect(await server.waitForDecision()).toMatchObject({ approved: true, repliesOnly: true, annotationCount: 1 })
   })
+
+  const lateReply = (url) => fetch(`${url}/api/threads/a3f19c2e/replies`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: 'late' })
+  })
+
+  it('freezes the replies when a replies-only decision is made and carries them in the decision', async () => {
+    const session = replySession()
+    await start({ session })
+    session.replies.add('a3f19c2e', 'Green')
+    await fetch(`${server.url}/api/approve`, { method: 'POST' })
+    const late = await lateReply(server.url)
+    expect(late.status).toBe(409)
+    expect((await late.json()).error).toBe('The round is already decided')
+    const decision = await server.waitForDecision()
+    expect(decision.replyCount).toBe(1)
+    expect(decision.carried).toHaveLength(1)
+  })
+
+  it('freezes the replies on a plain approve, so a late reply cannot contradict the verdict', async () => {
+    const session = replySession()
+    await start({ session })
+    await fetch(`${server.url}/api/approve`, { method: 'POST' })
+    expect((await lateReply(server.url)).status).toBe(409)
+    expect(await server.waitForDecision()).toMatchObject({ output: 'APPROVED: No changes requested.\n', carried: [], replyCount: 0 })
+  })
+
+  it('freezes the replies when marks are submitted', async () => {
+    const session = replySession()
+    await start({ session })
+    session.replies.add('a3f19c2e', 'Green')
+    const annotation = { id: 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d', type: 'pin', geometry: { x: 5, y: 5 }, text: 'Fix' }
+    await fetch(`${server.url}/api/annotations`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ annotations: [annotation] })
+    })
+    await fetch(`${server.url}/api/feedback`, { method: 'POST' })
+    expect((await lateReply(server.url)).status).toBe(409)
+    expect(await server.waitForDecision()).toMatchObject({ replyCount: 1, annotationCount: 1 })
+  })
 })

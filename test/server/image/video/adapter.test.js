@@ -254,4 +254,23 @@ describe('video annotator server', () => {
     await post('/api/approve', {})
     expect(await server.waitForDecision()).toMatchObject({ approved: true, repliesOnly: true, annotationCount: 1 })
   })
+
+  it('freezes the replies once a decision is made and carries them in the decision', async () => {
+    const session = replySession()
+    await start(session)
+    session.replies.add('a3f19c2e', 'Green')
+    await post('/api/approve', {})
+    expect(session.replies.add('a3f19c2e', 'late').status).toBe(409)
+    const decision = await server.waitForDecision()
+    expect(decision.replyCount).toBe(1)
+    expect(decision.carried).toHaveLength(1)
+  })
+
+  it('freezes the replies on a plain approve', async () => {
+    const session = replySession()
+    await start(session)
+    await post('/api/approve', {})
+    expect(session.replies.add('a3f19c2e', 'late').status).toBe(409)
+    expect(await server.waitForDecision()).toMatchObject({ carried: [], replyCount: 0 })
+  })
 })

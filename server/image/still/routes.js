@@ -1,3 +1,4 @@
+import { freezeReplies } from '../../core/session/replyStore.js'
 import { Router } from 'express'
 import { success, failure } from '../../core/http.js'
 import { annotationsFromBody } from '../common/annotationLimits.js'
@@ -132,20 +133,22 @@ export function createApiRouter({ origin, targetLabel, state, voiceNotes = false
 
   router.post('/api/approve', async (_req, res) => {
     if (state.annotations.length === 0) {
-      const pending = replies?.count() ?? 0
+      const frozen = freezeReplies(replies)
+      const pending = frozen.replyCount
       res.json(success({ message: pending > 0 ? 'Approved with notes' : 'Approved' }))
       setTimeout(() => resolveDecision(pending > 0
-        ? { approved: true, output: '', annotationCount: pending, annotations: [], repliesOnly: true, domMap: state.capture.domMap }
-        : { approved: true, output: formatApprovalOutput(), annotations: [], domMap: state.capture.domMap }), 100)
+        ? { approved: true, output: '', annotationCount: pending, annotations: [], repliesOnly: true, domMap: state.capture.domMap, ...frozen }
+        : { approved: true, output: formatApprovalOutput(), annotations: [], domMap: state.capture.domMap, ...frozen }), 100)
       return
     }
     try {
       const { width, height, annotatedImagePath, domMap, note } = await decisionInputs(state)
       const output = formatApprovalWithNotesOutput(state.annotations, width, height, annotatedImagePath, domMap, note)
+      const frozen = freezeReplies(replies)
       res.json(success({ message: 'Approved with notes' }))
       setTimeout(
         () => resolveDecision({
-          approved: true, output, annotationCount: state.annotations.length, annotations: state.annotations, domMap: state.capture.domMap
+          approved: true, output, annotationCount: state.annotations.length, annotations: state.annotations, domMap: state.capture.domMap, ...frozen
         }),
         100
       )
@@ -157,21 +160,22 @@ export function createApiRouter({ origin, targetLabel, state, voiceNotes = false
 
   router.post('/api/feedback', async (_req, res) => {
     if (state.annotations.length === 0) {
-      const pending = replies?.count() ?? 0
-      if (pending === 0) { return res.status(400).json(failure('No annotations to submit: use Approve instead')) }
+      if ((replies?.count() ?? 0) === 0) { return res.status(400).json(failure('No annotations to submit: use Approve instead')) }
+      const frozen = freezeReplies(replies)
       res.json(success({ message: 'Feedback submitted' }))
       setTimeout(() => resolveDecision({
-        approved: false, output: '', annotationCount: pending, annotations: [], repliesOnly: true, domMap: state.capture.domMap
+        approved: false, output: '', annotationCount: frozen.replyCount, annotations: [], repliesOnly: true, domMap: state.capture.domMap, ...frozen
       }), 100)
       return
     }
     try {
       const { width, height, annotatedImagePath, domMap, note } = await decisionInputs(state)
       const output = exportFeedback(state.annotations, width, height, annotatedImagePath, domMap, note)
+      const frozen = freezeReplies(replies)
       res.json(success({ message: 'Feedback submitted' }))
       setTimeout(
         () => resolveDecision({
-          approved: false, output, annotationCount: state.annotations.length, annotations: state.annotations, domMap: state.capture.domMap
+          approved: false, output, annotationCount: state.annotations.length, annotations: state.annotations, domMap: state.capture.domMap, ...frozen
         }),
         100
       )

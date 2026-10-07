@@ -1,3 +1,4 @@
+import { freezeReplies } from '../../core/session/replyStore.js'
 import { mkdtemp, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -152,8 +153,9 @@ export function createVideoApiRouter({ video, origin, targetLabel, state, replie
       await rm(state.rawDir, { recursive: true, force: true })
       state.rawDir = null
       state.decided = true
+      const frozen = freezeReplies(replies)
       res.json(success({ message: approved ? 'Approved with notes' : 'Feedback submitted' }))
-      setTimeout(() => resolveDecision({ approved, output, annotationCount: ready.ordered.length, annotations: ready.ordered }), 100)
+      setTimeout(() => resolveDecision({ approved, output, annotationCount: ready.ordered.length, annotations: ready.ordered, ...frozen }), 100)
     } catch (error) {
       console.error(error)
       res.status(500).json(failure(error.message))
@@ -164,11 +166,12 @@ export function createVideoApiRouter({ video, origin, targetLabel, state, replie
 
   router.post('/api/approve', rejectWhileDeciding, async (_req, res) => {
     if (state.annotations.length === 0) {
-      const pending = replies?.count() ?? 0
+      const frozen = freezeReplies(replies)
+      const pending = frozen.replyCount
       res.json(success({ message: pending > 0 ? 'Approved with notes' : 'Approved' }))
       setTimeout(() => resolveDecision(pending > 0
-        ? { approved: true, output: '', annotationCount: pending, annotations: [], repliesOnly: true }
-        : { approved: true, output: formatApprovalOutput(), annotations: [] }), 100)
+        ? { approved: true, output: '', annotationCount: pending, annotations: [], repliesOnly: true, ...frozen }
+        : { approved: true, output: formatApprovalOutput(), annotations: [], ...frozen }), 100)
       return
     }
     await decide(res, { approved: true })
@@ -176,10 +179,10 @@ export function createVideoApiRouter({ video, origin, targetLabel, state, replie
 
   router.post('/api/feedback', rejectWhileDeciding, async (_req, res) => {
     if (state.annotations.length === 0) {
-      const pending = replies?.count() ?? 0
-      if (pending === 0) { return res.status(400).json(failure('No annotations to submit: use Approve instead')) }
+      if ((replies?.count() ?? 0) === 0) { return res.status(400).json(failure('No annotations to submit: use Approve instead')) }
+      const frozen = freezeReplies(replies)
       res.json(success({ message: 'Feedback submitted' }))
-      setTimeout(() => resolveDecision({ approved: false, output: '', annotationCount: pending, annotations: [], repliesOnly: true }), 100)
+      setTimeout(() => resolveDecision({ approved: false, output: '', annotationCount: frozen.replyCount, annotations: [], repliesOnly: true, ...frozen }), 100)
       return
     }
     await decide(res, { approved: false })

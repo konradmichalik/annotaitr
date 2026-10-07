@@ -321,4 +321,23 @@ describe('document annotator server', () => {
     await post('/api/approve', {})
     expect(await decided).toMatchObject({ approved: true, repliesOnly: true, annotationCount: 1 })
   })
+
+  it('freezes the replies once a decision is made and carries them in the decision', async () => {
+    const session = replySession()
+    const { decided } = await start({ session })
+    session.replies.add('a3f19c2e', 'Green')
+    await post('/api/approve', {})
+    expect(session.replies.add('a3f19c2e', 'late').status).toBe(409)
+    const decision = await decided
+    expect(decision.replyCount).toBe(1)
+    expect(decision.carried).toHaveLength(1)
+  })
+
+  it('freezes the replies on a plain approve', async () => {
+    const session = replySession()
+    const { decided } = await start({ session })
+    await post('/api/approve', {})
+    expect(session.replies.add('a3f19c2e', 'late').status).toBe(409)
+    expect(await decided).toMatchObject({ carried: [], replyCount: 0 })
+  })
 })

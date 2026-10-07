@@ -1,3 +1,4 @@
+import { freezeReplies } from '../../core/session/replyStore.js'
 import { Router } from 'express'
 import { success, failure } from '../../core/http.js'
 import { annotationsFromBody } from '../common/annotationLimits.js'
@@ -107,8 +108,9 @@ function mountDecisionRoutes(router, { review, state, caches, document, replies,
       const ctx = { ...base, files }
       const output = approved ? formatDocumentApprovalWithNotes(ctx) : exportDocumentFeedback(ctx)
       state.decided = true
+      const frozen = freezeReplies(replies)
       res.json(success({ message: approved ? 'Approved with notes' : 'Feedback submitted' }))
-      setTimeout(() => resolveDecision({ approved, output, annotationCount: ctx.ordered.length, annotations: ctx.ordered }), 100)
+      setTimeout(() => resolveDecision({ approved, output, annotationCount: ctx.ordered.length, annotations: ctx.ordered, ...frozen }), 100)
     } catch (error) {
       console.error(error)
       res.status(500).json(failure(error.message))
@@ -120,11 +122,12 @@ function mountDecisionRoutes(router, { review, state, caches, document, replies,
   router.post('/api/approve', rejectWhileDeciding, async (_req, res) => {
     if (state.annotations.length === 0) {
       state.decided = true
-      const pending = replies?.count() ?? 0
+      const frozen = freezeReplies(replies)
+      const pending = frozen.replyCount
       res.json(success({ message: pending > 0 ? 'Approved with notes' : 'Approved' }))
       setTimeout(() => resolveDecision(pending > 0
-        ? { approved: true, output: '', annotationCount: pending, annotations: [], repliesOnly: true }
-        : { approved: true, output: formatApprovalOutput(), annotations: [] }), 100)
+        ? { approved: true, output: '', annotationCount: pending, annotations: [], repliesOnly: true, ...frozen }
+        : { approved: true, output: formatApprovalOutput(), annotations: [], ...frozen }), 100)
       return
     }
     await decide(res, { approved: true })
@@ -132,11 +135,11 @@ function mountDecisionRoutes(router, { review, state, caches, document, replies,
 
   router.post('/api/feedback', rejectWhileDeciding, async (_req, res) => {
     if (state.annotations.length === 0) {
-      const pending = replies?.count() ?? 0
-      if (pending === 0) { return res.status(400).json(failure('No annotations to submit: use Approve instead')) }
+      if ((replies?.count() ?? 0) === 0) { return res.status(400).json(failure('No annotations to submit: use Approve instead')) }
       state.decided = true
+      const frozen = freezeReplies(replies)
       res.json(success({ message: 'Feedback submitted' }))
-      setTimeout(() => resolveDecision({ approved: false, output: '', annotationCount: pending, annotations: [], repliesOnly: true }), 100)
+      setTimeout(() => resolveDecision({ approved: false, output: '', annotationCount: frozen.replyCount, annotations: [], repliesOnly: true, ...frozen }), 100)
       return
     }
     await decide(res, { approved: false })
