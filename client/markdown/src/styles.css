@@ -851,9 +851,10 @@
 
 /* === Annotation Highlights === */
 
+/* A selection not yet saved as a note: neutral, it has no intent until one is picked. */
 .annotation-highlight {
-  background: var(--comment-bg);
-  border-bottom: 2px solid var(--comment-border);
+  background: color-mix(in srgb, var(--focus) 16%, transparent);
+  border-bottom: 2px solid transparent;
   color: inherit;
   cursor: pointer;
   transition: filter 0.15s;
