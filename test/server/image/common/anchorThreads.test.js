@@ -109,4 +109,13 @@ describe('anchorThreads', () => {
     expect(anchors(previous([thread({ type: 'box', time: 5, geometry: {} })]), current))
       .toEqual([{ anchor: 'orphan', reason: 'The mark could not be read from the last round' }])
   })
+
+  it('compares a carried thread against the round its geometry belongs to', () => {
+    const prev = previous([thread(box(1, 1), { fingerprint: 'sha256:r1' })], { round: 2, fingerprint: 'sha256:a' })
+    expect(anchors(prev, still)).toEqual([
+      { anchor: 'ghost', reason: 'The target changed since round 2, the mark shows where it was then' }
+    ])
+    const same = previous([thread(box(1, 1), { fingerprint: 'sha256:a' })], { round: 2, fingerprint: 'sha256:b' })
+    expect(anchors(same, still)).toEqual([{ anchor: 'exact', reason: null }])
+  })
 })

@@ -104,7 +104,11 @@ export async function runImage({
   if (error) { fail(error); return }
 
   // Hashed from the bytes being reviewed, not a second read of a file that may have changed since.
-  const reviewed = { ...opened, fingerprint: imagePath ? hashBuffer(capture.buffer) : null }
+  const reviewed = {
+    ...opened,
+    fingerprint: imagePath ? hashBuffer(capture.buffer) : null,
+    imageSize: { width: capture.width, height: capture.height }
+  }
 
   await serveUntilDecision(await buildImageServer({
     imageBuffer: capture.buffer,

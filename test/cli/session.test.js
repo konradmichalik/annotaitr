@@ -23,7 +23,22 @@ describe('review sessions in the CLI', () => {
   afterEach(async () => { await rm(dir, { recursive: true, force: true }) })
 
   it('starts round 1 for a target seen for the first time', async () => {
-    expect(await open()).toEqual({ sessionId: sessionIdFor('/abs/shot.png'), target, previous: null })
+    expect(await open()).toMatchObject({ sessionId: sessionIdFor('/abs/shot.png'), target, previous: null })
+  })
+
+  it('attaches a reply store for last round to every opened session', async () => {
+    await recordSession(await open(), { annotations: [pin] }, { now: 2000, dir, log })
+    const opened = await open({ now: 3000 })
+    expect(opened.replies.add('a3f19c2e', 'Green').reply).toBeTruthy()
+    expect((await open({ newSession: true })).replies.add('a3f19c2e', 'x').status).toBe(404)
+  })
+
+  it('writes carried threads after the new marks', async () => {
+    const opened = await open()
+    const carried = [{ handle: 'b7210e44', number: null, origin: { round: 1, number: 2 }, annotation: pin, element: null, replies: [] }]
+    await recordSession(opened, { annotations: [pin], carried }, { now: 2000, dir, log })
+    const { session } = await readSession(opened.sessionId, dir)
+    expect(session.threads.map((t) => [t.handle, t.number])).toEqual([['a3f19c2e', 1], ['b7210e44', null]])
   })
 
   it('records the decision and returns the line for the agent', async () => {

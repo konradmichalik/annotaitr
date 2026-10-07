@@ -1,6 +1,7 @@
 import { join } from 'node:path'
 import { sessionIdFor, newSessionId } from '../server/core/session/identity.js'
 import { readSession, writeSession, pruneSessions, sessionDir, RESUME_WINDOW_MS } from '../server/core/session/store.js'
+import { createReplyStore } from '../server/core/session/replyStore.js'
 import { buildThreads, nextSession, sessionLine } from '../server/core/session/threads.js'
 import { matchAnnotation, describeMatch } from '../server/image/common/elementMatch.js'
 
@@ -10,7 +11,7 @@ async function resumeNamed(sessionId, target, dir) {
   const read = await readSession(sessionId, dir)
   if (read.missing) { return { error: `No review session ${sessionId} in ${dir}` } }
   if (read.error) { return { error: read.error } }
-  return { sessionId, target, previous: read.session }
+  return { sessionId, target, previous: read.session, replies: createReplyStore(read.session) }
 }
 
 /**
@@ -24,7 +25,7 @@ export async function openSession({
   if (sessionId) { return resumeNamed(sessionId, target, dir) }
 
   const id = identity ? sessionIdFor(identity) : newSessionId()
-  const fresh = { sessionId: id, target, previous: null }
+  const fresh = { sessionId: id, target, previous: null, replies: createReplyStore(null) }
   if (!identity || newSession) { return fresh }
 
   const read = await readSession(id, dir)
@@ -38,13 +39,13 @@ export async function openSession({
     return fresh
   }
   log(`Continuing review session ${id} at round ${read.session.round + 1}. Start over with --new-session.`)
-  return { sessionId: id, target, previous: read.session }
+  return { sessionId: id, target, previous: read.session, replies: createReplyStore(read.session) }
 }
 
 /** Save the decided round. Returns the line telling the agent how to reply, or '' when there is nothing to reply to or saving failed. */
 export async function recordSession(opened, decision, { now = Date.now(), dir = sessionDir(), log = stderrLine } = {}) {
   const describeElement = (annotation) => describeMatch(matchAnnotation(decision.domMap, annotation))
-  const threads = buildThreads(decision.annotations ?? [], describeElement)
+  const threads = [...buildThreads(decision.annotations ?? [], describeElement), ...(decision.carried ?? [])]
   const session = nextSession(opened.previous, {
     sessionId: opened.sessionId, target: opened.target, fingerprint: await opened.fingerprint, threads, now
   })

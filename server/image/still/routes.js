@@ -1,3 +1,4 @@
+import { freezeReplies } from '../../core/session/replyStore.js'
 import { Router } from 'express'
 import { success, failure } from '../../core/http.js'
 import { annotationsFromBody } from '../common/annotationLimits.js'
@@ -97,7 +98,7 @@ function mountExport(router, { state }) {
   })
 }
 
-export function createApiRouter({ origin, targetLabel, state, voiceNotes = false, recapture = null, resolveDecision }) {
+export function createApiRouter({ origin, targetLabel, state, voiceNotes = false, recapture = null, replies = null, resolveDecision }) {
   const router = Router()
 
   router.get('/api/image', (_req, res) => {
@@ -130,45 +131,73 @@ export function createApiRouter({ origin, targetLabel, state, voiceNotes = false
   mountRecapture(router, { state, recapture })
   mountExport(router, { state })
 
-  router.post('/api/approve', async (_req, res) => {
+  // safeResolve keeps only the first decision; a second click must hear that instead of a success that is thrown away.
+  const rejectWhileDeciding = (_req, res, next) => {
+    if (state.deciding || state.decided) { return res.status(409).json(failure('A decision is already being submitted')) }
+    next()
+  }
+
+  router.post('/api/approve', rejectWhileDeciding, async (_req, res) => {
     if (state.annotations.length === 0) {
-      res.json(success({ message: 'Approved' }))
-      setTimeout(() => resolveDecision({ approved: true, output: formatApprovalOutput(), annotations: [], domMap: state.capture.domMap }), 100)
+      state.decided = true
+      const frozen = freezeReplies(replies)
+      const pending = frozen.replyCount
+      res.json(success({ message: pending > 0 ? 'Approved with notes' : 'Approved' }))
+      setTimeout(() => resolveDecision(pending > 0
+        ? { approved: true, output: '', annotationCount: pending, annotations: [], repliesOnly: true, domMap: state.capture.domMap, ...frozen }
+        : { approved: true, output: formatApprovalOutput(), annotations: [], domMap: state.capture.domMap, ...frozen }), 100)
       return
     }
+    state.deciding = true
     try {
       const { width, height, annotatedImagePath, domMap, note } = await decisionInputs(state)
       const output = formatApprovalWithNotesOutput(state.annotations, width, height, annotatedImagePath, domMap, note)
+      state.decided = true
+      const frozen = freezeReplies(replies)
       res.json(success({ message: 'Approved with notes' }))
       setTimeout(
         () => resolveDecision({
-          approved: true, output, annotationCount: state.annotations.length, annotations: state.annotations, domMap: state.capture.domMap
+          approved: true, output, annotationCount: state.annotations.length, annotations: state.annotations, domMap: state.capture.domMap, ...frozen
         }),
         100
       )
     } catch (error) {
       console.error(error)
       res.status(500).json(failure(error.message))
+    } finally {
+      state.deciding = false
     }
   })
 
-  router.post('/api/feedback', async (_req, res) => {
+  router.post('/api/feedback', rejectWhileDeciding, async (_req, res) => {
     if (state.annotations.length === 0) {
-      return res.status(400).json(failure('No annotations to submit: use Approve instead'))
+      if ((replies?.count() ?? 0) === 0) { return res.status(400).json(failure('No annotations to submit: use Approve instead')) }
+      state.decided = true
+      const frozen = freezeReplies(replies)
+      res.json(success({ message: 'Feedback submitted' }))
+      setTimeout(() => resolveDecision({
+        approved: false, output: '', annotationCount: frozen.replyCount, annotations: [], repliesOnly: true, domMap: state.capture.domMap, ...frozen
+      }), 100)
+      return
     }
+    state.deciding = true
     try {
       const { width, height, annotatedImagePath, domMap, note } = await decisionInputs(state)
       const output = exportFeedback(state.annotations, width, height, annotatedImagePath, domMap, note)
+      state.decided = true
+      const frozen = freezeReplies(replies)
       res.json(success({ message: 'Feedback submitted' }))
       setTimeout(
         () => resolveDecision({
-          approved: false, output, annotationCount: state.annotations.length, annotations: state.annotations, domMap: state.capture.domMap
+          approved: false, output, annotationCount: state.annotations.length, annotations: state.annotations, domMap: state.capture.domMap, ...frozen
         }),
         100
       )
     } catch (error) {
       console.error(error)
       res.status(500).json(failure(error.message))
+    } finally {
+      state.deciding = false
     }
   })
 

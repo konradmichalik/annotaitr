@@ -172,6 +172,12 @@ what you need to know. Replies are independent, so run them in parallel. A
 chat too. Then re-open the target as below, so the reviewer sees the replies
 next to their marks.
 
+Feedback can also contain a `## Replies to round N` section. Each thread there
+continues an earlier discussion: act on the reviewer's latest reply and answer
+it with `annotaitr reply` on the same handle, like any other mark. A
+`Feedback: N replies to round N, no new marks.` decision is a valid decision
+with work in it, not an empty one.
+
 ## Re-review loop
 
 After applying all changes, re-open the annotator on the same target (a URL

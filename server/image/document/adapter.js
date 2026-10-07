@@ -33,7 +33,7 @@ export async function buildDocumentServer({ document, source = null, origin = 'c
     staticDirs: [],
     onReady,
     mountRoutes(app, { safeResolve }) {
-      app.use(createDocumentApiRouter({ document, source, origin, targetLabel, state, caches, voiceNotes, resolveDecision: safeResolve }))
+      app.use(createDocumentApiRouter({ document, source, origin, targetLabel, state, caches, voiceNotes, replies: session?.replies ?? null, resolveDecision: safeResolve }))
       app.use(createThreadsRouter({
         session,
         current: () => ({ pages: document.pages.map((p) => p.number) })

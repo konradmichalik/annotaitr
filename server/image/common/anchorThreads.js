@@ -50,6 +50,10 @@ function anchorOf(annotation, unchanged, round, current) {
 
 export function anchorThreads(previous, current) {
   if (!previous) { return [] }
-  const unchanged = current.kind !== 'url' && Boolean(previous.fingerprint) && previous.fingerprint === current.fingerprint
-  return previous.threads.map((thread) => ({ ...thread, ...anchorOf(thread.annotation, unchanged, previous.round, current) }))
+  return previous.threads.map((thread) => {
+    // A carried thread keeps the geometry of the round it was drawn in, so it is compared with that round's target.
+    const basis = thread.fingerprint ?? previous.fingerprint
+    const unchanged = current.kind !== 'url' && Boolean(basis) && basis === current.fingerprint
+    return { ...thread, ...anchorOf(thread.annotation, unchanged, previous.round, current) }
+  })
 }

@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { buildImageServer } from '../../../../server/image/still/adapter.js'
 import { makeFixturePng } from '../../../helpers/fixtureImage.js'
+import { createReplyStore } from '../../../../server/core/session/replyStore.js'
 import { flattenAnnotations } from '../../../../server/image/common/render.js'
 import { writeAnnotatedImage } from '../../../../server/image/still/output.js'
 
@@ -379,5 +380,92 @@ describe('image annotator server', () => {
       body: JSON.stringify({ annotations: [{ id: 'a1', type: 'freehand', geometry: { points } }] })
     })
     expect(res.status).toBe(200)
+  })
+
+  const replySession = () => {
+    const previous = { round: 1, threads: [{ handle: 'a3f19c2e', number: 1, annotation: { type: 'pin', geometry: { x: 1, y: 1 }, text: 'x' }, element: null, replies: [] }] }
+    return { sessionId: '2f8c1a9e04b7', target: { kind: 'file', label: 'a.png' }, previous, fingerprint: null, replies: createReplyStore(previous) }
+  }
+
+  it('accepts feedback that only carries replies to last round', async () => {
+    const session = replySession()
+    await start({ session })
+    session.replies.add('a3f19c2e', 'Green')
+    const res = await fetch(`${server.url}/api/feedback`, { method: 'POST' })
+    expect(res.status).toBe(200)
+    expect(await server.waitForDecision()).toMatchObject({ approved: false, output: '', annotations: [], repliesOnly: true, annotationCount: 1 })
+  })
+
+  it('answers a second decision with 409 instead of a success it would discard', async () => {
+    const session = replySession()
+    await start({ session })
+    session.replies.add('a3f19c2e', 'Green')
+    expect((await fetch(`${server.url}/api/feedback`, { method: 'POST' })).status).toBe(200)
+    expect((await fetch(`${server.url}/api/approve`, { method: 'POST' })).status).toBe(409)
+    expect((await fetch(`${server.url}/api/feedback`, { method: 'POST' })).status).toBe(409)
+  })
+
+  it('answers a second decision with 409 after a decision with marks too', async () => {
+    await start()
+    const annotation = { id: 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d', type: 'pin', geometry: { x: 5, y: 5 }, text: 'Fix' }
+    await fetch(`${server.url}/api/annotations`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ annotations: [annotation] })
+    })
+    const [first, second] = await Promise.all([
+      fetch(`${server.url}/api/feedback`, { method: 'POST' }),
+      fetch(`${server.url}/api/approve`, { method: 'POST' })
+    ])
+    expect([first.status, second.status].sort()).toEqual([200, 409])
+  })
+
+  it('still rejects feedback without marks and without replies', async () => {
+    await start({ session: replySession() })
+    expect((await fetch(`${server.url}/api/feedback`, { method: 'POST' })).status).toBe(400)
+  })
+
+  it('approves with notes when only replies are pending', async () => {
+    const session = replySession()
+    await start({ session })
+    session.replies.add('a3f19c2e', 'Green')
+    await fetch(`${server.url}/api/approve`, { method: 'POST' })
+    expect(await server.waitForDecision()).toMatchObject({ approved: true, repliesOnly: true, annotationCount: 1 })
+  })
+
+  const lateReply = (url) => fetch(`${url}/api/threads/a3f19c2e/replies`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: 'late' })
+  })
+
+  it('freezes the replies when a replies-only decision is made and carries them in the decision', async () => {
+    const session = replySession()
+    await start({ session })
+    session.replies.add('a3f19c2e', 'Green')
+    await fetch(`${server.url}/api/approve`, { method: 'POST' })
+    const late = await lateReply(server.url)
+    expect(late.status).toBe(409)
+    expect((await late.json()).error).toBe('The round is already decided')
+    const decision = await server.waitForDecision()
+    expect(decision.replyCount).toBe(1)
+    expect(decision.carried).toHaveLength(1)
+  })
+
+  it('freezes the replies on a plain approve, so a late reply cannot contradict the verdict', async () => {
+    const session = replySession()
+    await start({ session })
+    await fetch(`${server.url}/api/approve`, { method: 'POST' })
+    expect((await lateReply(server.url)).status).toBe(409)
+    expect(await server.waitForDecision()).toMatchObject({ output: 'APPROVED: No changes requested.\n', carried: [], replyCount: 0 })
+  })
+
+  it('freezes the replies when marks are submitted', async () => {
+    const session = replySession()
+    await start({ session })
+    session.replies.add('a3f19c2e', 'Green')
+    const annotation = { id: 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d', type: 'pin', geometry: { x: 5, y: 5 }, text: 'Fix' }
+    await fetch(`${server.url}/api/annotations`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ annotations: [annotation] })
+    })
+    await fetch(`${server.url}/api/feedback`, { method: 'POST' })
+    expect((await lateReply(server.url)).status).toBe(409)
+    expect(await server.waitForDecision()).toMatchObject({ replyCount: 1, annotationCount: 1 })
   })
 })
