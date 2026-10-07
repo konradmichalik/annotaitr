@@ -1,5 +1,5 @@
 /* global __APP_VERSION__ */
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Logo } from './Logo.jsx'
 import { CloseIcon } from './CloseIcon.jsx'
 import { useModalDismiss } from '../hooks/useModalDismiss.js'
@@ -151,11 +151,16 @@ const TABS = [
 
 /**
  * The settings dialog both modes share. Each mode passes the rows of its
- * Appearance and Behavior tabs and its shortcut list.
+ * Appearance and Behavior tabs and its shortcut list. `initialTab` is the tab
+ * it opens on, so the header's shortcuts button lands on Shortcuts.
  */
-export function SettingsModal({ isOpen, onClose, settings, updateSetting, resetSettings, appearance: Appearance, behavior: Behavior, shortcuts }) {
-  const [activeTab, setActiveTab] = useState('appearance')
+export function SettingsModal({ isOpen, onClose, settings, updateSetting, resetSettings, appearance: Appearance, behavior: Behavior, shortcuts, initialTab = 'appearance' }) {
+  const [activeTab, setActiveTab] = useState(initialTab)
   const dialogRef = useRef(null)
+
+  useEffect(() => {
+    if (isOpen) { setActiveTab(initialTab) }
+  }, [isOpen, initialTab])
 
   useModalDismiss(isOpen, onClose, dialogRef)
 

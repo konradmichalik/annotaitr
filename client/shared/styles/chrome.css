@@ -1,4 +1,4 @@
-/* Application frame: shell, header, buttons, tool groups, workspace surface, splitter, toast and update banner. */
+/* Application frame: shell, status bar, buttons, tool groups, workspace surface, splitter, toast and update banner. */
 
 .update-banner-icon {
   flex-shrink: 0;
@@ -10,54 +10,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1.5rem;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
-  flex-shrink: 0;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.app-logo {
-  height: 1.375rem;
-  width: auto;
-  fill: currentcolor;
-  flex-shrink: 0;
-  transform: translateY(-3px);
-}
-
-.origin-badge {
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  color: var(--ink-muted);
-  background: var(--line);
-  padding: 0.125rem 0.5rem;
-  border-radius: 9999px;
-  white-space: nowrap;
-  letter-spacing: 0.01em;
-}
-
-.version-badge {
-  font-size: var(--fs-sm);
-  font-weight: 400;
-  color: var(--ink-muted);
-  white-space: nowrap;
-  font-family: var(--font-mono);
-}
-
-.header-right {
-  display: flex;
-  gap: 0.5rem;
 }
 
 .app-status {
@@ -92,14 +44,6 @@
 .btn:disabled {
   opacity: 0.5;
   cursor: default;
-}
-
-/* The two decision buttons. Whichever is the main action for the current state also gets .btn-primary. */
-.btn-approve,
-.btn-feedback {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 }
 
 .btn-icon {
@@ -139,16 +83,6 @@
   background-color: var(--bg-secondary);
   background-image: radial-gradient(var(--dot-color) 1px, transparent 1px);
   background-size: 20px 20px;
-}
-
-.app-target {
-  font-size: var(--fs-sm);
-  color: var(--ink-muted);
-  font-family: var(--font-mono);
-  max-width: 40vw;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* The primary action is ink: ink fill with white text in light, light fill with ink text in dark. */
