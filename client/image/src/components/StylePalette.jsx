@@ -5,9 +5,15 @@ import { ARROW_STYLES, STYLE_FIELDS, presetsFor, DASH_STYLES } from '../utils/an
 import { useDropdown } from '../../../shared/hooks/useDropdown.js'
 import { PaletteIcon } from '../../../shared/components/HeaderIcons.jsx'
 
-// Fixed dash patterns for the picker's own icons, independent of the
-// proportional dash math used for real rendering: they only need to read at 16px.
-const DASH_ICON_PATTERN = { solid: undefined, dashed: '4 2', dotted: '1 2' }
+// Fixed patterns for the picker's own icons, independent of the proportional
+// dash math used for real rendering: they only need to read at 16px. Round caps
+// would close the dashes' gaps, so dashes are butt-ended and dots are round caps
+// on zero-length dashes.
+const DASH_ICON = {
+  solid: { cap: 'round' },
+  dashed: { dash: '4 3', cap: 'butt' },
+  dotted: { dash: '0 3.5', cap: 'round' }
+}
 
 // Thin, medium and thick as they read at 16px, whatever the real widths of the mark type are.
 const PREVIEW_WIDTHS = [1.5, 3, 5]
@@ -17,10 +23,10 @@ const capitalize = (word) => word.charAt(0).toUpperCase() + word.slice(1)
 // No ink: the mark takes its intent's colour.
 const INTENT_SWATCH = 'conic-gradient(var(--intent-change-mark) 0 25%, var(--intent-add-mark) 0 50%, var(--intent-remove-mark) 0 75%, var(--intent-question-mark) 0)'
 
-function LinePreviewIcon({ width, dash }) {
+function LinePreviewIcon({ width, dash, cap = 'round' }) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-      <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" strokeWidth={width} strokeLinecap="round" strokeDasharray={dash} />
+      <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" strokeWidth={width} strokeLinecap={cap} strokeDasharray={dash} />
     </svg>
   )
 }
@@ -109,7 +115,7 @@ export default function StylePalette({ annotationType, style, onChange }) {
             <OptionRow
               label="Line style"
               options={DASH_STYLES.map((dash) => ({
-                key: dash.id, label: dash.label, icon: <LinePreviewIcon width={2} dash={DASH_ICON_PATTERN[dash.id]} />,
+                key: dash.id, label: dash.label, icon: <LinePreviewIcon width={2} {...DASH_ICON[dash.id]} />,
                 active: style.dashStyle === dash.id, onSelect: () => onChange({ dashStyle: dash.id })
               }))}
             />
