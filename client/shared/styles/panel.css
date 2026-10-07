@@ -782,3 +782,15 @@
   font-size: var(--fs-sm);
   font-weight: 600;
 }
+
+/* A file's group of cards under All files. */
+.note-file-title {
+  padding: var(--space-3) var(--space-4) 0;
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -119,7 +119,7 @@ A status dot plus the words, never the dot alone. The tooltip names the command 
 
 ### Feedback panel
 
-- Title `Feedback`, then a two-way switch: `This round · n` and `Replies · n` (image, PDF, web, video) or `This file · n` and `All files · n` (Markdown).
+- Title `Feedback`, then a two-way switch: `This round · n` and `Replies · n` (image, PDF, web, video) or `This file · n` and `All files · n` (Markdown). The switch only shows when its second side can hold something: an earlier round, or more than one file. An empty `Replies · 0` tab would only be a dead end.
 - One card per note: number on the intent colour, intent icon and word, location (page, selector, timecode or line), then the quote and the comment.
 - Card actions are visible on hover and on `:focus-within`, never on hover only.
 - The general comment is a collapsed row `+ General comment` (key `G`) at the bottom. It opens into a field on click and shows the start of the text once written.
