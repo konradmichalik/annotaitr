@@ -69,6 +69,7 @@
   /* Radii */
   --radius-control: 6px;
   --radius-card: 10px;
+  --radius-popover: 12px;
   --radius-dialog: 14px;
 
   /* Elevation */

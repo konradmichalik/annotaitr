@@ -54,7 +54,7 @@ function CommentText({ annotation, isEditing, onSave, onCancel }) {
         placeholder="Add your comment..."
       />
       <div className="panel-global-edit-actions">
-        <button type="button" className="comment-popover-cancel-btn" onClick={onCancel}>Cancel</button>
+        <button type="button" className="panel-cancel-btn" onClick={onCancel}>Cancel</button>
         <button type="button" className="panel-global-save-btn" onClick={() => onSave(text)}>Save</button>
       </div>
     </div>

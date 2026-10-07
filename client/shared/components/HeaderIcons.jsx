@@ -118,3 +118,20 @@ export function CommentIcon({ size = 14 }) {
 export function InfoIcon({ size = 16 }) {
   return <Icon size={size}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></Icon>
 }
+
+export function PaletteIcon({ size = 16 }) {
+  return (
+    <Icon size={size}>
+      <path d="M12 21a9 9 0 0 1 0-18c4.97 0 9 3.58 9 8 0 1.06-.47 2.08-1.32 2.83-.84.75-1.99 1.17-3.18 1.17h-2.5a2 2 0 0 0-1 3.75 1.3 1.3 0 0 1-1 2.25" />
+      <circle cx="8.5" cy="10.5" r="1" /><circle cx="12.5" cy="7.5" r="1" /><circle cx="16.5" cy="10.5" r="1" />
+    </Icon>
+  )
+}
+
+export function ExpandIcon({ size = 16 }) {
+  return <Icon size={size}><path d="M15 3h6v6M21 3l-8 8M9 21H3v-6M3 21l8-8" /></Icon>
+}
+
+export function ClockIcon({ size = 14 }) {
+  return <Icon size={size}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></Icon>
+}

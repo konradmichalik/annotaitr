@@ -88,7 +88,7 @@ export function GeneralCommentRow({ text, onSave, disabled = false, Field = Plai
       <label className="general-comment-field-label" htmlFor={id}>General comment</label>
       <Field id={id} value={draft} setValue={setDraft} onKeyDown={handleKeyDown} inputRef={inputRef} />
       <div className="panel-global-edit-actions">
-        <button type="button" className="comment-popover-cancel-btn" onClick={close}>Cancel</button>
+        <button type="button" className="panel-cancel-btn" onClick={close}>Cancel</button>
         <button type="button" className="panel-global-save-btn" onClick={save}>Save</button>
       </div>
     </div>

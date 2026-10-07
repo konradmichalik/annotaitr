@@ -1,0 +1,134 @@
+/*
+ * The note composer and the thread popover share one shell: a card with a
+ * 1.5px border that turns --focus while focus is inside. The field has no
+ * outline of its own, the border is its focus indicator (docs/design/rules.md, Composer).
+ */
+.comment-popover {
+  position: fixed;
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-popover);
+  background: var(--card);
+  box-shadow: var(--elev-2);
+  color: var(--ink);
+  font-size: var(--fs-md);
+}
+
+.comment-popover:focus-within {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 18%, transparent), var(--elev-2);
+}
+
+@keyframes popover-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.comment-popover-body {
+  position: relative;
+  padding: var(--space-3) var(--space-3) var(--space-2);
+}
+
+.comment-popover-textarea {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  max-height: 160px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.5;
+  resize: none;
+  field-sizing: content;
+}
+
+.comment-popover-textarea:focus-visible {
+  outline: none;
+}
+
+.comment-popover-textarea::placeholder {
+  color: var(--ink-muted);
+}
+
+.composer-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border-top: 1px solid var(--line);
+}
+
+.composer-tools {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.composer-icon-button,
+.composer-cancel,
+.composer-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  border-radius: var(--radius-control);
+  font: inherit;
+  cursor: pointer;
+}
+
+.composer-icon-button {
+  gap: var(--space-1);
+  min-width: 28px;
+  padding: 0 var(--space-1);
+  border: none;
+  background: transparent;
+  color: var(--ink-muted);
+}
+
+.composer-icon-button:hover,
+.composer-icon-button[aria-expanded="true"] {
+  background: var(--surface-sunken);
+  color: var(--ink);
+}
+
+.composer-cancel {
+  margin-left: auto;
+  padding: 0 var(--space-2);
+  border: none;
+  background: transparent;
+  color: var(--ink);
+}
+
+.composer-cancel:hover {
+  background: var(--surface-sunken);
+}
+
+.composer-submit {
+  gap: 6px;
+  padding: 0 var(--space-1) 0 var(--space-3);
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--on-ink);
+  font-weight: 500;
+}
+
+.composer-submit:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 85%, var(--card));
+}
+
+.composer-submit:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.composer-submit .composer-submit-key {
+  border-color: color-mix(in srgb, var(--on-ink) 45%, transparent);
+  color: var(--on-ink);
+}
