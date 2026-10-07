@@ -1651,30 +1651,9 @@ button.voice-note:hover {
 }
 
 .previous-round-badge-chip {
-  fill: var(--bg-secondary);
-  stroke: var(--border);
+  fill: var(--status-bg, var(--bg-secondary));
+  stroke: var(--status-fg, var(--border));
   stroke-width: 1;
-}
-
-.previous-round-badge--applied .previous-round-badge-chip {
-  fill: var(--success-bg);
-  stroke: var(--success);
-}
-
-.previous-round-badge--partial .previous-round-badge-chip,
-.previous-round-badge--deferred .previous-round-badge-chip {
-  fill: var(--comment-bg);
-  stroke: var(--comment-border);
-}
-
-.previous-round-badge--declined .previous-round-badge-chip {
-  fill: var(--deletion-bg);
-  stroke: var(--danger);
-}
-
-.previous-round-badge--question .previous-round-badge-chip {
-  fill: var(--warning-bg);
-  stroke: var(--warning);
 }
 
 .previous-round-badge-label {
@@ -1697,6 +1676,9 @@ button.voice-note:hover {
 }
 
 .previous-round-panel {
+  --switch-top: 0.5rem;
+  --switch-room: 7rem;
+
   position: relative;
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--border-light);
@@ -1704,11 +1686,12 @@ button.voice-note:hover {
   font-size: 0.8125rem;
 }
 
+/* The right padding leaves room for .previous-round-switch, which sits outside the summary so it cannot fold the section. */
 .previous-round-panel summary {
   display: flex;
   gap: 0.375rem;
   align-items: center;
-  padding: 0.25rem 7rem 0.25rem 1rem;
+  padding: 0.25rem var(--switch-room) 0.25rem 1rem;
   white-space: nowrap;
   font-weight: 600;
   cursor: pointer;
@@ -1719,15 +1702,18 @@ button.voice-note:hover {
   outline-offset: -2px;
 }
 
+/* The 44px height is the touch target. The top offset pulls it up by half the extra height, so the visible switch stays where
+   the 1.5rem version sat and the absolutely positioned button does not make the header taller. */
 .previous-round-switch {
   position: absolute;
-  top: 0.5rem;
+  top: calc(var(--switch-top) - 0.625rem);
   right: 1rem;
   z-index: 1;
   display: inline-flex;
   gap: 0.5rem;
   align-items: center;
-  padding: 0.25rem 0;
+  min-height: 2.75rem;
+  padding: 0;
   border: 0;
   background: none;
   color: var(--text-muted);
@@ -1772,7 +1758,10 @@ button.voice-note:hover {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .previous-round-switch-track,
+  .previous-round-switch-track {
+    transition: background-color 0.15s;
+  }
+
   .previous-round-switch-knob {
     transition: left 0.15s, background-color 0.15s;
   }

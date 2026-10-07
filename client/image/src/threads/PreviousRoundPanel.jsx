@@ -45,7 +45,6 @@ export default function PreviousRoundPanel({ round, threads, showOnImage, onTogg
         aria-label="Show on image"
         className="previous-round-switch"
         onClick={onToggleShowOnImage}
-        title="Show or hide last round's marks and replies on the image"
       >
         <span className="previous-round-switch-label">On image</span>
         <span className="previous-round-switch-track" aria-hidden="true"><span className="previous-round-switch-knob" /></span>
