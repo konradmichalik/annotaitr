@@ -202,3 +202,38 @@ test('tool letters, the dock and the general comment work from the keyboard', as
     }
   })
 })
+
+test('the markdown selection bar opens the composer, which keeps a draft on a click outside', async ({ page }) => {
+  await withTargets(async ({ markdown }) => {
+    const cli = startCli([markdown])
+    try {
+      await page.goto(await cli.url)
+      const paragraph = page.getByText('A paragraph to review.')
+      const rect = await paragraph.boundingBox()
+      await page.mouse.move(rect.x + 2, rect.y + rect.height / 2)
+      await page.mouse.down()
+      await page.mouse.move(rect.x + 80, rect.y + rect.height / 2, { steps: 4 })
+      await page.mouse.up()
+
+      const bar = page.getByRole('toolbar', { name: 'Selection' })
+      await expect(bar.getByRole('button', { name: 'Delete' })).toHaveAttribute('type', 'button')
+      await bar.getByRole('button', { name: 'Comment' }).click()
+
+      const composer = page.getByRole('dialog', { name: 'Comment on selection' })
+      const field = composer.getByRole('textbox', { name: 'Comment on selection' })
+      await expect(field).toBeFocused()
+      await field.fill('Name the paragraph')
+      await page.mouse.click(5, 300)
+      await expect(composer).toBeVisible()
+
+      await field.focus()
+      await page.keyboard.press('ControlOrMeta+Enter')
+      await expect(composer).toHaveCount(0)
+      await page.getByRole('button', { name: /^Send feedback/ }).click()
+      await cli.exited
+      expect(cli.stdout()).toContain('> Name the paragraph')
+    } finally {
+      if (cli.child.exitCode === null) { cli.child.kill() }
+    }
+  })
+})

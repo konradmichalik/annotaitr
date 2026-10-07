@@ -195,7 +195,7 @@ test.describe('replies from the last round', () => {
       await page.mouse.down()
       await page.mouse.move(box.x + 140, box.y + 100)
       await page.mouse.up()
-      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await expect(page.getByRole('dialog', { name: /^Round/ })).toHaveCount(0)
       await page.getByPlaceholder('Add a comment…').fill('New note')
       await page.getByRole('button', { name: 'Add', exact: true }).click()
       await page.getByRole('button', { name: /^Send feedback/ }).click()
