@@ -22,7 +22,7 @@ function makeGif(path) {
 }
 
 async function drawBox(page, from, to) {
-  await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Box').click()
+  await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Box \(/ }).click()
   const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
   await page.mouse.move(canvas.x + from[0], canvas.y + from[1])
   await page.mouse.down()

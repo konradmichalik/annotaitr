@@ -33,7 +33,7 @@ async function firstVideoRoundWithReply(page, env) {
     await expect(page.locator('.timeline-time')).toContainText('/ 00:02.000')
     await page.keyboard.press('Shift+ArrowRight')
     await expect(page.locator('.timeline-time')).toContainText('00:01.000 /')
-    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Box').click()
+    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Box \(/ }).click()
     const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
     await page.mouse.move(canvas.x + 20, canvas.y + 20)
     await page.mouse.down()
@@ -160,7 +160,7 @@ test.describe('replies from the last round', () => {
       await expect(badge.locator('.previous-round-badge-number')).toHaveText('1')
       await expect(badge.locator('.previous-round-badge-label')).toHaveText('applied')
 
-      await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: 'Select' }).click()
+      await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Select \(/ }).click()
       const box = await page.locator('.image-canvas-wrapper').boundingBox()
       await page.mouse.click(box.x + 100, box.y + 80)
       const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
@@ -189,7 +189,7 @@ test.describe('replies from the last round', () => {
     try {
       await page.goto(await cli.url)
       await expect(page.locator('.previous-round').getByText('applied')).toBeVisible()
-      await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Box').click()
+      await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Box \(/ }).click()
       const box = await page.locator('.image-canvas-wrapper').boundingBox()
       await page.mouse.move(box.x + 60, box.y + 60)
       await page.mouse.down()

@@ -53,7 +53,7 @@ test('a voice note is recorded, transcribed into the comment field and submitted
   try {
     await page.addInitScript(fakeMicrophone)
     await page.goto(await cli.url)
-    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Pin').click()
+    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Pin \(/ }).click()
     const box = await page.locator('.image-canvas-wrapper').boundingBox()
     await page.mouse.click(box.x + 50, box.y + 50)
 
@@ -98,7 +98,7 @@ test('closing the comment box while microphone access is pending leaves the micr
       }
     })
     await page.goto(await cli.url)
-    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Pin').click()
+    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Pin \(/ }).click()
     const box = await page.locator('.image-canvas-wrapper').boundingBox()
     await page.mouse.click(box.x + 50, box.y + 50)
     await page.getByRole('button', { name: 'Record a voice note' }).click()
@@ -120,7 +120,7 @@ test('without whisper.cpp the annotator offers no voice note', async ({ page }) 
 
   try {
     await page.goto(await cli.url)
-    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Pin').click()
+    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Pin \(/ }).click()
     const box = await page.locator('.image-canvas-wrapper').boundingBox()
     await page.mouse.click(box.x + 50, box.y + 50)
     await expect(page.getByPlaceholder('Add a comment (optional)...')).toBeVisible()

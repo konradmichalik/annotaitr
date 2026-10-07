@@ -40,7 +40,7 @@ test('a full box annotation submits and the CLI prints structured feedback', asy
     })
 
     await page.goto(url)
-    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Box').click()
+    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Box \(/ }).click()
 
     const image = page.locator('.image-canvas-wrapper')
     const box = await image.boundingBox()
@@ -50,11 +50,10 @@ test('a full box annotation submits and the CLI prints structured feedback', asy
     await page.mouse.up()
 
     await page.getByPlaceholder('Add a comment (optional)...').fill('Move this element up')
-    // Exact match: the sidebar's "Add general comment" button also matches a
-    // loose substring search for "Add".
+    // Exact match: other buttons, such as a card's, also contain "Add".
     await page.getByRole('button', { name: 'Add', exact: true }).click()
 
-    await expect(page.getByText('1. Box')).toBeVisible()
+    await expect(page.getByRole('button', { name: /^1\. Box/ })).toBeVisible()
 
     await page.getByRole('button', { name: /^Send feedback/ }).click()
     await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
@@ -96,14 +95,14 @@ test('a saved general comment does not reopen for editing when the sidebar is sh
     })
 
     await page.goto(url)
-    await page.getByRole('button', { name: 'Add general comment' }).click()
+    await page.getByRole('button', { name: /General comment/ }).click()
     await page.locator('.panel-global-textarea').fill('Overall fine')
     await page.getByRole('button', { name: 'Save' }).click()
 
-    await page.getByRole('button', { name: 'Hide annotations' }).click()
-    await page.getByRole('button', { name: 'Show annotations' }).click()
+    await page.getByRole('button', { name: 'Hide feedback panel' }).click()
+    await page.getByRole('button', { name: 'Show feedback panel' }).click()
 
-    await expect(page.locator('.panel-comment-text', { hasText: 'Overall fine' })).toBeVisible()
+    await expect(page.locator('.general-comment-preview', { hasText: 'Overall fine' })).toBeVisible()
     // The edit mode would come from an effect after mounting, so give it time
     // to run before asserting it did not.
     await page.waitForTimeout(300)

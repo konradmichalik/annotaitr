@@ -114,7 +114,7 @@ test('the decision dialog sends a summary as the general comment', async ({ page
     const cli = startCli([markdown, '--origin', 'opencode'])
     try {
       await page.goto(await cli.url)
-      await page.getByRole('button', { name: 'Add general comment' }).click()
+      await page.getByRole('button', { name: /General comment/ }).click()
       await page.locator('.app-sidebar textarea, .annotation-panel textarea').first().fill('First pass')
       await page.keyboard.press('ControlOrMeta+Enter')
       await expect(page.getByRole('button', { name: /^Send feedback/ })).toBeVisible()
@@ -141,7 +141,7 @@ test('approving from the dialog asks once before discarding notes', async ({ pag
     const cli = startCli([markdown])
     try {
       await page.goto(await cli.url)
-      await page.getByRole('button', { name: 'Add general comment' }).click()
+      await page.getByRole('button', { name: /General comment/ }).click()
       await page.locator('.app-sidebar textarea, .annotation-panel textarea').first().fill('Not needed')
       await page.keyboard.press('ControlOrMeta+Enter')
       await page.getByRole('button', { name: 'Other decisions' }).click()
@@ -155,6 +155,50 @@ test('approving from the dialog asks once before discarding notes', async ({ pag
       expect(cli.stdout()).toMatch(/^APPROVED: No changes requested\./)
     } finally {
       cli.child.kill()
+    }
+  })
+})
+
+test('tool letters, the dock and the general comment work from the keyboard', async ({ page }) => {
+  await withTargets(async ({ markdown, image }) => {
+    const imageCli = startCli([image])
+    try {
+      await page.goto(await imageCli.url)
+      const dock = page.getByRole('toolbar', { name: 'Annotation tools' })
+      await expect(page.locator('.image-canvas-wrapper')).toBeVisible()
+      await page.keyboard.press('r')
+      await expect(dock.getByRole('button', { name: 'Box (R)' })).toHaveAttribute('aria-pressed', 'true')
+      await page.keyboard.press('Escape')
+      await expect(dock.getByRole('button', { name: 'Select (V)' })).toHaveAttribute('aria-pressed', 'true')
+      // One tab stop on the pressed tool, the arrow keys move along the dock.
+      await dock.getByRole('button', { name: 'Select (V)' }).focus()
+      await page.keyboard.press('ArrowRight')
+      await expect(dock.getByRole('button', { name: 'Box (R)' })).toBeFocused()
+      await expect(dock.locator('[tabindex="0"]')).toHaveCount(1)
+      await page.keyboard.press('g')
+      const field = page.getByLabel('General comment', { exact: true })
+      await expect(field).toBeFocused()
+      // Letters typed into the field are text, not tool keys.
+      await field.pressSequentially('crop')
+      await expect(dock.getByRole('button', { name: 'Select (V)' })).toHaveAttribute('aria-pressed', 'true')
+      await field.press('ControlOrMeta+Enter')
+      await expect(page.locator('.general-comment-preview')).toHaveText('crop')
+    } finally {
+      imageCli.child.kill()
+    }
+
+    const markdownCli = startCli([markdown])
+    try {
+      await page.goto(await markdownCli.url)
+      const dock = page.getByRole('toolbar', { name: 'Annotation mode' })
+      await expect(page.getByRole('heading', { name: 'Notes' })).toBeVisible()
+      await page.keyboard.press('c')
+      await expect(dock.getByRole('button', { name: 'Pinpoint (C)' })).toHaveAttribute('aria-pressed', 'true')
+      await page.keyboard.press('v')
+      await expect(dock.getByRole('button', { name: 'Select text (V)' })).toHaveAttribute('aria-pressed', 'true')
+      await expect(page.getByText('With no notes the main button reads')).toBeVisible()
+    } finally {
+      markdownCli.child.kill()
     }
   })
 })

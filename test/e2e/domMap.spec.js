@@ -113,7 +113,7 @@ test('the Element tool outlines and picks a page element, other tools only name 
     const contact = elements.find((el) => el.name === 'Contact us')
     const tools = page.getByRole('toolbar', { name: 'Annotation tools' })
 
-    await tools.getByText('Element').click()
+    await tools.getByRole('button', { name: /^Element \(/ }).click()
     const heroSpot = await canvasPoint(page, hero.box)
     await page.mouse.move(heroSpot.x, heroSpot.y)
     await expect(page.locator('.element-highlight')).toHaveCount(1)
@@ -122,16 +122,16 @@ test('the Element tool outlines and picks a page element, other tools only name 
     await expect(page.locator('.comment-popover-element')).toHaveText('Element: img#hero "Team photo" (team.png)')
     await page.getByPlaceholder('Add a comment (optional)...').fill('Swap the photo')
     await page.getByRole('button', { name: 'Add', exact: true }).click()
-    await expect(page.getByText('1. Element')).toBeVisible()
+    await expect(page.getByRole('button', { name: /^1\. Element/ })).toBeVisible()
     await expect(page.locator('.element-highlight')).toHaveCount(0)
 
     // A selected element stays on its element when dragged.
     await page.mouse.down()
     await page.mouse.move(heroSpot.x + 150 * heroSpot.zoom, heroSpot.y + 250 * heroSpot.zoom, { steps: 5 })
     await page.mouse.up()
-    await expect(page.locator('.panel-element')).toHaveText('img#hero "Team photo" (team.png)')
+    await expect(page.locator('.note-quote')).toHaveText('img#hero "Team photo" (team.png)')
 
-    await tools.getByText('Pin').click()
+    await tools.getByRole('button', { name: /^Pin \(/ }).click()
     const contactSpot = await canvasPoint(page, contact.box)
     await page.mouse.move(contactSpot.x, contactSpot.y)
     await expect(page.locator('.element-highlight')).toHaveCount(0)
@@ -167,12 +167,12 @@ test('the viewport picker captures the page again in place, after confirming tha
     // Measured on every call: a narrower capture is centered somewhere else.
     const pinAt = async (x, y) => {
       const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
-      await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Pin').click()
+      await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Pin \(/ }).click()
       await page.mouse.click(canvas.x + x, canvas.y + y)
       await page.getByRole('button', { name: 'Add', exact: true }).click()
     }
     await pinAt(60, 300)
-    await expect(page.getByText('1. Pin')).toBeVisible()
+    await expect(page.getByRole('button', { name: /^1\. Pin/ })).toBeVisible()
 
     // Declining keeps the annotation and the capture.
     await trigger.click()
@@ -181,13 +181,13 @@ test('the viewport picker captures the page again in place, after confirming tha
     page.once('dialog', (dialog) => dialog.dismiss())
     await page.getByRole('button', { name: 'Capture again' }).click()
     await expect(page.getByRole('alert')).toHaveText('Not captured again, your annotation is kept.')
-    await expect(page.getByText('1. Pin')).toBeVisible()
+    await expect(page.getByRole('button', { name: /^1\. Pin/ })).toBeVisible()
 
     page.once('dialog', (dialog) => dialog.accept())
     await choose('Phone')
     await captureAgain()
     await expect(trigger).toHaveText('Phone 375×812')
-    await expect(page.getByText('1. Pin')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /^1\. Pin/ })).toHaveCount(0)
     // The fixture's 400px card makes the page wider than the phone, and a full-page capture shows all of it.
     expect((await meta()).capture.viewport).toEqual({ width: 375, height: 812 })
 
@@ -238,7 +238,7 @@ test('the export menu copies the annotated image and the feedback, and saves the
     const appUrl = await url
     await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(appUrl).origin })
     await page.goto(appUrl)
-    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Pin').click()
+    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Pin \(/ }).click()
     const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
     const zoom = canvas.width / 800
     await page.mouse.click(canvas.x + 170 * zoom, canvas.y + 160 * zoom)

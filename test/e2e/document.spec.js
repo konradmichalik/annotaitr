@@ -7,7 +7,7 @@ import { startCli } from '../helpers/cli.js'
 import { makePdf } from '../helpers/pdfFixtures.js'
 
 async function drawBox(page, from, to) {
-  await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Box').click()
+  await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Box \(/ }).click()
   const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
   await page.mouse.move(canvas.x + from[0], canvas.y + from[1])
   await page.mouse.down()
@@ -104,7 +104,7 @@ test('text on a PDF page is selected word by word and quoted in the feedback', a
     await textLoaded
     await expect(page.locator('.page-skeleton')).toHaveCount(0)
     const toolbar = page.getByRole('toolbar', { name: 'Annotation tools' })
-    await toolbar.getByText('Text', { exact: true }).click()
+    await toolbar.getByRole('button', { name: /^Text \(/ }).click()
     // Body lines sit 160pt and 188pt below the top of a 960pt wide slide, in
     // 22pt type from x 60pt. Both points aim at the middle of a word ("North"
     // and "stayed"), since word edges shift with the fonts a system has.
@@ -117,7 +117,7 @@ test('text on a PDF page is selected word by word and quoted in the feedback', a
     await expect(page.locator('.comment-popover-element')).toContainText('"North grew 12% South stayed"')
     await page.getByPlaceholder('Add a comment (optional)...').fill('Say rose')
     await page.getByRole('button', { name: 'Add', exact: true }).click()
-    await expect(page.locator('.app-sidebar')).toContainText('"North grew 12% South stayed"')
+    await expect(page.locator('.app-sidebar')).toContainText('“North grew 12% South stayed”')
 
     await page.getByRole('button', { name: /^Send feedback/ }).click()
     expect(await cli.exited).toBe(0)
