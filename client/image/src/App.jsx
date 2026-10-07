@@ -19,9 +19,10 @@ import PageImage from './document/PageImage.jsx'
 import { usePreviousRound } from './threads/usePreviousRound.js'
 import { useThreadPopover } from './threads/useThreadPopover.js'
 import ApprovalGate from './threads/ApprovalGate.jsx'
+import { useApprovalGate } from './threads/useApprovalGate.js'
 import PreviousRoundPanel from './threads/PreviousRoundPanel.jsx'
 import ThreadPopover from './threads/ThreadPopover.jsx'
-import { placedThreads, threadPageCounts, hasMark, pendingReplyCount, openQuestions } from './threads/threadView.js'
+import { placedThreads, threadPageCounts, hasMark, pendingReplyCount } from './threads/threadView.js'
 import { useSettings } from './hooks/useSettings.js'
 import { useMediaPlayer } from './video/useMediaPlayer.js'
 import { useVideoReview } from './video/useVideoReview.js'
@@ -70,8 +71,6 @@ export default function App() {
   const [decision, setDecision] = useState(null)
   const [activeTool, setActiveTool] = useState('select')
   const [showExport, setShowExport] = useState(false)
-  const [gateOpen, setGateOpen] = useState(false)
-  const approveRef = useRef(null)
   const [editingAnnotationId, setEditingAnnotationId] = useState(null)
   const [zoom, setZoom] = useState(1)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -371,18 +370,9 @@ export default function App() {
     }
   }, [setErrorStatus, state.annotations, controller])
 
-  const unanswered = openQuestions(previous.threads)
-  const requestApproval = () => {
-    if (unanswered.length > 0) { setGateOpen(true) } else { submit('approve') }
-  }
-  const answerQuestions = () => {
-    setGateOpen(false)
-    showThread(unanswered[0], approveRef.current)
-  }
-  const approveAnyway = () => {
-    setGateOpen(false)
-    submit('approve')
-  }
+  const { gateOpen, unanswered, approveRef, requestApproval, answerQuestions, approveAnyway } = useApprovalGate({
+    threads: previous.threads, submit, showThread, showEntryThread
+  })
 
   const zoomBy = useCallback((delta) => {
     setZoom((z) => Math.round(Math.max(0.1, Math.min(3, z + delta)) * 100) / 100)
