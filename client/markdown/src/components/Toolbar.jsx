@@ -3,19 +3,42 @@ import { createPortal } from 'react-dom'
 import { CommentPopover } from './CommentPopover.jsx'
 import { QuickLabelPicker } from './QuickLabelPicker.jsx'
 import { CloseIcon } from '../../../shared/components/CloseIcon.jsx'
+import { MOD } from '../../../shared/components/SettingsModal.jsx'
+import { useRovingFocus } from '../../../shared/hooks/useRovingFocus.js'
 import { TrashIcon, PencilIcon, CommentIcon, PlusIcon, ExternalLinkIcon, FileIcon, TagIcon } from './Icons.jsx'
+
+const IS_MAC = MOD === '⌘'
+const modKey = (key) => (IS_MAC ? `⌘${key}` : `Ctrl+${key}`)
+const LABEL_KEYS = IS_MAC ? '⌥1–0' : 'Alt+1–0'
+
+/** One action of the selection bar: icon, word and, when it has one, its key as a hint. */
+function BarButton({ icon, label, hint, shortcut, ariaLabel, title, onClick }) {
+  return (
+    <button
+      type="button"
+      data-dock-item
+      className="selection-bar-btn"
+      title={title}
+      aria-label={ariaLabel}
+      aria-keyshortcuts={shortcut}
+      onClick={onClick}
+    >
+      {icon}
+      {label && <span className="selection-bar-label">{label}</span>}
+      {hint && <kbd className="selection-bar-key" aria-hidden="true">{hint}</kbd>}
+    </button>
+  )
+}
 
 const OpenLinkButton = ({ linkUrl, onOpenLink }) => {
   const isInternal = !!onOpenLink
   return (
-    <button
-      onClick={() => isInternal ? onOpenLink(linkUrl) : window.open(linkUrl, '_blank', 'noopener,noreferrer')}
-      className="toolbar-btn toolbar-btn-link"
+    <BarButton
+      icon={isInternal ? <FileIcon /> : <ExternalLinkIcon />}
+      label="Open"
       title={isInternal ? 'Open file' : 'Open link'}
-    >
-      {isInternal ? <FileIcon /> : <ExternalLinkIcon />}
-      <span className="toolbar-label">Open</span>
-    </button>
+      onClick={() => isInternal ? onOpenLink(linkUrl) : window.open(linkUrl, '_blank', 'noopener,noreferrer')}
+    />
   )
 }
 
@@ -24,6 +47,7 @@ export function Toolbar({ highlightElement, onAnnotate, onClose, onDelete, onQui
   const [initialText, setInitialText] = useState('')
   const [position, setPosition] = useState(null)
   const [labelPickerOpen, setLabelPickerOpen] = useState(false)
+  const roving = useRovingFocus()
 
   // NOTES annotations are read-only — close toolbar immediately
   useEffect(() => {
@@ -129,71 +153,57 @@ export function Toolbar({ highlightElement, onAnnotate, onClose, onDelete, onQui
   let composerTitle = 'Comment on selection'
   if (editAnnotation) { composerTitle = 'Edit comment' } else if (insertionMode) { composerTitle = 'Text to insert' }
 
-  const linkButton = linkUrl && (
-    <>
-      <span className="toolbar-divider" />
-      <OpenLinkButton linkUrl={linkUrl} onOpenLink={onOpenLink} />
-    </>
-  )
+  const linkButton = linkUrl && <OpenLinkButton linkUrl={linkUrl} onOpenLink={onOpenLink} />
+  const divider = <span className="selection-bar-divider" aria-hidden="true" />
+  const closeButton = (label) => <BarButton icon={<CloseIcon />} ariaLabel={label} title={label} onClick={onClose} />
+
+  let actions
+  if (editAnnotation) {
+    const hasText = editAnnotation.type === 'COMMENT' || editAnnotation.type === 'INSERTION'
+    actions = (
+      <>
+        <BarButton icon={<TrashIcon />} label="Remove" title="Remove annotation" onClick={handleDelete} />
+        <BarButton icon={<PencilIcon />} label={hasText ? 'Edit' : 'Comment'} hint={modKey('K')} shortcut={IS_MAC ? 'Meta+K' : 'Control+K'} onClick={() => setStep('input')} />
+        {linkButton}
+        {divider}
+        {closeButton('Close')}
+      </>
+    )
+  } else if (insertionMode) {
+    actions = (
+      <>
+        <BarButton icon={<PlusIcon />} label="Insert" title="Insert text here" onClick={() => setStep('input')} />
+        {divider}
+        {closeButton('Cancel')}
+      </>
+    )
+  } else {
+    actions = (
+      <>
+        <BarButton icon={<TrashIcon />} label="Delete" hint={modKey('D')} shortcut={IS_MAC ? 'Meta+D' : 'Control+D'} onClick={() => handleTypeSelect('DELETION')} />
+        <BarButton icon={<CommentIcon />} label="Comment" hint={modKey('K')} shortcut={IS_MAC ? 'Meta+K' : 'Control+K'} onClick={() => handleTypeSelect('COMMENT')} />
+        <BarButton icon={<TagIcon />} label="Label" hint={LABEL_KEYS} title="Quick label" onClick={() => setLabelPickerOpen(true)} />
+        {linkButton}
+        {divider}
+        {closeButton('Cancel')}
+      </>
+    )
+  }
 
   return (
     <>
       {step === 'menu' && createPortal(
         <div
-          className="annotation-toolbar"
+          ref={roving.ref}
+          className="annotation-toolbar selection-bar"
+          role="toolbar"
+          aria-label="Selection"
           style={{ top: position.top, left: position.left }}
           onMouseDown={(e) => e.stopPropagation()}
+          onFocus={roving.onFocus}
+          onKeyDown={roving.onKeyDown}
         >
-          <div className="toolbar-menu">
-            {editAnnotation ? (
-                <>
-                  <button onClick={handleDelete} className="toolbar-btn toolbar-btn-edit-remove" title="Remove annotation">
-                    <TrashIcon />
-                    <span className="toolbar-label">Remove</span>
-                  </button>
-                  <button onClick={() => setStep('input')} className="toolbar-btn toolbar-btn-edit-action" title="Edit comment (Cmd+K)">
-                    <PencilIcon />
-                    <span className="toolbar-label">{editAnnotation.type === 'COMMENT' || editAnnotation.type === 'INSERTION' ? 'Edit' : 'Comment'}</span>
-                  </button>
-                  {linkButton}
-                  <span className="toolbar-divider" />
-                  <button onClick={onClose} className="toolbar-btn toolbar-btn-cancel" title="Close" aria-label="Close">
-                    <CloseIcon />
-                  </button>
-                </>
-              ) : insertionMode ? (
-                <>
-                  <button onClick={() => setStep('input')} className="toolbar-btn toolbar-btn-insert" title="Insert text here">
-                    <PlusIcon />
-                    <span className="toolbar-label">Insert</span>
-                  </button>
-                  <span className="toolbar-divider" />
-                  <button onClick={onClose} className="toolbar-btn toolbar-btn-cancel" title="Cancel" aria-label="Cancel">
-                    <CloseIcon />
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button onClick={() => handleTypeSelect('DELETION')} className="toolbar-btn toolbar-btn-delete" title="Delete (Cmd+D)">
-                    <TrashIcon />
-                    <span className="toolbar-label">Delete</span>
-                  </button>
-                  <button onClick={() => handleTypeSelect('COMMENT')} className="toolbar-btn toolbar-btn-comment" title="Comment (Cmd+K)">
-                    <CommentIcon />
-                    <span className="toolbar-label">Comment</span>
-                  </button>
-                  <button onClick={() => setLabelPickerOpen(true)} className="toolbar-btn toolbar-btn-label" title="Quick label (Alt+1-0)">
-                    <TagIcon />
-                    <span className="toolbar-label">Label</span>
-                  </button>
-                  {linkButton}
-                  <span className="toolbar-divider" />
-                  <button onClick={onClose} className="toolbar-btn toolbar-btn-cancel" title="Cancel" aria-label="Cancel">
-                    <CloseIcon />
-                  </button>
-                </>
-              )}
-          </div>
+          {actions}
         </div>,
         document.body
       )}
