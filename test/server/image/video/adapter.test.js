@@ -242,6 +242,15 @@ describe('video annotator server', () => {
     expect(await server.waitForDecision()).toMatchObject({ approved: false, output: '', annotations: [], repliesOnly: true, annotationCount: 1 })
   })
 
+  it('answers a second replies-only decision with 409 instead of a success it would discard', async () => {
+    const session = replySession()
+    await start(session)
+    session.replies.add('a3f19c2e', 'Green')
+    expect((await post('/api/approve', {})).status).toBe(200)
+    expect((await post('/api/feedback', {})).status).toBe(409)
+    expect((await post('/api/approve', {})).status).toBe(409)
+  })
+
   it('still rejects feedback without marks and without replies', async () => {
     await start(replySession())
     expect((await post('/api/feedback', {})).status).toBe(400)

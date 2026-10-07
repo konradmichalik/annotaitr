@@ -396,6 +396,28 @@ describe('image annotator server', () => {
     expect(await server.waitForDecision()).toMatchObject({ approved: false, output: '', annotations: [], repliesOnly: true, annotationCount: 1 })
   })
 
+  it('answers a second decision with 409 instead of a success it would discard', async () => {
+    const session = replySession()
+    await start({ session })
+    session.replies.add('a3f19c2e', 'Green')
+    expect((await fetch(`${server.url}/api/feedback`, { method: 'POST' })).status).toBe(200)
+    expect((await fetch(`${server.url}/api/approve`, { method: 'POST' })).status).toBe(409)
+    expect((await fetch(`${server.url}/api/feedback`, { method: 'POST' })).status).toBe(409)
+  })
+
+  it('answers a second decision with 409 after a decision with marks too', async () => {
+    await start()
+    const annotation = { id: 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d', type: 'pin', geometry: { x: 5, y: 5 }, text: 'Fix' }
+    await fetch(`${server.url}/api/annotations`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ annotations: [annotation] })
+    })
+    const [first, second] = await Promise.all([
+      fetch(`${server.url}/api/feedback`, { method: 'POST' }),
+      fetch(`${server.url}/api/approve`, { method: 'POST' })
+    ])
+    expect([first.status, second.status].sort()).toEqual([200, 409])
+  })
+
   it('still rejects feedback without marks and without replies', async () => {
     await start({ session: replySession() })
     expect((await fetch(`${server.url}/api/feedback`, { method: 'POST' })).status).toBe(400)

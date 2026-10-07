@@ -166,6 +166,7 @@ export function createVideoApiRouter({ video, origin, targetLabel, state, replie
 
   router.post('/api/approve', rejectWhileDeciding, async (_req, res) => {
     if (state.annotations.length === 0) {
+      state.decided = true
       const frozen = freezeReplies(replies)
       const pending = frozen.replyCount
       res.json(success({ message: pending > 0 ? 'Approved with notes' : 'Approved' }))
@@ -180,6 +181,7 @@ export function createVideoApiRouter({ video, origin, targetLabel, state, replie
   router.post('/api/feedback', rejectWhileDeciding, async (_req, res) => {
     if (state.annotations.length === 0) {
       if ((replies?.count() ?? 0) === 0) { return res.status(400).json(failure('No annotations to submit: use Approve instead')) }
+      state.decided = true
       const frozen = freezeReplies(replies)
       res.json(success({ message: 'Feedback submitted' }))
       setTimeout(() => resolveDecision({ approved: false, output: '', annotationCount: frozen.replyCount, annotations: [], repliesOnly: true, ...frozen }), 100)
