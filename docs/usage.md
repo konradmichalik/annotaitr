@@ -422,7 +422,9 @@ takes its colour:
 The composer's footer starts with the intent chip (`✎ Change ▾`), which opens
 a menu of the four. The keys `1` to `4` switch it while focus is in the
 composer but not in its text field, for example after `Tab` from the field
-onto the chip, so digits typed into a comment stay text. A markdown deletion
+onto the chip, so digits typed into a comment stay text. In the image modes
+the same keys change the intent of the note selected on the canvas, and undo
+takes the change back. A markdown deletion
 is always Remove and an insertion always Add. The general comment has no
 intent.
 

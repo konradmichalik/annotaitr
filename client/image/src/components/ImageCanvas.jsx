@@ -6,6 +6,7 @@ import {
 } from '../utils/drawing.js'
 import { pickStyleFields } from '../utils/annotationStyles.js'
 import { cursorForTool } from '../utils/cursors.js'
+import { intentChangeForKey } from '../utils/toolShortcuts.js'
 import { matchAnnotation, matchPoint, describeElements } from '../utils/elementMatch.js'
 import { wordIndexAt, selectWords } from '../document/textSelection.js'
 import { markColor, intentMark } from '../utils/annotationColors.js'
@@ -199,6 +200,20 @@ export default function ImageCanvas({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [selectedId, pending, onRemoveAnnotation])
+
+  // 1 to 4 set the intent of the selected mark, undoable like any other edit.
+  useEffect(() => {
+    if (!selectedId || pending) { return }
+    const handleKeyDown = (event) => {
+      const before = annotations.find((a) => a.id === selectedId)
+      const intent = intentChangeForKey(event, before)
+      if (!intent) { return }
+      event.preventDefault()
+      onCommitEdit(selectedId, before, { ...before, intent })
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedId, pending, annotations, onCommitEdit])
 
   // Cmd/Ctrl+Z to undo, Cmd/Ctrl+Shift+Z or Ctrl+Y to redo. Same guards as
   // Delete/Backspace above: skipped while the popover is open or another

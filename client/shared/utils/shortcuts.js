@@ -41,6 +41,7 @@ const GROUPS = [
       { label: 'Remove the selection', keys: [MOD, 'D'], kinds: ['markdown'] },
       { label: 'Quick label on the selection', keys: [ALT, '1', '0'], range: true, kinds: ['markdown'] },
       { label: 'General comment', keys: ['G'], kinds: ALL },
+      { label: 'Intent of the selected note', keys: ['1', '4'], range: true, kinds: IMAGE },
       { label: 'Delete selected', keys: ['⌫'], kinds: IMAGE },
       { label: 'Discard the note being written', keys: ['Esc'], kinds: ALL },
       { label: 'Undo', keys: [MOD, 'Z'], kinds: ALL },

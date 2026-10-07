@@ -226,3 +226,34 @@ test('the composer sets the intent with 1 to 4 outside the field, and a deleted 
     if (cli.child.exitCode === null) { cli.child.kill() }
   }
 })
+
+test('keys 1 to 4 set the intent of the mark selected on the canvas, and undo restores it', async ({ page }) => {
+  const dir = await mkdtemp(join(tmpdir(), 'annotaitr-e2e-'))
+  const { path: imagePath, buffer } = makeFixturePngFile(dir)
+  await writeFile(imagePath, buffer)
+  const cli = startCli([imagePath])
+  try {
+    await page.goto(await cli.url)
+    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Box \(/ }).click()
+    const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
+    await page.mouse.move(canvas.x + 20, canvas.y + 20)
+    await page.mouse.down()
+    await page.mouse.move(canvas.x + 90, canvas.y + 70)
+    await page.mouse.up()
+    await page.getByPlaceholder('Add a comment…').fill('Box note')
+    await page.getByRole('button', { name: 'Add', exact: true }).click()
+    await expect(page.getByRole('button', { name: /^1\. Change, Box/ })).toBeVisible()
+
+    await page.keyboard.press('v')
+    await page.mouse.click(canvas.x + 20, canvas.y + 45)
+    await page.keyboard.press('3')
+    await expect(page.getByRole('button', { name: /^1\. Remove, Box/ })).toBeVisible()
+    await page.keyboard.press('4')
+    await expect(page.getByRole('button', { name: /^1\. Question, Box/ })).toBeVisible()
+    await page.keyboard.press('ControlOrMeta+z')
+    await expect(page.getByRole('button', { name: /^1\. Remove, Box/ })).toBeVisible()
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+    if (cli.child.exitCode === null) { cli.child.kill() }
+  }
+})

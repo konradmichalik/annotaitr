@@ -196,7 +196,7 @@ Session gone builds its exports in the browser, since the server has stopped: th
 | Key | Action |
 | --- | --- |
 | `V` `E` `T` `R` `A` `P` `H` `C` | Select, Element, Text, Box, Arrow, Freehand, Highlighter, Pin |
-| `1` to `4` | Intent in the composer (outside its text field) or of the markdown selection |
+| `1` to `4` | Intent in the composer (outside its text field), of the markdown selection or of the note selected on the canvas |
 | `G` | General comment |
 | `⌘↵` | Save note, submit the open dialog |
 | `⌘⇧↵` | Open the decision |
