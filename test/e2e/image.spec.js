@@ -49,7 +49,7 @@ test('a full box annotation submits and the CLI prints structured feedback', asy
     await page.mouse.move(box.x + 80, box.y + 60)
     await page.mouse.up()
 
-    await page.getByPlaceholder('Add a comment (optional)...').fill('Move this element up')
+    await page.getByPlaceholder('Add a comment…').fill('Move this element up')
     // Exact match: other buttons, such as a card's, also contain "Add".
     await page.getByRole('button', { name: 'Add', exact: true }).click()
 

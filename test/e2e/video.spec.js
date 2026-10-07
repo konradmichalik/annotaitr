@@ -31,7 +31,7 @@ async function drawBox(page, from, to) {
 }
 
 async function addComment(page, text) {
-  await page.getByPlaceholder('Add a comment (optional)...').fill(text)
+  await page.getByPlaceholder('Add a comment…').fill(text)
   await page.getByRole('button', { name: 'Add', exact: true }).click()
 }
 

@@ -120,7 +120,7 @@ test('the Element tool outlines and picks a page element, other tools only name 
     await expect(page.locator('.element-highlight-label')).toHaveText('img#hero "Team photo" (team.png)')
     await page.mouse.click(heroSpot.x, heroSpot.y)
     await expect(page.locator('.comment-popover-element')).toHaveText('Element: img#hero "Team photo" (team.png)')
-    await page.getByPlaceholder('Add a comment (optional)...').fill('Swap the photo')
+    await page.getByPlaceholder('Add a comment…').fill('Swap the photo')
     await page.getByRole('button', { name: 'Add', exact: true }).click()
     await expect(page.getByRole('button', { name: /^1\. Element/ })).toBeVisible()
     await expect(page.locator('.element-highlight')).toHaveCount(0)
@@ -242,7 +242,7 @@ test('the export menu copies the annotated image and the feedback, and saves the
     const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
     const zoom = canvas.width / 800
     await page.mouse.click(canvas.x + 170 * zoom, canvas.y + 160 * zoom)
-    await page.getByPlaceholder('Add a comment (optional)...').fill('Swap the photo')
+    await page.getByPlaceholder('Add a comment…').fill('Swap the photo')
     await page.getByRole('button', { name: 'Add', exact: true }).click()
 
     const menu = page.getByRole('button', { name: 'More actions', exact: true })

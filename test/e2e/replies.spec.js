@@ -39,7 +39,7 @@ async function firstVideoRoundWithReply(page, env) {
     await page.mouse.down()
     await page.mouse.move(canvas.x + 80, canvas.y + 60)
     await page.mouse.up()
-    await page.getByPlaceholder('Add a comment (optional)...').fill('Box on the first second')
+    await page.getByPlaceholder('Add a comment…').fill('Box on the first second')
     await page.getByRole('button', { name: 'Add', exact: true }).click()
     const saved = async () => (await (await fetch(`${await first.url}/api/annotations`)).json()).data.annotations
     await expect.poll(async () => (await saved()).length).toBe(1)
@@ -196,7 +196,7 @@ test.describe('replies from the last round', () => {
       await page.mouse.move(box.x + 140, box.y + 100)
       await page.mouse.up()
       await expect(page.getByRole('dialog')).toHaveCount(0)
-      await page.getByPlaceholder('Add a comment (optional)...').fill('New note')
+      await page.getByPlaceholder('Add a comment…').fill('New note')
       await page.getByRole('button', { name: 'Add', exact: true }).click()
       await page.getByRole('button', { name: /^Send feedback/ }).click()
       await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()

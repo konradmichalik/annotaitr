@@ -13,7 +13,7 @@ async function drawBox(page, from, to) {
   await page.mouse.down()
   await page.mouse.move(canvas.x + to[0], canvas.y + to[1])
   await page.mouse.up()
-  await page.getByPlaceholder('Add a comment (optional)...').fill(`box ${from[0]}`)
+  await page.getByPlaceholder('Add a comment…').fill(`box ${from[0]}`)
   await page.getByRole('button', { name: 'Add', exact: true }).click()
 }
 
@@ -115,7 +115,7 @@ test('text on a PDF page is selected word by word and quoted in the feedback', a
     await page.mouse.move(canvas.x + 155 * scale, canvas.y + 180 * scale, { steps: 4 })
     await page.mouse.up()
     await expect(page.locator('.comment-popover-element')).toContainText('"North grew 12% South stayed"')
-    await page.getByPlaceholder('Add a comment (optional)...').fill('Say rose')
+    await page.getByPlaceholder('Add a comment…').fill('Say rose')
     await page.getByRole('button', { name: 'Add', exact: true }).click()
     await expect(page.locator('.app-sidebar')).toContainText('“North grew 12% South stayed”')
 

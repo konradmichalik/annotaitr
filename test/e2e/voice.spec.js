@@ -57,7 +57,7 @@ test('a voice note is recorded, transcribed into the comment field and submitted
     const box = await page.locator('.image-canvas-wrapper').boundingBox()
     await page.mouse.click(box.x + 50, box.y + 50)
 
-    const field = page.getByPlaceholder('Add a comment (optional)...')
+    const field = page.getByPlaceholder('Add a comment…')
     await field.fill('Logo:')
     await page.getByRole('button', { name: 'Record a voice note' }).click()
     await expect(page.getByRole('button', { name: /Stop recording/ })).toBeVisible()
@@ -123,7 +123,7 @@ test('without whisper.cpp the annotator offers no voice note', async ({ page }) 
     await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Pin \(/ }).click()
     const box = await page.locator('.image-canvas-wrapper').boundingBox()
     await page.mouse.click(box.x + 50, box.y + 50)
-    await expect(page.getByPlaceholder('Add a comment (optional)...')).toBeVisible()
+    await expect(page.getByPlaceholder('Add a comment…')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Record a voice note' })).toHaveCount(0)
   } finally {
     await rm(dir, { recursive: true, force: true })

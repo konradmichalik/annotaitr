@@ -11,6 +11,7 @@ import { wordIndexAt, selectWords } from '../document/textSelection.js'
 import { ANNOTATION_COLORS } from '../utils/annotationColors.js'
 import { ACTION_ICONS } from '../utils/icons.jsx'
 import CommentPopover from './CommentPopover.jsx'
+import { noteType } from '../../../shared/utils/noteTypes.js'
 import PreviousRoundLayer from '../threads/PreviousRoundLayer.jsx'
 import ThreadPopover from '../threads/ThreadPopover.jsx'
 
@@ -426,13 +427,11 @@ export default function ImageCanvas({
   const previousVisible = showPrevious && previousThreads.length > 0
 
   const handleMouseDown = useCallback((event) => {
-    // A mousedown that closes the open popover (see CommentPopover's own
-    // outside-click handler) reaches this handler too, since the popover's
-    // dismissal doesn't stop propagation to the canvas. This early return is
-    // what keeps that same click from also starting a new draw underneath
-    // the popover - it works because `pending` is state (not a ref), so this
-    // closure still sees it as truthy even though CommentPopover's listener
-    // already called setPending(null) via onClose in the same event.
+    // While the comment popover is open, a press on the canvas never starts
+    // a new mark: an untouched popover closes on it (the composer's own
+    // outside-click handler), one holding a draft stays open. `pending` is
+    // state, not a ref, so this closure still sees it as truthy even when
+    // that handler already called setPending(null) in the same event.
     if (pending) { return }
     event.preventDefault()
     previousClickRef.current = null
@@ -660,6 +659,9 @@ export default function ImageCanvas({
   // Computed fresh every render (not stored in state) so the scroll-triggered
   // re-render above actually moves it - see the effect that owns forceRerenderOnScroll.
   const pendingAnchorPoint = pending ? toClientPoint(wrapperRef, annotationBottomAnchor(pending), zoom) : null
+  const pendingNumber = pending?.id
+    ? (numberFor ? numberFor(pending.before) : annotations.findIndex((a) => a.id === pending.id) + 1)
+    : nextNumber
 
   const openThread = previousVisible && openThreadHandle ? previousThreads.find((t) => t.handle === openThreadHandle) : null
 
@@ -766,6 +768,7 @@ export default function ImageCanvas({
       {pending && (
         <CommentPopover
           anchorPoint={pendingAnchorPoint}
+          title={`Note ${pendingNumber}, ${noteType(pending).word.toLowerCase()}`}
           initialText={pending.text || ''}
           initialColor={pending.color}
           annotationType={pending.type}
