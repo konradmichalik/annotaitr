@@ -13,6 +13,7 @@ import { useReviewDecision, isGeneralComment, createGeneralComment } from './hoo
 import { DisconnectedScreen, SubmittedScreen } from './components/DoneScreens.jsx'
 import { HashMismatchBanner, DraftBanner } from './components/ReviewBanners.jsx'
 import { CanvasTopbar } from './components/CanvasTopbar.jsx'
+import { ModeHelp } from './components/ModeHelp.jsx'
 import { validateAnnotationImport } from './utils/export.js'
 import { getTextStats } from './utils/textStats.js'
 import { UpdateBanner } from '../../shared/components/UpdateBanner.jsx'
@@ -51,7 +52,7 @@ function getInitialTocCollapsed() {
 function FileStats({ content }) {
   const { lines, words, readingTime } = getTextStats(content)
   return (
-    <span className="file-stats">
+    <span className="status-facts">
       {lines} lines &middot; {words} words &middot; ~{readingTime} min read
     </span>
   )
@@ -548,7 +549,7 @@ export default function App() {
       </main>
 
       <footer className="app-status">
-        <span>{status}</span>
+        <span className="status-help" role="status">{status || <ModeHelp pinpoint={effectivePinpointMode} />}</span>
         {activeFile?.content && (
           <FileStats content={activeFile.content} />
         )}

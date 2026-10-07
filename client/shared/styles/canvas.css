@@ -235,13 +235,15 @@
 }
 
 .status-help {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 0 var(--space-1);
-  align-items: center;
   min-width: 0;
   overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.status-help .key-cap {
+  margin: 0 2px;
+  vertical-align: 1px;
 }
 
 .status-facts {

@@ -6,11 +6,6 @@
   overflow: hidden;
 }
 
-.image-stats {
-  white-space: nowrap;
-  font-family: var(--font-mono);
-}
-
 /* The canvas scrolls, a recording's player stays docked below it. */
 .app-stage {
   display: flex;

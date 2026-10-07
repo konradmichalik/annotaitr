@@ -77,10 +77,6 @@
   overflow: hidden;
 }
 
-.file-stats {
-  white-space: nowrap;
-}
-
 .status-disconnected {
   color: var(--danger);
 }

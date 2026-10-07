@@ -9,6 +9,7 @@ import ImageCanvas from './components/ImageCanvas.jsx'
 import AnnotationPanel from './components/AnnotationPanel.jsx'
 import ExportModal from './components/ExportModal.jsx'
 import ExportMenu from './components/ExportMenu.jsx'
+import ToolHelp from './components/ToolHelp.jsx'
 import SettingsModal from './components/SettingsModal.jsx'
 import Timeline from './video/Timeline.jsx'
 import MediaSlot from './video/MediaSlot.jsx'
@@ -470,16 +471,12 @@ export default function App() {
     duration: controller?.duration
   }) : null
 
-  function statusText() {
+  function statusHelp() {
     if (exportProgress) { return `Preparing frames ${exportProgress.done}/${exportProgress.total}...` }
     if (status) { return status }
-    if (video.spanComplete) { return 'Span marked. Pick a tool (or click "Pin") and click the frame to mark something in it, or click "Comment span" to comment without drawing.' }
+    if (video.spanComplete) { return 'Span marked. Pick a tool and click the frame to mark something in it, or click "Comment span" to comment without drawing.' }
     if (video.range.start !== null) { return 'Span started. Move to where it ends (play, scrub or use the arrows), then click "Set end here".' }
-    if (isVideo) { return 'Pause on a frame and draw on it. Space plays, arrows step frames, I and O mark a span.' }
-    if (activeTool === 'text') { return 'Drag across the text you mean, from its first to its last word, then add a comment.' }
-    if (activeTool === 'element') { return `Point at ${isDocument ? 'a text block or link' : 'a page element'} to see what it is, then click to select it and add a comment.` }
-    if (isDocument) { return 'Draw on the page. PageUp/PageDown or [ and ] switch pages, Home and End jump to the first and last.' }
-    return 'Click a mark to select it, drag to move, or press Delete to remove it.'
+    return <ToolHelp tool={activeTool} isVideo={isVideo} isDocument={isDocument} />
   }
 
   function pageMedia() {
@@ -742,9 +739,9 @@ export default function App() {
       </main>
 
       <footer className="app-status">
-        <span role="status">{statusText()}</span>
+        <span className="status-help" role="status">{statusHelp()}</span>
         {mediaWidth && (
-          <span className="image-stats">
+          <span className="status-facts">
             {isDocument && `Page ${doc.current} of ${meta.pageCount} · `}
             {mediaWidth} &times; {mediaHeight}px
           </span>
