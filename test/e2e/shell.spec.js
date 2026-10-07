@@ -81,3 +81,80 @@ test('approving shows the shared done screen', async ({ page }) => {
     }
   })
 })
+
+test('the header names the source, the target and who is waiting', async ({ page }) => {
+  await withTargets(async ({ markdown, image }) => {
+    const cli = startCli([image, '--origin', 'claude-code'])
+    try {
+      await page.goto(await cli.url)
+      const header = page.locator('.app-header')
+      await expect(header.locator('.source-chip')).toHaveText('Image')
+      await expect(header.locator('.header-facts')).toHaveText('200 × 150')
+      await expect(header.getByText('Claude Code is waiting')).toBeVisible()
+      await expect(header.locator('.version-badge')).toHaveCount(0)
+      await header.getByRole('button', { name: 'Keyboard shortcuts' }).click()
+      await expect(page.getByRole('tab', { name: 'Shortcuts' })).toHaveAttribute('aria-selected', 'true')
+    } finally {
+      cli.child.kill()
+    }
+
+    const markdownCli = startCli([markdown])
+    try {
+      await page.goto(await markdownCli.url)
+      await expect(page.locator('.source-chip')).toHaveText('Markdown')
+      await expect(page.getByText('Terminal is waiting')).toBeVisible()
+    } finally {
+      markdownCli.child.kill()
+    }
+  })
+})
+
+test('the decision dialog sends a summary as the general comment', async ({ page }) => {
+  await withTargets(async ({ markdown }) => {
+    const cli = startCli([markdown, '--origin', 'opencode'])
+    try {
+      await page.goto(await cli.url)
+      await page.getByRole('button', { name: 'Add general comment' }).click()
+      await page.locator('.app-sidebar textarea, .annotation-panel textarea').first().fill('First pass')
+      await page.keyboard.press('ControlOrMeta+Enter')
+      await expect(page.getByRole('button', { name: /^Send feedback/ })).toBeVisible()
+      await page.keyboard.press('ControlOrMeta+Shift+Enter')
+      const decision = page.getByRole('dialog', { name: 'Finish review' })
+      await expect(decision.getByRole('group', { name: 'What should OpenCode do?' })).toBeVisible()
+      await expect(decision.getByRole('radio', { name: 'Send feedback' })).toBeChecked()
+      const summary = decision.getByLabel(/Summary for the agent/)
+      await expect(summary).toHaveValue('First pass')
+      await summary.fill('Tighten the intro')
+      await summary.press('ControlOrMeta+Enter')
+      await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
+      await cli.exited
+      expect(cli.stdout()).toContain('Tighten the intro')
+      expect(cli.stdout()).not.toContain('First pass')
+    } finally {
+      cli.child.kill()
+    }
+  })
+})
+
+test('approving from the dialog asks once before discarding notes', async ({ page }) => {
+  await withTargets(async ({ markdown }) => {
+    const cli = startCli([markdown])
+    try {
+      await page.goto(await cli.url)
+      await page.getByRole('button', { name: 'Add general comment' }).click()
+      await page.locator('.app-sidebar textarea, .annotation-panel textarea').first().fill('Not needed')
+      await page.keyboard.press('ControlOrMeta+Enter')
+      await page.getByRole('button', { name: 'Other decisions' }).click()
+      const decision = page.getByRole('dialog', { name: 'Finish review' })
+      await decision.getByRole('radio', { name: 'Approve', exact: true }).check()
+      await decision.getByRole('button', { name: 'Approve', exact: true }).click()
+      await expect(decision.getByRole('alert')).toHaveText('This discards 1 note. Select Approve again to confirm.')
+      await decision.getByRole('button', { name: 'Discard and approve' }).click()
+      await expect(page.getByRole('heading', { name: 'Approved' })).toBeVisible()
+      await cli.exited
+      expect(cli.stdout()).toMatch(/^APPROVED: No changes requested\./)
+    } finally {
+      cli.child.kill()
+    }
+  })
+})

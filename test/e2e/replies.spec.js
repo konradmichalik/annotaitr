@@ -44,7 +44,7 @@ async function firstVideoRoundWithReply(page, env) {
     const saved = async () => (await (await fetch(`${await first.url}/api/annotations`)).json()).data.annotations
     await expect.poll(async () => (await saved()).length).toBe(1)
     const id = (await saved())[0].id
-    await page.getByRole('button', { name: 'Feedback' }).click()
+    await page.getByRole('button', { name: /^Send feedback/ }).click()
     await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible({ timeout: 20_000 })
     const sessionId = (await first.exited, first.stdout()).match(/Session: ([0-9a-f]{12})/)[1]
     spawnSync('node', ['index.js', 'reply', '--session', sessionId, '--to', id.slice(0, 8), '--status', 'applied', '--text', 'Moved the button'], {
@@ -75,9 +75,8 @@ test.describe('replies from the last round', () => {
       await page.keyboard.press('Escape')
       await expect(section.getByText('You: Green')).toBeVisible()
       await expect(section.getByText('1 to send')).toBeVisible()
-      await expect(page.getByRole('button', { name: 'Approve with Notes' })).toBeVisible()
       await expect(page.locator('.previous-round-badge[aria-label*="reply pending"]')).toHaveCount(1)
-      const feedback = page.getByRole('button', { name: /^Feedback/ })
+      const feedback = page.getByRole('button', { name: /^Send feedback/ })
       await expect(feedback).toBeEnabled()
       await expect(feedback).toHaveAttribute('title', 'Submit 1 reply')
       await feedback.click()
@@ -199,7 +198,7 @@ test.describe('replies from the last round', () => {
       await expect(page.getByRole('dialog')).toHaveCount(0)
       await page.getByPlaceholder('Add a comment (optional)...').fill('New note')
       await page.getByRole('button', { name: 'Add', exact: true }).click()
-      await page.getByRole('button', { name: 'Feedback' }).click()
+      await page.getByRole('button', { name: /^Send feedback/ }).click()
       await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
       await cli.exited
       const stdout = cli.stdout()
@@ -485,16 +484,17 @@ test.describe('replies from the last round', () => {
     const cli = startCli([image], env)
     try {
       await page.goto(await cli.url)
-      const approve = page.getByRole('button', { name: /^Approve/ })
+      const approve = page.getByRole('button', { name: 'Approve', exact: true })
       await approve.click()
-      const gate = page.getByRole('dialog', { name: /question.*not answered/ })
-      await expect(gate.getByText('Green or blue?')).toBeVisible()
-      await expect(gate.getByRole('button', { name: 'Answer' })).toBeFocused()
-      await page.keyboard.press('Escape')
+      const decision = page.getByRole('dialog', { name: 'Finish review' })
+      await expect(decision.getByRole('radio', { name: 'Approve', exact: true })).toBeChecked()
+      await expect(decision.getByText('The agent asked 1 question you have not answered.')).toBeVisible()
+      await expect(decision.getByText('Green or blue?')).toBeVisible()
+      await decision.getByRole('button', { name: 'Answer' }).click()
       await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' })).toBeVisible()
       await page.keyboard.press('Escape')
       await approve.click()
-      await page.getByRole('dialog', { name: /question.*not answered/ }).getByRole('button', { name: 'Approve anyway' }).click()
+      await decision.getByRole('button', { name: 'Approve', exact: true }).click()
       await expect(page.getByRole('heading', { name: /Approved/ })).toBeVisible()
       await cli.exited
       expect(cli.stdout()).toMatch(/^APPROVED/)
@@ -581,8 +581,12 @@ test.describe('replies from the last round', () => {
       await dialog.getByRole('button', { name: 'Send' }).click()
       await expect(dialog.getByText('pending, sent with your decision')).toBeVisible()
       await page.keyboard.press('Escape')
-      await page.getByRole('button', { name: /^Approve/ }).click()
-      await expect(page.getByRole('dialog', { name: /not answered/ })).toHaveCount(0)
+      await page.getByRole('button', { name: 'Other decisions' }).click()
+      const decision = page.getByRole('dialog', { name: 'Finish review' })
+      await expect(decision.getByText('1 pending reply to round 1 goes out with this.')).toBeVisible()
+      await decision.getByRole('radio', { name: 'Approve with notes' }).check()
+      await expect(decision.getByText(/not answered/)).toHaveCount(0)
+      await decision.getByRole('button', { name: 'Approve with notes' }).click()
       await expect(page.getByRole('heading', { name: 'Approved with Notes' })).toBeVisible()
       await expect(page.getByText(/1 reply passed along as notes/)).toBeVisible()
       await cli.exited
@@ -592,29 +596,31 @@ test.describe('replies from the last round', () => {
     }
   })
 
-  test('keeps focus inside the approval gate and returns it to Approve', async ({ page }) => {
+  test('keeps focus inside the decision dialog and returns it to the split button', async ({ page }) => {
     await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Button colour', color: '#bf616a' }, 'question', 'Green or blue?')
     const cli = startCli([image], env)
     try {
       await page.goto(await cli.url)
-      const approve = page.getByRole('button', { name: /^Approve/ })
+      const approve = page.getByRole('button', { name: 'Approve', exact: true })
       await approve.click()
-      const gate = page.getByRole('dialog', { name: /question.*not answered/ })
-      const answer = gate.getByRole('button', { name: 'Answer' })
-      await expect(answer).toBeFocused()
-      // An app re-render behind the gate must not move focus.
+      const decision = page.getByRole('dialog', { name: 'Finish review' })
+      const option = decision.getByRole('radio', { name: 'Approve', exact: true })
+      await expect(option).toBeFocused()
+      // An app re-render behind the dialog must not move focus.
       await page.getByRole('button', { name: /zoom in/i }).evaluate((b) => b.click())
-      await expect(answer).toBeFocused()
+      await expect(option).toBeFocused()
       await page.keyboard.press('Shift+Tab')
-      await expect(gate.getByRole('button', { name: 'Approve anyway' })).toBeFocused()
+      await expect(decision.getByRole('button', { name: 'Approve', exact: true })).toBeFocused()
       await page.keyboard.press('Tab')
-      await expect(answer).toBeFocused()
-      await page.keyboard.press('Shift+Tab')
-      await page.keyboard.press('Shift+Tab')
-      await expect(answer).toBeFocused()
-      await page.keyboard.press('Escape')
+      await expect(option).toBeFocused()
+      await decision.getByRole('button', { name: 'Answer' }).click()
       await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' })).toBeVisible()
       await page.keyboard.press('Escape')
+      await expect(approve).toBeFocused()
+      await page.keyboard.press('ControlOrMeta+Shift+Enter')
+      await expect(decision).toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(decision).toHaveCount(0)
       await expect(approve).toBeFocused()
     } finally {
       cli.child.kill()

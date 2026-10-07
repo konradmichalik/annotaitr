@@ -67,7 +67,7 @@ test('a voice note is recorded, transcribed into the comment field and submitted
     await expect(field).toHaveValue('Logo: Move the logo a bit to the left.')
     await expect(field).toBeFocused()
     await page.getByRole('button', { name: 'Add', exact: true }).click()
-    await page.getByRole('button', { name: 'Feedback' }).click()
+    await page.getByRole('button', { name: /^Send feedback/ }).click()
     await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
 
     expect(await cli.exited).toBe(0)

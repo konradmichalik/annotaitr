@@ -71,7 +71,7 @@ test('a video gets a point and a span annotation and the CLI prints frames for b
     await expect(page.getByRole('button', { name: /Annotation 1 from 00:00.900 to 00:01.200/ })).toBeVisible()
     await expect(page.getByRole('button', { name: /Annotation 2 at 00:01.000/ })).toBeVisible()
 
-    await page.getByRole('button', { name: 'Feedback' }).click()
+    await page.getByRole('button', { name: /^Send feedback/ }).click()
     await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible({ timeout: 20_000 })
 
     expect(await cli.exited).toBe(0)
@@ -179,7 +179,7 @@ test('a GIF steps frame by frame and exports the annotated frame', async ({ page
     await drawBox(page, [5, 5], [30, 25])
     await addComment(page, 'Second frame')
 
-    await page.getByRole('button', { name: 'Feedback' }).click()
+    await page.getByRole('button', { name: /^Send feedback/ }).click()
     await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible({ timeout: 20_000 })
 
     expect(await cli.exited).toBe(0)

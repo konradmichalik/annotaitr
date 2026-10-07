@@ -57,7 +57,7 @@ test('a PDF is annotated page by page and the CLI prints per-page feedback with 
     await page.getByRole('button', { name: 'Save' }).click()
 
     await expect(page.locator('.app-sidebar')).toContainText('Page 2')
-    await page.getByRole('button', { name: /^Feedback/ }).click()
+    await page.getByRole('button', { name: /^Send feedback/ }).click()
     await expect(page.getByText('Feedback Submitted')).toBeVisible()
 
     expect(await cli.exited).toBe(0)
@@ -119,7 +119,7 @@ test('text on a PDF page is selected word by word and quoted in the feedback', a
     await page.getByRole('button', { name: 'Add', exact: true }).click()
     await expect(page.locator('.app-sidebar')).toContainText('"North grew 12% South stayed"')
 
-    await page.getByRole('button', { name: /^Feedback/ }).click()
+    await page.getByRole('button', { name: /^Send feedback/ }).click()
     expect(await cli.exited).toBe(0)
     expect(cli.stdout()).toMatch(/### 1\. \[#[0-9a-f]{8}\] Selected text: [^\n]*\nQuote: "North grew 12% South stayed"\n> Say rose/)
     await rm(cli.stdout().match(/Overview: (.*)\/overview\.png/)[1], { recursive: true, force: true })

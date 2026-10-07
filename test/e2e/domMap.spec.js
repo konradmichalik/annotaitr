@@ -139,7 +139,7 @@ test('the Element tool outlines and picks a page element, other tools only name 
     await expect(page.locator('.comment-popover-element')).toHaveText('Element: button#contact "Contact us"')
     await page.getByRole('button', { name: 'Add', exact: true }).click()
 
-    await page.getByRole('button', { name: 'Feedback' }).click()
+    await page.getByRole('button', { name: /^Send feedback/ }).click()
     await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
     expect(await new Promise((resolve) => child.on('exit', resolve))).toBe(0)
     expect(stdout()).toMatch(/### 1\. \[#\w+\] Selected element: .*\nElement: img "Team photo" \("team.png"\) · #hero\n> Swap the photo/)
@@ -210,7 +210,7 @@ test('the viewport picker captures the page again in place, after confirming tha
     expect(await meta()).toMatchObject({ width: 812, height: 375, capture: { section: { anchor: '#pricing' }, delayMs: 200 } })
 
     await pinAt(30, 30)
-    await page.getByRole('button', { name: 'Feedback' }).click()
+    await page.getByRole('button', { name: /^Send feedback/ }).click()
     await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
     expect(await new Promise((resolve) => child.on('exit', resolve))).toBe(0)
     expect(stdout()).toContain('Captured at mobile landscape (812×375), section #pricing, after 200 ms\n')
