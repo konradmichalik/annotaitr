@@ -11,7 +11,7 @@ function ThreadEntry({ thread, onActivate }) {
         <StatusChip status={threadStatus(thread)} display={STATUS_DISPLAY} />
         <span className="previous-round-entry-text">{thread.annotation.text}</span>
         {lastReply && (
-          <span className="previous-round-entry-reply">{AUTHOR_LABELS.agent}: {lastReply.text}</span>
+          <span className="previous-round-entry-reply">{AUTHOR_LABELS[lastReply.author ?? 'agent']}: {lastReply.text}</span>
         )}
         {thread.anchor === 'orphan' && thread.reason && <span className="previous-round-entry-reason">{thread.reason}</span>}
       </button>

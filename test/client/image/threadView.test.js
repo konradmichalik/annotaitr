@@ -140,7 +140,17 @@ describe('pending replies and open questions', () => {
     expect(openQuestions([asked, answered, applied])).toEqual([asked])
   })
 
-  it('keeps the agent status of a thread whose last reply is a pending human one', () => {
+  it('reads a thread as unanswered while the reviewer has the last sent word', () => {
+    const sent = thread(box(), { replies: [{ author: 'agent', status: 'question', text: '?' }, { author: 'human', text: 'Green' }] })
+    expect(threadStatus(sent)).toBe('none')
+  })
+
+  it('ignores a pending reply when reading the status', () => {
     expect(threadStatus(answered)).toBe('question')
+  })
+
+  it('does not list a question the reviewer answered, sent or pending', () => {
+    const sent = thread(box(), { replies: [{ author: 'agent', status: 'question', text: '?' }, { author: 'human', text: 'Green' }] })
+    expect(openQuestions([asked, answered, sent])).toEqual([asked])
   })
 })

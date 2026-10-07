@@ -13,9 +13,10 @@ export const STATUS_DISPLAY = {
   none: { icon: '·', label: 'no reply' }
 }
 
-// Reviewer replies carry no status, so a pending answer never hides the agent's last one.
+// The status of the last sent reply: a reviewer's answer reads as no reply until the agent responds, a pending one is not sent yet.
 export function threadStatus(thread) {
-  return thread.replies.findLast((r) => r.status)?.status ?? 'none'
+  const last = thread.replies.findLast((r) => !r.pending)
+  return last?.author === 'human' ? 'none' : (last?.status ?? 'none')
 }
 
 /** A thread carried into this round has no number of its own, it keeps the round and number it was raised with. */

@@ -457,6 +457,11 @@
   cursor: pointer;
 }
 
+.reply-list-remove:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 .reply-list-time {
   color: var(--text-muted);
   font-size: 0.6875rem;
