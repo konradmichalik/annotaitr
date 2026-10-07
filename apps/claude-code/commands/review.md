@@ -98,6 +98,11 @@ declined, when you will do it, or the question. Replies can run in parallel. A
 Re-open the target afterwards so the reviewer sees the replies. Markdown
 feedback has no session yet.
 
+Image feedback can also contain a `## Replies to round N` section: those
+threads continue an earlier discussion, so act on the reviewer's reply and
+answer it with `annotaitr reply` on the same handle. A `Feedback: N replies to
+round N, no new marks.` decision is a valid decision with work in it.
+
 In both shapes: if the output shows `APPROVED:`, the target was approved with
 no changes needed — confirm and stop. If it shows `APPROVED WITH NOTES:`, it
 was approved as-is but carries annotations; do **not** make changes, read the

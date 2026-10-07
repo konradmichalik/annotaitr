@@ -317,6 +317,29 @@ an existing `ANNOTAITR_SESSION_DIR` must meet that too. If a session cannot be
 saved, a warning goes to stderr and the decision is printed as usual. Several
 `reply` calls may run at the same time, each waits for the others.
 
+### Replying to the agent
+
+In round 2 the reviewer can answer a thread from the previous round in the
+annotator. A decision may carry only replies and no new marks. Its first line
+then reads `Feedback: 1 reply to round 1, no new marks.`, or
+`APPROVED WITH NOTES: 1 reply to round 1. ...` when the target is approved.
+
+The agent sees the exchange under "Replies to round N", after the feedback for
+any new marks and before the `Session:` line:
+
+```
+## Replies to round 1
+
+### [#b7210e44] Comment pin: bottom (~80% from top, ~50% from left)
+> Round 1, mark 2: Button-Farbe passt nicht zur CI
+Agent (question): Soll es das CI-Grün #2e7d32 sein oder das Blau aus dem Header?
+Reviewer: CI-Grün #2e7d32
+```
+
+Answered threads continue into the next round on the same handle, so
+`annotaitr reply --to <handle>` works on them. All other threads end with the
+decision.
+
 ## Environment variables
 
 | Variable | Applies to | Description |
