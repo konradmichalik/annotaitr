@@ -9,6 +9,7 @@ describe('shortcutGroups', () => {
     expect(titles('pdf')).toEqual(['Tools', 'Notes', 'Pages', 'Review'])
     expect(titles('video')).toEqual(['Tools', 'Notes', 'Timeline', 'Review'])
     expect(titles('markdown')).toEqual(['Tools', 'Notes', 'Search', 'Review'])
+    expect(titles('image')).toEqual(['Tools', 'Notes', 'View', 'Review'])
   })
 
   it('leaves out the keys another mode uses', () => {

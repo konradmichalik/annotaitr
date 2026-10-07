@@ -5,8 +5,7 @@
  */
 import { MOD, ALT } from './keys.js'
 
-const STILL = ['image', 'url', 'pdf']
-const IMAGE = [...STILL, 'video']
+const IMAGE = ['image', 'url', 'pdf', 'video']
 const ALL = [...IMAGE, 'markdown']
 
 /** The mode name the shortcut list shows next to its title. */
@@ -54,7 +53,14 @@ const GROUPS = [
     items: [
       { label: 'Previous, next page', keys: ['[', ']'], kinds: ['pdf'] },
       { label: 'First, last page', keys: ['Home', 'End'], kinds: ['pdf'] },
-      { label: 'Zoom', keys: [MOD, 'Scroll'], kinds: STILL }
+      { label: 'Zoom', keys: [MOD, 'Scroll'], kinds: ['pdf'] }
+    ]
+  },
+  {
+    id: 'view',
+    title: 'View',
+    items: [
+      { label: 'Zoom', keys: [MOD, 'Scroll'], kinds: ['image', 'url'] }
     ]
   },
   {
