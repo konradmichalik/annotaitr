@@ -19,7 +19,7 @@ const CLOSE_OPTIONS = [
   { value: '5', label: '5 s' }
 ]
 
-function GeneralSection({ settings, updateSetting, drafts }) {
+function GeneralSection({ settings, updateSetting, drafts, tips }) {
   return (
     <div className="settings-section-body">
       <ThemeTiles value={settings.theme} onChange={(v) => updateSetting('theme', v)} />
@@ -31,7 +31,7 @@ function GeneralSection({ settings, updateSetting, drafts }) {
           <Toggle id="setting-drafts" checked={settings.keepDrafts} onChange={(v) => updateSetting('keepDrafts', v)} />
         </SettingRow>
       )}
-      <SettingRow id="setting-hints" label="Tool hints" description="The help line in the status bar">
+      <SettingRow id="setting-hints" label="Tool hints" description={tips ? 'First-run tips and the help line in the status bar' : 'The help line in the status bar'}>
         <Toggle id="setting-hints" checked={settings.toolHints} onChange={(v) => updateSetting('toolHints', v)} />
       </SettingRow>
       <SettingRow id="setting-intent" label="Default intent" description="For new shapes and selections. Pins always start as Question" labelFor="setting-intent-select">
@@ -117,7 +117,7 @@ function SettingsDialog({
 
   const current = sections.find((section) => section.id === active) ?? sections[0]
   const props = { settings, updateSetting }
-  let body = <GeneralSection {...props} drafts={drafts} />
+  let body = <GeneralSection {...props} drafts={drafts} tips={kind === 'markdown'} />
   if (current.render) { body = current.render(props) }
   if (current.id === 'shortcuts') { body = <ShortcutList kind={kind} searchRef={searchRef} /> }
   if (current.id === 'about') { body = <AboutSection /> }

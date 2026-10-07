@@ -52,10 +52,10 @@ const BAR_KEYS = { 1: 'change', 2: 'add', 3: 'remove', 4: 'question' }
  * and Open, then the composer. `onAddAfter` inserts text after a text
  * selection; without it (an element, a token, the source view) Add is not offered.
  */
-export function Toolbar({ highlightElement, onAnnotate, onAddAfter = null, onClose, onDelete, onQuickLabel, requestedStep: requestedStepProp, editAnnotation, elementMode, insertionMode, linkUrl, onOpenLink }) {
+export function Toolbar({ highlightElement, onAnnotate, onAddAfter = null, onClose, onDelete, onQuickLabel, requestedStep: requestedStepProp, editAnnotation, elementMode, insertionMode, linkUrl, onOpenLink, newIntent = 'change' }) {
   const [step, setStep] = useState('menu')
   const [initialText, setInitialText] = useState('')
-  const [intent, setIntent] = useState('change')
+  const [intent, setIntent] = useState(newIntent)
   const [position, setPosition] = useState(null)
   const [labelPickerOpen, setLabelPickerOpen] = useState(false)
   const roving = useRovingFocus()
@@ -79,13 +79,13 @@ export function Toolbar({ highlightElement, onAnnotate, onAddAfter = null, onClo
     } else if (requestedStepProp) {
       setStep('input')
       setInitialText('')
-      setIntent('change')
+      setIntent(newIntent)
     } else {
       setStep('menu')
       setInitialText('')
-      setIntent('change')
+      setIntent(newIntent)
     }
-  }, [highlightElement, requestedStepProp, editAnnotation, elementMode, insertionMode])
+  }, [highlightElement, requestedStepProp, editAnnotation, elementMode, insertionMode, newIntent])
 
   const openComposer = (nextIntent, text = '') => {
     setIntent(nextIntent)
@@ -93,7 +93,7 @@ export function Toolbar({ highlightElement, onAnnotate, onAddAfter = null, onClo
     setStep('input')
   }
 
-  // Keys 1 to 4 pick an intent, any other printable key starts a Change comment with that key.
+  // Keys 1 to 4 pick an intent, any other printable key starts a comment with the default intent and that key.
   useEffect(() => {
     if (step !== 'menu' || !highlightElement || editAnnotation || insertionMode) {return}
     const handleKeyDown = (e) => {
@@ -106,11 +106,11 @@ export function Toolbar({ highlightElement, onAnnotate, onAddAfter = null, onClo
       e.preventDefault()
       if (picked === 'remove') { onAnnotate('DELETION') }
       else if (picked === 'add') { onAddAfter() }
-      else { openComposer(picked ?? 'change', picked ? '' : e.key) }
+      else { openComposer(picked ?? newIntent, picked ? '' : e.key) }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [step, highlightElement, editAnnotation, insertionMode, onAddAfter, onAnnotate])
+  }, [step, highlightElement, editAnnotation, insertionMode, onAddAfter, onAnnotate, newIntent])
 
   useEffect(() => {
     if (!highlightElement) {

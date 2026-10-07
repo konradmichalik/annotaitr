@@ -26,9 +26,12 @@ export function isGeneral(annotation) {
 
 export const isNumbered = (annotation) => annotation.type !== 'NOTES' && !isGeneral(annotation)
 
-/** The intent a new note of this type starts with: Question for a pin, Change for everything else. */
-export function defaultIntent(type) {
-  return FIXED_BY_TYPE[type] ?? (type === 'pin' ? 'question' : 'change')
+/**
+ * The intent a new note of this type starts with: Question for a pin,
+ * `preferred` (the Default intent setting, Change unless set) for everything else.
+ */
+export function defaultIntent(type, preferred = 'change') {
+  return FIXED_BY_TYPE[type] ?? (type === 'pin' ? 'question' : (IDS.includes(preferred) ? preferred : 'change'))
 }
 
 /** The note's intent; old data without the field gets the default of its type. Null for general comments. */

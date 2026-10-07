@@ -260,7 +260,7 @@ function SelectionToolbar({ point, onEdit, onRemove, onClose }) {
 export default function ImageCanvas({
   imageUrl, imageAlt = 'Image being annotated', imageWidth, imageHeight, activeTool, annotations, zoom, onZoomBy,
   editingAnnotationId, onAddAnnotation, onUpdateAnnotation, onCommitEdit, onRemoveAnnotation, onRequestEdit,
-  onUndo, onRedo, colorMode = 'intent', fixedColor = null,
+  onUndo, onRedo, colorMode = 'intent', fixedColor = null, newIntent = 'change',
   // A video passes its player element, the frame-visible subset of its
   // annotations and a hook to pause playback before any pointer interaction.
   // `nextNumber` is the number the note being drawn will keep.
@@ -552,11 +552,11 @@ export default function ImageCanvas({
 
   // Every `setPending` call that starts a brand-new annotation (as opposed to editing an existing one).
   const createPending = useCallback((partial) => {
-    setPending(partial)
+    setPending({ ...partial, intent: defaultIntent(partial.type, newIntent) })
     // The pointer now rests on the new mark, so the hover outline would
     // otherwise linger over it until the next mouse move.
     setHoverPoint(null)
-  }, [])
+  }, [newIntent])
 
   // The tool-specific dispatch for "a drag/click just finished, and it was a
   // draw gesture rather than a move/resize/select" - split out of
@@ -679,15 +679,16 @@ export default function ImageCanvas({
   const openThread = previousVisible && openThreadHandle ? previousThreads.find((t) => t.handle === openThreadHandle) : null
 
   let livePreview = null
+  const previewIntent = (type) => defaultIntent(type, newIntent)
   if (activeTool === 'box' && dragStart && dragPoint) {
-    livePreview = { type: 'box', geometry: boxFromPoints(dragStart, dragPoint), color: nextColor }
+    livePreview = { type: 'box', geometry: boxFromPoints(dragStart, dragPoint), color: nextColor, intent: previewIntent('box') }
   } else if (activeTool === 'arrow' && dragStart && dragPoint) {
-    livePreview = { type: 'arrow', geometry: { x1: dragStart.x, y1: dragStart.y, x2: dragPoint.x, y2: dragPoint.y }, color: nextColor, arrowStyle: 'head' }
+    livePreview = { type: 'arrow', geometry: { x1: dragStart.x, y1: dragStart.y, x2: dragPoint.x, y2: dragPoint.y }, color: nextColor, arrowStyle: 'head', intent: previewIntent('arrow') }
   } else if (isPointCollectingTool(activeTool) && strokePoints.length > 1) {
-    livePreview = { type: activeTool, geometry: { points: strokePoints }, color: nextColor }
+    livePreview = { type: activeTool, geometry: { points: strokePoints }, color: nextColor, intent: previewIntent(activeTool) }
   } else if (activeTool === 'text' && dragStart && dragPoint) {
     const selection = selectWords(words, wordIndexAt(words, dragStart), wordIndexAt(words, dragPoint))
-    livePreview = selection ? { type: 'text', ...selection, color: nextColor } : null
+    livePreview = selection ? { type: 'text', ...selection, color: nextColor, intent: previewIntent('text') } : null
   }
 
   // Only the Element tool outlines what is under the pointer; every tool
@@ -717,7 +718,7 @@ export default function ImageCanvas({
       >
         <defs>
           <marker id="arrowhead-preview" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 Z" fill={pending ? markColor(pending) : (nextColor ?? intentMark(defaultIntent('arrow')))} />
+            <path d="M0,0 L10,5 L0,10 Z" fill={pending ? markColor(pending) : (nextColor ?? intentMark(defaultIntent('arrow', newIntent)))} />
           </marker>
           {annotations.map((annotation) => annotation.type === 'arrow'
             && ['head', 'double'].includes(resolveArrowStyle(annotation.arrowStyle)) && (
@@ -783,7 +784,7 @@ export default function ImageCanvas({
           anchorPoint={pendingAnchorPoint}
           title={`Note ${pendingNumber}, ${noteType(pending).shape.toLowerCase()}`}
           initialText={pending.text || ''}
-          initialIntent={pending.id ? intentOf(pending.before) : defaultIntent(pending.type)}
+          initialIntent={pending.id ? intentOf(pending.before) : pending.intent}
           initialColor={pending.color}
           annotationType={pending.type}
           initialArrowStyle={pending.arrowStyle}

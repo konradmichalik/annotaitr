@@ -518,6 +518,8 @@ export default function App() {
               krokiServerUrl={serverConfig.krokiServerUrl}
               selectedAnnotationId={selectedAnnotationId}
               crossFileSearch={crossFileSearchProps}
+              newIntent={settings.defaultIntent}
+              toolHints={settings.toolHints}
             />
           ) : (
             <SourceView
@@ -529,6 +531,7 @@ export default function App() {
               onEditAnnotation={handleEditAnnotation}
               onDeleteAnnotation={handleDeleteAnnotation}
               onSelectAnnotation={handleSelectAnnotation}
+              newIntent={settings.defaultIntent}
             />
           )}
         </div>

@@ -35,6 +35,8 @@ export const Viewer = forwardRef(function Viewer({
   krokiServerUrl,
   selectedAnnotationId: _selectedAnnotationId,
   crossFileSearch,
+  newIntent = 'change',
+  toolHints = true,
 }, ref) {
   const [pinpointTarget, setPinpointTarget] = useState(null)
   const [hoverHintTarget, setHoverHintTarget] = useState(null)
@@ -455,9 +457,10 @@ export const Viewer = forwardRef(function Viewer({
           insertionMode={toolbarState?.insertionMode || false}
           linkUrl={toolbarState?.linkUrl || null}
           onOpenLink={toolbarState?.linkIsOpenable ? onOpenFile : null}
+          newIntent={newIntent}
         />
         {pinpointMode && <PinpointOverlay target={pinpointTarget} />}
-        {!pinpointMode && <BlockHoverHint target={hoverHintTarget} />}
+        {!pinpointMode && toolHints && <BlockHoverHint target={hoverHintTarget} />}
       </article>
       {activeSearch.isOpen && (
         <SearchBar

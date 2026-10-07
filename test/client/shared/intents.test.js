@@ -21,6 +21,14 @@ describe('defaultIntent', () => {
     expect(defaultIntent('DELETION')).toBe('remove')
     expect(defaultIntent('INSERTION')).toBe('add')
   })
+
+  it('starts new marks with the preferred intent, except pins and fixed types', () => {
+    expect(defaultIntent('box', 'remove')).toBe('remove')
+    expect(defaultIntent('COMMENT', 'question')).toBe('question')
+    expect(defaultIntent('pin', 'add')).toBe('question')
+    expect(defaultIntent('DELETION', 'add')).toBe('remove')
+    expect(defaultIntent('box', 'praise')).toBe('change')
+  })
 })
 
 describe('intentOf', () => {
