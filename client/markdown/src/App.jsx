@@ -167,7 +167,7 @@ export default function App() {
     annotations,
     contentHash: activeFile?.contentHash,
     submitted,
-    enabled: settings.autoSaveDrafts,
+    enabled: settings.keepDrafts,
   })
 
   const clearSelection = useCallback(() => setSelectedAnnotationId(null), [])

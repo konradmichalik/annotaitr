@@ -54,8 +54,8 @@ function BehaviorTab({ settings, updateSetting }) {
 
       <SettingRow label="Auto-save drafts" description="Save annotation progress to restore on reload">
         <Toggle
-          checked={settings.autoSaveDrafts}
-          onChange={v => updateSetting('autoSaveDrafts', v)}
+          checked={settings.keepDrafts}
+          onChange={v => updateSetting('keepDrafts', v)}
           label="Auto-save drafts"
         />
       </SettingRow>

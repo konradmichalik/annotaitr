@@ -1,12 +1,13 @@
 import { useEffect } from 'react'
-import { useSettings as useStoredSettings, SHARED_DEFAULTS } from '../../../shared/hooks/useSettings.js'
+import { useSettings as useStoredSettings } from '../../../shared/hooks/useSettings.js'
+import { SHARED_DEFAULTS } from '../../../shared/utils/settings.js'
 
 const DEFAULTS = {
   ...SHARED_DEFAULTS,
   contentWidth: 900,
   fontSize: 15,
   defaultMode: 'select',
-  autoSaveDrafts: true,
+  keepDrafts: true,
 }
 
 export function useSettings() {
