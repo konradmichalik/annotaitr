@@ -182,12 +182,14 @@ A status dot plus the words, never the dot alone. The tooltip names the caller (
 
 The countdown is one line with a progress bar. No duplicated close hints.
 
+Session gone builds its exports in the browser, since the server has stopped: the Markdown is a short list of the notes rather than the agent's output, and the image is drawn from the picture last shown with its marks.
+
 ## Settings
 
 - Sections in a left column: General, Markdown, Shortcuts, About. Changes apply immediately. The footer only holds `Reset to defaults`.
-- General: Theme (Light, Dark, System as preview tiles), Close tab after a decision (Never, Now, 3 s, 5 s), Keep drafts, Tool hints, Default intent.
+- General: Theme (Light, Dark, System as preview tiles), Close tab after a decision (Never, Now, 3 s, 5 s), Keep drafts (markdown only, the image modes keep no drafts), Tool hints, Default intent.
 - Markdown: content width, font size, starting mode.
-- Shortcuts: a searchable list grouped by Tools, Notes, Pages or Timeline, Review. It lists only the keys of the open mode and opens directly with `?`.
+- Shortcuts: a searchable list grouped by Tools, Notes, Pages or Timeline, Review; markdown adds Search, still images and web pages have View for zoom. It lists only the keys of the open mode and opens directly with `?`.
 
 ## Shortcuts
 

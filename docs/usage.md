@@ -373,8 +373,12 @@ with a modifier held:
 | `C` | Pin | Pinpoint |
 | `Esc` | Back to Select | |
 | `G` | General comment | General comment |
+| `?` | Shortcut list | Shortcut list |
 
-The status bar names what the active tool does and its keys. The feedback
+`?` opens the full, searchable list of the open mode's keys in Settings,
+under **Shortcuts**; the keyboard button in the header does the same. The
+status bar names what the active tool does and its keys (unless **Tool hints**
+is off). The feedback
 panel lists one card per note: its number on the intent's colour, the intent
 as icon and word, the location with the kind of mark (`Page 1 · Box`), then
 the quote and the comment. The number is the one the agent reads in the output
@@ -398,8 +402,8 @@ the expand button opens a larger editor, which `Esc` collapses again.
 Selecting text in markdown mode shows a bar with **Change** (`1` or
 Ctrl/Cmd+K), **Add** (`2`, inserts text after the selection), **Remove** (`3`
 or Ctrl/Cmd+D), **Ask** (`4`, a comment with the intent Question), **Label**
-(Alt+1 to 0) and, on a link, **Open**. Any other key starts a Change comment
-with that key. **Add** is offered on text selections only; Alt+click still
+(Alt+1 to 0) and, on a link, **Open**. Any other key starts a comment with
+the [default intent](#settings) and that key. **Add** is offered on text selections only; Alt+click still
 inserts text at any position. The arrow keys move between the bar's buttons.
 
 ### Intents and numbers
@@ -410,7 +414,7 @@ takes its colour:
 
 | Intent | Meaning for the agent | Default for |
 | --- | --- | --- |
-| Change | Apply the comment to what the note points at | Shapes, text selections, comments on a page or a time, markdown comments |
+| Change | Apply the comment to what the note points at | Shapes, text selections, comments on a page or a time, markdown comments (unless **Default intent** in the settings names another) |
 | Add | Add something there; a markdown insertion carries the text | Markdown insertions |
 | Remove | Remove what the note points at | Markdown deletions |
 | Question | The reviewer asks, no edit is requested | Pins |
@@ -456,6 +460,42 @@ The dialog's optional summary is the general comment: it is prefilled with an
 existing one and replaces it. Ctrl/Cmd+Enter submits the dialog. Outside the
 dialog Ctrl/Cmd+Enter only saves the note being written, it never sends the
 review.
+
+The done page then shows what happened:
+
+| Outcome | Shows |
+| --- | --- |
+| Send feedback | `Sent to <agent>`, the counts and the first notes |
+| Approve | That the agent continues without changes to the target |
+| Approve with notes | The notes in a dashed box, passed along as context |
+| Session gone | `<agent> stopped waiting`: the session ended before the decision arrived, so nothing was delivered |
+
+After a decision the tab closes as set in **Close tab after a decision**, with
+a countdown that **Keep open** stops. The Session gone page never closes on
+its own. It offers **Copy as Markdown**, **Save annotated image** (images and
+PDF pages) and **Export JSON**, all made in the browser since the server is
+no longer there, so the notes can go into the next session.
+
+## Settings
+
+The gear in the header opens the settings. Changes apply right away and are
+kept in cookies on `localhost`, so they carry over between runs and modes;
+**Reset to defaults** restores them.
+
+| Section | Setting | Values |
+| --- | --- | --- |
+| General | Theme | Light, Dark, System |
+| General | Close tab after a decision | Never (default), Now, 3 s, 5 s |
+| General | Keep drafts | Markdown only: unsent notes survive a reload or a closed tab (default on). Image modes keep the notes on the server until the decision |
+| General | Tool hints | The help line in the status bar, and in markdown mode the first-run hint for Shift+click (default on) |
+| General | Default intent | The intent new shapes and text selections start with (default Change). Pins always start as Question |
+| Markdown | Content width, Font size, Starting mode | Markdown mode only |
+| Shortcuts | | The keys of the open mode, searchable, also opened with `?` |
+| About | | Version and repository |
+
+Settings saved by earlier versions are migrated when the annotator loads:
+**Auto-save drafts** becomes **Keep drafts**, and the auto-close delay keeps
+its value.
 
 ## Environment variables
 
