@@ -47,6 +47,22 @@ describe('threads route', () => {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: 'x' })
     })
     expect(res.status).toBe(404)
+    expect(await res.json()).toEqual({ success: false, error: 'No thread #deadbeef in round 1' })
+    expect(withStore.replies.count()).toBe(0)
+  })
+
+  it('rejects blank and overlong reply text with the store message', async () => {
+    const withStore = { ...session, replies: createReplyStore(session.previous) }
+    const url = await serve(createThreadsRouter({ session: withStore, current: () => ({}) }))
+    const post = (text) => fetch(`${url}/api/threads/a3f19c2e/replies`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text })
+    })
+    const blank = await post('   ')
+    expect(blank.status).toBe(400)
+    expect(await blank.json()).toEqual({ success: false, error: 'A reply needs text' })
+    const long = await post('x'.repeat(4001))
+    expect(long.status).toBe(400)
+    expect(await long.json()).toEqual({ success: false, error: 'Reply text is longer than 4000 characters' })
     expect(withStore.replies.count()).toBe(0)
   })
 
@@ -66,6 +82,7 @@ describe('threads route', () => {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: 'x' })
     })
     expect(res.status).toBe(404)
+    expect(await res.json()).toEqual({ success: false, error: 'No review session to reply in' })
   })
 
   it('answers an empty list without a previous round', async () => {
