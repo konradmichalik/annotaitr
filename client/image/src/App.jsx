@@ -102,6 +102,8 @@ export default function App() {
     showPrevious, openThreadHandle, entryThread,
     openCanvasThread, showThread, showEntryThread, showTimelineThread, togglePrevious, closeThread
   } = useThreadPopover({ previousThreads, seekTo })
+  // Looked up in the current threads so a reload (a sent or removed reply) reaches the open popover.
+  const entryPopoverThread = entryThread && previous.threads.find((t) => t.handle === entryThread.handle)
   const markedThreads = previous.threads.filter(hasMark)
   const previousPageCounts = isDocument && showPrevious ? threadPageCounts(markedThreads) : undefined
   const timelineThreads = isVideo && showPrevious ? previous.threads.filter((t) => t.anchor !== 'orphan' && typeof t.annotation.time === 'number') : []
@@ -679,8 +681,8 @@ export default function App() {
               />
             </div>
             <PreviousRoundPanel round={previous.round} threads={previous.threads} showOnImage={showPrevious} onToggleShowOnImage={togglePrevious} onShow={showThread} onShowDetached={showEntryThread} />
-            {entryThread && (
-              <ThreadPopover key={entryThread.thread.handle} thread={entryThread.thread} round={previous.round} anchorPoint={entryThread.anchorPoint} onClose={closeThread} onReload={previous.reload} />
+            {entryPopoverThread && (
+              <ThreadPopover key={entryPopoverThread.handle} thread={entryPopoverThread} round={previous.round} anchorPoint={entryThread.anchorPoint} onClose={closeThread} onReload={previous.reload} />
             )}
             <AnnotationPanel
               annotations={review.ordered}

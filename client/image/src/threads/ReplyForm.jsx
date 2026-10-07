@@ -1,16 +1,18 @@
-import { useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { postReply } from './replyApi.js'
 
-export default function ReplyForm({ handle, onSent }) {
+export default function ReplyForm({ handle, onSent, error: externalError }) {
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
-  const [error, setError] = useState(null)
+  const [sendError, setError] = useState(null)
+  const error = sendError ?? externalError
   const fieldRef = useRef(null)
+  const refocusRef = useRef(false)
   const id = useId()
   const errorId = `${id}-error`
 
   const send = async () => {
-    if (sending || !text.trim()) { return }
+    if (sending) { return }
     setSending(true)
     const result = await postReply(handle, text)
     setSending(false)
@@ -20,9 +22,17 @@ export default function ReplyForm({ handle, onSent }) {
     }
     setError(null)
     setText('')
+    refocusRef.current = true
     onSent()
-    fieldRef.current?.focus()
   }
+
+  // The field is disabled while sending, so focus can only return once it is enabled again.
+  useEffect(() => {
+    if (!sending && refocusRef.current) {
+      refocusRef.current = false
+      fieldRef.current?.focus()
+    }
+  }, [sending])
 
   // Escape still reaches the popover's own listener, everything else must stay out of the annotator's shortcuts.
   const handleKeyDown = (event) => {
@@ -42,6 +52,7 @@ export default function ReplyForm({ handle, onSent }) {
         ref={fieldRef}
         className="reply-form-field"
         rows={2}
+        disabled={sending}
         value={text}
         aria-describedby={error ? errorId : undefined}
         aria-invalid={error ? true : undefined}

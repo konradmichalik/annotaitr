@@ -63,7 +63,7 @@ export function useThreadPopover({ previousThreads, seekTo }) {
   const showEntryThread = useCallback((thread, anchorPoint, opener) => {
     setOpenThreadHandle(null)
     openerRef.current = opener
-    setEntryThread({ thread, anchorPoint })
+    setEntryThread({ handle: thread.handle, anchorPoint })
   }, [])
 
   // A tick on the timeline is a thread's only entry on a video: with a mark the canvas shows it, a general comment hangs off the tick.

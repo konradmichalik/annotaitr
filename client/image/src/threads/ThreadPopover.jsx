@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useOutsideClick } from '../../../shared/hooks/useOutsideClick.js'
 import { useModalDismiss } from '../../../shared/hooks/useModalDismiss.js'
@@ -26,8 +26,10 @@ function computePosition(anchorPoint) {
 }
 
 export function ThreadPopoverContent({ thread, round, onReload }) {
+  const [removeError, setRemoveError] = useState(null)
   const handleRemove = async (reply) => {
-    await removeReply(thread.handle, reply.id)
+    const result = await removeReply(thread.handle, reply.id)
+    setRemoveError(result.error ?? null)
     onReload()
   }
   return (
@@ -53,7 +55,7 @@ export function ThreadPopoverContent({ thread, round, onReload }) {
             pendingLabel="pending, sent with your decision" onRemove={onReload && handleRemove}
           />
         : <p className="thread-popover-empty">No reply from the agent yet.</p>}
-      {onReload && <ReplyForm handle={thread.handle} onSent={onReload} />}
+      {onReload && <ReplyForm handle={thread.handle} error={removeError} onSent={() => { setRemoveError(null); onReload() }} />}
     </>
   )
 }

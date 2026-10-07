@@ -88,6 +88,25 @@ test.describe('replies from the last round', () => {
     }
   })
 
+  test('keeps a popover opened from the panel in sync when replying to a mark outside the image', async ({ page }) => {
+    await firstRoundWithReply(image, env, { id: UUID, type: 'pin', geometry: { x: 380, y: 280 }, text: 'Corner', color: '#bf616a' }, 'question', 'Which corner?')
+    await writeFile(image, makeFixturePng(200, 150))
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      await page.getByRole('region', { name: /Round 1 replies/ }).getByRole('button', { name: /1\./ }).click()
+      const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
+      const field = dialog.getByLabel('Reply to the agent')
+      await field.fill('The top one')
+      await field.press('Control+Enter')
+      await expect(dialog.getByText('pending, sent with your decision')).toBeVisible()
+      await dialog.getByRole('button', { name: 'Remove your reply' }).click()
+      await expect(dialog.getByText('pending, sent with your decision')).toHaveCount(0)
+    } finally {
+      cli.child.kill()
+    }
+  })
+
   test('shows the mark with its reply, opens the thread from the canvas and hides it on demand', async ({ page }) => {
     await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Button too close', color: '#bf616a' })
     const cli = startCli([image], env)
