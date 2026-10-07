@@ -446,7 +446,7 @@ export default function App() {
               <p className="done-backup-info">
                 {annotationCount} annotation{annotationCount === 1 ? '' : 's'} not yet submitted.
               </p>
-              <button type="button" onClick={() => setShowExport(true)} className="btn btn-feedback">
+              <button type="button" onClick={() => setShowExport(true)} className="btn btn-primary">
                 Export Annotations
               </button>
             </div>
@@ -510,7 +510,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => submit('feedback')}
-            className="btn btn-feedback"
+            className={`btn btn-feedback${decisionItemCount > 0 ? ' btn-primary' : ''}`}
             disabled={decisionItemCount === 0 || !!exportProgress}
             title={submitTitle}
           >
@@ -521,7 +521,7 @@ export default function App() {
             type="button"
             ref={approveRef}
             onClick={requestApproval}
-            className="btn btn-approve"
+            className={`btn btn-approve${decisionItemCount === 0 ? ' btn-primary' : ''}`}
             disabled={!!exportProgress}
             title={decisionItemCount > 0
               ? `Approve as-is and pass ${notesTitle} along as notes`

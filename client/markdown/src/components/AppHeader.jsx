@@ -41,7 +41,7 @@ export function AppHeader({
       <div className="header-right">
         <button
           onClick={onSubmitFeedback}
-          className="btn btn-feedback"
+          className={`btn btn-feedback${totalAnnotationCount > 0 ? ' btn-primary' : ''}`}
           disabled={totalAnnotationCount === 0}
           title={totalAnnotationCount === 0 ? 'Add annotations first' : `Submit ${totalAnnotationCount} annotation(s)`}
         >
@@ -50,7 +50,7 @@ export function AppHeader({
         </button>
         <button
           onClick={onApprove}
-          className="btn btn-approve"
+          className={`btn btn-approve${totalAnnotationCount === 0 ? ' btn-primary' : ''}`}
           title={totalAnnotationCount > 0
             ? `Approve as-is and pass ${totalAnnotationCount} annotation(s) along as notes`
             : 'Approve file as-is'}

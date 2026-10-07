@@ -19,7 +19,7 @@ export function DisconnectedScreen({ reconnectState, annotationCount, onExport }
           <p className="done-backup-info">
             {annotationCount} annotation{annotationCount !== 1 ? 's' : ''} in this file not yet submitted.
           </p>
-          <button onClick={onExport} className="btn btn-feedback">
+          <button onClick={onExport} className="btn btn-primary">
             Export Annotations
           </button>
         </div>

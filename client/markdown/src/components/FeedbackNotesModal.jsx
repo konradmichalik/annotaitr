@@ -57,7 +57,7 @@ export function FeedbackNotesModal({ isOpen, onClose, notesGroups, totalFiles })
           ))}
         </div>
         <div className="modal-footer">
-          <button className="btn btn-approve" onClick={onClose}>
+          <button className="btn btn-primary" onClick={onClose}>
             Got it
           </button>
         </div>
