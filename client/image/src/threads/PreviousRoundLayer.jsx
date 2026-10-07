@@ -12,6 +12,7 @@ const PADDING = 16
 function Badge({ thread, anchor }) {
   const { label } = statusDisplay(thread)
   const replyPending = pendingReplies(thread).length > 0
+  // The two extra characters make room for the ' ↩' appended to the label.
   const chipWidth = (label.length + (replyPending ? 2 : 0)) * CHAR_WIDTH + PADDING
   const markerWidth = badgeShowsNumber(thread) ? MARKER_SIZE + GAP : 0
   const width = markerWidth + chipWidth

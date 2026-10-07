@@ -79,7 +79,7 @@ test.describe('replies from the last round', () => {
       await expect(page.locator('.previous-round-badge[aria-label*="reply pending"]')).toHaveCount(1)
       const feedback = page.getByRole('button', { name: /^Feedback/ })
       await expect(feedback).toBeEnabled()
-      await expect(feedback).toHaveAttribute('title', 'Submit 1 reply(ies)')
+      await expect(feedback).toHaveAttribute('title', 'Submit 1 reply')
       await feedback.click()
       await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
       await cli.exited

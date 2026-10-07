@@ -55,7 +55,7 @@ export default function PreviousRoundPanel({ round, threads, showOnImage, onTogg
       <details open>
         <summary id="previous-round-summary">
           <span className="previous-round-icon">{ACTION_ICONS.history}</span>
-          Round {round} replies <span className="panel-badge">{threads.length}</span>
+          <span className="previous-round-title">Round {round} replies</span> <span className="panel-badge">{threads.length}</span>
           {toSend > 0 && <span className="previous-round-to-send">· {toSend} to send</span>}
         </summary>
         {placed.length > 0 && (

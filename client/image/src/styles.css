@@ -1913,6 +1913,12 @@ button.voice-note:hover {
   font-style: italic;
 }
 
+.previous-round-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .previous-round-to-send {
   color: var(--text-muted);
   font-size: 0.75rem;

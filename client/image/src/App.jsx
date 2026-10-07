@@ -397,7 +397,7 @@ export default function App() {
   const annotationCount = state.annotations.length
   const replyCount = pendingReplyCount(previous.threads)
   const decisionItemCount = annotationCount + replyCount
-  const notesTitle = [annotationCount > 0 && `${annotationCount} annotation(s)`, replyCount > 0 && `${replyCount} reply(ies)`].filter(Boolean).join(' and ')
+  const notesTitle = [annotationCount > 0 && `${annotationCount} annotation${annotationCount === 1 ? '' : 's'}`, replyCount > 0 && `${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`].filter(Boolean).join(' and ')
   const submitTitle = decisionItemCount === 0 ? 'Add annotations first' : `Submit ${notesTitle}`
   const origin = meta?.origin
 
