@@ -30,7 +30,7 @@ export default function ReplyForm({ handle, onSent, error, onError, fieldRef }) 
       refocusRef.current = false
       fieldRef.current?.focus()
     }
-  }, [sending])
+  }, [sending, fieldRef])
 
   // Escape still reaches the popover's own listener, everything else must stay out of the annotator's shortcuts.
   const handleKeyDown = (event) => {
