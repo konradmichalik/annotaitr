@@ -330,7 +330,7 @@ new marks, so Feedback is enabled with replies alone.
 
 Approving while the agent's questions are unanswered opens a warning: "The
 agent asked N questions you have not answered", with Answer and Approve
-anyway. It never blocks the approval. Its first line
+anyway. It never blocks the approval. The decision's first line
 then reads `Feedback: 1 reply to round 1, no new marks.`, or
 `APPROVED WITH NOTES: 1 reply to round 1. ...` when the target is approved.
 
