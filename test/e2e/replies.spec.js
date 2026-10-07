@@ -523,6 +523,35 @@ test.describe('replies from the last round', () => {
     }
   })
 
+  test('keeps focus inside the approval gate and returns it to Approve', async ({ page }) => {
+    await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Button colour', color: '#bf616a' }, 'question', 'Green or blue?')
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      const approve = page.getByRole('button', { name: /^Approve/ })
+      await approve.click()
+      const gate = page.getByRole('dialog', { name: /question.*not answered/ })
+      const answer = gate.getByRole('button', { name: 'Answer' })
+      await expect(answer).toBeFocused()
+      // An app re-render behind the gate must not move focus.
+      await page.getByRole('button', { name: /zoom in/i }).evaluate((b) => b.click())
+      await expect(answer).toBeFocused()
+      await page.keyboard.press('Shift+Tab')
+      await expect(gate.getByRole('button', { name: 'Approve anyway' })).toBeFocused()
+      await page.keyboard.press('Tab')
+      await expect(answer).toBeFocused()
+      await page.keyboard.press('Shift+Tab')
+      await page.keyboard.press('Shift+Tab')
+      await expect(answer).toBeFocused()
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' })).toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(approve).toBeFocused()
+    } finally {
+      cli.child.kill()
+    }
+  })
+
   test('anchors last round again after the page is captured at another viewport', async ({ page }) => {
     const server = createServer((_req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/html' })
