@@ -1,12 +1,10 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { postReply } from './replyApi.js'
 
-export default function ReplyForm({ handle, onSent, error: externalError }) {
+// The owner holds the error so a failed removal shows here too, and `fieldRef` lets it focus the field.
+export default function ReplyForm({ handle, onSent, error, onError, fieldRef }) {
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
-  const [sendError, setError] = useState(null)
-  const error = sendError ?? externalError
-  const fieldRef = useRef(null)
   const refocusRef = useRef(false)
   const id = useId()
   const errorId = `${id}-error`
@@ -17,10 +15,10 @@ export default function ReplyForm({ handle, onSent, error: externalError }) {
     const result = await postReply(handle, text)
     setSending(false)
     if (result.error) {
-      setError(result.error)
+      onError(result.error)
       return
     }
-    setError(null)
+    onError(null)
     setText('')
     refocusRef.current = true
     onSent()
@@ -56,7 +54,7 @@ export default function ReplyForm({ handle, onSent, error: externalError }) {
         value={text}
         aria-describedby={error ? errorId : undefined}
         aria-invalid={error ? true : undefined}
-        onChange={(event) => setText(event.target.value)}
+        onChange={(event) => { setText(event.target.value); if (error) { onError(null) } }}
         onKeyDown={handleKeyDown}
       />
       {error && <p id={errorId} className="reply-form-error" role="alert">{error}</p>}
