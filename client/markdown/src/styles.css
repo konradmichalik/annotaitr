@@ -1139,6 +1139,12 @@
 .comment-popover .textarea-backdrop-wrap { width: 100%; }
 .comment-popover .textarea-backdrop { width: 100%; padding: 0; }
 
+/* In the composer the @ suggestions sit in the flow under the field, so the footer moves down instead of hiding under them. */
+.comment-popover .file-autocomplete {
+  position: static;
+  max-height: 160px;
+}
+
 /* === Pinpoint Mode === */
 .pinpoint-overlay {
   position: absolute;
