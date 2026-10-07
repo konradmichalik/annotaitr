@@ -1,5 +1,5 @@
 import { annotationTopAnchor } from '../utils/drawing.js'
-import { statusDisplay, threadStatus, badgeShowsNumber } from './threadView.js'
+import { statusDisplay, threadStatus, badgeShowsNumber, threadNumber } from './threadView.js'
 
 const BADGE_HEIGHT = 20
 const MARKER_SIZE = 16
@@ -19,7 +19,7 @@ function Badge({ thread, anchor }) {
       {markerWidth > 0 && (
         <>
           <circle className="previous-round-badge-marker" cx={MARKER_SIZE / 2} cy={BADGE_HEIGHT / 2} r={MARKER_SIZE / 2} />
-          <text className="previous-round-badge-number" x={MARKER_SIZE / 2} y={BADGE_HEIGHT / 2} textAnchor="middle" dominantBaseline="central">{thread.number}</text>
+          <text className="previous-round-badge-number" x={MARKER_SIZE / 2} y={BADGE_HEIGHT / 2} textAnchor="middle" dominantBaseline="central">{threadNumber(thread)}</text>
         </>
       )}
       {/* The tint is translucent like the sidebar chip, so an opaque plate underneath keeps the label readable over any image. */}
@@ -44,7 +44,7 @@ export default function PreviousRoundLayer({ threads, Shape, fallbackColor }) {
       {threads.map((thread) => (
         <g key={thread.handle} className={`previous-round-mark previous-round--${thread.anchor}`}>
           <g className="previous-round-shape">
-            <Shape annotation={{ ...thread.annotation, id: `prev-${thread.handle}` }} number={thread.number} markerId={`arrowhead-prev-${thread.handle}`} />
+            <Shape annotation={{ ...thread.annotation, id: `prev-${thread.handle}` }} number={threadNumber(thread)} markerId={`arrowhead-prev-${thread.handle}`} />
           </g>
           <Badge thread={thread} anchor={annotationTopAnchor(thread.annotation)} />
         </g>

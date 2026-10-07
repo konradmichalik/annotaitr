@@ -13,9 +13,20 @@ export const STATUS_DISPLAY = {
   none: { icon: '·', label: 'no reply' }
 }
 
+// Reviewer replies carry no status, so a pending answer never hides the agent's last one.
 export function threadStatus(thread) {
-  return thread.replies.at(-1)?.status ?? 'none'
+  return thread.replies.findLast((r) => r.status)?.status ?? 'none'
 }
+
+/** A thread carried into this round has no number of its own, it keeps the round and number it was raised with. */
+export const threadRound = (thread, round) => thread.origin?.round ?? round
+export const threadNumber = (thread) => thread.origin?.number ?? thread.number
+export const threadTitle = (thread, round) => `Round ${threadRound(thread, round)} · mark ${threadNumber(thread)}`
+
+export const pendingReplies = (thread) => thread.replies.filter((r) => r.pending)
+export const pendingReplyCount = (threads) => threads.reduce((sum, t) => sum + pendingReplies(t).length, 0)
+
+export const openQuestions = (threads) => threads.filter((t) => threadStatus(t) === 'question' && pendingReplies(t).length === 0)
 
 // A status from a hand-edited session must not crash the canvas, it reads as no reply.
 export function statusDisplay(thread) {

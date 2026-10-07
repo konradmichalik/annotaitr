@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { layoutMarkerLanes, MARKER_SIZE_PX } from '../video/timeline.js'
-import { statusDisplay } from './threadView.js'
+import { statusDisplay, threadNumber, threadRound } from './threadView.js'
 
 const LANE_GAP_PX = 2
 
@@ -23,7 +23,7 @@ export default function PreviousTimelineMarks({ threads, round, duration, onShow
     <div ref={rowRef} className="timeline-markers timeline-markers--previous" style={{ height: laneCount * (MARKER_SIZE_PX + LANE_GAP_PX) }}>
       {threads.map((thread) => {
         const { icon, label } = statusDisplay(thread)
-        const name = `Round ${round} mark ${thread.number}, ${label}`
+        const name = `Round ${threadRound(thread, round)} mark ${threadNumber(thread)}, ${label}`
         return (
           <button
             key={thread.handle}
@@ -34,7 +34,7 @@ export default function PreviousTimelineMarks({ threads, round, duration, onShow
             title={`${name}: ${thread.annotation.text ?? ''}`}
             onClick={(event) => onShow(thread, event.currentTarget)}
           >
-            <span aria-hidden="true">{icon}</span> {thread.number}
+            <span aria-hidden="true">{icon}</span> {threadNumber(thread)}
           </button>
         )
       })}

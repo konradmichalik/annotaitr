@@ -43,4 +43,10 @@ describe('ThreadPopoverContent', () => {
     expect(html).not.toContain('Your comment')
     expect(html).not.toContain('>Replies<')
   })
+
+  it('names a carried thread by its origin', () => {
+    const html = render({ ...base, number: null, origin: { round: 1, number: 2 } })
+    expect(html).toContain('Round 1 · mark 2')
+    expect(html).not.toContain('mark null')
+  })
 })

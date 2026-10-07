@@ -4,7 +4,7 @@ import { useOutsideClick } from '../../../shared/hooks/useOutsideClick.js'
 import { useModalDismiss } from '../../../shared/hooks/useModalDismiss.js'
 import { TOOL_ICONS } from '../utils/icons.jsx'
 import ReplyList from '../../../shared/components/ReplyList.jsx'
-import { STATUS_DISPLAY, AUTHOR_LABELS } from './threadView.js'
+import { STATUS_DISPLAY, AUTHOR_LABELS, threadTitle, threadRound, threadNumber } from './threadView.js'
 
 const POPOVER_WIDTH = 320
 const POPOVER_HEIGHT_ESTIMATE = 150
@@ -27,7 +27,7 @@ export function ThreadPopoverContent({ thread, round }) {
   return (
     <>
       <h2 className="thread-popover-title">
-        Round {round} · mark {thread.number}
+        {threadTitle(thread, round)}
         {thread.handle && <span className="thread-popover-handle">#{thread.handle}</span>}
       </h2>
       {thread.anchor === 'ghost' && thread.reason && <p className="thread-popover-note">{thread.reason}</p>}
@@ -59,7 +59,7 @@ export default function ThreadPopover({ thread, round, anchorPoint, onClose }) {
       ref={popoverRef}
       className="comment-popover thread-popover"
       role="dialog"
-      aria-label={`Round ${round}, mark ${thread.number}`}
+      aria-label={`Round ${threadRound(thread, round)}, mark ${threadNumber(thread)}`}
       tabIndex={-1}
       style={{ ...computePosition(anchorPoint), width: POPOVER_WIDTH }}
       onMouseDown={(event) => event.stopPropagation()}
