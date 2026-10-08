@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { applySummary } from '../../../shared/utils/decision.js'
 import { createAnnotationId } from '../../../shared/utils/annotationId.js'
 
-export const isGeneralComment = (a) => a.targetType === 'global'
+export const isGeneralComment = (a) => a.targetType === 'global' && a.type !== 'NOTES'
 
 export function createGeneralComment(text) {
   return {
