@@ -9,7 +9,7 @@ import { PenIcon } from './HeaderIcons.jsx'
  */
 export function NoteCard({
   id, number = null, badgeStyle, word, icon = null, intent = null, location = null, quote = null,
-  selected = false, onActivate, onEdit = null, onRemove = null, label = null, buttonRef = null, children
+  selected = false, selectable = true, onActivate, onEdit = null, onRemove = null, label = null, buttonRef = null, children
 }) {
   const name = label ?? [number !== null ? `${number}. ${word}` : word, location].filter(Boolean).join(', ')
   return (
@@ -19,7 +19,7 @@ export function NoteCard({
           ref={buttonRef}
           type="button"
           className="note-card-select"
-          aria-pressed={selected}
+          aria-pressed={selectable ? selected : undefined}
           aria-label={name}
           onClick={(event) => { event.stopPropagation(); onActivate() }}
         >

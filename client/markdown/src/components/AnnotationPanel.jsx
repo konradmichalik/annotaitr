@@ -132,8 +132,8 @@ export function AnnotationPanel({
     ...sortNotes(annotations.filter(isNumbered), blocks),
     ...annotations.filter(a => a.targetType === 'global' && a !== generalComment)
   ], [annotations, blocks, generalComment])
-  const allCount = numbers.size + files.reduce((sum, f, index) => sum + f.annState.annotations
-    .filter(a => a.targetType === 'global' && (index !== activeFileIndex || a !== generalComment)).length, 0)
+  const allCount = numbers.size + files.reduce((sum, f) => sum + f.annState.annotations
+    .filter(a => a.targetType === 'global').length, 0)
 
   // A note selected on the page brings its card into view.
   useEffect(() => {
@@ -210,7 +210,7 @@ export function AnnotationPanel({
           panelId="feedback-tabpanel"
           value={tab}
           onChange={setTab}
-          options={[{ id: 'file', label: `This file · ${fileNotes.length}` }, { id: 'all', label: `All files · ${allCount}` }]}
+          options={[{ id: 'file', label: `This file · ${fileNotes.length + (hasGeneral ? 1 : 0)}` }, { id: 'all', label: `All files · ${allCount}` }]}
         />
       )}
       <div className="panel-body" id="feedback-tabpanel" {...(isMultiFile ? { role: 'tabpanel', 'aria-labelledby': `panel-tab-${tab}` } : {})}>

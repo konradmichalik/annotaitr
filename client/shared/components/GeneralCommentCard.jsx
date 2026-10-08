@@ -14,6 +14,7 @@ export function GeneralCommentCard({ annotation, editor, children = null }) {
       label="General comment"
       word={noteType(annotation).word}
       icon={<CommentIcon />}
+      selectable={false}
       buttonRef={editor.cardRef}
       onActivate={editor.start}
       onEdit={editor.start}

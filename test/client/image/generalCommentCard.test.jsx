@@ -72,6 +72,20 @@ describe('general comment card', () => {
     expect(card().querySelector('.note-card-select').getAttribute('aria-label')).toBe('General comment')
   })
 
+  it('does not announce a pressed state, the card only opens the editor', () => {
+    mount({ initial: 'Overall fine', withNote: true })
+    expect(card().querySelector('.note-card-select').hasAttribute('aria-pressed')).toBe(false)
+    expect(host.querySelector('li[data-annotation-id="n1"] .note-card-select').getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('keeps showing the saved text while the editor is open', () => {
+    mount({ initial: 'Overall fine', withNote: false })
+    act(() => card().querySelector('.note-card-select').click())
+    type(host.querySelector('textarea'), 'Draft')
+    expect(card().textContent).toContain('Overall fine')
+    expect(card().textContent).not.toContain('Draft')
+  })
+
   it('comes before the numbered cards', () => {
     mount({ initial: 'Overall fine', withNote: true })
     const ids = [...host.querySelectorAll('li.note-card')].map((li) => li.dataset.annotationId)

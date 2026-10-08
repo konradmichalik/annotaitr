@@ -102,4 +102,16 @@ describe('general comment card across files', () => {
     expect(host.querySelector('li.note-card').textContent).toContain('About B')
     expect(save).not.toHaveBeenCalled()
   })
+
+  const tabs = () => [...host.querySelectorAll('[role="tab"]')].map((t) => t.textContent)
+
+  it('counts the general comment in This file and All files', () => {
+    const list = [withComment('a.md', 'About A'), withComment('b.md', 'About B')]
+    renderWith(list, 0)
+    expect(tabs()).toEqual(['This file · 1', 'All files · 2'])
+    renderWith([withComment('a.md', 'About A'), withComment('b.md', null)], 0)
+    expect(tabs()).toEqual(['This file · 1', 'All files · 1'])
+    renderWith([withComment('a.md', null), withComment('b.md', null)], 0)
+    expect(tabs()).toEqual(['This file · 0', 'All files · 0'])
+  })
 })

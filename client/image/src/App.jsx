@@ -702,7 +702,7 @@ export default function App() {
                 value={panelTab}
                 onChange={setPanelTab}
                 options={[
-                  { id: 'round', label: `This round · ${cardCount}` },
+                  { id: 'round', label: `This round · ${annotationCount}` },
                   { id: 'replies', label: `Replies · ${previous.threads.length}` }
                 ]}
               />
