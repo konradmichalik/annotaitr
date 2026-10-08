@@ -61,4 +61,15 @@ describe('noteLocation', () => {
     expect(noteLocation(note('x', 'block-1', 0), blocks.slice(1))).toBe('L3')
     expect(noteLocation(note('x', 'missing', 0), blocks)).toBeNull()
   })
+
+  it('drops raw HTML from a heading and falls back to the line when nothing is left', () => {
+    const html = [
+      { id: 'h1', type: 'heading', content: '<picture><img alt="logo" src="logo.svg"></picture>', startLine: 1 },
+      { id: 'h2', type: 'heading', content: '<b>Usage</b> guide', startLine: 5 },
+      { id: 'p1', type: 'paragraph', content: 'text', startLine: 3 },
+      { id: 'p2', type: 'paragraph', content: 'text', startLine: 7 }
+    ]
+    expect(noteLocation(note('x', 'p1', 0), html)).toBe('L3')
+    expect(noteLocation(note('x', 'p2', 0), html)).toBe('Usage guide · L7')
+  })
 })

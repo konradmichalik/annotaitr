@@ -6,6 +6,7 @@ import { AgentNotes } from './AgentNotes.jsx'
 import { GeneralCommentField } from './GeneralCommentField.jsx'
 import { flashElement } from '../utils/flashElement.js'
 import { noteNumbers, noteLocation, sortNotes } from '../utils/noteNumbers.js'
+import { isGeneralComment } from '../hooks/useReviewDecision.js'
 import { isNumbered } from '../../../shared/utils/intents.js'
 import { noteType } from '../../../shared/utils/noteTypes.js'
 import { PanelMenu } from '../../../shared/components/PanelMenu.jsx'
@@ -130,10 +131,10 @@ export function AnnotationPanel({
   const agentNotes = useMemo(() => annotations.filter(a => a.type === 'NOTES'), [annotations])
   const fileNotes = useMemo(() => [
     ...sortNotes(annotations.filter(isNumbered), blocks),
-    ...annotations.filter(a => a.targetType === 'global' && a !== generalComment)
+    ...annotations.filter(a => isGeneralComment(a) && a !== generalComment)
   ], [annotations, blocks, generalComment])
   const allCount = numbers.size + files.reduce((sum, f) => sum + f.annState.annotations
-    .filter(a => a.targetType === 'global').length, 0)
+    .filter(isGeneralComment).length, 0)
 
   // A note selected on the page brings its card into view.
   useEffect(() => {
@@ -176,7 +177,7 @@ export function AnnotationPanel({
     const own = file.annState.annotations
     const cards = index === activeFileIndex ? fileNotes : [
       ...sortNotes(own.filter(isNumbered), file.blocks || []),
-      ...own.filter(a => a.targetType === 'global')
+      ...own.filter(isGeneralComment)
     ]
     if (cards.length === 0 && !(index === activeFileIndex && hasGeneral)) { return null }
     return (
