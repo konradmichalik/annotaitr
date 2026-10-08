@@ -196,7 +196,10 @@ test('the composer sets the intent with 1 to 4 outside the field, and a deleted 
     // A digit typed in the field is text, not an intent.
     await field.fill(`${text} 4`)
     if (key) {
-      await page.keyboard.press('Tab')
+      // The composer focuses its field in a zero-delay timer set on mount; a timer queued now runs after it,
+      // so it cannot pull focus back from the chip once Tab has moved it there.
+      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 0)))
+      await field.press('Tab')
       await expect(page.getByRole('button', { name: 'Intent: Change' })).toBeFocused()
       await page.keyboard.press(key)
     }
