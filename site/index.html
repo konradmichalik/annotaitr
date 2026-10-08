@@ -1,0 +1,259 @@
+<!doctype html>
+<!-- Describes annotaitr after PR #102 (redesign). Do not merge/deploy before it is released. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>annotaitr: point at it, your coding agent gets the rest</title>
+<meta name="description" content="annotaitr opens an image, a web page, a video, a PDF or a Markdown file in your browser. You mark it up and your coding agent receives numbered, structured feedback it can act on.">
+<meta name="theme-color" content="#eef0f3">
+<link rel="canonical" href="https://konradmichalik.github.io/annotaitr/">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="annotaitr">
+<meta property="og:title" content="annotaitr: point at it, your coding agent gets the rest">
+<meta property="og:description" content="Mark up an image, a web page, a video, a PDF or a Markdown file. Your coding agent receives numbered, structured feedback.">
+<meta property="og:url" content="https://konradmichalik.github.io/annotaitr/">
+<meta property="og:image" content="https://konradmichalik.github.io/annotaitr/images/01-pdf.png">
+<meta property="og:image:width" content="1440">
+<meta property="og:image:height" content="900">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="annotaitr: point at it, your coding agent gets the rest">
+<meta name="twitter:description" content="Mark up an image, a web page, a video, a PDF or a Markdown file. Your coding agent receives numbered, structured feedback.">
+<meta name="twitter:image" content="https://konradmichalik.github.io/annotaitr/images/01-pdf.png">
+<link rel="preload" href="fonts/geist-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/geist-mono-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<script src="main.js" defer></script>
+</head>
+<body id="top">
+<svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
+  <symbol id="i-github" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></symbol>
+  <symbol id="i-change" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
+  <symbol id="i-add" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke-width="2.2"/></symbol>
+  <symbol id="i-remove" viewBox="0 0 24 24"><path d="M5 12h14" stroke-width="2.2"/></symbol>
+  <symbol id="i-question" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+</svg>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <a class="brand" href="#top"><img src="images/logo.svg" alt="annotaitr" width="280" height="44"></a>
+  <nav class="nav" aria-label="Main">
+    <a class="nl" href="#modes">Modes</a>
+    <a class="nl" href="#intents">Intents</a>
+    <a class="nl" href="#output">Output</a>
+    <a class="nl" href="#install">Install</a>
+    <a class="nl nl-outline" href="https://github.com/konradmichalik/annotaitr"><svg class="icon icon-fill" width="16" height="16" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+  </nav>
+</header>
+
+<main id="main">
+  <section class="hero">
+    <div class="hero-in">
+      <span class="kicker"><span class="pulse"></span>For Claude Code, OpenCode and Mistral Vibe</span>
+      <h1>Point at it. Your coding agent gets the rest.</h1>
+      <p class="lead">annotaitr opens an image, a web page, a video, a PDF or a Markdown file in your browser. You mark it up. The agent receives numbered, structured feedback it can act on, instead of pixel coordinates and line numbers you typed by hand.</p>
+      <div class="actions">
+        <a class="cta" href="#install">Install the plugin</a>
+        <a class="ghost" href="https://github.com/konradmichalik/annotaitr"><svg class="icon icon-fill" width="18" height="18" aria-hidden="true"><use href="#i-github"/></svg>View on GitHub</a>
+      </div>
+      <div class="install-cmd"><span class="line"><span class="prompt">$ </span>claude plugin marketplace add konradmichalik/annotaitr</span><span class="line"><span class="prompt">$ </span>claude plugin install annotaitr@annotaitr</span></div>
+      <div class="hero-shot">
+        <img class="shot" src="images/01-pdf.png" width="1440" height="900" data-zoom alt="annotaitr reviewing a PDF: numbered marks on the page, a dock of tools at the bottom and a feedback panel with four notes on the right">
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-first">
+    <h2 class="reveal">An agent can read your code. It cannot see your page.</h2>
+    <p class="section-lead">Saying "this, right here" is easy for you and impossible for a model. annotaitr closes that gap in three steps.</p>
+    <div class="grid grid-steps">
+      <div class="reveal lift card step">
+        <span class="step-num">1</span>
+        <h3>The agent opens it</h3>
+        <p>When the agent has something for you to judge, it calls annotaitr. Your browser opens with the screenshot, page, recording, PDF or document.</p>
+      </div>
+      <div class="reveal lift card step">
+        <span class="step-num">2</span>
+        <h3>You mark it up</h3>
+        <p>Draw boxes and arrows, drop pins, select text, or pick an element straight off a captured page. Add a comment where it helps.</p>
+      </div>
+      <div class="reveal lift card step">
+        <span class="step-num">3</span>
+        <h3>It acts on your notes</h3>
+        <p>The agent gets each note with its number, intent and position, and reopens the annotator for another round until you approve.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="demo">
+    <h2 class="reveal">From a mark to a line the agent can use.</h2>
+    <p class="section-lead">Draw a box, ask a question. Each mark becomes a numbered note, and each note becomes a line in the agent's feedback.</p>
+    <div class="reveal demo">
+      <div class="demo-row">
+        <div class="demo-canvas">
+          <svg class="demo-doc" viewBox="0 0 520 300" role="img" aria-label="A pricing page mock. A box is drawn around the middle plan card and a pin numbered 1 is placed. An arrow then points at the FAQ block with a pin numbered 2.">
+            <rect x="0.5" y="0.5" width="519" height="299" rx="10" fill="#fff" stroke="#e2e5ea"/>
+            <text x="28" y="44" font-size="18" font-weight="700" fill="#16181d">Simple pricing for every team</text>
+            <text x="28" y="66" font-size="10.5" fill="#5a6170">Start free, upgrade when you need more seats.</text>
+            <g>
+              <rect x="28" y="92" width="148" height="118" rx="8" fill="#fff" stroke="#e2e5ea"/>
+              <text x="42" y="116" font-size="12" font-weight="600" fill="#16181d">Starter</text>
+              <text x="42" y="144" font-size="20" font-weight="700" fill="#16181d">$0</text>
+              <rect x="42" y="160" width="90" height="5" rx="2.5" fill="#e2e5ea"/><rect x="42" y="174" width="70" height="5" rx="2.5" fill="#e2e5ea"/>
+              <rect x="186" y="92" width="148" height="118" rx="8" fill="#fff" stroke="#16181d" stroke-width="2"/>
+              <text x="200" y="116" font-size="12" font-weight="600" fill="#16181d">Team</text>
+              <text x="200" y="144" font-size="20" font-weight="700" fill="#16181d">$24</text>
+              <rect x="200" y="160" width="100" height="5" rx="2.5" fill="#e2e5ea"/><rect x="200" y="174" width="80" height="5" rx="2.5" fill="#e2e5ea"/>
+              <rect x="344" y="92" width="148" height="118" rx="8" fill="#fff" stroke="#e2e5ea"/>
+              <text x="358" y="116" font-size="12" font-weight="600" fill="#16181d">Enterprise</text>
+              <text x="358" y="144" font-size="20" font-weight="700" fill="#16181d">Custom</text>
+              <rect x="358" y="160" width="96" height="5" rx="2.5" fill="#e2e5ea"/><rect x="358" y="174" width="66" height="5" rx="2.5" fill="#e2e5ea"/>
+              <rect x="28" y="226" width="464" height="52" rx="8" fill="#f3f4f6"/>
+              <text x="42" y="248" font-size="11" font-weight="600" fill="#16181d">Frequently asked</text>
+              <rect x="42" y="258" width="150" height="5" rx="2.5" fill="#d5d9e0"/>
+            </g>
+            <rect class="d-box d-draw" pathLength="1" x="178" y="84" width="164" height="134" rx="6" fill="none" stroke="#fff" stroke-width="5" stroke-opacity="0.7"/>
+            <rect class="d-box d-draw" pathLength="1" x="178" y="84" width="164" height="134" rx="6" fill="none" stroke="#c04a00" stroke-width="2.5"/>
+            <g class="d-mark d-pin1"><circle cx="342" cy="84" r="11" fill="#c04a00" stroke="#fff" stroke-width="2"/><text x="342" y="88.2" text-anchor="middle" font-size="12" font-weight="600" fill="#fff">1</text></g>
+            <path class="d-arrow d-draw" pathLength="1" d="M470 205 C 440 240, 380 252, 318 248" fill="none" stroke="#fff" stroke-width="5.5" stroke-opacity="0.7" stroke-linecap="round"/>
+            <path class="d-arrow d-draw" pathLength="1" d="M470 205 C 440 240, 380 252, 318 248 M318 248 l11 -9 M318 248 l13 5" fill="none" stroke="#0072b2" stroke-width="2.5" stroke-linecap="round"/>
+            <g class="d-mark d-pin2"><circle cx="476" cy="200" r="11" fill="#0072b2" stroke="#fff" stroke-width="2"/><text x="476" y="204.2" text-anchor="middle" font-size="12" font-weight="600" fill="#fff">2</text></g>
+            <g class="d-cursor" aria-hidden="true"><path d="M0 0 L0 15 L4 11.5 L7 18 L9.5 17 L6.5 10.5 L12 10.5 Z" fill="#16181d" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></g>
+          </svg>
+        </div>
+        <div class="demo-panel">
+          <span class="demo-panel-title">Feedback</span>
+          <div class="d-card1 note i-change">
+            <span class="note-head"><span class="badge badge-sm">1</span><span class="label label-sm"><svg class="icon" width="13" height="13" aria-hidden="true"><use href="#i-change"/></svg>Change</span><span class="note-kind">Box</span></span>
+            <span class="note-text">Highlight is too loud next to the hero.</span>
+          </div>
+          <div class="d-card2 note i-question">
+            <span class="note-head"><span class="badge badge-sm">2</span><span class="label label-sm"><svg class="icon" width="13" height="13" aria-hidden="true"><use href="#i-question"/></svg>Question</span><span class="note-kind">Arrow</span></span>
+            <span class="note-text">Is the FAQ still loaded lazily?</span>
+          </div>
+        </div>
+      </div>
+      <div class="term demo-out"><span class="d-out0 out-line out-muted">2 annotations (1 Change, 1 Question) on the screenshot.</span><span class="d-out1 out-line"><span class="out-head">### 1.</span> <span class="out-change">Change</span> · Boxed area: center</span><span class="d-out2 out-line"><span class="out-head">### 2.</span> <span class="out-question">Question</span> · Arrow: bottom right</span></div>
+    </div>
+  </section>
+
+  <section class="section" id="intents">
+    <h2 class="reveal">Every note says what to do.</h2>
+    <p class="section-lead">Four intents, each with its own colour, icon and word, so the meaning survives colour blindness and a quick glance. The agent receives the intent with every note.</p>
+    <div class="grid grid-intents">
+      <div class="reveal lift card intent i-change">
+        <span class="intent-head"><span class="badge num">1</span><span class="label"><svg class="icon" width="16" height="16" aria-hidden="true"><use href="#i-change"/></svg>Change</span></span>
+        <p>This is wrong or off. Rework it.</p>
+      </div>
+      <div class="reveal lift card intent i-add">
+        <span class="intent-head"><span class="badge num">2</span><span class="label"><svg class="icon" width="16" height="16" aria-hidden="true"><use href="#i-add"/></svg>Add</span></span>
+        <p>Something is missing here.</p>
+      </div>
+      <div class="reveal lift card intent i-remove">
+        <span class="intent-head"><span class="badge num">3</span><span class="label"><svg class="icon" width="16" height="16" aria-hidden="true"><use href="#i-remove"/></svg>Remove</span></span>
+        <p>Take this out.</p>
+      </div>
+      <div class="reveal lift card intent i-question">
+        <span class="intent-head"><span class="badge num">4</span><span class="label"><svg class="icon" width="16" height="16" aria-hidden="true"><use href="#i-question"/></svg>Question</span></span>
+        <p>Explain this before I decide.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-modes" id="modes">
+    <h2 class="reveal">One annotator for everything you review.</h2>
+    <p class="section-lead">The mode is detected from what you open. Tools, notes and the decision work the same way in all of them.</p>
+    <div class="grid grid-modes">
+      <article class="reveal mode">
+        <img class="shot" src="images/03-web-capture.png" width="1440" height="900" loading="lazy" data-zoom alt="Web page capture with the Element tool outlining a section and its selector">
+        <div><h3>Web pages</h3><p>Capture any URL at a chosen viewport. The Element tool picks a part of the page straight off the screenshot, and the feedback names the element so the agent finds it in the source.</p></div>
+      </article>
+      <article class="reveal mode">
+        <img class="shot" src="images/04-video.png" width="1440" height="900" loading="lazy" data-zoom alt="A video on a timeline with note markers, a cluster of two close notes and two overlapping spans">
+        <div><h3>Videos and GIFs</h3><p>Annotate a screen recording as single moments or spans. The agent gets each annotated frame, a strip per span and an overview.</p></div>
+      </article>
+      <article class="reveal mode">
+        <img class="shot" src="images/05-markdown.png" width="1440" height="900" loading="lazy" data-zoom alt="A Markdown review with a Files overview, numbered highlights in the text and notes in the panel">
+        <div><h3>Markdown and plain text</h3><p>Select text to change, add, remove or ask. Review several files in one session, with a Files overview that shows what you have read. Mermaid, PlantUML and math are annotatable as a whole.</p></div>
+      </article>
+      <article class="reveal mode">
+        <img class="shot" src="images/06-image-dark.png" width="1440" height="900" loading="lazy" data-zoom alt="An image in the dark theme with a note being written in the composer">
+        <div><h3>Images, screenshots and PDFs</h3><p>Boxes, arrows, freehand, highlighter and numbered pins on a screenshot, the clipboard or a PDF page. Light and dark theme, with marks that stay readable on any image.</p></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="output" id="output">
+    <div class="output-in">
+      <div class="output-copy">
+        <h2>The agent gets a list, not a screenshot to squint at.</h2>
+        <p>Your notes arrive as text, each with its number, intent and a plain-language position. The marked-up image is saved next to it, so the agent can match both.</p>
+        <p>Approve with nothing to change, or approve with notes that are only context. The agent knows the difference.</p>
+      </div>
+      <div class="reveal output-window">
+        <div class="window-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="window-title">what the agent reads</span></div>
+        <pre class="term output-pre"><span class="out-muted">2 annotations (1 Change, 1 Question) on the screenshot.</span>
+
+<span class="out-head">### 1. [#a3f19c2e]</span> <span class="out-change">Change</span> · Boxed area: top left
+<span class="out-muted">Make the title shorter.</span>
+
+<span class="out-head">### 3. [#7b210e44]</span> <span class="out-question">Question</span> · Comment pin: bottom right
+<span class="out-muted">Are refunds net or gross?</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-install" id="install">
+    <h2 class="reveal">Install it where your agent lives.</h2>
+    <p class="section-lead">Needs Node.js 22.13 or newer. Web page capture also needs a Chromium build for Playwright: <code>npx playwright install chromium</code>.</p>
+    <div class="grid grid-install">
+      <div class="reveal lift card install-card install-card-main">
+        <h3>Claude Code</h3>
+        <p>Everything: images, web pages, video, PDF and Markdown.</p>
+        <a class="more" href="https://github.com/konradmichalik/annotaitr#claude-code-plugin">Setup steps <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="reveal lift card install-card">
+        <h3>OpenCode</h3>
+        <p>Markdown for now. Add it to <code>opencode.json</code>.</p>
+        <a class="more" href="https://github.com/konradmichalik/annotaitr#opencode-plugin">Setup steps <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="reveal lift card install-card">
+        <h3>Mistral Vibe</h3>
+        <p>Markdown for now. Drives the standalone CLI, so install that too.</p>
+        <a class="more" href="https://github.com/konradmichalik/annotaitr#mistral-vibe-skill">Setup steps <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="reveal lift card install-card">
+        <h3>Standalone CLI</h3>
+        <p>Use it by hand or from any script.</p>
+        <a class="more" href="https://github.com/konradmichalik/annotaitr#standalone-cli">Setup steps <span aria-hidden="true">→</span></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="closing">
+    <div class="closing-in">
+      <div class="closing-copy">
+        <h2>Runs on your machine.</h2>
+        <p>annotaitr serves its UI from localhost and prints your decision to the terminal that started it. There is no tracking and no account.</p>
+      </div>
+      <a class="cta" href="https://github.com/konradmichalik/annotaitr"><svg class="icon icon-fill" width="18" height="18" aria-hidden="true"><use href="#i-github"/></svg>Star it on GitHub</a>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-in">
+    <span class="footer-brand"><img src="favicon.svg" alt="" width="20" height="20">annotaitr · MIT license</span>
+    <span class="footer-links"><a href="https://github.com/konradmichalik/annotaitr">GitHub</a><a href="https://github.com/konradmichalik/annotaitr/blob/main/docs/usage.md">Usage</a><a href="https://github.com/konradmichalik/annotaitr/blob/main/docs/how-it-works.md">How it works</a></span>
+  </div>
+</footer>
+
+<dialog class="lightbox" aria-label="Screenshot, enlarged">
+  <button type="button" class="lb-x" aria-label="Close"><svg class="icon" width="18" height="18" aria-hidden="true"><use href="#i-close"/></svg></button>
+  <img class="lb-img" src="" alt="">
+</dialog>
+</body>
+</html>
