@@ -71,5 +71,5 @@ npm run lint:fix
 
 - Commit format: `<type>: <description>`, with type one of feat, fix, refactor, docs, test, chore, perf, ci (`release` is used for releases)
 - One commit per logical change, no co-author trailers
-- Pull requests target `main`. Changes to the public CLI surface (flags, environment variables, plugin commands) must be reflected in `docs/usage.md`
+- Pull requests target `main`. Changes to the public CLI surface (flags, environment variables, plugin commands) must be reflected in `docs/usage.md` or the matching guide in `docs/usage/`
 - Releasing is maintainer-only, see `docs/release.md`
