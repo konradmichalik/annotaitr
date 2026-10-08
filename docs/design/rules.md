@@ -69,11 +69,11 @@ All colours come from tokens in `client/shared/styles/tokens.css`, with a light 
 | Element | Value |
 | --- | --- |
 | Spacing scale | 4, 8, 12, 16, 24, 32px |
-| Radius | 6px controls, 10px cards, 12px popovers (composer, thread), 14px dock and dialogs |
+| Radius | 6px controls, 10px cards, 12px popovers (composer, thread), 14px dock and dialogs; `--radius-full` for pills and round badges, `--radius-sm` (4px) only for marks inside text such as inline code and search hits |
 | Elevation e1 | Panels: `0 1px 2px rgb(22 24 29 / 6%)` |
 | Elevation e2 | Dock, popovers: `0 2px 4px rgb(22 24 29 / 6%), 0 12px 32px rgb(22 24 29 / 12%)` |
 
-These replace the mixed px and rem values and the roughly 30 hardcoded radii in the current CSS.
+Radii and spacing in the CSS come from these tokens (`--radius-*`, `--space-*`). Values off the scale (a 6px gap, a 0.375rem padding) remain where moving them would shift the layout; new rules use the scale.
 
 ## Layout
 

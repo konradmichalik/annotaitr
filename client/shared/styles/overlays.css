@@ -81,7 +81,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.5rem;
+  gap: var(--space-2);
   padding: 1rem 1.25rem;
   border-top: 1px solid var(--border);
 }
@@ -90,7 +90,7 @@
   background: var(--bg-secondary);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
-  padding: 1rem;
+  padding: var(--space-4);
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
   line-height: 1.5;
@@ -103,7 +103,7 @@
 .btn-export {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   color: var(--primary);
   border-color: var(--primary);
 }
@@ -126,7 +126,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   box-shadow: var(--elev-2);
-  padding: 0.25rem;
+  padding: var(--space-1);
   z-index: 10;
 }
 
@@ -167,7 +167,7 @@
 }
 
 .modal-error {
-  margin-top: 0.5rem;
+  margin-top: var(--space-2);
   font-size: var(--fs-md);
   color: var(--danger);
 }

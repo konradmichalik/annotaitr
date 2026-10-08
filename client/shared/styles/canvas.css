@@ -154,7 +154,7 @@
 
 .dock-segmented .dock-button {
   height: 36px;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
 }
 
 .dock-segmented .dock-button.active {
@@ -171,7 +171,7 @@
   height: 18px;
   padding: 0 var(--space-1);
   border: 1px solid var(--line-control);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: inherit;
   font-family: var(--font-mono);
