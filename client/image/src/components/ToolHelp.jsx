@@ -16,7 +16,7 @@ const HELP = {
 export default function ToolHelp({ tool, isVideo, isDocument }) {
   if (HELP[tool]) { return HELP[tool](isDocument) }
   if (isVideo) {
-    return <><KeyCap>Space</KeyCap> play, <KeyCap>←</KeyCap><KeyCap>→</KeyCap> one frame, <KeyCap>I</KeyCap><KeyCap>O</KeyCap> span in and out</>
+    return <><KeyCap>Space</KeyCap> play, <KeyCap>←</KeyCap><KeyCap>→</KeyCap> one frame, <KeyCap>I</KeyCap><KeyCap>O</KeyCap> span in and out. Close notes group into a cluster, <KeyCap>Enter</KeyCap> opens it</>
   }
   if (isDocument) {
     return <>Select: click a mark to edit it. <KeyCap>[</KeyCap><KeyCap>]</KeyCap> switch pages, <KeyCap>Home</KeyCap><KeyCap>End</KeyCap> first and last</>

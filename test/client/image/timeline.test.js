@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatTimecode, orderVideoAnnotations, isVisibleAt, layoutMarkerLanes, dragMarkerTimes, formatTimes } from '../../../client/image/src/video/timeline.js'
+import { formatTimecode, orderVideoAnnotations, isVisibleAt, layoutMarkerLanes, dragMarkerTimes, formatTimes, clusterNotes, MARKER_SIZE_PX } from '../../../client/image/src/video/timeline.js'
 
 describe('formatTimecode', () => {
   it('matches the server format', () => {
@@ -62,9 +62,44 @@ describe('layoutMarkerLanes', () => {
     expect(lanes.get('c')).toBe(lanes.get('a'))
   })
 
+  it('gives each of several overlapping spans its own row', () => {
+    const { lanes, laneCount } = layoutMarkerLanes([span('a', 1, 6), span('b', 2, 7), span('c', 3, 4)], 10, 1000)
+    expect(laneCount).toBe(3)
+    expect(new Set(lanes.values()).size).toBe(3)
+  })
+
   it('treats a very short span as wide as its number label', () => {
     const { laneCount } = layoutMarkerLanes([span('a', 1, 1.01), point('b', 1.1)], 10, 1000)
     expect(laneCount).toBe(2)
+  })
+})
+
+describe('clusterNotes', () => {
+  const note = (id, time, intent = 'change') => ({ id, time, intent })
+  // 1000px for 10 s: 100px a second, so a marker width is 0.2 s.
+  const ids = (clusters) => clusters.map((c) => c.items.map((i) => i.id))
+
+  it('keeps notes at least a marker width apart on their own', () => {
+    expect(ids(clusterNotes([note('a', 1), note('b', 1.3), note('c', 5)], 10, 1000))).toEqual([['a'], ['b'], ['c']])
+  })
+
+  it('merges notes closer than a marker width, in time order', () => {
+    const clusters = clusterNotes([note('b', 1.1, 'question'), note('a', 1), note('c', 5)], 10, 1000)
+    expect(ids(clusters)).toEqual([['a', 'b'], ['c']])
+    expect(clusters[0].time).toBeCloseTo(1.05)
+  })
+
+  it('chains a run of close notes into one cluster', () => {
+    const step = (MARKER_SIZE_PX - 1) / 100
+    expect(ids(clusterNotes([note('a', 1), note('b', 1 + step), note('c', 1 + 2 * step)], 10, 1000))).toEqual([['a', 'b', 'c']])
+  })
+
+  it('names a cluster after its first note, so an open list survives a re-render', () => {
+    expect(clusterNotes([note('a', 1), note('b', 1.05)], 10, 1000)[0].id).toBe('a')
+  })
+
+  it('merges nothing before the track has a width', () => {
+    expect(ids(clusterNotes([note('a', 1), note('b', 1)], 10, 0))).toEqual([['a'], ['b']])
   })
 })
 

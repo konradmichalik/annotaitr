@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+import { intentOf } from '../../../shared/utils/intents.js'
 import { orderVideoAnnotations, isVisibleAt, isTimed, isSpan } from './timeline.js'
 
 const EMPTY_RANGE = { start: null, end: null }
@@ -26,7 +27,7 @@ export function useVideoReview({ controller, playerState, annotations }) {
   const markers = useMemo(() => ordered.filter(isTimed).map((a) => ({
     id: a.id,
     number: a.number,
-    intent: a.intent,
+    intent: intentOf(a),
     type: a.type,
     text: a.text,
     time: a.time,

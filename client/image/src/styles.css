@@ -1130,7 +1130,10 @@ button.voice-note:hover {
   }
 }
 
+/* Above the dock, so a cluster list that opens upwards is never covered by it. */
 .timeline {
+  position: relative;
+  z-index: 31;
   flex-shrink: 0;
   padding: 10px 20px 12px;
   background: var(--bg-card);
@@ -1138,11 +1141,56 @@ button.voice-note:hover {
   box-shadow: var(--elev-1);
 }
 
-/* --- Scrubber --- */
-.timeline-markers {
+/* --- Lanes and scrubber: labels on the left, Notes, Spans and the track aligned on the right --- */
+.timeline-lanes {
   position: relative;
-  margin-bottom: 6px;
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  row-gap: var(--space-1);
+  align-items: center;
 }
+
+.timeline-lane-label {
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+}
+
+.timeline-lane {
+  position: relative;
+  min-height: 20px;
+}
+
+.timeline-lane--notes {
+  height: 20px;
+}
+
+/* The lane's hairline, which the notes sit on. */
+.timeline-lane--notes::before {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  border-top: 1px solid var(--line);
+  content: '';
+}
+
+.timeline-playhead {
+  position: absolute;
+  z-index: 0;
+  grid-row: 1 / span 3;
+  grid-column: 2;
+  top: 0;
+  bottom: 9px;
+  width: 0;
+  border-left: 1px solid var(--ink);
+  pointer-events: none;
+}
+
+.timeline-lane > *,
+.timeline-track {
+  z-index: 1;
+}
+
 
 .timeline-marker {
   position: absolute;
@@ -1249,6 +1297,125 @@ button.voice-note:hover {
   border-radius: 0 5px 5px 0;
   background: var(--marker-color, var(--danger));
   opacity: 0.6;
+}
+
+.timeline-cluster {
+  position: absolute;
+  top: 0;
+}
+
+.timeline-cluster .timeline-marker--cluster {
+  position: relative;
+}
+
+.timeline-marker--cluster {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  padding: 0 6px 0 3px;
+  border-color: var(--line-control);
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.timeline-cluster-dots {
+  display: inline-flex;
+}
+
+.timeline-cluster-dot {
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--card);
+  border-radius: 50%;
+}
+
+.timeline-cluster-dot + .timeline-cluster-dot {
+  margin-left: -4px;
+}
+
+.timeline-cluster-dot--previous {
+  border: 1.5px dashed var(--intent-earlier-mark);
+  background: var(--card);
+}
+
+/* Above the lanes, so the transport row below always stays visible. */
+.timeline-cluster-list {
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + var(--space-2));
+  left: 0;
+  min-width: 220px;
+  padding: var(--space-1);
+  transform: translateX(-50%);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-popover);
+  background: var(--card);
+  box-shadow: var(--elev-2);
+}
+
+.timeline-cluster-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline-cluster-item {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  width: 100%;
+  min-height: 32px;
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-md);
+  text-align: left;
+  cursor: pointer;
+}
+
+.timeline-cluster-item:hover {
+  background: var(--surface-sunken);
+}
+
+.timeline-cluster-item:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.timeline-cluster-number {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--marker-color);
+  color: var(--marker-on-color);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-cluster-number--previous {
+  border: 1.5px dashed var(--intent-earlier-mark);
+  background: none;
+  color: var(--ink);
+}
+
+.timeline-cluster-word {
+  flex: 1;
+}
+
+.timeline-cluster-time {
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
 }
 
 .timeline-track {
@@ -1922,36 +2089,19 @@ button.voice-note:hover {
   color: var(--text-muted);
 }
 
-/* Last round's ticks sit above the current markers, read-only and quieter. */
-.timeline-markers--previous {
-  margin-bottom: 4px;
-}
-
+/* Last round's marks: dashed grey, never filled, so they never compete with this round's notes. */
 .timeline-marker--previous {
-  min-width: 0;
-  height: 18px;
-  padding: 0 7px;
-  border-color: var(--bg-card);
-  background: var(--text);
-  color: var(--bg);
+  border: 2px dashed var(--intent-earlier-mark);
+  background: var(--card);
+  color: var(--ink);
   font-weight: 600;
-  line-height: 14px;
   white-space: nowrap;
   cursor: pointer;
-  opacity: 0.8;
-}
-
-/* The dashed border marks a ghost, so it needs no fading: the opacity would pull the text below 4.5:1. */
-.timeline-marker--previous.timeline-marker--ghost {
-  border: 2px dashed var(--bg-card);
-  background: var(--text-muted);
-  opacity: 1;
 }
 
 .timeline-marker--previous:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
-  opacity: 1;
 }
 
 .page-strip-previous {
