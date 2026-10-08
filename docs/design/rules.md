@@ -122,7 +122,7 @@ A status dot plus the words, never the dot alone. The tooltip names the caller (
 - One card per note: number on the intent colour, intent icon and word, location (page, selector, timecode or line), then the quote and the comment.
 - Card actions are visible on hover and on `:focus-within`, never on hover only.
 - The general comment is a collapsed row `+ General comment` (key `G`) at the bottom. It opens into a field on click. Once written, the row reads `Edit general comment` and does not repeat the text.
-- A written general comment is also a card at the top of the list: no number, the neutral word `General` with a comment icon, the full text wrapped, and the same hover and `:focus-within` actions. Edit opens the row's field, delete removes the comment. Its accessible name is `General comment`. It counts as content for the empty state, not for the `This round` and `This file` counts. In Markdown it belongs to the active file; a draft is dropped when the file changes.
+- A written general comment is also a card at the top of the list: no number, the neutral word `General` with a comment icon, the full text wrapped, and the same hover and `:focus-within` actions. Edit opens the row's field, delete removes the comment. Its accessible name is `General comment`. It counts as content for the empty state and as one entry in the `This round`, `This file` and `All files` counts, like the header count. While its editor is open the card keeps the saved text until the draft is saved. In Markdown it belongs to the active file; a draft is dropped when the file changes.
 - Empty panel: one sentence on what a note becomes, the three main tool keys, and that the main button reads Approve until the first note exists.
 
 ## Modes
