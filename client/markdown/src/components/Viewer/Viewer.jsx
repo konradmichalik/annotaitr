@@ -72,6 +72,14 @@ export const Viewer = forwardRef(function Viewer({
     exceptSelectors: ['.code-copy-btn', '.annotatable-image-wrapper', '.diagram-render-area', '.diagram-source', '.diagram-controls'],
     onBeforeHighlight,
     enrichToolbarState,
+    restoreInsertion: (ann) => {
+      const blockEl = containerRef.current?.querySelector(`[data-block-id="${ann.blockId}"]`)
+      if (!blockEl) { return false }
+      if (!blockEl.querySelector(`[data-insertion-id="${ann.id}"]`)) {
+        createPersistentInsertionMarker(ann.id, blockEl, ann.startOffset, ann.number)
+      }
+      return true
+    },
   })
 
   const search = useDocumentSearch(containerRef)
@@ -196,22 +204,6 @@ export const Viewer = forwardRef(function Viewer({
     ...highlightMethods,
     openSearch: crossFileSearch ? crossFileSearch.openSearch : search.openSearch,
     closeSearch: crossFileSearch ? crossFileSearch.closeSearch : search.closeSearch,
-    restoreHighlight(loaded) {
-      const ann = highlightMethods.currentNote(loaded)
-      if (ann.type === 'INSERTION') {
-        const blockEl = containerRef.current?.querySelector(`[data-block-id="${ann.blockId}"]`)
-        if (!blockEl) { return false }
-        const existing = blockEl.querySelector(`[data-insertion-id="${ann.id}"]`)
-        if (!existing) {
-          createPersistentInsertionMarker(ann.id, blockEl, ann.startOffset, ann.number)
-        }
-        return true
-      }
-      return highlightMethods.restoreHighlight(ann)
-    },
-    restoreHighlights(anns) {
-      anns.forEach(ann => { this.restoreHighlight(ann) })
-    },
     openEditToolbar(ann) {
       if (ELEMENT_TARGET_TYPES.has(ann.targetType)) {
         this.openElementEditToolbar(ann)

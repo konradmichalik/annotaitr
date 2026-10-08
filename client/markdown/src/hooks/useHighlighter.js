@@ -26,6 +26,7 @@ function showNoteNumber(doms, ann) {
  * - enrichToolbarState(element) — extra fields for toolbar state on CREATE/CLICK
  * - extraAnnotationFields — static fields merged into new annotations
  * - restoreFilter(ann) — only restore annotations matching this predicate
+ * - restoreInsertion(ann) — place the marker of an INSERTION note, returns whether it was placed
  *
  * Keyboard shortcuts are NOT included — each consumer registers its own.
  */
@@ -40,6 +41,7 @@ export function useHighlighter({
   enrichToolbarState,
   extraAnnotationFields,
   restoreFilter,
+  restoreInsertion,
 }) {
   const containerRef = useRef(null)
   const highlighterRef = useRef(null)
@@ -53,7 +55,7 @@ export function useHighlighter({
   r.current = {
     onAddAnnotation, onEditAnnotation, annotations, toolbarState,
     onBeforeHighlight, enrichToolbarState, extraAnnotationFields,
-    restoreFilter,
+    restoreFilter, restoreInsertion,
   }
 
   // --- Highlighter setup ---
@@ -259,6 +261,7 @@ export function useHighlighter({
 
   const restoreHighlight = (loaded) => {
     const ann = currentNote(loaded)
+    if (ann.type === 'INSERTION' && r.current.restoreInsertion) { return r.current.restoreInsertion(ann) }
     if (ann.targetType === 'image' || ann.targetType === 'diagram' ||
         ann.targetType === 'pinpoint' || ann.targetType === 'global' ||
         ann.targetType === 'link' || ann.type === 'NOTES' || ann.type === 'INSERTION') { return true }
@@ -310,6 +313,6 @@ export function useHighlighter({
     handleTextAnnotate,
     handleToolbarClose,
     handleToolbarDelete,
-    highlightMethods: { removeHighlight, currentNote, restoreHighlight, restoreHighlights, clearAllHighlights, updateHighlightType },
+    highlightMethods: { removeHighlight, restoreHighlight, restoreHighlights, clearAllHighlights, updateHighlightType },
   }
 }
