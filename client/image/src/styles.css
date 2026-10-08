@@ -46,36 +46,74 @@
   position: relative;
 }
 
-.viewport-trigger {
+/* One floating bar: the viewport button and the Capture again icon button. */
+.viewport-bar {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  padding: var(--space-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-popover);
+  background: var(--card);
+  box-shadow: var(--elev-2);
+}
+
+.viewport-trigger,
+.viewport-again {
   display: flex;
   gap: 6px;
   align-items: center;
-  min-height: 38px;
-  padding: 6px 10px;
-  border: 1px solid var(--line-control);
-  border-radius: var(--radius-md);
-  background: var(--bg-card);
-  box-shadow: var(--shadow);
-  color: var(--text);
+  min-height: 32px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--ink);
   font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
 }
 
-.viewport-trigger:hover {
-  background: var(--bg-secondary);
+.viewport-trigger {
+  padding: 0 var(--space-2);
 }
 
-.viewport-trigger:disabled {
+.viewport-again {
+  justify-content: center;
+  width: 32px;
+  padding: 0;
+  color: var(--ink-muted);
+}
+
+.viewport-trigger:hover,
+.viewport-again:hover {
+  background: var(--surface-sunken);
+  color: var(--ink);
+}
+
+.viewport-trigger:disabled,
+.viewport-again:disabled {
   cursor: progress;
   opacity: 0.6;
 }
 
-.viewport-trigger-size {
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
+.viewport-error--bar {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  width: max-content;
+  max-width: 320px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--card);
+  box-shadow: var(--elev-2);
 }
 
+.image-canvas-wrapper:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.viewport-again:focus-visible,
 .viewport-trigger:focus-visible,
 .viewport-panel button:focus-visible,
 .viewport-panel input:focus-visible,

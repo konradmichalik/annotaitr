@@ -239,9 +239,11 @@ annotaitr --viewport mobile http://localhost:3000/checkout
 annotaitr --viewport 1024x768 http://localhost:3000
 ```
 
-The viewport can also be changed after the page opened: the button next
-to the zoom controls (e.g. `Desktop 1920×1080`) picks a preset or a custom
-size, a section and a delay, and captures the page again in the same tab.
+The viewport can also be changed after the page opened: the capture
+control at the top left names it (e.g. `Desktop · 1920`) and opens a panel
+that picks a preset or a custom size, a section and a delay, and captures
+the page again in the same tab. The camera button next to it captures the
+page again with the settings it has, for a page that changed meanwhile.
 Tablet and Phone can be turned to landscape, which the feedback names as
 `tablet landscape (1024×768)`; `--viewport 1024x768` captures the same
 from the start.
@@ -383,6 +385,12 @@ with a modifier held:
 | `Esc` | Back to Select | |
 | `G` | General comment | General comment |
 | `?` | Shortcut list | Shortcut list |
+
+The **Element** tool labels the element under the pointer with its selector
+and size (`section.hero p.lede 400×22`). From the keyboard, `Tab` onto the
+canvas: `Tab` and `Shift+Tab` then walk the page's elements in document
+order, `↑` selects the parent (the smallest element around the current one)
+and `Enter` annotates it. Past the last element `Tab` leaves the canvas.
 
 `?` opens the full, searchable list of the open mode's keys in Settings,
 under **Shortcuts**; the keyboard button in the header does the same. The

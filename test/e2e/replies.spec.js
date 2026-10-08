@@ -658,7 +658,7 @@ test.describe('replies from the last round', () => {
         await page.locator('label', { has: page.getByRole('radio', { name: 'Phone', exact: true }) }).click()
         await Promise.all([
           page.waitForResponse('**/api/recapture'),
-          page.getByRole('button', { name: 'Capture again' }).click()
+          page.getByRole('button', { name: 'Capture', exact: true }).click()
         ])
         await expect(section.getByText('No longer in the target')).toBeVisible()
       } finally {

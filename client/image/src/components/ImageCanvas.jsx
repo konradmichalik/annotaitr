@@ -7,6 +7,8 @@ import {
 import { pickStyleFields } from '../utils/annotationStyles.js'
 import { cursorForTool } from '../utils/cursors.js'
 import { intentChangeForKey } from '../utils/toolShortcuts.js'
+import { elementCaption } from '../utils/elementWalk.js'
+import { useElementWalk } from '../hooks/useElementWalk.js'
 import { matchAnnotation, matchPoint, describeElements } from '../utils/elementMatch.js'
 import { wordIndexAt, selectWords } from '../document/textSelection.js'
 import { markColor, intentMark } from '../utils/annotationColors.js'
@@ -552,7 +554,12 @@ export default function ImageCanvas({
 
   // Only the Element tool outlines what is under the pointer; every tool
   // names the matched element in the comment popover.
-  const hovered = !pending && hoverPoint ? matchPoint(elements, hoverPoint) : null
+  const walk = useElementWalk({
+    active: activeTool === 'element' && !pending,
+    elements,
+    onPick: (element) => createPending({ type: 'element', geometry: { ...element.box }, color: nextColor })
+  })
+  const hovered = walk.current ?? (!pending && hoverPoint ? matchPoint(elements, hoverPoint) : null)
   const highlighted = hovered ? [hovered] : []
   const elementHint = pending?.type === 'text' ? `"${pending.quote}"` : describeElements(matchAnnotation(elements, pending))
 
@@ -568,6 +575,7 @@ export default function ImageCanvas({
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => setHoverPoint(null)}
+      {...walk.canvasProps}
     >
       {media ?? <img ref={imageRef} src={imageUrl} alt={imageAlt} width={imageWidth * zoom} height={imageHeight * zoom} draggable={false} />}
       <svg
@@ -605,10 +613,12 @@ export default function ImageCanvas({
         <span
           className="element-highlight-label" aria-hidden="true"
           style={{ left: hovered.box.x * zoom, top: Math.max(0, hovered.box.y * zoom - 24) }}
+          ref={(label) => { if (walk.current) { label?.scrollIntoView({ block: 'nearest', inline: 'nearest' }) } }}
         >
-          {describeElements(highlighted)}
+          {elementCaption(hovered)}
         </span>
       )}
+      {walk.current && <span className="visually-hidden" aria-live="polite">{describeElements(highlighted)}</span>}
       {!pending && selectedAnnotation && (
         <SelectionToolbar
           point={toClientPoint(wrapperRef, annotationTopAnchor(selectedAnnotation), zoom)}

@@ -3,7 +3,12 @@ import { KeyCap } from '../../../shared/components/KeyCap.jsx'
 const BACK = <>, <KeyCap>Esc</KeyCap> back to Select</>
 
 const HELP = {
-  element: (isDocument) => <>Element: click {isDocument ? 'a text block or link' : 'a page element'} to annotate it{BACK}</>,
+  element: (isDocument) => (
+    <>
+      Element: click {isDocument ? 'a text block or link' : 'a page element'} to annotate it.
+      On the focused canvas <KeyCap>Tab</KeyCap> walks the elements, <KeyCap>↑</KeyCap> selects the parent, <KeyCap>Enter</KeyCap> annotates{BACK}
+    </>
+  ),
   text: () => <>Text: drag from the first to the last word you mean{BACK}</>,
   box: () => <>Box: drag around an area{BACK}</>,
   arrow: () => <>Arrow: drag from where it starts to what it points at{BACK}</>,
