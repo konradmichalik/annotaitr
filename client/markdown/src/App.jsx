@@ -19,7 +19,7 @@ import { ModeHelp } from './components/ModeHelp.jsx'
 import { validateAnnotationImport } from './utils/export.js'
 import { getTextStats } from './utils/textStats.js'
 import { UpdateBanner } from '../../shared/components/UpdateBanner.jsx'
-import { FileTabsBar } from './components/FileTabsBar.jsx'
+import { FilesSection, MarkReviewedButton } from './components/FilesSection.jsx'
 import { initialAnnotationState } from './state/annotationReducer.js'
 import { useAutoClose } from '../../shared/hooks/useAutoClose.js'
 import { useResizablePanel } from '../../shared/hooks/useResizablePanel.js'
@@ -348,7 +348,7 @@ export default function App() {
   const handleSelectFile = useCallback((index) => {
     if (index === activeFileIndex) {return}
     setActiveFileIndex(index)
-    filesDispatch({ type: 'MARK_REVIEWED', fileIndex: index })
+    filesDispatch({ type: 'MARK_OPENED', fileIndex: index })
   }, [activeFileIndex, setActiveFileIndex, filesDispatch])
 
   // A card from another file opens that file first; the selection follows once it is shown.
@@ -458,20 +458,24 @@ export default function App() {
         }}
       />
 
-      <FileTabsBar
-        files={files}
-        activeFileIndex={activeFileIndex}
-        onSelectFile={handleSelectFile}
-      />
-
       <main className="app-main">
-        {!isPlainTextFile && (
+        {(!isPlainTextFile || isMultiFile) && (
           <>
             <TableOfContents
-              blocks={blocks}
+              blocks={isPlainTextFile ? [] : blocks}
               annotations={annotations}
               collapsed={tocCollapsed}
               width={tocWidth}
+              fileName={isMultiFile ? activeFile?.path.split(/[\\/]/).pop() : null}
+              filesSection={isMultiFile && (
+                <FilesSection files={files} activeFileIndex={activeFileIndex} onSelectFile={handleSelectFile} />
+              )}
+              footer={isMultiFile && (
+                <MarkReviewedButton
+                  reviewed={!!activeFile?.reviewed}
+                  onToggle={() => filesDispatch({ type: 'SET_REVIEWED', fileIndex: activeFileIndex, reviewed: !activeFile?.reviewed })}
+                />
+              )}
             />
             {!tocCollapsed && (
               <div

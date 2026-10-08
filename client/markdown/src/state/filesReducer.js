@@ -32,20 +32,28 @@ export function filesReducer(state, action) {
     case 'INIT_FILES':
       return action.files.map((f, i) => ({
         ...f,
-        reviewed: i === 0,
+        opened: i === 0,
+        reviewed: false,
         annState: { ...initialAnnotationState }
       }))
     case 'ADD_FILE':
-      return [...state, { ...action.file, reviewed: false, annState: { ...initialAnnotationState } }]
+      return [...state, { ...action.file, opened: false, reviewed: false, annState: { ...initialAnnotationState } }]
     case 'UPDATE_FILE': {
       const idx = action.fileIndex
       if (idx < 0 || idx >= state.length) {return state}
       return state.map((f, i) => i !== idx ? f : { ...f, ...action.updates })
     }
-    case 'MARK_REVIEWED': {
+    // Shown once: the overview then stops saying "not opened".
+    case 'MARK_OPENED': {
       const idx = action.fileIndex
-      if (idx < 0 || idx >= state.length || state[idx].reviewed) { return state }
-      return state.map((f, i) => i !== idx ? f : { ...f, reviewed: true })
+      if (idx < 0 || idx >= state.length || state[idx].opened) { return state }
+      return state.map((f, i) => i !== idx ? f : { ...f, opened: true })
+    }
+    // Reviewed is the reviewer's call ("Mark file as reviewed"), not a side effect of opening.
+    case 'SET_REVIEWED': {
+      const idx = action.fileIndex
+      if (idx < 0 || idx >= state.length) { return state }
+      return state.map((f, i) => i !== idx ? f : { ...f, opened: true, reviewed: action.reviewed })
     }
     case 'ANN': {
       const idx = action.fileIndex

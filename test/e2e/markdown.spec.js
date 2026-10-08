@@ -48,3 +48,44 @@ test('Alt+click opens the insertion bar and its composer at the insertion point'
     }
   })
 })
+
+test('the Files overview lists every file, opens one from the keyboard and marks it as reviewed', async ({ page }) => {
+  await withFiles({ 'a.md': '# Alpha\n\nAlpha text.\n', 'b.md': '# Beta\n\nBeta text.\n' }, async (paths) => {
+    const cli = startCli(paths)
+    try {
+      await page.goto(await cli.url)
+      const files = page.getByRole('region', { name: 'Files' })
+      await expect(files).toContainText('0 of 2 reviewed')
+      await expect(files.getByRole('button', { name: 'b.md, 0 notes, not opened' })).toBeVisible()
+      await expect(page.getByRole('tab', { name: /b\.md/ })).toHaveCount(0)
+
+      await files.getByRole('button', { name: /^a\.md/ }).focus()
+      await page.keyboard.press('Tab')
+      await expect(files.getByRole('button', { name: /^b\.md/ })).toBeFocused()
+      await page.keyboard.press('Enter')
+      await expect(page.getByText('Beta text.')).toBeVisible()
+      await expect(files.getByRole('button', { name: /^b\.md/ })).toHaveAttribute('aria-current', 'true')
+
+      await page.getByRole('button', { name: 'Mark file as reviewed' }).click()
+      await expect(files).toContainText('1 of 2 reviewed')
+      await expect(files.getByRole('button', { name: 'b.md, 0 notes, reviewed' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Reviewed', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    } finally {
+      if (cli.child.exitCode === null) { cli.child.kill() }
+    }
+  })
+})
+
+test('a single file shows no Files overview', async ({ page }) => {
+  await withFiles({ 'a.md': '# Alpha\n\nAlpha text.\n' }, async (paths) => {
+    const cli = startCli(paths)
+    try {
+      await page.goto(await cli.url)
+      await expect(page.getByText('Alpha text.')).toBeVisible()
+      await expect(page.getByRole('region', { name: 'Files' })).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Mark file as reviewed' })).toHaveCount(0)
+    } finally {
+      if (cli.child.exitCode === null) { cli.child.kill() }
+    }
+  })
+})

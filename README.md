@@ -38,9 +38,9 @@ Which mode runs is auto-detected from the target: see Usage below and
 
 **Markdown and plain-text review:**
 
-- **Multi-file support**: review multiple files in one session with a tabbed interface
+- **Multi-file support**: review multiple files in one session, with a Files overview of notes and reviewed files
 - **Config and data files**: annotate YAML, JSON, TOML, CSV, XML and more as raw source with line numbers
-- **Linked navigation**: click relative `.md` links to open them as new tabs
+- **Linked navigation**: click relative `.md` links to add them to the review
 - **LaTeX math, Mermaid, PlantUML, and Kroki diagrams**: rendered inline, annotatable as a whole
 - **File references**: type `@` in a comment to autocomplete other project files
 - **Quick labels**: categorize a selection instantly with a predefined label

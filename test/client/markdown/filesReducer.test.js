@@ -134,53 +134,37 @@ describe('filesReducer', () => {
     })
   })
 
-  describe('MARK_REVIEWED', () => {
-    it('marks a file as reviewed', () => {
-      const initial = filesReducer([], {
-        type: 'INIT_FILES',
-        files: [makeFile({ path: '/a.md' }), makeFile({ path: '/b.md' })]
-      })
-      expect(initial[1].reviewed).toBe(false)
-      const state = filesReducer(initial, { type: 'MARK_REVIEWED', fileIndex: 1 })
-      expect(state[1].reviewed).toBe(true)
-      expect(state[0].reviewed).toBe(true) // first file is auto-reviewed
+  describe('opened and reviewed', () => {
+    const init = (count) => filesReducer([], {
+      type: 'INIT_FILES',
+      files: Array.from({ length: count }, (_, i) => makeFile({ path: `/${i}.md` }))
     })
 
-    it('returns same state if already reviewed', () => {
-      const initial = filesReducer([], {
-        type: 'INIT_FILES',
-        files: [makeFile({ path: '/a.md' })]
-      })
-      // First file is auto-reviewed
-      expect(initial[0].reviewed).toBe(true)
-      const state = filesReducer(initial, { type: 'MARK_REVIEWED', fileIndex: 0 })
-      expect(state).toBe(initial)
+    it('starts with the first file opened and nothing reviewed', () => {
+      const state = init(3)
+      expect(state.map((f) => f.opened)).toEqual([true, false, false])
+      expect(state.map((f) => f.reviewed)).toEqual([false, false, false])
     })
 
-    it('returns same state for out-of-bounds index', () => {
-      const initial = filesReducer([], { type: 'INIT_FILES', files: [makeFile()] })
-      const state = filesReducer(initial, { type: 'MARK_REVIEWED', fileIndex: 5 })
-      expect(state).toBe(initial)
-    })
-  })
-
-  describe('INIT_FILES reviewed flag', () => {
-    it('marks first file as reviewed, others as not', () => {
-      const state = filesReducer([], {
-        type: 'INIT_FILES',
-        files: [makeFile({ path: '/a.md' }), makeFile({ path: '/b.md' }), makeFile({ path: '/c.md' })]
-      })
-      expect(state[0].reviewed).toBe(true)
+    it('marks a file opened once it is shown, and keeps the state when it already is', () => {
+      const initial = init(2)
+      const state = filesReducer(initial, { type: 'MARK_OPENED', fileIndex: 1 })
+      expect(state[1].opened).toBe(true)
       expect(state[1].reviewed).toBe(false)
-      expect(state[2].reviewed).toBe(false)
+      expect(filesReducer(state, { type: 'MARK_OPENED', fileIndex: 1 })).toBe(state)
+      expect(filesReducer(state, { type: 'MARK_OPENED', fileIndex: 5 })).toBe(state)
     })
-  })
 
-  describe('ADD_FILE reviewed flag', () => {
-    it('adds new file as not reviewed', () => {
-      const initial = filesReducer([], { type: 'INIT_FILES', files: [makeFile({ path: '/a.md' })] })
-      const state = filesReducer(initial, { type: 'ADD_FILE', file: makeFile({ path: '/b.md' }) })
-      expect(state[1].reviewed).toBe(false)
+    it('marks a file reviewed only when asked, and takes it back', () => {
+      const reviewed = filesReducer(init(2), { type: 'SET_REVIEWED', fileIndex: 1, reviewed: true })
+      expect(reviewed[1]).toMatchObject({ reviewed: true, opened: true })
+      expect(filesReducer(reviewed, { type: 'SET_REVIEWED', fileIndex: 1, reviewed: false })[1].reviewed).toBe(false)
+      expect(filesReducer(reviewed, { type: 'SET_REVIEWED', fileIndex: 5, reviewed: true })).toBe(reviewed)
+    })
+
+    it('adds a new file neither opened nor reviewed', () => {
+      const state = filesReducer(init(1), { type: 'ADD_FILE', file: makeFile({ path: '/b.md' }) })
+      expect(state[1]).toMatchObject({ opened: false, reviewed: false })
     })
   })
 

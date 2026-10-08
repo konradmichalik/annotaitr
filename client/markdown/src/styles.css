@@ -1,76 +1,5 @@
 @import url('../../shared/styles/common.css');
 
-/* === File Tabs Bar === */
-.file-tabs-bar {
-  display: flex;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border);
-  padding: 0 1rem;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.file-tabs-scroll {
-  display: flex;
-  overflow-x: auto;
-  scrollbar-width: none;
-  gap: 0;
-}
-
-.file-tabs-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.file-tab {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.8125rem;
-  color: var(--text-muted);
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: color var(--transition-fast), border-color var(--transition-fast);
-}
-
-.file-tab:hover {
-  color: var(--text);
-}
-
-.file-tab--active {
-  color: var(--text);
-  border-bottom-color: var(--primary);
-}
-
-.file-tab-name {
-  font-family: var(--font-mono, monospace);
-}
-
-.file-tab-reviewed {
-  display: flex;
-  align-items: center;
-  color: var(--success);
-  flex-shrink: 0;
-}
-
-.file-tab-badge {
-  font-size: var(--fs-sm);
-  min-width: 1.125rem;
-  height: 1.125rem;
-  padding: 0 0.25rem;
-  border-radius: 999px;
-  background: var(--focus);
-  color: var(--on-focus);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
 .app-main {
   display: flex;
   flex: 1;
@@ -1371,6 +1300,138 @@
   color: var(--comment-border);
 }
 
+/* === Files overview (several files) === */
+.files-section {
+  padding: var(--space-3) 0 var(--space-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.sidebar-heading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-2);
+}
+
+.sidebar-heading h2 {
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+
+.sidebar-heading-meta {
+  margin-left: auto;
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.files-list {
+  margin: 0;
+  padding: 0 var(--space-2);
+  list-style: none;
+}
+
+.files-item {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  width: 100%;
+  min-height: 28px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.files-item:hover {
+  background: var(--card);
+}
+
+.files-item--active {
+  border-color: var(--line);
+  background: var(--card);
+}
+
+.files-item:focus-visible,
+.files-review-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.files-item-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.files-item-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 var(--space-1);
+  border-radius: 9px;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 18px;
+  text-align: center;
+}
+
+.files-item-check {
+  display: inline-flex;
+  color: var(--status-ok);
+}
+
+.files-item-state {
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+.toc-header-file {
+  color: var(--ink-muted);
+  font-weight: 400;
+}
+
+.files-footer {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  padding: var(--space-2);
+  border-top: 1px solid var(--line);
+  background: var(--bg-sidebar);
+}
+
+.files-review-btn {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 32px;
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-control);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-md);
+  cursor: pointer;
+}
+
+.files-review-btn[aria-pressed="true"] {
+  border-color: var(--status-ok);
+  color: var(--status-ok);
+}
+
 /* === Table of Contents === */
 .toc-panel {
   width: var(--toc-width);
@@ -1394,8 +1455,12 @@
 }
 
 .toc-header h2 {
+  min-width: 0;
+  overflow: hidden;
   font-size: 0.875rem;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .toc-header-actions {

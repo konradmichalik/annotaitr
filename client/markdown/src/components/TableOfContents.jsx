@@ -65,7 +65,12 @@ function buildDescendantsMap(headings) {
   return { descendantsMap, parentSet, parentMap }
 }
 
-export function TableOfContents({ blocks, annotations = [], collapsed, width }) {
+/**
+ * The left sidebar: with several files their overview (`filesSection`) on top,
+ * then the contents of the active file with note counts per section, and
+ * `footer` (Mark file as reviewed) at the bottom.
+ */
+export function TableOfContents({ blocks, annotations = [], collapsed, width, filesSection = null, footer = null, fileName = null }) {
   const [activeId, setActiveId] = useState(null)
   const [collapsedIds, setCollapsedIds] = useState(() => new Set())
   const observerRef = useRef(null)
@@ -255,87 +260,93 @@ export function TableOfContents({ blocks, annotations = [], collapsed, width }) 
     }
   }, [])
 
-  if (collapsed || headings.length === 0) {
+  if (collapsed || (headings.length === 0 && !filesSection)) {
     return null
   }
 
   return (
-    <nav className="toc-panel" ref={tocRef} style={width ? { width: `${width}px` } : undefined}>
-      <div className="toc-header">
-        <h2>Contents</h2>
-        {parentSet.size > 0 && (
-          <div className="toc-header-actions">
-            <button
-              className="toc-header-btn"
-              onClick={expandAll}
-              disabled={[...parentSet].every(id => !collapsedIds.has(id))}
-              title="Expand all"
-              aria-label="Expand all sections"
-            >
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 6l4 4 4-4" />
-              </svg>
-            </button>
-            <button
-              className="toc-header-btn"
-              onClick={collapseAll}
-              disabled={[...parentSet].every(id => collapsedIds.has(id))}
-              title="Collapse all"
-              aria-label="Collapse all sections"
-            >
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 4l4 4-4 4" />
-              </svg>
-            </button>
-          </div>
-        )}
-      </div>
-      <ul className="toc-list">
-        {headings.map(h => {
-          const isHidden = hiddenIds.has(h.id)
-          const isParent = parentSet.has(h.id)
-          const isCollapsed = collapsedIds.has(h.id)
-          const count = isCollapsed
-            ? (deepAnnotationCounts.get(h.id) || 0)
-            : (annotationCountPerHeading.get(h.id) || 0)
-
-          return (
-            <li key={h.id} className={`toc-li${isHidden ? ' toc-li--hidden' : ''}`} inert={isHidden ? true : undefined}>
-              <div className="toc-li-inner">
-                <div
-                  className={`toc-row toc-row--level-${h.level}${visibleActiveId === h.id ? ' toc-row--active' : ''}`}
-                  data-toc-id={h.id}
+    <aside className="toc-panel" ref={tocRef} style={width ? { width: `${width}px` } : undefined} aria-label="Files and contents">
+      {filesSection}
+      {headings.length > 0 && (
+        <nav className="toc-contents" aria-label="Contents">
+          <div className="toc-header">
+            <h2>Contents{fileName && <span className="toc-header-file"> · {fileName}</span>}</h2>
+            {parentSet.size > 0 && (
+              <div className="toc-header-actions">
+                <button
+                  className="toc-header-btn"
+                  onClick={expandAll}
+                  disabled={[...parentSet].every(id => !collapsedIds.has(id))}
+                  title="Expand all"
+                  aria-label="Expand all sections"
                 >
-                  {isParent ? (
-                    <button
-                      className={`toc-toggle${isCollapsed ? '' : ' toc-toggle--expanded'}`}
-                      onClick={() => toggleCollapse(h.id)}
-                      aria-expanded={!isCollapsed}
-                      aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} ${h.content}`}
-                    >
-                      <svg viewBox="0 0 16 16" width="10" height="10">
-                        <path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </button>
-                  ) : (
-                    <span className="toc-toggle toc-toggle--placeholder" aria-hidden="true" />
-                  )}
-                  <button
-                    className={`toc-item${count > 0 ? ' toc-item--annotated' : ''}${h.id === '__intro__' ? ' toc-item--intro' : ''}`}
-                    onClick={() => handleClick(h.id)}
-                    title={h.content}
-                  >
-                    <span className="toc-item-text">{h.content}</span>
-                    {count > 0 && (
-                      <span className="toc-badge">{count}</span>
-                    )}
-                  </button>
-                </div>
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 6l4 4 4-4" />
+                  </svg>
+                </button>
+                <button
+                  className="toc-header-btn"
+                  onClick={collapseAll}
+                  disabled={[...parentSet].every(id => collapsedIds.has(id))}
+                  title="Collapse all"
+                  aria-label="Collapse all sections"
+                >
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 4l4 4-4 4" />
+                  </svg>
+                </button>
               </div>
-            </li>
-          )
-        })}
-      </ul>
-    </nav>
+            )}
+          </div>
+          <ul className="toc-list">
+            {headings.map(h => {
+              const isHidden = hiddenIds.has(h.id)
+              const isParent = parentSet.has(h.id)
+              const isCollapsed = collapsedIds.has(h.id)
+              const count = isCollapsed
+                ? (deepAnnotationCounts.get(h.id) || 0)
+                : (annotationCountPerHeading.get(h.id) || 0)
+
+              return (
+                <li key={h.id} className={`toc-li${isHidden ? ' toc-li--hidden' : ''}`} inert={isHidden ? true : undefined}>
+                  <div className="toc-li-inner">
+                    <div
+                      className={`toc-row toc-row--level-${h.level}${visibleActiveId === h.id ? ' toc-row--active' : ''}`}
+                      data-toc-id={h.id}
+                    >
+                      {isParent ? (
+                        <button
+                          className={`toc-toggle${isCollapsed ? '' : ' toc-toggle--expanded'}`}
+                          onClick={() => toggleCollapse(h.id)}
+                          aria-expanded={!isCollapsed}
+                          aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} ${h.content}`}
+                        >
+                          <svg viewBox="0 0 16 16" width="10" height="10">
+                            <path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                      ) : (
+                        <span className="toc-toggle toc-toggle--placeholder" aria-hidden="true" />
+                      )}
+                      <button
+                        className={`toc-item${count > 0 ? ' toc-item--annotated' : ''}${h.id === '__intro__' ? ' toc-item--intro' : ''}`}
+                        onClick={() => handleClick(h.id)}
+                        title={h.content}
+                      >
+                        <span className="toc-item-text">{h.content}</span>
+                        {count > 0 && (
+                          <span className="toc-badge">{count}</span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </nav>
+      )}
+      {footer}
+    </aside>
   )
 }

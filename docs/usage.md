@@ -24,7 +24,7 @@ mode-specific except `--help`, `--origin` and `--as`.
 | Anything else | Exits `1` naming the supported extensions and suggesting `--as` |
 
 ```bash
-annotaitr README.md docs/guide.md    # markdown: multiple files, tab bar
+annotaitr README.md docs/guide.md    # markdown: multiple files, Files overview
 annotaitr ./mockup.png               # image: local file
 annotaitr http://localhost:3000      # image: capture
 annotaitr                            # image: clipboard (macOS), or help
@@ -407,6 +407,14 @@ untouched box closes, and a mark that was just drawn goes with it. The footer
 starts with the [intent](#intents-and-numbers) chip. In image mode the palette
 button next to it holds the ink colour, line width, line style and arrow end. In markdown mode `@` suggests files to reference and
 the expand button opens a larger editor, which `Esc` collapses again.
+
+With several markdown files the left sidebar starts with **Files**: every
+file with its note count, a check once it is reviewed or `not opened` while
+it was never shown, and how many of them are reviewed (`1 of 3 reviewed`).
+A click or `Enter` opens a file. Below it are the contents of the open file
+with the note count per section, and **Mark file as reviewed** at the bottom
+records that the file is done (a second click takes it back). Opening a file
+does not mark it as reviewed. A single file shows only its contents.
 
 Selecting text in markdown mode shows a bar with **Change** (`1` or
 Ctrl/Cmd+K), **Add** (`2`, inserts text after the selection), **Remove** (`3`
