@@ -3,7 +3,8 @@ const AGENT_NAMES = {
   'claude-code': 'Claude Code',
   'codex': 'Codex',
   'opencode': 'OpenCode',
-  'vibe': 'Mistral Vibe'
+  'vibe': 'Mistral Vibe',
+  'gemini': 'Gemini CLI'
 }
 
 /** The calling agent's full name, or null for a plain terminal or an unknown origin. */

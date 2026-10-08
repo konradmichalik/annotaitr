@@ -83,8 +83,8 @@ Without a model, `whisper-cli` or ffmpeg the button is simply not shown.
 Identifies the caller in the feedback output and in the annotator header,
 which says who is waiting for the decision ("Claude Code is waiting",
 "Terminal is waiting"). One of `cli` (default), `claude-code`, `codex`, `opencode`,
-`vibe`. Set
-automatically by the Claude Code, Codex, OpenCode and Vibe integrations; a plain
+`vibe`, `gemini`. Set
+automatically by the Claude Code, Codex, OpenCode, Vibe and Gemini CLI integrations; a plain
 terminal invocation never needs it.
 
 ## Environment variables

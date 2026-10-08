@@ -81,6 +81,10 @@ describe('parseArgs', () => {
     expect(parseArgs([...BASE, '--bogus']).error).toMatch(/Unknown option/)
   })
 
+  it('accepts gemini as an origin', () => {
+    expect(parseArgs([...BASE, '--origin', 'gemini', 'http://x']).origin).toBe('gemini')
+  })
+
   it('errors on an unknown origin', () => {
     expect(parseArgs([...BASE, '--origin', 'nope', 'http://x']).error).toMatch(/Unknown origin/)
   })
