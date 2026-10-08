@@ -112,6 +112,18 @@ Markdown-only for now. Add to `opencode.json`:
 }
 ```
 
+### Codex skill
+
+Covers every target kind and drives the standalone CLI, so install that too:
+
+```bash
+npm install -g annotaitr
+mkdir -p ~/.agents/skills
+cp -r apps/codex/skills/annotaitr ~/.agents/skills/annotaitr
+```
+
+See [apps/codex](apps/codex/README.md).
+
 ### Mistral Vibe skill
 
 Markdown-only for now, and drives the standalone CLI, so install that too:
@@ -156,6 +168,12 @@ A screenshot pasted into the chat works as a target too: `/annotaitr:image [Imag
 ```
 
 or the tool directly: `annotate_markdown({ filePath: "/path/to/file.md" })`.
+
+**Codex:**
+
+```text
+$annotaitr ./anything
+```
 
 **Mistral Vibe:**
 

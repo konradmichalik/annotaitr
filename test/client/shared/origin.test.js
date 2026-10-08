@@ -4,6 +4,7 @@ import { agentName, waitingLabel, originTooltip, decisionLegend } from '../../..
 describe('origin labels', () => {
   it('names each agent in full', () => {
     expect(agentName('claude-code')).toBe('Claude Code')
+    expect(agentName('codex')).toBe('Codex')
     expect(agentName('opencode')).toBe('OpenCode')
     expect(agentName('vibe')).toBe('Mistral Vibe')
   })

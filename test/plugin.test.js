@@ -34,3 +34,16 @@ describe('marketplace manifest', () => {
     expect(marketplace.plugins[0].source).toBe('./apps/claude-code')
   })
 })
+
+describe('codex skill', () => {
+  const content = readFileSync('apps/codex/skills/annotaitr/SKILL.md', 'utf-8')
+
+  it('declares the skill name and a description in its frontmatter', () => {
+    expect(content).toMatch(/^---\nname: annotaitr\ndescription: .+\n---\n/)
+  })
+
+  it('shells out to annotaitr with the codex origin', () => {
+    expect(content).toContain('annotaitr --origin codex')
+    expect(content).not.toContain('--origin claude-code')
+  })
+})

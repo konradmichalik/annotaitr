@@ -26,7 +26,7 @@ Which mode runs is auto-detected from the target:
 
 Options:
   --help                       Show this help message
-  --origin <name>               Set caller origin (cli, claude-code, opencode, vibe)
+  --origin <name>               Set caller origin (cli, claude-code, codex, opencode, vibe)
   --as <image|markdown>         Skip detection, force a mode
   --viewport <preset|WxH>       Image mode only: desktop (default) | laptop | tablet | mobile | <W>x<H>
   --delay <ms>                  Image mode only: wait this long after the page loads before capturing (0 to 10000)

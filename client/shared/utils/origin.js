@@ -1,6 +1,7 @@
 /** Who started the review (`--origin`) and is waiting for the decision on stdout. */
 const AGENT_NAMES = {
   'claude-code': 'Claude Code',
+  'codex': 'Codex',
   'opencode': 'OpenCode',
   'vibe': 'Mistral Vibe'
 }
