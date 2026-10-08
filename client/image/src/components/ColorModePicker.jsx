@@ -1,5 +1,9 @@
+import { useEffect, useRef } from 'react'
 import { ANNOTATION_COLORS } from '../utils/annotationColors.js'
 import { useDropdown } from '../../../shared/hooks/useDropdown.js'
+import { moveMenuFocus } from '../../../shared/utils/menuFocus.js'
+
+const MENU_ITEMS = '[role="menuitemradio"], [role="radio"]'
 
 // The four intent colours in one swatch: a new mark takes the colour of its intent.
 const INTENT_GRADIENT = 'conic-gradient(var(--intent-change-mark) 0 25%, var(--intent-add-mark) 0 50%, var(--intent-remove-mark) 0 75%, var(--intent-question-mark) 0)'
@@ -12,13 +16,29 @@ const INTENT_GRADIENT = 'conic-gradient(var(--intent-change-mark) 0 25%, var(--i
  */
 export default function ColorModePicker({ colorMode, fixedColor, onChangeMode, onChangeColor }) {
   const { open, setOpen, toggle, wrapperRef } = useDropdown()
+  const listRef = useRef(null)
+  const triggerRef = useRef(null)
   const fixed = colorMode === 'fixed'
+
+  useEffect(() => {
+    if (open) { listRef.current?.querySelector('[aria-checked="true"]')?.focus() }
+  }, [open])
+
+  // Escape closes the menu only and hands focus back to the trigger.
+  const handleKeyDown = (event) => {
+    if (event.key !== 'Escape' || !open) { return }
+    event.preventDefault()
+    event.stopPropagation()
+    setOpen(false)
+    triggerRef.current?.focus()
+  }
 
   const triggerStyle = fixed ? { backgroundColor: fixedColor } : { background: INTENT_GRADIENT }
 
   return (
-    <div className="color-mode-picker" ref={wrapperRef}>
+    <div className="color-mode-picker" ref={wrapperRef} onKeyDown={handleKeyDown}>
       <button
+        ref={triggerRef}
         type="button"
         data-dock-item=""
         className="color-mode-trigger dock-button"
@@ -31,7 +51,7 @@ export default function ColorModePicker({ colorMode, fixedColor, onChangeMode, o
         <span className="color-mode-swatch" style={triggerStyle} />
       </button>
       {open && (
-        <div className="color-mode-dropdown" role="menu">
+        <div ref={listRef} className="color-mode-dropdown" role="menu" aria-label="Ink for new marks" onKeyDown={(event) => moveMenuFocus(event, listRef.current, MENU_ITEMS)}>
           <button
             type="button"
             role="menuitemradio"
