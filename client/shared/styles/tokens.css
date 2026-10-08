@@ -17,7 +17,6 @@
   --line-control: #8a909c;
   --focus: #2f55c8;
   --on-focus: #fff;
-  --brand: #767f9e;
 
   /* Status: darker than the intent marks, so they hold 4.5:1 as text and on their tint. */
   --status-ok: #17692e;
@@ -41,7 +40,6 @@
   --intent-question-on-mark: #fff;
   --intent-question-label: #005a8c;
   --intent-earlier-mark: #5a6170;
-  --intent-earlier-label: var(--ink-muted);
   --mark-halo: rgb(255 255 255 / 60%);
   --scrim: rgb(15 17 20 / 50%);
 

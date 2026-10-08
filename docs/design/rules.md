@@ -27,7 +27,6 @@ All colours come from tokens in `client/shared/styles/tokens.css`, with a light 
 | `--line` | `#e2e5ea` | `#22262d` | Separators and card outlines only |
 | `--line-control` | `#8a909c` | `#6b7280` | Boundaries of inputs, selects and toggles |
 | `--focus` | `#2f55c8` | `#8fb0ff` | Focus ring, selected card, link |
-| `--brand` | `#767f9e` | `#767f9e` | The logo, nothing else |
 
 - **The primary button is ink.** Light theme: ink fill, white text. Dark theme: light fill, ink text. No green or orange decision buttons.
 - **`--line` is decoration, `--line-control` is a boundary.** A field outlined with `--line` fails WCAG 1.4.11.
