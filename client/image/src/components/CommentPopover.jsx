@@ -71,7 +71,6 @@ export default function CommentPopover({
   const tools = (
     <>
       <StylePalette annotationType={annotationType} style={style} onChange={(change) => setStyle((current) => ({ ...current, ...change }))} />
-      {voiceNotes && <VoiceNoteButton onText={appendVoiceText} />}
       {timeBadge && <span className="comment-popover-time">{timeBadge}</span>}
     </>
   )
@@ -101,6 +100,7 @@ export default function CommentPopover({
           value={text}
           onChange={(event) => setText(event.target.value)}
         />
+        {voiceNotes && <VoiceNoteButton onText={appendVoiceText} />}
       </div>
       {elementHint && (
         <p className="comment-popover-element" title={elementHint}>

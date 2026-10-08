@@ -133,6 +133,14 @@
   color: var(--on-ink);
 }
 
+/* The ring sits inside the 28px box, so a focused button is not taller than its neighbours. */
+.composer-icon-button:focus-visible,
+.composer-cancel:focus-visible,
+.composer-submit:focus-visible,
+.intent-chip-trigger:focus-visible {
+  outline-offset: -2px;
+}
+
 /* Intent chip: icon and word in the intent's label colour, the menu lists all four with their keys. */
 .intent-chip {
   position: relative;
