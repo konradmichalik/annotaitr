@@ -21,5 +21,5 @@ export default function ToolHelp({ tool, isVideo, isDocument }) {
   if (isDocument) {
     return <>Select: click a mark to edit it. <KeyCap>[</KeyCap><KeyCap>]</KeyCap> switch pages, <KeyCap>Home</KeyCap><KeyCap>End</KeyCap> first and last</>
   }
-  return <>Select: click a mark to edit it, drag to move, <KeyCap>Delete</KeyCap> removes it. <KeyCap>R</KeyCap><KeyCap>A</KeyCap><KeyCap>C</KeyCap> pick a tool</>
+  return <>Select: click a mark to edit it, drag to move, <KeyCap>1</KeyCap> to <KeyCap>4</KeyCap> set its intent, <KeyCap>Delete</KeyCap> removes it. <KeyCap>R</KeyCap><KeyCap>A</KeyCap><KeyCap>C</KeyCap> pick a tool</>
 }
