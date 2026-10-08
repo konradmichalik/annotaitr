@@ -18,6 +18,7 @@ const GROUPS = [
     items: [
       { label: 'Select', keys: ['V'], kinds: IMAGE },
       { label: 'Element', keys: ['E'], kinds: ['url', 'pdf'] },
+      { label: 'Next element, parent (Element tool, canvas focused)', keys: ['Tab', '↑'], kinds: ['url', 'pdf'] },
       { label: 'Text', keys: ['T'], kinds: ['pdf'] },
       { label: 'Box', keys: ['R'], kinds: IMAGE },
       { label: 'Arrow', keys: ['A'], kinds: IMAGE },
