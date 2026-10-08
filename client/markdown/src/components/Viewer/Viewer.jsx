@@ -196,7 +196,8 @@ export const Viewer = forwardRef(function Viewer({
     ...highlightMethods,
     openSearch: crossFileSearch ? crossFileSearch.openSearch : search.openSearch,
     closeSearch: crossFileSearch ? crossFileSearch.closeSearch : search.closeSearch,
-    restoreHighlight(ann) {
+    restoreHighlight(loaded) {
+      const ann = highlightMethods.currentNote(loaded)
       if (ann.type === 'INSERTION') {
         const blockEl = containerRef.current?.querySelector(`[data-block-id="${ann.blockId}"]`)
         if (!blockEl) { return false }

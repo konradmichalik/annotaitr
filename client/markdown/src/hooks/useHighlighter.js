@@ -254,7 +254,11 @@ export function useHighlighter({
     containerRef.current?.querySelectorAll(`[data-highlight-id="${id}"]`).forEach(unwrapOrRemove)
   }
 
-  const restoreHighlight = (ann) => {
+  // A delayed restore is handed the notes as loaded. The reducer has numbered them since, and its copy is the one the cards show.
+  const currentNote = (ann) => r.current.annotations.find((a) => a.id === ann.id) ?? ann
+
+  const restoreHighlight = (loaded) => {
+    const ann = currentNote(loaded)
     if (ann.targetType === 'image' || ann.targetType === 'diagram' ||
         ann.targetType === 'pinpoint' || ann.targetType === 'global' ||
         ann.targetType === 'link' || ann.type === 'NOTES' || ann.type === 'INSERTION') { return true }
@@ -306,6 +310,6 @@ export function useHighlighter({
     handleTextAnnotate,
     handleToolbarClose,
     handleToolbarDelete,
-    highlightMethods: { removeHighlight, restoreHighlight, restoreHighlights, clearAllHighlights, updateHighlightType },
+    highlightMethods: { removeHighlight, currentNote, restoreHighlight, restoreHighlights, clearAllHighlights, updateHighlightType },
   }
 }
