@@ -1,11 +1,25 @@
 /* The done page shown after a decision or when the session ended first. */
 
 .done-screen {
+  position: relative;
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--space-6) var(--space-4);
+}
+
+.done-logo {
+  position: absolute;
+  bottom: var(--space-5);
+  left: 50%;
+  height: 1.75rem;
+  width: auto;
+  fill: currentcolor;
+  color: var(--ink-muted);
+  opacity: 0.4;
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
 .done-card {

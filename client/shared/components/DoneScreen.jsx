@@ -3,6 +3,7 @@ import { agentName } from '../utils/origin.js'
 import { countsLabel, previewNotes } from '../utils/done.js'
 import { intentBadgeStyle, intentWord } from '../utils/intents.js'
 import { plural } from '../utils/decision.js'
+import { Logo } from './Logo.jsx'
 
 const ICON_PROPS = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true }
 
@@ -59,6 +60,15 @@ function Countdown({ state, onKeepOpen }) {
   return lines[state.phase] ? <p className="done-countdown">{lines[state.phase]}</p> : null
 }
 
+function DoneShell({ children }) {
+  return (
+    <main className="done-screen canvas-surface">
+      {children}
+      <Logo className="done-logo" />
+    </main>
+  )
+}
+
 function Heading({ icon, tone, title, subtitle }) {
   return (
     <div className="done-heading">
@@ -110,7 +120,7 @@ export function DoneScreen({ outcome, origin, target, notes = [], replies = 0, c
 
   if (outcome === 'gone') {
     return (
-      <main className="done-screen canvas-surface">
+      <DoneShell>
         <div className="done-card">
           <div role="alert">
             <Heading icon="unlinked" tone="warn" title={`${subject} stopped waiting`} subtitle="The session ended before your decision arrived" />
@@ -125,13 +135,13 @@ export function DoneScreen({ outcome, origin, target, notes = [], replies = 0, c
             {reconnecting ? 'Trying to reach the session again. ' : ''}This tab stays open until you close it.
           </p>
         </div>
-      </main>
+      </DoneShell>
     )
   }
 
   if (outcome === 'approved') {
     return (
-      <main className="done-screen canvas-surface">
+      <DoneShell>
         <div className="done-card done-card--centered">
           <div role="status">
             <span className="done-icon done-icon--ok done-icon--round">{ICONS.check}</span>
@@ -142,13 +152,13 @@ export function DoneScreen({ outcome, origin, target, notes = [], replies = 0, c
           </div>
           {countdownLine}
         </div>
-      </main>
+      </DoneShell>
     )
   }
 
   if (outcome === 'approved-notes') {
     return (
-      <main className="done-screen canvas-surface">
+      <DoneShell>
         <div className="done-card">
           <div role="status">
             <Heading
@@ -160,12 +170,12 @@ export function DoneScreen({ outcome, origin, target, notes = [], replies = 0, c
           </div>
           {countdownLine}
         </div>
-      </main>
+      </DoneShell>
     )
   }
 
   return (
-    <main className="done-screen canvas-surface">
+    <DoneShell>
       <div className="done-card">
         <div role="status">
           <Heading icon="sent" tone="ink" title={`Sent to ${agent ?? 'the agent'}`} subtitle={countsLabel(notes.length, replies)} />
@@ -173,6 +183,6 @@ export function DoneScreen({ outcome, origin, target, notes = [], replies = 0, c
         </div>
         {countdownLine}
       </div>
-    </main>
+    </DoneShell>
   )
 }
