@@ -158,7 +158,11 @@ test('the Element tool walks the page elements from the keyboard and annotates o
     const caption = (el) => `${el.selector} ${Math.round(el.box.width)}×${Math.round(el.box.height)}`
     const label = page.locator('.element-highlight-label')
 
-    await page.keyboard.press('e')
+    // The tool is offered once the app has the element map, which arrives after the image.
+    await expect(async () => {
+      await page.keyboard.press('e')
+      await expect(page.getByRole('button', { name: /^Element \(/ })).toHaveAttribute('aria-pressed', 'true', { timeout: 500 })
+    }).toPass()
     // Reached with Tab, as a keyboard user does: a click on the canvas starts no walk.
     for (let i = 0; i < 40; i++) {
       await page.keyboard.press('Tab')
