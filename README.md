@@ -2,7 +2,8 @@
 
 # <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-dark.svg"><source media="(prefers-color-scheme: light)" srcset="docs/images/logo.svg"><img alt="annotaitr" src="docs/images/logo.svg" width="300"></picture>
 
-An AI coding agent plugin that opens images, captured web pages, videos, GIFs, PDFs, or Markdown files in a browser-based annotator.
+An AI coding agent plugin that opens images, captured web pages, videos, GIFs, PDFs, or Markdown files in a browser-based annotator.<br>
+Learn more at <a href="https://konradmichalik.github.io/annotaitr/">konradmichalik.github.io/annotaitr</a>
 
 [![Test](https://github.com/konradmichalik/annotaitr/actions/workflows/test.yml/badge.svg)](https://github.com/konradmichalik/annotaitr/actions/workflows/test.yml)
 [![License](https://img.shields.io/github/license/konradmichalik/annotaitr)](LICENSE)

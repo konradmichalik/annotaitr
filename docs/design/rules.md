@@ -246,6 +246,17 @@ Nothing else moves.
 
 The intent is a field of every annotation and part of the stdout output. Adding or renaming an intent changes the contract with the calling agent, so it goes with tests and an update to [usage.md](../usage.md).
 
+## Landing page
+
+- `site/` is plain HTML, one CSS file and one small script, no build step and no framework. `.github/workflows/pages.yml` deploys it together with `scripts/install.sh`.
+- Colours, fonts and spacing are CSS custom properties on `:root`, taken from the token table above. Intent colours come as a pair: the mark colour and its darker label colour for text.
+- Geist and Geist Mono are self-hosted from `site/fonts/` with their licence. No CDN, analytics, embeds or any other third-party request. URLs are relative, because the site is served under `/annotaitr/`.
+- Animation follows the Motion rules: it sits inside `prefers-reduced-motion: no-preference`, the static state is the final state, and scroll reveal runs only inside `@supports (animation-timeline: view())` and never hides content otherwise.
+- No horizontal scrolling down to 320px. Code wraps instead of scrolling.
+- The page works without JavaScript. The script only enhances, for example the screenshot lightbox on a native `<dialog>`.
+- Copy claims only what README and docs state. Say "no tracking and no account", never "nothing is sent": the CLI checks for updates.
+- The screenshots in `site/images/` are exports of the reference screens. When a screen changes, export it again and replace the file.
+
 ## Pull request checklist
 
 - [ ] Colours come from tokens, no literals
