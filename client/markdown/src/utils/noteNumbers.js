@@ -38,5 +38,6 @@ export function noteLocation(annotation, blocks) {
   const line = lineOf(annotation.blockId, blocks)
   if (!line) { return null }
   const heading = blocks.filter((block) => block.type === 'heading' && block.startLine <= line).at(-1)
-  return heading ? `${heading.content} · L${line}` : `L${line}`
+  const title = heading?.content.replace(/<[^>]*>/g, '').trim()
+  return title ? `${title} · L${line}` : `L${line}`
 }
