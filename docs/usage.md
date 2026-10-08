@@ -407,7 +407,8 @@ and the one on the mark.
 Selecting a mark selects its card and the other way round. With an earlier
 round the panel switches between **This round** and **Replies**; with several
 markdown files between **This file** and **All files**. The general comment is
-the row at the bottom of the panel.
+written in the row at the bottom of the panel (`G`). Once it has text it also
+appears as a **General** card at the top of the list, with edit and delete.
 
 ### Writing a note
 
