@@ -125,7 +125,7 @@ export default function App() {
   const seekTo = isDocument ? doc.seekTo : video.seekTo
   const {
     showPrevious, openThreadHandle, entryThread,
-    openCanvasThread, showThread, showEntryThread, showTimelineThread, togglePrevious, closeThread
+    openCanvasThread, showThreadFrom, showTimelineThread, togglePrevious, closeThread
   } = useThreadPopover({ previousThreads, seekTo })
   // Looked up in the current threads so a reload (a sent or removed reply) reaches the open popover.
   const entryPopoverThread = entryThread && previous.threads.find((t) => t.handle === entryThread.handle)
@@ -436,15 +436,8 @@ export default function App() {
   }
   const answerQuestions = () => {
     setDecisionDialog(null)
-    const button = primaryRef.current
     const [thread] = unanswered
-    // A thread without a mark has no canvas popover, so it hangs off the primary button like a panel entry does.
-    if (hasMark(thread)) {
-      showThread(thread, button)
-    } else {
-      const rect = button.getBoundingClientRect()
-      showEntryThread(thread, { x: rect.left + rect.width / 2, y: rect.bottom }, button)
-    }
+    showThreadFrom(thread, primaryRef.current, 'bottom')
   }
   const openDecision = useCallback(() => setDecisionDialog({ choice: null }), [])
   const closeDecision = useCallback(() => setDecisionDialog(null), [])
@@ -717,7 +710,7 @@ export default function App() {
               {...(previous.threads.length > 0 ? { role: 'tabpanel', 'aria-labelledby': `panel-tab-${panelTab}` } : {})}
             >
               {previous.threads.length > 0 && panelTab === 'replies' ? (
-                <PreviousRoundPanel round={previous.round} threads={previous.threads} showOnImage={showPrevious} onToggleShowOnImage={togglePrevious} onShow={showThread} onShowDetached={showEntryThread} />
+                <PreviousRoundPanel round={previous.round} threads={previous.threads} showOnImage={showPrevious} onToggleShowOnImage={togglePrevious} onShow={(thread, button) => showThreadFrom(thread, button, 'bottom')} />
               ) : (
                 <AnnotationPanel
                   annotations={review.ordered}

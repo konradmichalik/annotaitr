@@ -7,7 +7,7 @@ const entry = (replies) => ({
   annotation: { type: 'box', text: 'Fix' }, replies
 })
 const render = (replies) => renderToStaticMarkup(
-  <PreviousRoundPanel round={1} threads={[entry(replies)]} showOnImage onToggleShowOnImage={() => {}} onShow={() => {}} onShowDetached={() => {}} />
+  <PreviousRoundPanel round={1} threads={[entry(replies)]} showOnImage onToggleShowOnImage={() => {}} onShow={() => {}} />
 )
 
 describe('PreviousRoundPanel', () => {
@@ -24,7 +24,7 @@ describe('PreviousRoundPanel', () => {
   it('numbers a carried thread with its origin round', () => {
     const carried = { ...entry([]), number: null, origin: { round: 1, number: 2 } }
     const html = renderToStaticMarkup(
-      <PreviousRoundPanel round={2} threads={[carried]} showOnImage onToggleShowOnImage={() => {}} onShow={() => {}} onShowDetached={() => {}} />
+      <PreviousRoundPanel round={2} threads={[carried]} showOnImage onToggleShowOnImage={() => {}} onShow={() => {}} />
     )
     expect(html).toContain('>1·2<')
     expect(html).toContain('Round 1 · note 2.')
