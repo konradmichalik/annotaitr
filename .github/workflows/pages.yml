@@ -4,8 +4,8 @@ on:
   push:
     branches: [main]
     paths:
+      - 'site/**'
       - 'scripts/install.sh'
-      - 'docs/pages/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -29,9 +29,7 @@ jobs:
 
       - name: Build pages
         run: |
-          mkdir -p _site
-          cp scripts/install.sh _site/install.sh
-          cp -r docs/pages/* _site/ 2>/dev/null || true
+          mkdir -p _site && cp -r site/. _site/ && cp scripts/install.sh _site/install.sh
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
