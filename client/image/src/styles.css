@@ -2032,31 +2032,71 @@ button.voice-note:hover {
 }
 
 .previous-round-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
   list-style: none;
 }
 
 .previous-round-heading {
-  padding: 0.5rem 1rem 0.25rem;
+  padding: var(--space-2) var(--space-4) 0;
+  color: var(--ink-muted);
   font-size: var(--fs-sm);
   font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
 }
 
 .previous-round-entry {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem 0.5rem;
+  flex-direction: column;
+  gap: var(--space-2);
   width: 100%;
-  padding: 0.375rem 1rem;
+  padding: 0;
   border: 0;
+  border-radius: var(--radius-control);
   background: none;
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
+}
+
+/* An earlier round's number: dashed grey, never filled (docs/design/rules.md, Intents). */
+.note-number--earlier {
+  border: 1.5px dashed var(--intent-earlier-mark);
+  background: none;
+  color: var(--ink);
+}
+
+.reply-card {
+  gap: var(--space-2);
+}
+
+.reply-card-reply {
+  align-self: flex-start;
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-control);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.reply-card-reply:hover {
+  background: var(--surface-sunken);
+}
+
+.reply-card-reply:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.reply-card-pending {
+  color: var(--ink-muted);
 }
 
 /* display: flex drops the native marker, so the open state is drawn here and never animated. */
@@ -2075,32 +2115,20 @@ button.voice-note:hover {
   color: var(--text-muted);
 }
 
-.previous-round-entry:hover {
-  background: var(--bg-card);
-}
-
 .previous-round-entry:focus-visible {
   outline: 2px solid var(--focus);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 
 .previous-round-entry-text {
-  flex: 1 1 6rem;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--ink);
+  overflow-wrap: anywhere;
 }
 
 .previous-round-entry-reply {
-  flex-basis: 100%;
-  min-width: 0;
-  padding-left: 1rem;
-  overflow: hidden;
-  color: var(--text-muted);
+  color: var(--ink-muted);
   font-size: var(--fs-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .previous-round-entry-reply--pending {

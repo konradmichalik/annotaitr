@@ -336,8 +336,12 @@ In round 2 the reviewer can answer a thread from the previous round in the
 annotator. Opening a thread, from its badge on the canvas or from the "Round 1
 replies" section under the panel's **Replies** tab, shows a "Reply to the agent" field. **Reply**, or Ctrl/Cmd+Enter,
 stores the reply as "Pending, sent with your decision". It can be removed
-until the decision is submitted. The panel shows the reviewer's reply as
-"You: ..." and counts them as "· N to send", and a thread with a pending reply
+until the decision is submitted. Each thread in the **Replies** tab is a
+card: the note's number in a dashed grey badge, the agent's status as icon
+and word, "You: ..." with the note, "Agent: ..." with the last reply and a
+**Reply** button that opens the thread. A reply of the reviewer's own shows as
+"You: ... · pending" until it is sent. The section counts them as "· N to
+send", and a thread with a pending reply
 carries a ↩ mark on its canvas badge. A decision may carry only replies and no
 new marks, so the main button reads Send feedback with replies alone.
 

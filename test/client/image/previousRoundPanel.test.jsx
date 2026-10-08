@@ -26,6 +26,7 @@ describe('PreviousRoundPanel', () => {
     const html = renderToStaticMarkup(
       <PreviousRoundPanel round={2} threads={[carried]} showOnImage onToggleShowOnImage={() => {}} onShow={() => {}} onShowDetached={() => {}} />
     )
-    expect(html).toContain('1·2.')
+    expect(html).toContain('>1·2<')
+    expect(html).toContain('Round 1 · note 2.')
   })
 })
