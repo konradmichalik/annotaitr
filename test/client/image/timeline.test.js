@@ -98,6 +98,12 @@ describe('clusterNotes', () => {
     expect(clusterNotes([note('a', 1), note('b', 1.05)], 10, 1000)[0].id).toBe('a')
   })
 
+  it('keeps an excluded note out of every cluster while the rest still merge', () => {
+    const notes = [note('a', 1), note('b', 1.1), note('c', 1.4), note('d', 1.45)]
+    expect(ids(clusterNotes(notes, 10, 1000))).toEqual([['a', 'b'], ['c', 'd']])
+    expect(ids(clusterNotes(notes, 10, 1000, 'b'))).toEqual([['a'], ['b'], ['c', 'd']])
+  })
+
   it('merges nothing before the track has a width', () => {
     expect(ids(clusterNotes([note('a', 1), note('b', 1)], 10, 0))).toEqual([['a'], ['b']])
   })

@@ -58,7 +58,7 @@ function useMarkerDrag({ controller, width, onChangeTimes, onDragging }) {
       if (event.button !== 0) { return }
       event.currentTarget.setPointerCapture(event.pointerId)
       dragRef.current = { marker, mode: event.target.dataset.edge ?? 'move', startX: event.clientX, moved: false, times: null }
-      onDragging({ id: marker.id, span: isSpan(marker) })
+      onDragging({ id: marker.id, span: isSpan(marker), time: marker.time })
     },
     onPointerMove: (event) => {
       const drag = dragRef.current
@@ -258,7 +258,9 @@ export default function TimelineLanes({ controller, currentTime, markers, onChan
     ...previousThreads.filter((thread) => !isSpan(thread.annotation))
       .map((thread) => ({ id: `previous-${thread.handle}`, kind: 'previous', time: thread.annotation.time, thread }))
   ]
-  const clusters = clusterNotes(notes, duration, width)
+  // The dragged marker keeps its place in the DOM: moving the element that holds the pointer capture ends the drag.
+  const domTime = (cluster) => (cluster.id === dragging?.id ? dragging.time : cluster.time)
+  const clusters = clusterNotes(notes, duration, width, dragging?.id).sort((a, b) => domTime(a) - domTime(b))
   const spans = markers.filter(inSpans)
   const spanItems = [...spans, ...previousSpans.map((thread) => ({ id: `previous-${thread.handle}`, time: thread.annotation.time, endTime: thread.annotation.endTime }))]
   const { lanes, laneCount } = layoutMarkerLanes(spanItems, duration, width)

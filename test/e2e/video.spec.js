@@ -137,6 +137,35 @@ test('dragging a span marker resizes and moves it, and undo restores it', async 
   }
 })
 
+test('dragging a point marker across a neighbour completes and can be undone', async ({ page }) => {
+  const cli = startCli([WEBM_FIXTURE], { ANNOTAITR_SESSION_DIR: sessionDir })
+  try {
+    await page.goto(await cli.url)
+    await expect(page.locator('.timeline-time')).toContainText('/ 00:02.000')
+
+    await drawBox(page, [20, 20], [80, 60])
+    await addComment(page, 'First')
+    await page.keyboard.press('Shift+ArrowRight')
+    await drawBox(page, [20, 20], [80, 60])
+    await addComment(page, 'Second')
+    const first = await page.getByRole('button', { name: /Annotation 1 at 00:00.000/ }).boundingBox()
+    const track = await page.locator('.timeline-track').boundingBox()
+    const y = first.y + first.height / 2
+
+    // From 0 s past the note at 1 s to 1.5 s: the marker passes within a marker width of its neighbour.
+    await page.mouse.move(first.x + first.width / 2, y)
+    await page.mouse.down()
+    await page.mouse.move(first.x + first.width / 2 + track.width * 0.75, y, { steps: 30 })
+    await page.mouse.up()
+    await expect(page.getByRole('button', { name: /Annotation 1 at 00:01.[45]\d\d/ })).toBeVisible()
+
+    await page.keyboard.press('ControlOrMeta+z')
+    await expect(page.getByRole('button', { name: /Annotation 1 at 00:00.000/ })).toBeVisible()
+  } finally {
+    if (cli.child.exitCode === null) { cli.child.kill() }
+  }
+})
+
 test('a point annotation becomes a span by dragging its handle or with Alt+Shift+Right', async ({ page }) => {
   const cli = startCli([WEBM_FIXTURE], { ANNOTAITR_SESSION_DIR: sessionDir })
   try {
