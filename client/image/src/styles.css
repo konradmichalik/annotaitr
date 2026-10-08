@@ -624,16 +624,6 @@
   pointer-events: none;
 }
 
-.panel-element {
-  margin-bottom: 0.25rem;
-  overflow: hidden;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
 .color-swatch {
   width: 18px;
   height: 18px;
@@ -1228,7 +1218,6 @@ button.voice-note:hover {
 .timeline-track {
   z-index: 1;
 }
-
 
 .timeline-marker {
   position: absolute;
@@ -1845,18 +1834,6 @@ button.voice-note:hover {
   .timeline-play {
     transition: height var(--transition-fast), background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
   }
-}
-
-.panel-time-chip {
-  flex-shrink: 0;
-  white-space: nowrap;
-  padding: 0 6px;
-  border-radius: 9999px;
-  background: var(--badge-bg);
-  color: var(--badge-text);
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  font-weight: 500;
 }
 
 @media (forced-colors: active) {
