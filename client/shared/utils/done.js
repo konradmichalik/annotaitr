@@ -21,7 +21,7 @@ export function countsLabel(notes, replies = 0) {
  * The rows the done page lists: numbered notes by number, the general
  * comment last. `notes` are `{ id, number, intent, text }`.
  */
-export function orderNotes(notes) {
+function orderNotes(notes) {
   const numbered = notes.filter((note) => Number.isInteger(note.number)).sort((a, b) => a.number - b.number)
   return [...numbered, ...notes.filter((note) => !Number.isInteger(note.number))]
 }
