@@ -703,15 +703,6 @@
   flex-shrink: 0;
 }
 
-.general-comment-preview {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--ink-muted);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .general-comment-row .key-cap {
   margin-left: auto;
   color: var(--ink-muted);

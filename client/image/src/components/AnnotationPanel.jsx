@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { matchAnnotation, describeElements } from '../utils/elementMatch.js'
 import { noteType } from '../../../shared/utils/noteTypes.js'
 import { NoteCard } from '../../../shared/components/NoteCard.jsx'
+import { GeneralCommentCard } from '../../../shared/components/GeneralCommentCard.jsx'
 import { IntentIcon } from '../../../shared/components/IntentIcon.jsx'
 import { intentBadgeStyle } from '../../../shared/utils/intents.js'
 import { PanelEmpty } from '../../../shared/components/PanelEmpty.jsx'
@@ -56,12 +57,13 @@ function CommentText({ annotation, isEditing, onSave, onCancel }) {
 /**
  * The cards of this round, in feedback order. A card shows the number its
  * note keeps for the round, as the canvas, the image and the output do.
- * `hidden` is the general comment, which has its own row at the bottom.
+ * `hidden` is the general comment: its card comes first, the row to write it
+ * is at the bottom. `generalEditor` is its state, from `useGeneralComment`.
  * `timeLabelFor` names the time or page of a note in a recording or PDF.
  * `autoEditId` opens a just-added comment for typing straight away.
  */
 export default function AnnotationPanel({
-  annotations, hidden = null, onRemove, onEdit, onEditComment, timeLabelFor = null, autoEditId = null, onAutoEditConsumed = null,
+  annotations, hidden = null, generalEditor = null, onRemove, onEdit, onEditComment, timeLabelFor = null, autoEditId = null, onAutoEditConsumed = null,
   elements = [], subject = 'image', selectedId = null, emptyKeys, approves = false
 }) {
   const [editingId, setEditingId] = useState(null)
@@ -79,7 +81,8 @@ export default function AnnotationPanel({
   }, [selectedId])
 
   const cards = annotations.filter((a) => a !== hidden)
-  if (cards.length === 0) {
+  const generalCard = hidden?.text && generalEditor ? <GeneralCommentCard annotation={hidden} editor={generalEditor} /> : null
+  if (cards.length === 0 && !generalCard) {
     return (
       <PanelEmpty
         lead={`Every mark becomes a numbered note the agent can find on the ${subject}.`}
@@ -96,6 +99,7 @@ export default function AnnotationPanel({
 
   return (
     <ul className="note-list" ref={listRef}>
+      {generalCard}
       {annotations.map((annotation) => {
         if (annotation === hidden) { return null }
         const { word, intent, shape } = noteType(annotation)

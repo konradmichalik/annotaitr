@@ -49,6 +49,7 @@ import { doneOutcome } from '../../shared/utils/done.js'
 import { getItem, setItem } from '../../shared/utils/storage.js'
 import { PanelSwitch } from '../../shared/components/PanelSwitch.jsx'
 import { GeneralCommentRow } from '../../shared/components/GeneralCommentRow.jsx'
+import { useGeneralComment } from '../../shared/hooks/useGeneralComment.js'
 
 // The general comment has no shape, page or time: it is about the whole target.
 const isGeneralComment = (a) => a.type === 'comment' && !a.geometry && typeof a.page !== 'number' && typeof a.time !== 'number'
@@ -346,6 +347,11 @@ export default function App() {
       dispatch({ type: 'REMOVE', id: generalComment.id })
     }
   }, [generalComment])
+  const generalEditor = useGeneralComment({
+    text: generalComment?.text || null,
+    onSave: saveGeneralComment,
+    disabled: sidebarCollapsed || settingsOpen || showExport || !!decisionDialog
+  })
 
   const removeAnnotation = useCallback((id) => {
     dispatch({ type: 'REMOVE', id })
@@ -715,6 +721,7 @@ export default function App() {
                 <AnnotationPanel
                   annotations={review.ordered}
                   hidden={generalComment}
+                  generalEditor={generalEditor}
                   onRemove={removeAnnotation}
                   onEdit={editAnnotation}
                   onEditComment={editGlobalComment}
@@ -729,11 +736,7 @@ export default function App() {
                 />
               )}
             </div>
-            <GeneralCommentRow
-              text={generalComment?.text || null}
-              onSave={saveGeneralComment}
-              disabled={settingsOpen || showExport || !!decisionDialog}
-            />
+            <GeneralCommentRow editor={generalEditor} />
           </aside>
         )}
       </main>

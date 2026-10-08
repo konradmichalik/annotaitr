@@ -103,7 +103,7 @@ test('a saved general comment does not reopen for editing when the sidebar is sh
     await page.getByRole('button', { name: 'Hide feedback panel' }).click()
     await page.getByRole('button', { name: 'Show feedback panel' }).click()
 
-    await expect(page.locator('.general-comment-preview', { hasText: 'Overall fine' })).toBeVisible()
+    await expect(page.locator('.note-card', { hasText: 'Overall fine' })).toBeVisible()
     // The edit mode would come from an effect after mounting, so give it time
     // to run before asserting it did not.
     await page.waitForTimeout(300)

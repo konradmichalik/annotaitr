@@ -13,6 +13,8 @@ import { NoteCard } from '../../../shared/components/NoteCard.jsx'
 import { PanelSwitch } from '../../../shared/components/PanelSwitch.jsx'
 import { PanelEmpty } from '../../../shared/components/PanelEmpty.jsx'
 import { GeneralCommentRow } from '../../../shared/components/GeneralCommentRow.jsx'
+import { GeneralCommentCard } from '../../../shared/components/GeneralCommentCard.jsx'
+import { useGeneralComment } from '../../../shared/hooks/useGeneralComment.js'
 import { IntentIcon } from '../../../shared/components/IntentIcon.jsx'
 import { intentBadgeStyle } from '../../../shared/utils/intents.js'
 
@@ -115,6 +117,14 @@ export function AnnotationPanel({
   const [tab, setTab] = useState('file')
   const isMultiFile = files.length > 1
   const showAll = isMultiFile && tab === 'all'
+  // Scoped to the active file: an open draft is discarded on a file switch, so a save can never reach another file.
+  const generalEditor = useGeneralComment({
+    text: generalComment?.text || null,
+    onSave: onSaveGeneralComment,
+    disabled: generalDisabled || collapsed,
+    scope: files[activeFileIndex]?.path
+  })
+  const hasGeneral = Boolean(generalComment?.text)
 
   const numbers = useMemo(() => noteNumbers(files.map(f => ({ annotations: f.annState.annotations, blocks: f.blocks || [] }))), [files])
   const agentNotes = useMemo(() => annotations.filter(a => a.type === 'NOTES'), [annotations])
@@ -145,6 +155,11 @@ export function AnnotationPanel({
     if (ann.targetType !== 'global') { flashElement(markOf(ann)) }
   }
 
+  const generalCard = hasGeneral && (
+    <GeneralCommentCard key="general-comment" annotation={generalComment} editor={generalEditor}>
+      <p className="note-text"><FileReferenceText text={generalComment.text} /></p>
+    </GeneralCommentCard>
+  )
   const activeCards = fileNotes.map(ann => (
     <Card
       key={ann.id} ann={ann} number={numbers.get(ann.id)} blocks={blocks}
@@ -155,18 +170,20 @@ export function AnnotationPanel({
     />
   ))
 
+  const activeList = [generalCard, ...activeCards]
+
   const allFiles = files.map((file, index) => {
     const own = file.annState.annotations
     const cards = index === activeFileIndex ? fileNotes : [
       ...sortNotes(own.filter(isNumbered), file.blocks || []),
       ...own.filter(a => a.targetType === 'global')
     ]
-    if (cards.length === 0) { return null }
+    if (cards.length === 0 && !(index === activeFileIndex && hasGeneral)) { return null }
     return (
       <section key={file.path} className="note-file" aria-label={file.path}>
         <h3 className="note-file-title">{file.path}</h3>
         <ul className="note-list">
-          {index === activeFileIndex ? activeCards : cards.map(ann => (
+          {index === activeFileIndex ? activeList : cards.map(ann => (
             <Card
               key={ann.id} ann={ann} number={numbers.get(ann.id)} blocks={file.blocks || []}
               selected={false}
@@ -178,7 +195,7 @@ export function AnnotationPanel({
     )
   })
 
-  const empty = fileNotes.length === 0 && (!showAll || allCount === 0)
+  const empty = fileNotes.length === 0 && !hasGeneral && (!showAll || allCount === 0)
 
   return (
     <aside ref={panelRef} className="annotation-panel" style={width ? { width: `${width}px` } : undefined}>
@@ -200,17 +217,10 @@ export function AnnotationPanel({
         {empty && (
           <PanelEmpty lead="Every selection becomes a numbered note the agent applies to the file." keys={EMPTY_KEYS} approves={approves} />
         )}
-        {!empty && (showAll ? allFiles : <ul className="note-list">{activeCards}</ul>)}
+        {!empty && (showAll ? allFiles : <ul className="note-list">{activeList}</ul>)}
         {!showAll && <AgentNotes notes={agentNotes} selectedAnnotationId={selectedAnnotationId} onSelect={onSelect} />}
       </div>
-      {/* Keyed by file: an open draft is discarded on a file switch, so a save can never reach another file. */}
-      <GeneralCommentRow
-        key={files[activeFileIndex]?.path}
-        text={generalComment?.text || null}
-        onSave={onSaveGeneralComment}
-        disabled={generalDisabled}
-        Field={GeneralCommentField}
-      />
+      <GeneralCommentRow editor={generalEditor} Field={GeneralCommentField} />
     </aside>
   )
 }

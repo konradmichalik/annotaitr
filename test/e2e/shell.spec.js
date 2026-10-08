@@ -182,7 +182,7 @@ test('tool letters, the dock and the general comment work from the keyboard', as
       await field.pressSequentially('crop')
       await expect(dock.getByRole('button', { name: 'Select (V)' })).toHaveAttribute('aria-pressed', 'true')
       await field.press('ControlOrMeta+Enter')
-      await expect(page.locator('.general-comment-preview')).toHaveText('crop')
+      await expect(page.locator('.note-card .note-text')).toHaveText('crop')
     } finally {
       imageCli.child.kill()
     }
@@ -296,6 +296,41 @@ test('Keep open stops the done page countdown', async ({ page }) => {
       expect(page.isClosed()).toBe(false)
       await expect(page.getByRole('heading', { name: 'Approved' })).toBeVisible()
       expect(cli.stdout()).toMatch(/^APPROVED/)
+    } finally {
+      cli.child.kill()
+    }
+  })
+})
+
+test('the general comment shows as a card at the top of the list that can be edited and deleted', async ({ page }) => {
+  await withTargets(async ({ image }) => {
+    const cli = startCli([image])
+    try {
+      await page.goto(await cli.url)
+      await expect(page.getByText('Nothing marked yet')).toBeVisible()
+      await page.keyboard.press('g')
+      await page.getByLabel('General comment', { exact: true }).fill('Spacing is off overall')
+      await page.keyboard.press('ControlOrMeta+Enter')
+      const card = page.locator('.note-card').first()
+      await expect(card).toContainText('General')
+      await expect(card.locator('.note-text')).toHaveText('Spacing is off overall')
+      await expect(page.getByText('Nothing marked yet')).toHaveCount(0)
+      await expect(page.locator('.general-comment-row')).toContainText('Edit general comment')
+      await expect(page.locator('.general-comment-row')).not.toContainText('Spacing')
+
+      await card.getByRole('button', { name: 'General comment' }).focus()
+      await page.keyboard.press('Enter')
+      const field = page.getByRole('textbox', { name: 'General comment' })
+      await expect(field).toHaveValue('Spacing is off overall')
+      await field.fill('Spacing is fine now')
+      await field.press('ControlOrMeta+Enter')
+      await expect(card.locator('.note-text')).toHaveText('Spacing is fine now')
+
+      await card.hover()
+      await card.getByRole('button', { name: 'Delete annotation' }).click()
+      await expect(page.locator('.note-card')).toHaveCount(0)
+      await expect(page.getByText('Nothing marked yet')).toBeVisible()
+      await expect(page.locator('.general-comment-row')).not.toContainText('Edit')
     } finally {
       cli.child.kill()
     }

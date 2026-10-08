@@ -9,13 +9,14 @@ import { PenIcon } from './HeaderIcons.jsx'
  */
 export function NoteCard({
   id, number = null, badgeStyle, word, icon = null, intent = null, location = null, quote = null,
-  selected = false, onActivate, onEdit = null, onRemove = null, children
+  selected = false, onActivate, onEdit = null, onRemove = null, label = null, buttonRef = null, children
 }) {
-  const name = [number !== null ? `${number}. ${word}` : word, location].filter(Boolean).join(', ')
+  const name = label ?? [number !== null ? `${number}. ${word}` : word, location].filter(Boolean).join(', ')
   return (
     <li className={`note-card${selected ? ' selected' : ''}`} data-annotation-id={id} onClick={onActivate}>
       <div className="note-card-head">
         <button
+          ref={buttonRef}
           type="button"
           className="note-card-select"
           aria-pressed={selected}
