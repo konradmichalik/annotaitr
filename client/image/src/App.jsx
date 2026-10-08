@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useState, useCallback, useRef, useMemo } from 'react'
 import { annotationReducer, initialAnnotationState, upcomingNumber } from './state/annotationReducer.js'
 import { createAnnotationId } from '../../shared/utils/annotationId.js'
+import { isGeneralComment, createGeneralComment } from './utils/generalComment.js'
 import { intentOf } from '../../shared/utils/intents.js'
 import Toolbar, { offeredTools } from './components/Toolbar.jsx'
 import ZoomControls from './components/ZoomControls.jsx'
@@ -15,6 +16,7 @@ import SettingsModal from './components/SettingsModal.jsx'
 import Timeline from './video/Timeline.jsx'
 import MediaSlot from './video/MediaSlot.jsx'
 import PageStrip from './document/PageStrip.jsx'
+import ImageStrip from './components/ImageStrip.jsx'
 import PageNav from './document/PageNav.jsx'
 import PageImage from './document/PageImage.jsx'
 import { usePreviousRound } from './threads/usePreviousRound.js'
@@ -23,6 +25,7 @@ import UnansweredQuestions from './threads/UnansweredQuestions.jsx'
 import PreviousRoundPanel from './threads/PreviousRoundPanel.jsx'
 import ThreadPopover from './threads/ThreadPopover.jsx'
 import { placedThreads, threadPageCounts, hasMark, pendingReplyCount, openQuestions } from './threads/threadView.js'
+import { useImageSet, saveAnnotations } from './hooks/useImageSet.js'
 import { useSettings } from './hooks/useSettings.js'
 import { useToolShortcuts } from './hooks/useToolShortcuts.js'
 import { useMediaPlayer } from './video/useMediaPlayer.js'
@@ -51,13 +54,6 @@ import { PanelSwitch } from '../../shared/components/PanelSwitch.jsx'
 import { GeneralCommentRow } from '../../shared/components/GeneralCommentRow.jsx'
 import { useGeneralComment } from '../../shared/hooks/useGeneralComment.js'
 
-// The general comment has no shape, page or time: it is about the whole target.
-const isGeneralComment = (a) => a.type === 'comment' && !a.geometry && typeof a.page !== 'number' && typeof a.time !== 'number'
-
-function createGeneralComment(text) {
-  return { id: createAnnotationId(), createdAt: Date.now(), type: 'comment', geometry: null, text, color: null }
-}
-
 const EMPTY_KEYS = [
   { key: 'R', label: 'Box around an area' },
   { key: 'A', label: 'Arrow to point at something' },
@@ -69,8 +65,8 @@ function getInitialSidebarCollapsed() {
 }
 
 /** Elements of a captured web page; empty for files, the clipboard and recordings. */
-function loadElements(setElements) {
-  return fetch('/api/elements')
+function loadElements(setElements, index = 0) {
+  return fetch(`/api/elements?index=${index}`)
     .then((r) => (r.ok ? r.json() : null))
     .then((r) => setElements(r?.data?.elements ?? []))
     .catch(() => setElements([]))
@@ -180,6 +176,19 @@ export default function App() {
     }, 5000)
   }, [])
 
+  const showImage = useCallback(({ index, meta: shown, annotations, elements: shownElements }) => {
+    setMeta(shown)
+    setImageUrl(`/api/image?index=${index}`)
+    setElements(shownElements)
+    setEditingAnnotationId(null)
+    setSelectedAnnotationId(null)
+    setZoom(1)
+    dispatch({ type: 'SET_ALL', annotations })
+  }, [])
+  const {
+    imageIndex, switching, stashed, counts: imageCounts, switchImage, restore: restoreImages, discardOthers: discardOtherImages
+  } = useImageSet({ annotations: state.annotations, onShow: showImage, onError: setErrorStatus })
+
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) { clearTimeout(toastTimerRef.current) }
@@ -192,14 +201,17 @@ export default function App() {
   }, [sidebarCollapsed])
 
   useEffect(() => {
-    fetch('/api/meta').then((r) => r.json()).then((r) => setMeta(r.data)).catch((err) => setErrorStatus('Error loading image metadata: ' + err.message))
+    fetch('/api/meta').then((r) => r.json()).then(({ data }) => {
+      setMeta(data)
+      return data.images && restoreImages(data.images)
+    }).catch((err) => setErrorStatus('Error loading image metadata: ' + err.message))
     setImageUrl('/api/image')
     loadElements(setElements)
     fetch('/api/annotations')
       .then((r) => r.json())
       .then((r) => dispatch({ type: 'SET_ALL', annotations: r.data.annotations }))
       .catch((err) => setErrorStatus('Error loading annotations: ' + err.message))
-  }, [setErrorStatus])
+  }, [setErrorStatus, restoreImages])
 
   // Debounced auto-save to the server, so a fast drag doesn't fire one POST
   // per mousemove - only settles 500ms after the annotations actually stop
@@ -207,17 +219,13 @@ export default function App() {
   useEffect(() => {
     if (!meta || decision) { return }
     const timer = setTimeout(() => {
-      fetch('/api/annotations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ annotations: state.annotations })
-      }).catch(() => {
+      saveAnnotations(imageIndex, state.annotations).catch(() => {
         // Silent failure - persistence is best-effort, the heartbeat/disconnect
         // screen is what surfaces a truly lost server.
       })
     }, 500)
     return () => clearTimeout(timer)
-  }, [state.annotations, meta, decision])
+  }, [state.annotations, meta, decision, imageIndex])
 
   // Capture the URL again with new settings. The server discards the
   // annotations, since their coordinates belong to the old layout, so the
@@ -384,7 +392,7 @@ export default function App() {
     showToast(`Imported ${annotations.length} annotation${annotations.length === 1 ? '' : 's'}`)
   }, [showToast, isVideo, isDocument, doc.pages, setErrorStatus])
 
-  const submit = useCallback(async (endpoint, annotations) => {
+  const submit = useCallback(async (endpoint, annotations, { discardOthers = false } = {}) => {
     if (submittingRef.current) { return }
     submittingRef.current = true
     try {
@@ -392,14 +400,11 @@ export default function App() {
       // and /api/feedback read the server's own state.annotations, which the
       // debounced auto-save effect above may not have posted yet if the user
       // submits within 500ms of their last edit.
-      const flush = await fetch('/api/annotations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ annotations })
-      })
+      const flush = await saveAnnotations(imageIndex, annotations)
       // Deciding on whatever the server last accepted would drop or alter
       // annotations without the reviewer noticing.
       if (!flush.ok) { throw new Error(`annotations were not saved: ${await readError(flush)}`) }
+      if (discardOthers) { await discardOtherImages(meta?.images ?? []) }
       // A recording's output is built from frames only the browser can
       // decode, so they are grabbed and uploaded before the decision.
       if (controller && annotations.length > 0) {
@@ -417,7 +422,7 @@ export default function App() {
       setExportProgress(null)
       submittingRef.current = false
     }
-  }, [setErrorStatus, controller])
+  }, [setErrorStatus, controller, imageIndex, meta, discardOtherImages])
 
   const unanswered = openQuestions(previous.threads)
   // `summary` comes from the decision dialog and becomes the general comment; null keeps the notes as they are.
@@ -425,7 +430,7 @@ export default function App() {
     const withSummary = summary === null
       ? state.annotations
       : applySummary(state.annotations, summary, { isGeneral: isGeneralComment, create: createGeneralComment })
-    submit(choice === 'feedback' ? 'feedback' : 'approve', choice === 'approve' ? [] : withSummary)
+    submit(choice === 'feedback' ? 'feedback' : 'approve', choice === 'approve' ? [] : withSummary, { discardOthers: choice === 'approve' })
   }
   // While the agent waits for answers, the main button opens the dialog with the open questions first,
   // so they are seen before feedback or an approval ends the wait.
@@ -477,10 +482,10 @@ export default function App() {
     if (isDocument) { zoomFit() }
   }, [isDocument, zoomFit])
 
-  const annotationCount = state.annotations.length
+  const annotationCount = state.annotations.length + stashed.length
   const replyCount = pendingReplyCount(previous.threads)
   const decisionItemCount = annotationCount + replyCount
-  const cardCount = annotationCount - (generalComment ? 1 : 0)
+  const cardCount = state.annotations.length - (generalComment ? 1 : 0)
   // A round that opens on replies shows them first; a new note brings its card into view.
   const hasThreads = previous.threads.length > 0
   const cardCountRef = useRef(cardCount)
@@ -493,6 +498,7 @@ export default function App() {
   }, [cardCount])
   const notesTitle = [annotationCount > 0 && `${annotationCount} annotation${annotationCount === 1 ? '' : 's'}`, replyCount > 0 && `${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`].filter(Boolean).join(' and ')
   const origin = meta?.origin
+  const targetLabel = meta?.images ? meta.images[imageIndex].label : meta?.targetLabel
   const source = sourceKind(meta)
   const facts = meta ? targetFacts({
     kind: source,
@@ -531,7 +537,7 @@ export default function App() {
           annotations={outcome === 'approved' ? [] : state.annotations}
           replies={replyCount}
           origin={origin}
-          target={meta?.targetLabel}
+          target={targetLabel}
           locate={isVideo ? formatTimes : (isDocument ? pageLabel : null)}
           snapshot={isVideo || !mediaWidth ? null : {
             image: lastImageRef.current, width: mediaWidth, height: mediaHeight, marks: review.visible, noun: isDocument ? 'page' : 'image'
@@ -548,7 +554,7 @@ export default function App() {
     <div className="app-shell">
       <AppHeader
         source={source}
-        target={meta?.targetLabel}
+        target={targetLabel}
         facts={facts}
         round={previous.round === null ? null : previous.round + 1}
         origin={origin}
@@ -568,6 +574,7 @@ export default function App() {
       />
 
       <main className="app-body">
+        {meta?.images && <ImageStrip images={meta.images} current={imageIndex} counts={imageCounts} onSelect={switchImage} />}
         {isDocument && <PageStrip pages={doc.pages} current={doc.current} counts={doc.counts} previousCounts={previousPageCounts} onSelect={goToPage} />}
         <div className="app-stage">
           <div className="work-area">
@@ -593,15 +600,15 @@ export default function App() {
               canUndo={state.history.length > 0}
             />
           </div>
-          <div className="app-main canvas-surface">
+          <div className="app-main canvas-surface" inert={switching}>
             {mediaError && <p className="media-error" role="alert">{mediaError}</p>}
             {doc.pageError && <p className="media-error" role="alert">Page {doc.current} could not be rendered: {doc.pageError}</p>}
             {recapturing && <CaptureOverlay label={recapturing} />}
             {meta && (isVideo ? controller && playerState : (isDocument ? doc.currentPage && !doc.pageError : imageUrl)) && (
               <ImageCanvas
-                key={isDocument ? doc.current : 'media'}
+                key={isDocument ? doc.current : (meta.images ? imageIndex : 'media')}
                 imageUrl={imageUrl}
-                imageAlt={meta.targetLabel ? `Annotating ${meta.targetLabel}` : 'Image being annotated'}
+                imageAlt={targetLabel ? `Annotating ${targetLabel}` : 'Image being annotated'}
                 imageWidth={mediaWidth}
                 imageHeight={mediaHeight}
                 activeTool={activeTool}
@@ -688,9 +695,10 @@ export default function App() {
               )}
               <ExportMenu
                 annotations={state.annotations}
-                target={isDocument && meta?.targetLabel ? `${meta.targetLabel.replace(/\.pdf$/i, '')} page ${doc.current}` : meta?.targetLabel}
+                target={isDocument && meta?.targetLabel ? `${meta.targetLabel.replace(/\.pdf$/i, '')} page ${doc.current}` : targetLabel}
                 imageActions={!isVideo}
                 page={isDocument ? doc.current : null}
+                index={imageIndex}
                 onOpenJson={() => setShowExport(true)}
                 onDone={showToast}
               />
@@ -702,7 +710,7 @@ export default function App() {
                 value={panelTab}
                 onChange={setPanelTab}
                 options={[
-                  { id: 'round', label: `This round · ${annotationCount}` },
+                  { id: 'round', label: `This round · ${state.annotations.length}` },
                   { id: 'replies', label: `Replies · ${previous.threads.length}` }
                 ]}
               />
@@ -762,7 +770,7 @@ export default function App() {
       {decisionDialog && (
         <DecisionDialog
           origin={origin}
-          noteIntents={state.annotations.filter((a) => a !== generalComment).map(intentOf)}
+          noteIntents={[...state.annotations.filter((a) => a !== generalComment), ...stashed.filter((a) => !isGeneralComment(a))].map(intentOf)}
           generalText={generalComment ? generalComment.text : null}
           replies={replyCount}
           info={replyCount > 0 ? `${plural(replyCount, 'pending reply', 'pending replies')} to round ${previous.round} ${replyCount === 1 ? 'goes' : 'go'} out with this.` : null}
