@@ -14,9 +14,10 @@ import { transcriptionConfig, detectTranscription, createTranscriptionRouter } f
  * Start the image annotator server for a single already-captured image.
  *
  * @param {Object} options
- * @param {Buffer} options.imageBuffer
- * @param {number} options.imageWidth
- * @param {number} options.imageHeight
+ * @param {Buffer} [options.imageBuffer]
+ * @param {number} [options.imageWidth]
+ * @param {number} [options.imageHeight]
+ * @param {Array<{buffer: Buffer, width: number, height: number, label: string}>} [options.images] - a set of local images reviewed in one session, instead of the single image
  * @param {string} [options.origin='cli']
  * @param {string} [options.targetLabel] - the URL or file path that was captured
  * @param {Array|null} [options.domMap] - elements of a captured page (server/image/common/domMap.js), only for URL captures
@@ -28,12 +29,17 @@ import { transcriptionConfig, detectTranscription, createTranscriptionRouter } f
 export async function buildImageServer(options) {
   const {
     imageBuffer, imageWidth, imageHeight, origin = 'cli', targetLabel = null, domMap = null,
-    captureSettings = null, recapture = null, session = null, onReady = null
+    captureSettings = null, recapture = null, session = null, onReady = null, images = null
   } = options
 
   const state = {
-    annotations: [],
-    capture: { buffer: imageBuffer, width: imageWidth, height: imageHeight, domMap, settings: captureSettings }
+    images: (images ?? [{ buffer: imageBuffer, width: imageWidth, height: imageHeight, label: targetLabel }]).map(
+      ({ buffer, width, height, label }, i) => ({
+        label,
+        annotations: [],
+        capture: { buffer, width, height, domMap: i === 0 ? domMap : null, settings: i === 0 ? captureSettings : null }
+      })
+    )
   }
   const transcription = transcriptionConfig()
   const voiceNotes = await detectTranscription(transcription)
@@ -54,7 +60,7 @@ export async function buildImageServer(options) {
       }))
       app.use(createThreadsRouter({
         session,
-        current: () => ({ width: state.capture.width, height: state.capture.height })
+        current: () => ({ width: state.images[0].capture.width, height: state.images[0].capture.height })
       }))
       app.use(createTranscriptionRouter({ available: voiceNotes, config: transcription }))
     }

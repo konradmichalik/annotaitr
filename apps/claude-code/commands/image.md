@@ -22,17 +22,18 @@ If the output above starts with `PASTED CHAT IMAGE:`, the user passed an
 `[Image #N]` chip for an image pasted or dropped into the chat. The shell runs
 before the image's path is known, so open it yourself:
 
-1. Find the `[Image: source: <path>]` line for that image in this
+1. Find the `[Image: source: <path>]` line for each image in this
    conversation.
-2. Run `annotaitr --origin claude-code '<path>'` with the Bash tool and
+2. Run `annotaitr --origin claude-code '<path>'` (one path per image) with the Bash tool and
    `run_in_background: true`, since it blocks until the user submits.
 3. Tell the user in one line that the annotator is open, then end your turn.
    When the background command finishes, read its output and continue with
    the task below.
 
-Image mode takes exactly one image. If several chips were given, ask which one
-to open. If no source line exists for the chip, say so and ask the user to
-save the image or copy it to the clipboard instead.
+If several chips were given, pass every source path in one command:
+`annotaitr --origin claude-code '<path1>' '<path2>'`. If no source line exists
+for a chip, say so and ask the user to save the image or copy it to the
+clipboard instead.
 
 ## Office documents
 

@@ -29,6 +29,7 @@ export function isVideoTarget(target) {
  * 2. every target exists and is markdown/plain-text -> markdown (multiple allowed)
  * 3. a single http(s) URL -> image (capture)
  * 4. a single existing file with a supported image extension -> image (local file)
+ * 3b. several existing image files -> image (file set)
  * 4b. a single existing video or GIF -> image (video capture)
  * 4c. a single existing PDF -> image (document review)
  * 5. anything else -> a detailed error
@@ -40,6 +41,13 @@ export async function detectMode(targets) {
   )
   if (annotatableChecks.every(Boolean)) {
     return { mode: 'markdown', resolvedPaths: resolved }
+  }
+
+  if (targets.length > 1) {
+    const imageChecks = await Promise.all(resolved.map(async (p) => (await fileExists(p)) && isImageFile(p)))
+    if (imageChecks.every(Boolean)) {
+      return { mode: 'image', capture: 'files', resolvedPaths: resolved }
+    }
   }
 
   if (targets.length === 1) {
@@ -66,8 +74,8 @@ function buildDetectionError(targets) {
   if (targets.length > 1) {
     return (
       `Could not determine a single mode for: ${targets.join(', ')}\n` +
-      'Multiple targets are only supported for markdown/plain-text files. ' +
-      'Pass exactly one target for image mode, or use --as to force a mode.'
+      'Multiple targets are only supported for several markdown/plain-text files or several image files. ' +
+      'URLs, videos and PDFs take exactly one target. Use --as to force a mode.'
     )
   }
   return (

@@ -220,10 +220,26 @@ describe('detectMode', () => {
     expect(result.error).toMatch(/--as/)
   })
 
-  it('errors on more than one image-shaped target', async () => {
+  it('detects several existing image files as image mode with a file set', async () => {
     const otherPngPath = join(dir, 'other.png')
     await writeFile(otherPngPath, Buffer.from('also-not-a-png'))
-    const result = await detectMode([pngPath, otherPngPath])
+    expect(await detectMode([pngPath, otherPngPath])).toEqual({
+      mode: 'image',
+      capture: 'files',
+      resolvedPaths: [pngPath, otherPngPath]
+    })
+  })
+
+  it('errors on several targets when one is not an existing image file', async () => {
+    const result = await detectMode([pngPath, 'http://localhost:3000'])
+    expect(result.error).toMatch(/Could not determine a single mode/)
+    expect(result.error).toMatch(/several image files/)
+  })
+
+  it('keeps video and PDF single-target', async () => {
+    const video = join(dir, 'multi.mp4')
+    await writeFile(video, 'x')
+    const result = await detectMode([pngPath, video])
     expect(result.error).toMatch(/Could not determine a single mode/)
   })
 })
@@ -425,5 +441,46 @@ describe('help text', () => {
     expect(stderr).toContain('--session <id>')
     expect(stderr).toContain('--new-session')
     expect(stderr).toContain('ANNOTAITR_SESSION_DIR')
+  })
+})
+
+describe('several image targets', () => {
+  let dir, pngPath, otherPngPath
+
+  beforeAll(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'annotaitr-set-'))
+    pngPath = join(dir, 'a.png')
+    otherPngPath = join(dir, 'b.png')
+    await writeFile(pngPath, Buffer.from('not-really-a-png'))
+    await writeFile(otherPngPath, Buffer.from('not-really-a-png'))
+  })
+
+  afterAll(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  const run = (...args) => spawnSync('node', ['index.js', ...args])
+
+  it('names the file that is missing', () => {
+    const result = run('--as', 'image', pngPath, join(dir, 'missing.png'))
+    expect(result.status).toBe(1)
+    expect(result.stderr.toString()).toMatch(/File not found: .*missing\.png/)
+  })
+
+  it.each([['http://localhost:3000'], ['deck.pdf'], ['clip.mp4']])('rejects %s next to an image', (other) => {
+    const result = run('--as', 'image', pngPath, other)
+    expect(result.status).toBe(1)
+    expect(result.stderr.toString()).toMatch(/Several targets must all be image files/)
+  })
+
+  it('rejects a review session', () => {
+    const result = run('--new-session', pngPath, otherPngPath)
+    expect(result.status).toBe(1)
+    expect(result.stderr.toString()).toMatch(/only apply to a single image target/)
+  })
+
+  it('rejects capture flags', () => {
+    const result = run('--viewport', 'mobile', pngPath, otherPngPath)
+    expect(result.status).toBe(1)
   })
 })

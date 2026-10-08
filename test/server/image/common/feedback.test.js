@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { formatApprovalOutput, formatApprovalWithNotesOutput, exportFeedback } from '../../../../server/image/common/feedback.js'
+import { normalizeNotes } from '../../../../server/core/notes.js'
+import { formatApprovalOutput, formatApprovalWithNotesOutput, exportFeedback, formatImageSetOutput } from '../../../../server/image/common/feedback.js'
 
 const pin = { type: 'pin', color: '#e11d48', text: 'This spacing looks off', geometry: { x: 10, y: 10 } }
 const box = { type: 'box', color: '#e11d48', text: '', geometry: { x: 0, y: 0, width: 50, height: 50 } }
@@ -192,5 +193,38 @@ describe('intents and stable numbers', () => {
     expect(output).toContain('2 annotations (1 Change, 1 General) on the screenshot.')
     expect(output).toContain('### General comment about the whole image')
     expect(output).toContain('### 1. Change · Boxed area:')
+  })
+})
+
+describe('formatImageSetOutput', () => {
+  const sets = [
+    { label: 'a.png', notes: normalizeNotes([pin]), width: 100, height: 100, annotatedImagePath: '/tmp/a/annotated.png', domMap: null, note: null },
+    { label: 'b.png', notes: [], width: 100, height: 100, annotatedImagePath: null, domMap: null, note: null },
+    { label: 'c.png', notes: normalizeNotes([box]), width: 100, height: 100, annotatedImagePath: '/tmp/c/annotated.png', domMap: null, note: null }
+  ]
+
+  it('groups the notes per image under the image label', () => {
+    const output = formatImageSetOutput(sets, { approved: false })
+    expect(output).toContain('2 annotations (1 Change, 1 Question) on 3 screenshots.')
+    expect(output).toContain('## Image 1 of 3: a.png')
+    expect(output).toContain('Annotated screenshot: /tmp/a/annotated.png')
+    expect(output).toContain('## Image 3 of 3: c.png')
+    expect(output.indexOf('This spacing looks off')).toBeLessThan(output.indexOf('## Image 3 of 3'))
+  })
+
+  it('numbers the notes per image, as the numbers are baked into each image', () => {
+    const output = formatImageSetOutput(sets, { approved: false })
+    expect(output.match(/### 1\./g)).toHaveLength(2)
+  })
+
+  it('lists an image without notes as unannotated', () => {
+    const output = formatImageSetOutput(sets, { approved: false })
+    expect(output).toMatch(/## Image 2 of 3: b\.png\nNo annotations\./)
+  })
+
+  it('frames an approval as context, not change requests', () => {
+    const output = formatImageSetOutput(sets, { approved: true })
+    expect(output).toContain('APPROVED WITH NOTES: 2 notes (1 Change, 1 Question) on 3 screenshots.')
+    expect(output).toContain('Treat the notes below as context, not as change requests.')
   })
 })
