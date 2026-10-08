@@ -28,6 +28,7 @@ Stdout is the contract with the calling agent:
 - `.claude-plugin/marketplace.json`: plugin marketplace manifest
 - `test/`: unit and integration tests (vitest) and `test/e2e/` (Playwright)
 - `scripts/`: install script and Vite helper plugin
+- `site/`: landing page (`index.html`, `styles.css`, `main.js`, self-hosted Geist fonts with their OFL licence, screenshots in `images/`), plain HTML with no build step, deployed together with `scripts/install.sh` by `.github/workflows/pages.yml`
 - `docs/`: usage, development, how-it-works, migration and release docs, plus `docs/design/` with the binding UI design rules and reference screens
 
 ## Development commands
