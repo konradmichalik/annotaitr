@@ -1,6 +1,6 @@
 {
   "name": "annotaitr-opencode",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "OpenCode plugin for interactive markdown annotation",
   "license": "MIT",
   "type": "module",
