@@ -6,11 +6,15 @@ const pin = { id: UUID, type: 'pin', geometry: { x: 1, y: 2 }, text: 'Fix' }
 const legacy = { id: 'ann-1', type: 'comment', geometry: null, text: 'Overall' }
 
 describe('buildThreads', () => {
-  it('numbers marks in the given order, as the feedback does, and derives the handle', () => {
+  it('numbers marks in the given order when they carry no number, and derives the handle', () => {
     expect(buildThreads([pin, legacy])).toEqual([
       { handle: 'a3f19c2e', number: 1, annotation: pin, element: null, replies: [] },
-      { handle: null, number: 2, annotation: legacy, element: null, replies: [] }
+      { handle: null, number: null, annotation: legacy, element: null, replies: [] }
     ])
+  })
+
+  it('keeps the stable number a mark was decided with', () => {
+    expect(buildThreads([{ ...pin, number: 4 }])[0].number).toBe(4)
   })
 
   it('records the element a mark points at when a describer is given', () => {

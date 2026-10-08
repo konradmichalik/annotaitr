@@ -79,6 +79,34 @@ export function layoutMarkerLanes(markers, duration, trackWidth) {
   return { lanes, laneCount: Math.max(1, laneEnds.length) }
 }
 
+/**
+ * Point notes on the Notes lane, merged where they would overlap: a note
+ * closer than a marker width to the one before it joins its cluster, so a run
+ * of close notes chains into one. Each cluster sits between its first and
+ * last note and is named after its first, which keeps an open cluster list
+ * open while the notes re-render. Before the track has a width nothing merges.
+ * The note named by `excludeId` (the one being dragged) never merges and does
+ * not pull others in: a cluster would unmount the marker holding the pointer.
+ */
+export function clusterNotes(notes, duration, trackWidth, excludeId = null) {
+  const sorted = [...notes].sort((a, b) => a.time - b.time)
+  const toPx = (time) => (time / duration) * trackWidth
+  const groups = []
+  let last = null
+  for (const note of sorted) {
+    if (note.id === excludeId) {
+      groups.push([note])
+      continue
+    }
+    const close = trackWidth > 0 && last && toPx(note.time) - toPx(last.at(-1).time) < MARKER_SIZE_PX
+    if (close) { last.push(note) } else {
+      last = [note]
+      groups.push(last)
+    }
+  }
+  return groups.map((items) => ({ id: items[0].id, time: (items[0].time + items.at(-1).time) / 2, items }))
+}
+
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 const roundMs = (value) => Math.round(value * 1000) / 1000
 

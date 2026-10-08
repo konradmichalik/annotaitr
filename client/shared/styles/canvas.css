@@ -1,0 +1,253 @@
+/* Canvas chrome: the work area, its floating controls, the dock and key caps. */
+
+/* The work area holds the scrolling canvas and the controls that float above it. */
+.work-area {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.floating {
+  position: absolute;
+  z-index: 10;
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.floating--top-left {
+  top: var(--space-3);
+  left: var(--space-4);
+}
+
+.floating--top-right {
+  top: var(--space-3);
+  right: var(--space-5);
+}
+
+.floating--bottom {
+  bottom: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* === Dock === */
+.dock {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-dialog);
+  background: var(--card);
+  box-shadow: var(--elev-2);
+}
+
+.dock-separator {
+  align-self: stretch;
+  width: 1px;
+  margin: 6px var(--space-1);
+  background: var(--line);
+}
+
+.dock-button {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-card);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-md);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.dock-button--text {
+  padding: 0 var(--space-3);
+  white-space: nowrap;
+}
+
+.dock-button:hover:not(.active, :disabled) {
+  background: var(--surface-sunken);
+}
+
+.dock-button.active {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+.dock-button:disabled {
+  color: var(--ink-muted);
+  cursor: default;
+}
+
+.dock-button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.dock-button svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.dock-button--text svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Name and key cap above an icon-only item, on hover and on keyboard focus. */
+.dock-tooltip {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  z-index: 30;
+  display: none;
+  gap: 6px;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-control);
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.dock-button:hover .dock-tooltip,
+.dock-button:focus-visible .dock-tooltip {
+  display: inline-flex;
+}
+
+.dock-button--text .key-cap {
+  color: var(--ink-muted);
+}
+
+.dock-tooltip .key-cap,
+.dock-button.active .key-cap {
+  border-color: color-mix(in srgb, var(--on-ink) 45%, transparent);
+  color: var(--on-ink);
+}
+
+/* A segmented control inside the dock, such as Preview and Source. */
+.dock-segmented {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-card);
+  background: var(--surface-sunken);
+}
+
+.dock-segmented .dock-button {
+  height: 36px;
+  border-radius: var(--radius-control);
+}
+
+.dock-segmented .dock-button.active {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--elev-1);
+}
+
+.key-cap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 var(--space-1);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: var(--fs-key);
+  font-weight: 400;
+  line-height: 1;
+}
+
+/* === Floating control groups (zoom, page navigation) === */
+.zoom-controls {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  padding: var(--space-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--card);
+  box-shadow: var(--elev-1);
+}
+
+.zoom-controls button {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.zoom-controls button:hover:not(:disabled) {
+  background: var(--surface-sunken);
+}
+
+.zoom-controls button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* === Status bar === */
+.app-status {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-4);
+  justify-content: space-between;
+  align-items: center;
+  height: 30px;
+  padding: 0 var(--space-4);
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+}
+
+.status-help {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-help .key-cap {
+  margin: 0 2px;
+  vertical-align: 1px;
+}
+
+.status-facts {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

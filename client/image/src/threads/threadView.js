@@ -2,6 +2,7 @@ import { isVisibleAt } from '../video/timeline.js'
 
 /** Visible names for the two sides of a thread. */
 export const AUTHOR_LABELS = { agent: 'Agent', human: 'You' }
+export const AUTHOR_AVATARS = { agent: 'AI', human: 'You' }
 
 // Icon plus text, so a status never depends on colour alone.
 export const STATUS_DISPLAY = {
@@ -21,10 +22,13 @@ export function threadStatus(thread) {
 
 /** A thread carried into this round has no number of its own, it keeps the round and number it was raised with. */
 export const threadRound = (thread, round) => thread.origin?.round ?? round
-export const threadNumber = (thread) => thread.origin?.number ?? thread.number
+export const threadNumber = (thread) => thread.origin?.number ?? thread.number ?? null
 // The panel lists carried threads beside this round's own, so a number from another round carries its round.
 export const threadLabel = (thread, round) => (threadRound(thread, round) === round ? `${threadNumber(thread)}` : `${threadRound(thread, round)}·${threadNumber(thread)}`)
-export const threadTitle = (thread, round) => `Round ${threadRound(thread, round)} · mark ${threadNumber(thread)}`
+// A general comment has no number, so its title names what it is instead of "note null".
+export const threadTitle = (thread, round) => (threadNumber(thread) === null
+  ? `Round ${threadRound(thread, round)} · general comment`
+  : `Round ${threadRound(thread, round)} · note ${threadNumber(thread)}`)
 
 export const pendingReplies = (thread) => thread.replies.filter((r) => r.pending)
 export const pendingReplyCount = (threads) => threads.reduce((sum, t) => sum + pendingReplies(t).length, 0)
@@ -36,8 +40,8 @@ export function statusDisplay(thread) {
   return STATUS_DISPLAY[threadStatus(thread)] ?? STATUS_DISPLAY.none
 }
 
-// Pins and text marks draw their number inside the shape, a second one in the badge would only repeat it.
-export const badgeShowsNumber = (thread) => !['pin', 'text'].includes(thread.annotation.type)
+// A pin is its own number, a second one in the badge would only repeat it. Other earlier marks are drawn without their number badge.
+export const badgeShowsNumber = (thread) => thread.annotation.type !== 'pin'
 
 function inView(annotation, view) {
   if (view.kind === 'video') { return isVisibleAt(annotation, view.time, view.tolerance) }

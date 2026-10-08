@@ -1,7 +1,9 @@
+import { intentOf } from '../../../shared/utils/intents.js'
+
 /**
- * Annotation color palette, matching md-annotator's Nord-derived quick-label
- * colors (client/src/utils/quickLabels.js) so both tools share one palette
- * even though this one applies to drawn shapes, not text highlights.
+ * Ink colours: an optional style a shape can carry for visibility on a busy
+ * image. Without one a mark takes its intent's colour, which never changes:
+ * the number badge always shows the intent (docs/design/rules.md, Intents).
  */
 export const ANNOTATION_COLORS = [
   { id: 'red', hex: '#bf616a' },
@@ -17,3 +19,11 @@ export const ANNOTATION_COLORS = [
 ]
 
 export const DEFAULT_ANNOTATION_COLOR = ANNOTATION_COLORS[0].hex
+
+export const intentMark = (intent) => `var(--intent-${intent ?? 'change'}-mark)`
+export const intentOnMark = (intent) => `var(--intent-${intent ?? 'change'}-on-mark)`
+
+/** The colour a shape is drawn in: its ink when it has one, its intent's mark colour otherwise. */
+export function markColor(annotation) {
+  return annotation.color || intentMark(intentOf(annotation))
+}

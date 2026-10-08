@@ -103,13 +103,12 @@ describe('readPreviousRound', () => {
 })
 
 describe('badgeShowsNumber', () => {
-  it('is false for marks that already draw their number', () => {
+  it('is false for a pin, which is its own number', () => {
     expect(badgeShowsNumber(thread({ type: 'pin', geometry: { x: 1, y: 1 } }))).toBe(false)
-    expect(badgeShowsNumber(thread({ type: 'text', geometry: { x: 1, y: 1, width: 5, height: 5 } }))).toBe(false)
   })
 
-  it('is true for marks without a number of their own', () => {
-    for (const type of ['box', 'arrow', 'freehand', 'highlighter', 'element']) {
+  it('is true for every other mark, which an earlier round draws without its number badge', () => {
+    for (const type of ['box', 'arrow', 'freehand', 'highlighter', 'element', 'text']) {
       expect(badgeShowsNumber(thread({ type }))).toBe(true)
     }
   })
@@ -117,12 +116,16 @@ describe('badgeShowsNumber', () => {
 
 describe('thread labels', () => {
   it('names a thread of last round by round and number', () => {
-    expect(threadTitle(thread(box(), { number: 2 }), 1)).toBe('Round 1 · mark 2')
+    expect(threadTitle(thread(box(), { number: 2 }), 1)).toBe('Round 1 · note 2')
+  })
+
+  it('names an unnumbered thread a general comment, never "note null"', () => {
+    expect(threadTitle(thread(box(), { number: null }), 1)).toBe('Round 1 · general comment')
   })
 
   it('names a carried thread by its origin, never "mark null"', () => {
     const carried = thread(box(), { number: null, origin: { round: 1, number: 2 } })
-    expect(threadTitle(carried, 2)).toBe('Round 1 · mark 2')
+    expect(threadTitle(carried, 2)).toBe('Round 1 · note 2')
     expect(threadNumber(carried)).toBe(2)
   })
 

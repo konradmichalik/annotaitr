@@ -3,11 +3,32 @@
  * Mirrors server/feedback.js format for consistency.
  */
 
+import { intentOf, intentWord } from '../../../shared/utils/intents.js'
 import { annotationHandle } from '../../../shared/utils/annotationId.js'
 
 function handleTag(id) {
   const handle = annotationHandle(id)
   return handle ? ` [#${handle}]` : ''
+}
+
+/**
+ * Each path as its file name, with as many parent folders as it takes to tell
+ * files of the same name apart. The relative paths the CLI passes can climb
+ * far up, which says nothing to someone reading a copied export.
+ */
+export function shortFileNames(paths) {
+  const parts = paths.map((path) => path.split(/[\\/]/).filter((part) => part && part !== '.' && part !== '..'))
+  const depths = parts.map(() => 1)
+  const nameAt = (i) => parts[i].slice(-depths[i]).join('/')
+  for (let changed = true; changed;) {
+    changed = false
+    const names = parts.map((_, i) => nameAt(i))
+    names.forEach((name, i) => {
+      const clash = names.some((other, j) => j !== i && other === name)
+      if (clash && depths[i] < parts[i].length) { depths[i] += 1; changed = true }
+    })
+  }
+  return parts.map((_, i) => nameAt(i))
 }
 
 /**
@@ -45,12 +66,14 @@ export function formatAnnotationsForExport(annotations, blocks, filePath) {
     const block = blocks.find(blk => blk.id === ann.blockId)
     const blockStartLine = block?.startLine || 1
     const tag = handleTag(ann.id)
+    // The number the note keeps for the round and its intent, as the card and the agent's feedback show them.
+    const heading = `${ann.number ?? index + 1}. ${intentWord(intentOf(ann))} · `
 
     // Element-level annotations
     if (ann.targetType === 'image') {
       const isDeletion = ann.type === 'DELETION'
       const label = isDeletion ? 'Remove image' : 'Comment on image'
-      output += `## ${index + 1}. ${label} (Line ${blockStartLine})${tag}\n\n`
+      output += `## ${heading}${label} (Line ${blockStartLine})${tag}\n\n`
       output += `Image: \`${ann.originalText}\`\n\n`
       if (ann.imageAlt) { output += `Alt text: "${ann.imageAlt}"\n\n` }
       if (ann.imageSrc) { output += `Source: ${ann.imageSrc}\n\n` }
@@ -64,7 +87,7 @@ export function formatAnnotationsForExport(annotations, blocks, filePath) {
     if (ann.targetType === 'diagram') {
       const isDeletion = ann.type === 'DELETION'
       const label = isDeletion ? 'Remove Mermaid diagram' : 'Comment on Mermaid diagram'
-      output += `## ${index + 1}. ${label} (Line ${blockStartLine})${tag}\n\n`
+      output += `## ${heading}${label} (Line ${blockStartLine})${tag}\n\n`
       output += `\`\`\`mermaid\n${block?.content || ann.originalText}\n\`\`\`\n\n`
       if (isDeletion) {
         output += `> User wants this diagram removed from the document.\n\n`
@@ -83,7 +106,7 @@ export function formatAnnotationsForExport(annotations, blocks, filePath) {
 
     const lineRef = startLine === endLine ? `Line ${startLine}` : `Lines ${startLine}-${endLine}`
 
-    output += `## ${index + 1}. `
+    output += `## ${heading}`
 
     if (ann.type === 'DELETION') {
       output += `Remove (${lineRef})${tag}\n\n`

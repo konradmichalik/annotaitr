@@ -1,9 +1,10 @@
 import { DEFAULT_ANNOTATION_COLOR } from '../utils/annotationColors.js'
-import { useSettings as useStoredSettings, SHARED_DEFAULTS } from '../../../shared/hooks/useSettings.js'
+import { useSettings as useStoredSettings } from '../../../shared/hooks/useSettings.js'
+import { SHARED_DEFAULTS } from '../../../shared/utils/settings.js'
 
 const DEFAULTS = {
   ...SHARED_DEFAULTS,
-  colorMode: 'rotate',
+  colorMode: 'intent',
   fixedColor: DEFAULT_ANNOTATION_COLOR
 }
 

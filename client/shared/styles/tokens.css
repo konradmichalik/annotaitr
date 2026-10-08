@@ -1,0 +1,105 @@
+/*
+ * Design tokens for both clients, as listed in docs/design/rules.md.
+ * The light values sit on :root, the dark ones on :root[data-theme="dark"],
+ * which the theme script sets before the first paint (also for the System setting).
+ */
+
+:root {
+  /* Chrome: ink and greys */
+  --canvas: #eef0f3;
+  --surface: #fbfbfc;
+  --surface-sunken: #f6f7f9;
+  --card: #fff;
+  --ink: #16181d;
+  --ink-muted: #5a6170;
+  --on-ink: #fff;
+  --line: #e2e5ea;
+  --line-control: #8a909c;
+  --focus: #2f55c8;
+  --on-focus: #fff;
+
+  /* Status: darker than the intent marks, so they hold 4.5:1 as text and on their tint. */
+  --status-ok: #17692e;
+  --status-warn: #855800;
+  --status-danger: #b0263e;
+  --status-info: #2f55c8;
+  --status-accent: #7c4dcc;
+  --tint: 12%;
+
+  /* Intents. Marks keep their colour in both themes, labels switch. */
+  --intent-change-mark: #c04a00;
+  --intent-change-on-mark: #fff;
+  --intent-change-label: #9a3b00;
+  --intent-add-mark: #e69f00;
+  --intent-add-on-mark: #16181d;
+  --intent-add-label: #7a5400;
+  --intent-remove-mark: #a8457e;
+  --intent-remove-on-mark: #fff;
+  --intent-remove-label: #8a3466;
+  --intent-question-mark: #0072b2;
+  --intent-question-on-mark: #fff;
+  --intent-question-label: #005a8c;
+  --intent-earlier-mark: #5a6170;
+  --mark-halo: rgb(255 255 255 / 60%);
+  --scrim: rgb(15 17 20 / 50%);
+
+  /* Search hits in the reviewed text */
+  --search-hit: #ffe48a;
+  --search-hit-active: #f0a020;
+
+  /* Type */
+  --font-sans: 'Geist', -apple-system, 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+  --fs-xl: 20px;
+  --fs-lg: 15px;
+  --fs-md: 13px;
+  --fs-sm: 12px;
+  --fs-key: 11px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Radii */
+  --radius-control: 6px;
+  --radius-card: 10px;
+  --radius-popover: 12px;
+  --radius-dialog: 14px;
+  --radius-full: 9999px;
+
+  /* Elevation */
+  --elev-1: 0 1px 2px rgb(22 24 29 / 6%);
+  --elev-2: 0 2px 4px rgb(22 24 29 / 6%), 0 12px 32px rgb(22 24 29 / 12%);
+}
+
+:root[data-theme="dark"] {
+  --canvas: #0f1114;
+  --surface: #121418;
+  --surface-sunken: #121418;
+  --card: #16191e;
+  --ink: #eceef2;
+  --ink-muted: #a3a9b5;
+  --on-ink: #16181d;
+  --line: #22262d;
+  --line-control: #6b7280;
+  --focus: #8fb0ff;
+  --on-focus: #16181d;
+  --status-ok: #5fd38a;
+  --status-warn: #e3b341;
+  --status-danger: #ff8b8b;
+  --status-info: #8fb0ff;
+  --status-accent: #c9a7ff;
+  --tint: 20%;
+  --intent-change-label: #ffb07a;
+  --intent-add-label: #f0c05a;
+  --intent-remove-label: #f0abd0;
+  --intent-question-label: #8fd0f5;
+  --search-hit: #5c4a12;
+  --search-hit-active: #8a5a00;
+  --elev-1: 0 1px 2px rgb(0 0 0 / 40%);
+  --elev-2: 0 2px 4px rgb(0 0 0 / 30%), 0 12px 32px rgb(0 0 0 / 45%);
+}

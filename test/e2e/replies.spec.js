@@ -33,19 +33,19 @@ async function firstVideoRoundWithReply(page, env) {
     await expect(page.locator('.timeline-time')).toContainText('/ 00:02.000')
     await page.keyboard.press('Shift+ArrowRight')
     await expect(page.locator('.timeline-time')).toContainText('00:01.000 /')
-    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Box').click()
+    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Box \(/ }).click()
     const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
     await page.mouse.move(canvas.x + 20, canvas.y + 20)
     await page.mouse.down()
     await page.mouse.move(canvas.x + 80, canvas.y + 60)
     await page.mouse.up()
-    await page.getByPlaceholder('Add a comment (optional)...').fill('Box on the first second')
+    await page.getByPlaceholder('Add a comment…').fill('Box on the first second')
     await page.getByRole('button', { name: 'Add', exact: true }).click()
     const saved = async () => (await (await fetch(`${await first.url}/api/annotations`)).json()).data.annotations
     await expect.poll(async () => (await saved()).length).toBe(1)
     const id = (await saved())[0].id
-    await page.getByRole('button', { name: 'Feedback' }).click()
-    await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible({ timeout: 20_000 })
+    await page.getByRole('button', { name: /^Send feedback/ }).click()
+    await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible({ timeout: 20_000 })
     const sessionId = (await first.exited, first.stdout()).match(/Session: ([0-9a-f]{12})/)[1]
     spawnSync('node', ['index.js', 'reply', '--session', sessionId, '--to', id.slice(0, 8), '--status', 'applied', '--text', 'Moved the button'], {
       env: { ...process.env, ...env }, encoding: 'utf-8'
@@ -69,20 +69,19 @@ test.describe('replies from the last round', () => {
       await page.goto(await cli.url)
       const section = page.getByRole('region', { name: /Round 1 replies/ })
       await section.getByRole('button', { name: /1\..*question/ }).click()
-      const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
+      const dialog = page.getByRole('dialog', { name: 'Round 1 · note 1' })
       await dialog.getByLabel('Reply to the agent').fill('Green')
-      await dialog.getByRole('button', { name: 'Send' }).click()
+      await dialog.getByRole('button', { name: 'Reply' }).click()
       await page.keyboard.press('Escape')
       await expect(section.getByText('You: Green')).toBeVisible()
       await expect(section.getByText('1 to send')).toBeVisible()
-      await expect(page.getByRole('button', { name: 'Approve with Notes' })).toBeVisible()
       await expect(page.locator('.previous-round-badge[aria-label*="reply pending"]')).toHaveCount(1)
-      const feedback = page.getByRole('button', { name: /^Feedback/ })
+      const feedback = page.getByRole('button', { name: /^Send feedback/ })
       await expect(feedback).toBeEnabled()
       await expect(feedback).toHaveAttribute('title', 'Submit 1 reply')
       await feedback.click()
-      await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
-      await expect(page.getByText(/^1 reply (sent to|submitted)/)).toBeVisible()
+      await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible()
+      await expect(page.getByText('1 reply', { exact: true })).toBeVisible()
       await cli.exited
       const out = cli.stdout()
       expect(out).toMatch(/^Feedback: 1 reply to round 1, no new marks\./)
@@ -96,7 +95,7 @@ test.describe('replies from the last round', () => {
       try {
         await page.goto(await third.url)
         await page.getByRole('region', { name: /replies/ }).getByRole('button', { name: /1\./ }).click()
-        await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' })).toBeVisible()
+        await expect(page.getByRole('dialog', { name: 'Round 1 · note 1' })).toBeVisible()
       } finally {
         third.child.kill()
       }
@@ -111,10 +110,10 @@ test.describe('replies from the last round', () => {
     try {
       await page.goto(await cli.url)
       await page.getByRole('region', { name: /Round 1 replies/ }).getByRole('button', { name: /1\..*question/ }).click()
-      const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
+      const dialog = page.getByRole('dialog', { name: 'Round 1 · note 1' })
       const field = dialog.getByLabel('Reply to the agent')
       await field.fill('x'.repeat(4001))
-      await dialog.getByRole('button', { name: 'Send' }).click()
+      await dialog.getByRole('button', { name: 'Reply' }).click()
       await expect(dialog.getByRole('alert')).toContainText('longer than 4000')
       await expect(field).toHaveValue('x'.repeat(4001))
       await field.fill('Green, the dark one')
@@ -124,7 +123,7 @@ test.describe('replies from the last round', () => {
       await dialog.getByRole('button', { name: 'Remove your reply' }).click()
       await expect(dialog.getByText('pending, sent with your decision')).toHaveCount(0)
       await field.fill('Green')
-      await dialog.getByRole('button', { name: 'Send' }).click()
+      await dialog.getByRole('button', { name: 'Reply' }).click()
       await expect(dialog.getByText('Green', { exact: true })).toBeVisible()
     } finally {
       cli.child.kill()
@@ -138,7 +137,7 @@ test.describe('replies from the last round', () => {
     try {
       await page.goto(await cli.url)
       await page.getByRole('region', { name: /Round 1 replies/ }).getByRole('button', { name: /1\./ }).click()
-      const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
+      const dialog = page.getByRole('dialog', { name: 'Round 1 · note 1' })
       const field = dialog.getByLabel('Reply to the agent')
       await field.fill('The top one')
       await field.press('Control+Enter')
@@ -161,10 +160,10 @@ test.describe('replies from the last round', () => {
       await expect(badge.locator('.previous-round-badge-number')).toHaveText('1')
       await expect(badge.locator('.previous-round-badge-label')).toHaveText('applied')
 
-      await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: 'Select' }).click()
+      await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Select \(/ }).click()
       const box = await page.locator('.image-canvas-wrapper').boundingBox()
       await page.mouse.click(box.x + 100, box.y + 80)
-      const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
+      const dialog = page.getByRole('dialog', { name: 'Round 1 · note 1' })
       await expect(dialog.getByText('Button too close')).toBeVisible()
       await expect(dialog.getByText('Moved the button')).toBeVisible()
       await page.keyboard.press('Escape')
@@ -190,17 +189,17 @@ test.describe('replies from the last round', () => {
     try {
       await page.goto(await cli.url)
       await expect(page.locator('.previous-round').getByText('applied')).toBeVisible()
-      await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Box').click()
+      await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Box \(/ }).click()
       const box = await page.locator('.image-canvas-wrapper').boundingBox()
       await page.mouse.move(box.x + 60, box.y + 60)
       await page.mouse.down()
       await page.mouse.move(box.x + 140, box.y + 100)
       await page.mouse.up()
-      await expect(page.getByRole('dialog')).toHaveCount(0)
-      await page.getByPlaceholder('Add a comment (optional)...').fill('New note')
+      await expect(page.getByRole('dialog', { name: /^Round/ })).toHaveCount(0)
+      await page.getByPlaceholder('Add a comment…').fill('New note')
       await page.getByRole('button', { name: 'Add', exact: true }).click()
-      await page.getByRole('button', { name: 'Feedback' }).click()
-      await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
+      await page.getByRole('button', { name: /^Send feedback/ }).click()
+      await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible()
       await cli.exited
       const stdout = cli.stdout()
       expect(stdout).toContain('New note')
@@ -210,7 +209,7 @@ test.describe('replies from the last round', () => {
     }
   })
 
-  test('greys out a ghost pin instead of keeping its mark colour', async ({ page }) => {
+  test('draws a ghost pin as a dashed grey outline instead of its mark colour', async ({ page }) => {
     await firstRoundWithReply(image, env, { id: UUID, type: 'pin', geometry: { x: 100, y: 100 }, text: 'Pin note', color: '#bf616a' })
     await writeFile(image, makeFixturePng(400, 300, '#aa0000'))
     const cli = startCli([image], env)
@@ -218,10 +217,15 @@ test.describe('replies from the last round', () => {
       await page.goto(await cli.url)
       const circle = page.locator('.previous-round--ghost .previous-round-shape circle')
       await expect(circle).toBeVisible()
-      const muted = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim())
-      const fill = await circle.evaluate((el) => getComputedStyle(el).fill)
-      const probe = await page.evaluate((c) => { const d = document.createElement('i'); d.style.color = c; document.body.append(d); const v = getComputedStyle(d).color; d.remove(); return v }, muted)
-      expect(fill).toBe(probe)
+      const earlier = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--intent-earlier-mark').trim())
+      const { fill, stroke, dash } = await circle.evaluate((el) => {
+        const style = getComputedStyle(el)
+        return { fill: style.fill, stroke: style.stroke, dash: style.strokeDasharray }
+      })
+      const probe = await page.evaluate((c) => { const d = document.createElement('i'); d.style.color = c; document.body.append(d); const v = getComputedStyle(d).color; d.remove(); return v }, earlier)
+      expect(fill).toBe('none')
+      expect(stroke).toBe(probe)
+      expect(dash).not.toBe('none')
       // The pin draws its own number, so the badge is the chip alone, without a leading glyph, and it is not faded with the shape.
       const badge = page.locator('.previous-round--ghost .previous-round-badge')
       await expect(badge).toHaveText('applied')
@@ -260,7 +264,7 @@ test.describe('replies from the last round', () => {
       await section.locator('summary').click()
       await entry.focus()
       await page.keyboard.press('Enter')
-      await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' }).getByText('Left or right aligned?')).toBeVisible()
+      await expect(page.getByRole('dialog', { name: 'Round 1 · note 1' }).getByText('Left or right aligned?')).toBeVisible()
       await page.keyboard.press('Escape')
       await expect(page.getByRole('dialog')).toHaveCount(0)
       await expect(entry).toBeFocused()
@@ -298,7 +302,7 @@ test.describe('replies from the last round', () => {
       await expect(section.getByText('The mark lies outside the current image')).toBeVisible()
       const entry = section.getByRole('button', { name: /1\./ })
       await entry.click()
-      await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' }).getByText('Corner')).toBeVisible()
+      await expect(page.getByRole('dialog', { name: 'Round 1 · note 1' }).getByText('Corner')).toBeVisible()
       await page.keyboard.press('Escape')
       await expect(page.getByRole('dialog')).toHaveCount(0)
       await expect(entry).toBeFocused()
@@ -313,7 +317,7 @@ test.describe('replies from the last round', () => {
     try {
       await page.goto(await cli.url)
       await page.getByRole('region', { name: /Round 1 replies/ }).getByRole('button', { name: /1\./ }).click()
-      const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
+      const dialog = page.getByRole('dialog', { name: 'Round 1 · note 1' })
       await expect(dialog).toBeVisible()
       const toggle = page.getByRole('switch', { name: 'Show on image' })
       await toggle.click()
@@ -451,7 +455,7 @@ test.describe('replies from the last round', () => {
       await expect(page.locator('.previous-round')).toHaveCount(0)
       await tick.click()
       await expect(page.locator('.timeline-time')).toContainText('00:01.000 /')
-      await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' }).getByText('Moved the button')).toBeVisible()
+      await expect(page.getByRole('dialog', { name: 'Round 1 · note 1' }).getByText('Moved the button')).toBeVisible()
       await page.keyboard.press('Escape')
       await expect(page.getByRole('dialog')).toHaveCount(0)
       await expect(tick).toBeFocused()
@@ -485,16 +489,17 @@ test.describe('replies from the last round', () => {
     const cli = startCli([image], env)
     try {
       await page.goto(await cli.url)
-      const approve = page.getByRole('button', { name: /^Approve/ })
+      const approve = page.getByRole('button', { name: 'Approve', exact: true })
       await approve.click()
-      const gate = page.getByRole('dialog', { name: /question.*not answered/ })
-      await expect(gate.getByText('Green or blue?')).toBeVisible()
-      await expect(gate.getByRole('button', { name: 'Answer' })).toBeFocused()
-      await page.keyboard.press('Escape')
-      await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' })).toBeVisible()
+      const decision = page.getByRole('dialog', { name: 'Finish review' })
+      await expect(decision.getByRole('radio', { name: 'Approve', exact: true })).toBeChecked()
+      await expect(decision.getByText('The agent asked 1 question you have not answered.')).toBeVisible()
+      await expect(decision.getByText('Green or blue?')).toBeVisible()
+      await decision.getByRole('button', { name: 'Answer' }).click()
+      await expect(page.getByRole('dialog', { name: 'Round 1 · note 1' })).toBeVisible()
       await page.keyboard.press('Escape')
       await approve.click()
-      await page.getByRole('dialog', { name: /question.*not answered/ }).getByRole('button', { name: 'Approve anyway' }).click()
+      await decision.getByRole('button', { name: 'Approve', exact: true }).click()
       await expect(page.getByRole('heading', { name: /Approved/ })).toBeVisible()
       await cli.exited
       expect(cli.stdout()).toMatch(/^APPROVED/)
@@ -508,9 +513,9 @@ test.describe('replies from the last round', () => {
     const cli = startCli([image], env)
     try {
       await page.goto(await cli.url)
-      await page.getByRole('button', { name: /^Approve/ }).click()
-      await page.getByRole('dialog', { name: /question.*not answered/ }).getByRole('button', { name: 'Answer' }).click()
-      await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' })).toBeVisible()
+      await page.getByRole('button', { name: 'Approve', exact: true }).click()
+      await page.getByRole('dialog', { name: 'Finish review' }).getByRole('button', { name: 'Answer' }).click()
+      await expect(page.getByRole('dialog', { name: 'Round 1 · general comment' })).toBeVisible()
     } finally {
       cli.child.kill()
     }
@@ -523,11 +528,11 @@ test.describe('replies from the last round', () => {
     try {
       await page.goto(await cli.url)
       await page.getByRole('region', { name: /Round 1 replies/ }).getByRole('button', { name: /1\..*question/ }).click()
-      const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
+      const dialog = page.getByRole('dialog', { name: 'Round 1 · note 1' })
       const field = dialog.getByLabel('Reply to the agent')
       for (const text of ['Green', 'Dark green please', 'Really the dark one']) {
         await field.fill(text)
-        await dialog.getByRole('button', { name: 'Send' }).click()
+        await dialog.getByRole('button', { name: 'Reply', exact: true }).click()
         await expect(dialog.getByText(text, { exact: true })).toBeVisible()
       }
       const box = await field.boundingBox()
@@ -548,15 +553,15 @@ test.describe('replies from the last round', () => {
       await page.goto(await cli.url)
       const section = page.getByRole('region', { name: /Round 1 replies/ })
       await section.getByRole('button', { name: /1\..*question/ }).click()
-      const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
+      const dialog = page.getByRole('dialog', { name: 'Round 1 · note 1' })
       const field = dialog.getByLabel('Reply to the agent')
       await field.fill('Green')
-      await dialog.getByRole('button', { name: 'Send' }).click()
+      await dialog.getByRole('button', { name: 'Reply', exact: true }).click()
       await expect(section.getByText('1 to send')).toBeVisible()
       const fits = await section.locator('.previous-round-title').evaluate((el) => el.scrollWidth <= el.clientWidth)
       expect(fits).toBe(true)
       for (const selector of ['.reply-list-remove', '.reply-form-send']) {
-        expect((await dialog.locator(selector).boundingBox()).height).toBeGreaterThanOrEqual(44)
+        expect((await dialog.locator(selector).boundingBox()).height).toBeGreaterThanOrEqual(24)
       }
       let deletes = 0
       page.on('request', (req) => { if (req.method() === 'DELETE') { deletes += 1 } })
@@ -576,15 +581,18 @@ test.describe('replies from the last round', () => {
     try {
       await page.goto(await cli.url)
       await page.getByRole('region', { name: /Round 1 replies/ }).getByRole('button', { name: /1\..*question/ }).click()
-      const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
+      const dialog = page.getByRole('dialog', { name: 'Round 1 · note 1' })
       await dialog.getByLabel('Reply to the agent').fill('Green')
-      await dialog.getByRole('button', { name: 'Send' }).click()
+      await dialog.getByRole('button', { name: 'Reply', exact: true }).click()
       await expect(dialog.getByText('pending, sent with your decision')).toBeVisible()
       await page.keyboard.press('Escape')
-      await page.getByRole('button', { name: /^Approve/ }).click()
-      await expect(page.getByRole('dialog', { name: /not answered/ })).toHaveCount(0)
-      await expect(page.getByRole('heading', { name: 'Approved with Notes' })).toBeVisible()
-      await expect(page.getByText(/1 reply passed along as notes/)).toBeVisible()
+      await page.getByRole('button', { name: 'Other decisions' }).click()
+      const decision = page.getByRole('dialog', { name: 'Finish review' })
+      await expect(decision.getByText('1 pending reply to round 1 goes out with this.')).toBeVisible()
+      await decision.getByRole('radio', { name: 'Approve with notes' }).check()
+      await expect(decision.getByText(/not answered/)).toHaveCount(0)
+      await decision.getByRole('button', { name: 'Approve with notes' }).click()
+      await expect(page.getByRole('heading', { name: 'Approved with 1 reply' })).toBeVisible()
       await cli.exited
       expect(cli.stdout()).toMatch(/^APPROVED WITH NOTES: 1 reply to round 1\./)
     } finally {
@@ -592,29 +600,31 @@ test.describe('replies from the last round', () => {
     }
   })
 
-  test('keeps focus inside the approval gate and returns it to Approve', async ({ page }) => {
+  test('keeps focus inside the decision dialog and returns it to the split button', async ({ page }) => {
     await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Button colour', color: '#bf616a' }, 'question', 'Green or blue?')
     const cli = startCli([image], env)
     try {
       await page.goto(await cli.url)
-      const approve = page.getByRole('button', { name: /^Approve/ })
+      const approve = page.getByRole('button', { name: 'Approve', exact: true })
       await approve.click()
-      const gate = page.getByRole('dialog', { name: /question.*not answered/ })
-      const answer = gate.getByRole('button', { name: 'Answer' })
-      await expect(answer).toBeFocused()
-      // An app re-render behind the gate must not move focus.
+      const decision = page.getByRole('dialog', { name: 'Finish review' })
+      const option = decision.getByRole('radio', { name: 'Approve', exact: true })
+      await expect(option).toBeFocused()
+      // An app re-render behind the dialog must not move focus.
       await page.getByRole('button', { name: /zoom in/i }).evaluate((b) => b.click())
-      await expect(answer).toBeFocused()
+      await expect(option).toBeFocused()
       await page.keyboard.press('Shift+Tab')
-      await expect(gate.getByRole('button', { name: 'Approve anyway' })).toBeFocused()
+      await expect(decision.getByRole('button', { name: 'Approve', exact: true })).toBeFocused()
       await page.keyboard.press('Tab')
-      await expect(answer).toBeFocused()
-      await page.keyboard.press('Shift+Tab')
-      await page.keyboard.press('Shift+Tab')
-      await expect(answer).toBeFocused()
+      await expect(option).toBeFocused()
+      await decision.getByRole('button', { name: 'Answer' }).click()
+      await expect(page.getByRole('dialog', { name: 'Round 1 · note 1' })).toBeVisible()
       await page.keyboard.press('Escape')
-      await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' })).toBeVisible()
+      await expect(approve).toBeFocused()
+      await page.keyboard.press('ControlOrMeta+Shift+Enter')
+      await expect(decision).toBeVisible()
       await page.keyboard.press('Escape')
+      await expect(decision).toHaveCount(0)
       await expect(approve).toBeFocused()
     } finally {
       cli.child.kill()
@@ -648,7 +658,7 @@ test.describe('replies from the last round', () => {
         await page.locator('label', { has: page.getByRole('radio', { name: 'Phone', exact: true }) }).click()
         await Promise.all([
           page.waitForResponse('**/api/recapture'),
-          page.getByRole('button', { name: 'Capture again' }).click()
+          page.getByRole('button', { name: 'Capture', exact: true }).click()
         ])
         await expect(section.getByText('No longer in the target')).toBeVisible()
       } finally {

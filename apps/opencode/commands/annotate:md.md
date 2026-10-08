@@ -10,18 +10,19 @@ If arguments contain file path(s), use those files.
 Otherwise, ask the user which markdown file they want to annotate.
 
 The user can:
-- Select text and mark it for deletion
-- Select text and add comments
+- Select text and ask for a change, an addition, a removal or ask a question about it
 - Insert text at specific locations
 - Approve the file with no changes
 
 After the user submits their decision:
 - If approved: No action needed
-- If feedback provided: Apply the requested changes to the file
+- If feedback provided: Apply the requested changes to the file. Each numbered note states its intent
+  after the number (`## 3. Question · Text (Line 7)`): Change applies the comment, Add inserts the text
+  after its `After:` context or adds what the comment asks, Remove deletes the quoted text, Question asks
+  without requesting an edit, so answer it. Numbers stay fixed for the round, so they can have gaps.
 
 Each annotation heading normally ends with a short handle in brackets, such as
-`[#a3f19c2e]`. The number is positional and is recalculated on every export,
-the handle stays fixed for as long as the annotation exists. Use it whenever you
+`[#a3f19c2e]`. The handle stays fixed for as long as the annotation exists. Use it whenever you
 refer to a specific annotation. The reviewer never sees handles in the
 annotator, so pair each one with a few words naming the passage. If a heading
 carries no handle, refer to that annotation by its number and quoted text

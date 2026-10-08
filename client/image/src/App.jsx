@@ -1,8 +1,8 @@
-/* global __APP_VERSION__ */
-import { useEffect, useReducer, useState, useCallback, useRef } from 'react'
-import { annotationReducer, initialAnnotationState } from './state/annotationReducer.js'
+import { useEffect, useReducer, useState, useCallback, useRef, useMemo } from 'react'
+import { annotationReducer, initialAnnotationState, upcomingNumber } from './state/annotationReducer.js'
 import { createAnnotationId } from '../../shared/utils/annotationId.js'
-import Toolbar from './components/Toolbar.jsx'
+import { intentOf } from '../../shared/utils/intents.js'
+import Toolbar, { offeredTools } from './components/Toolbar.jsx'
 import ZoomControls from './components/ZoomControls.jsx'
 import ViewportControl from './components/ViewportControl.jsx'
 import CaptureOverlay from './components/CaptureOverlay.jsx'
@@ -10,6 +10,7 @@ import ImageCanvas from './components/ImageCanvas.jsx'
 import AnnotationPanel from './components/AnnotationPanel.jsx'
 import ExportModal from './components/ExportModal.jsx'
 import ExportMenu from './components/ExportMenu.jsx'
+import ToolHelp from './components/ToolHelp.jsx'
 import SettingsModal from './components/SettingsModal.jsx'
 import Timeline from './video/Timeline.jsx'
 import MediaSlot from './video/MediaSlot.jsx'
@@ -18,34 +19,50 @@ import PageNav from './document/PageNav.jsx'
 import PageImage from './document/PageImage.jsx'
 import { usePreviousRound } from './threads/usePreviousRound.js'
 import { useThreadPopover } from './threads/useThreadPopover.js'
-import ApprovalGate from './threads/ApprovalGate.jsx'
-import { useApprovalGate } from './threads/useApprovalGate.js'
+import UnansweredQuestions from './threads/UnansweredQuestions.jsx'
 import PreviousRoundPanel from './threads/PreviousRoundPanel.jsx'
 import ThreadPopover from './threads/ThreadPopover.jsx'
-import { placedThreads, threadPageCounts, hasMark, pendingReplyCount } from './threads/threadView.js'
+import { placedThreads, threadPageCounts, hasMark, pendingReplyCount, openQuestions } from './threads/threadView.js'
 import { useSettings } from './hooks/useSettings.js'
+import { useToolShortcuts } from './hooks/useToolShortcuts.js'
 import { useMediaPlayer } from './video/useMediaPlayer.js'
 import { useVideoReview } from './video/useVideoReview.js'
 import { useTimelineShortcuts } from './video/useTimelineShortcuts.js'
 import { useDocumentReview } from './document/useDocumentReview.js'
 import { useDocumentShortcuts } from './document/useDocumentShortcuts.js'
-import { pageLabel, isPaged } from './document/documentPages.js'
+import { pageLabel, isPaged, orderDocumentAnnotations } from './document/documentPages.js'
 import { uploadFrames } from './utils/uploadFrames.js'
-import { formatTimes } from './video/timeline.js'
+import { formatTimes, orderVideoAnnotations } from './video/timeline.js'
 import { readError } from './utils/readError.js'
 import { useAutoClose } from '../../shared/hooks/useAutoClose.js'
 import { useServerConnection } from '../../shared/hooks/useServerConnection.js'
 import { useResizablePanel } from '../../shared/hooks/useResizablePanel.js'
 import { UpdateBanner } from '../../shared/components/UpdateBanner.jsx'
-import { Logo } from '../../shared/components/Logo.jsx'
-import { DoneScreen, DoneAutoClose } from '../../shared/components/DoneScreen.jsx'
+import { AppHeader } from '../../shared/components/AppHeader.jsx'
+import { DecisionDialog } from '../../shared/components/DecisionDialog.jsx'
+import { useDecisionShortcut } from '../../shared/hooks/useDecisionShortcut.js'
+import { useShortcutListKey } from '../../shared/hooks/useShortcutListKey.js'
+import { applySummary, plural } from '../../shared/utils/decision.js'
+import { sourceKind, targetFacts } from './utils/headerSource.js'
+import ImageDoneScreen from './components/ImageDoneScreen.jsx'
+import { doneOutcome } from '../../shared/utils/done.js'
 import { getItem, setItem } from '../../shared/utils/storage.js'
+import { PanelSwitch } from '../../shared/components/PanelSwitch.jsx'
+import { GeneralCommentRow } from '../../shared/components/GeneralCommentRow.jsx'
+import { useGeneralComment } from '../../shared/hooks/useGeneralComment.js'
 
-const ORIGIN_LABELS = {
-  'claude-code': 'Claude Code',
-  'opencode': 'OpenCode',
-  'vibe': 'Mistral Vibe'
+// The general comment has no shape, page or time: it is about the whole target.
+const isGeneralComment = (a) => a.type === 'comment' && !a.geometry && typeof a.page !== 'number' && typeof a.time !== 'number'
+
+function createGeneralComment(text) {
+  return { id: createAnnotationId(), createdAt: Date.now(), type: 'comment', geometry: null, text, color: null }
 }
+
+const EMPTY_KEYS = [
+  { key: 'R', label: 'Box around an area' },
+  { key: 'A', label: 'Arrow to point at something' },
+  { key: 'C', label: 'Pin a comment to a spot' }
+]
 
 function getInitialSidebarCollapsed() {
   return getItem('img-annotator-sidebar-collapsed') === 'true'
@@ -71,9 +88,16 @@ export default function App() {
   const [decision, setDecision] = useState(null)
   const [activeTool, setActiveTool] = useState('select')
   const [showExport, setShowExport] = useState(false)
+  // The decision dialog, with the option it opens on (null: the default for the state).
+  const [decisionDialog, setDecisionDialog] = useState(null)
+  const primaryRef = useRef(null)
   const [editingAnnotationId, setEditingAnnotationId] = useState(null)
+  // The mark selected on the canvas, whose card the panel selects and scrolls to.
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState(null)
+  const [panelTab, setPanelTab] = useState('round')
   const [zoom, setZoom] = useState(1)
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsTab, setSettingsTab] = useState(null)
+  const settingsOpen = settingsTab !== null
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialSidebarCollapsed)
   const [status, setStatus] = useState('')
   const [toast, setToast] = useState(null)
@@ -102,7 +126,7 @@ export default function App() {
   const seekTo = isDocument ? doc.seekTo : video.seekTo
   const {
     showPrevious, openThreadHandle, entryThread,
-    openCanvasThread, showThread, showEntryThread, showTimelineThread, togglePrevious, closeThread
+    openCanvasThread, showThreadFrom, showTimelineThread, togglePrevious, closeThread
   } = useThreadPopover({ previousThreads, seekTo })
   // Looked up in the current threads so a reload (a sent or removed reply) reaches the open popover.
   const entryPopoverThread = entryThread && previous.threads.find((t) => t.handle === entryThread.handle)
@@ -118,6 +142,7 @@ export default function App() {
   const textPending = isDocument && !doc.textLoaded
   const offersElementTool = elements.length > 0 || textPending
   const offersTextTool = words.length > 0 || textPending
+  const tools = useMemo(() => offeredTools({ elementTool: offersElementTool, textTool: offersTextTool }), [offersElementTool, offersTextTool])
   useEffect(() => {
     const unavailable = (activeTool === 'element' && !offersElementTool) || (activeTool === 'text' && !offersTextTool)
     if (unavailable) { setActiveTool('select') }
@@ -125,9 +150,9 @@ export default function App() {
   const mediaWidth = isVideo ? controller?.width : (isDocument ? doc.currentPage?.width : meta?.width)
   const mediaHeight = isVideo ? controller?.height : (isDocument ? doc.currentPage?.height : meta?.height)
   const subject = isVideo ? 'recording' : (isDocument ? 'document' : 'image')
-  const { state: autoCloseState, enableAndStart } = useAutoClose(!!decision, settings.autoCloseDelay)
+  const { state: autoCloseState, keepOpen } = useAutoClose(!!decision, settings.autoCloseDelay)
   const { serverGone, reconnectState } = useServerConnection({ submitted: !!decision })
-  const { width: panelWidth, handleMouseDown: handlePanelResize } = useResizablePanel('img-annotator-panel-width', 300, 1)
+  const { width: panelWidth, handleMouseDown: handlePanelResize } = useResizablePanel('img-annotator-panel-width', 340, 1)
   const toastTimerRef = useRef(null)
   // Guards submit() synchronously: the buttons only disable once frame
   // export reports progress, which is too late to stop a double click.
@@ -135,6 +160,9 @@ export default function App() {
   // The annotation as it was when a marker drag began, so the whole drag
   // becomes one undo step.
   const markerDragRef = useRef(null)
+  // The image last shown, still loaded after the canvas is gone, for Save annotated image when the session ends.
+  const lastImageRef = useRef(null)
+  const keepImage = useCallback((element) => { if (element) { lastImageRef.current = element } }, [])
   const errorTimerRef = useRef(null)
 
   const showToast = useCallback((message) => {
@@ -238,7 +266,6 @@ export default function App() {
     setSidebarCollapsed(false)
   }, [])
 
-  const addGlobalComment = useCallback(() => addComment({}), [addComment])
   const pageShown = doc.current
   const addPageComment = useCallback(() => addComment({ page: pageShown }), [addComment, pageShown])
   const clearAutoEdit = useCallback(() => setAutoEditId(null), [])
@@ -308,6 +335,24 @@ export default function App() {
     dispatch({ type: 'EDIT', id, before, after: { ...before, text } })
   }, [state.annotations])
 
+  const generalComment = state.annotations.find(isGeneralComment) ?? null
+  const saveGeneralComment = useCallback((text) => {
+    if (!generalComment) {
+      if (text) { dispatch({ type: 'ADD', annotation: createGeneralComment(text) }) }
+      return
+    }
+    if (text) {
+      dispatch({ type: 'EDIT', id: generalComment.id, before: generalComment, after: { ...generalComment, text } })
+    } else {
+      dispatch({ type: 'REMOVE', id: generalComment.id })
+    }
+  }, [generalComment])
+  const generalEditor = useGeneralComment({
+    text: generalComment?.text || null,
+    onSave: saveGeneralComment,
+    disabled: sidebarCollapsed || settingsOpen || showExport || !!decisionDialog
+  })
+
   const removeAnnotation = useCallback((id) => {
     dispatch({ type: 'REMOVE', id })
   }, [])
@@ -333,11 +378,13 @@ export default function App() {
       setErrorStatus('Import failed: these annotations belong to another image or to pages not part of this review.')
       return
     }
-    dispatch({ type: 'SET_ALL', annotations })
+    // An export from before notes kept their numbers is numbered the way that version numbered it.
+    const order = isVideo ? orderVideoAnnotations : (isDocument ? orderDocumentAnnotations : undefined)
+    dispatch({ type: 'SET_ALL', annotations, order })
     showToast(`Imported ${annotations.length} annotation${annotations.length === 1 ? '' : 's'}`)
   }, [showToast, isVideo, isDocument, doc.pages, setErrorStatus])
 
-  const submit = useCallback(async (endpoint) => {
+  const submit = useCallback(async (endpoint, annotations) => {
     if (submittingRef.current) { return }
     submittingRef.current = true
     try {
@@ -348,19 +395,21 @@ export default function App() {
       const flush = await fetch('/api/annotations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ annotations: state.annotations })
+        body: JSON.stringify({ annotations })
       })
       // Deciding on whatever the server last accepted would drop or alter
       // annotations without the reviewer noticing.
       if (!flush.ok) { throw new Error(`annotations were not saved: ${await readError(flush)}`) }
       // A recording's output is built from frames only the browser can
       // decode, so they are grabbed and uploaded before the decision.
-      if (controller && state.annotations.length > 0) {
+      if (controller && annotations.length > 0) {
         controller.pause()
         await uploadFrames(controller, (done, total) => setExportProgress({ done, total }))
       }
       const res = await fetch(`/api/${endpoint}`, { method: 'POST' })
       if (!res.ok) { throw new Error(await readError(res)) }
+      // The done screen counts what went out: a summary may have been added, an approval may have discarded the notes.
+      dispatch({ type: 'SET_ALL', annotations })
       setDecision(endpoint === 'approve' ? 'approved' : 'feedback')
     } catch (err) {
       setErrorStatus(`${endpoint === 'approve' ? 'Approve' : 'Submit'} failed: ${err.message}`)
@@ -368,11 +417,40 @@ export default function App() {
       setExportProgress(null)
       submittingRef.current = false
     }
-  }, [setErrorStatus, state.annotations, controller])
+  }, [setErrorStatus, controller])
 
-  const { gateOpen, unanswered, approveRef, requestApproval, answerQuestions, approveAnyway } = useApprovalGate({
-    threads: previous.threads, submit, showThread, showEntryThread
-  })
+  const unanswered = openQuestions(previous.threads)
+  // `summary` comes from the decision dialog and becomes the general comment; null keeps the notes as they are.
+  const finish = ({ choice, summary = null }) => {
+    const withSummary = summary === null
+      ? state.annotations
+      : applySummary(state.annotations, summary, { isGeneral: isGeneralComment, create: createGeneralComment })
+    submit(choice === 'feedback' ? 'feedback' : 'approve', choice === 'approve' ? [] : withSummary)
+  }
+  // While the agent waits for answers, the main button opens the dialog with the open questions first,
+  // so they are seen before feedback or an approval ends the wait.
+  const decidePrimary = (choice) => {
+    if (unanswered.length > 0) {
+      setDecisionDialog({ choice })
+      return
+    }
+    finish({ choice })
+  }
+  const finishFromDialog = (result) => {
+    setDecisionDialog(null)
+    finish(result)
+  }
+  const answerQuestions = () => {
+    setDecisionDialog(null)
+    const [thread] = unanswered
+    showThreadFrom(thread, primaryRef.current, 'bottom')
+  }
+  const openDecision = useCallback(() => setDecisionDialog({ choice: null }), [])
+  const closeDecision = useCallback(() => setDecisionDialog(null), [])
+  useDecisionShortcut(openDecision, !decision && !settingsOpen && !showExport && !exportProgress)
+  const openShortcuts = useCallback(() => setSettingsTab('shortcuts'), [])
+  useShortcutListKey(openShortcuts, !decision && !settingsOpen && !showExport && !decisionDialog && !exportProgress)
+  useToolShortcuts({ tools, disabled: settingsOpen || showExport || !!decisionDialog || !!decision || !!exportProgress, onSelect: setActiveTool })
 
   const zoomBy = useCallback((delta) => {
     setZoom((z) => Math.round(Math.max(0.1, Math.min(3, z + delta)) * 100) / 100)
@@ -384,12 +462,11 @@ export default function App() {
     if (!mediaWidth) { return }
     const appMain = document.querySelector('.app-main')
     if (!appMain) { return }
-    // Reserve room for .app-main's own padding (12px each side) plus, on the
-    // vertical axis, the sticky .canvas-topbar toolbar row above the image.
-    const APP_MAIN_PADDING = 24
-    const TOPBAR_RESERVED_HEIGHT = 76
-    const availableWidth = appMain.clientWidth - APP_MAIN_PADDING
-    const availableHeight = appMain.clientHeight - TOPBAR_RESERVED_HEIGHT
+    // Reserve .app-main's own padding, which keeps the floating controls
+    // above and the dock below clear of the image.
+    const style = getComputedStyle(appMain)
+    const availableWidth = appMain.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+    const availableHeight = appMain.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom)
     const fit = Math.min(availableWidth / mediaWidth, availableHeight / mediaHeight)
     setZoom(Math.round(Math.max(0.1, Math.min(3, fit)) * 100) / 100)
   }, [mediaWidth, mediaHeight])
@@ -403,20 +480,34 @@ export default function App() {
   const annotationCount = state.annotations.length
   const replyCount = pendingReplyCount(previous.threads)
   const decisionItemCount = annotationCount + replyCount
+  const cardCount = annotationCount - (generalComment ? 1 : 0)
+  // A round that opens on replies shows them first; a new note brings its card into view.
+  const hasThreads = previous.threads.length > 0
+  const cardCountRef = useRef(cardCount)
+  useEffect(() => {
+    if (hasThreads && cardCountRef.current === 0) { setPanelTab('replies') }
+  }, [hasThreads])
+  useEffect(() => {
+    if (cardCount > cardCountRef.current) { setPanelTab('round') }
+    cardCountRef.current = cardCount
+  }, [cardCount])
   const notesTitle = [annotationCount > 0 && `${annotationCount} annotation${annotationCount === 1 ? '' : 's'}`, replyCount > 0 && `${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`].filter(Boolean).join(' and ')
-  const submitTitle = decisionItemCount === 0 ? 'Add annotations first' : `Submit ${notesTitle}`
   const origin = meta?.origin
+  const source = sourceKind(meta)
+  const facts = meta ? targetFacts({
+    kind: source,
+    pageCount: meta.pageCount,
+    width: isVideo ? controller?.width : meta.width,
+    height: isVideo ? controller?.height : meta.height,
+    duration: controller?.duration
+  }) : null
 
-  function statusText() {
+  function statusHelp() {
     if (exportProgress) { return `Preparing frames ${exportProgress.done}/${exportProgress.total}...` }
     if (status) { return status }
-    if (video.spanComplete) { return 'Span marked. Pick a tool (or click "Pin") and click the frame to mark something in it, or click "Comment span" to comment without drawing.' }
+    if (video.spanComplete) { return 'Span marked. Pick a tool and click the frame to mark something in it, or click "Comment span" to comment without drawing.' }
     if (video.range.start !== null) { return 'Span started. Move to where it ends (play, scrub or use the arrows), then click "Set end here".' }
-    if (isVideo) { return 'Pause on a frame and draw on it. Space plays, arrows step frames, I and O mark a span.' }
-    if (activeTool === 'text') { return 'Drag across the text you mean, from its first to its last word, then add a comment.' }
-    if (activeTool === 'element') { return `Point at ${isDocument ? 'a text block or link' : 'a page element'} to see what it is, then click to select it and add a comment.` }
-    if (isDocument) { return 'Draw on the page. PageUp/PageDown or [ and ] switch pages, Home and End jump to the first and last.' }
-    return 'Click a mark to select it, drag to move, or press Delete to remove it.'
+    return settings.toolHints ? <ToolHelp tool={activeTool} isVideo={isVideo} isDocument={isDocument} /> : null
   }
 
   function pageMedia() {
@@ -426,159 +517,83 @@ export default function App() {
       <PageImage
         src={doc.imageUrl} alt={`Page ${doc.current} of ${meta.targetLabel ?? 'the document'}`}
         width={mediaWidth * zoom} height={mediaHeight * zoom} loadingLabel={`Loading page ${doc.current}`}
-        loading={doc.loading} onLoad={doc.markLoaded} onError={doc.reportImageError}
+        loading={doc.loading} onLoad={doc.markLoaded} onError={doc.reportImageError} imageRef={keepImage}
       />
     )
   }
 
-  if (serverGone && !decision) {
+  const outcome = doneOutcome({ decision, serverGone, notes: annotationCount, replies: replyCount })
+  if (outcome) {
     return (
       <div className="app-shell">
-        <DoneScreen
-          variant="disconnected"
-          title="Server Disconnected"
-          message="The server is no longer available. Your annotations have not been submitted."
-        >
-          {reconnectState === 'reconnecting' && <p className="done-hint">Attempting to reconnect...</p>}
-          {reconnectState === 'failed' && <p className="done-hint">Could not reconnect to the server.</p>}
-          {annotationCount > 0 && (
-            <div className="done-actions">
-              <p className="done-backup-info">
-                {annotationCount} annotation{annotationCount === 1 ? '' : 's'} not yet submitted.
-              </p>
-              <button type="button" onClick={() => setShowExport(true)} className="btn btn-feedback">
-                Export Annotations
-              </button>
-            </div>
-          )}
-        </DoneScreen>
-        {showExport && (
-          <ExportModal
-            annotations={state.annotations}
-            onImport={importAnnotations}
-            onClose={() => setShowExport(false)}
-          />
-        )}
-        {toast && <div className="toast">{toast}</div>}
-      </div>
-    )
-  }
-
-  if (decision) {
-    return (
-      <div className="app-shell">
-        <DoneScreen
-          variant={decision}
-          title={decision === 'approved'
-            ? (decisionItemCount > 0 ? 'Approved with Notes' : 'Approved')
-            : 'Feedback Submitted'}
-          message={decision === 'approved'
-            ? (decisionItemCount > 0
-              ? `Approved as-is. ${notesTitle} passed along as notes.`
-              : `No changes requested. The ${subject} was approved as-is.`)
-            : `${notesTitle} ${ORIGIN_LABELS[origin] ? `sent to ${ORIGIN_LABELS[origin]}` : 'submitted'}.`}
-        >
-          <p className="done-hint">
-            {decision === 'feedback' && ORIGIN_LABELS[origin]
-              ? `${ORIGIN_LABELS[origin]} is processing your feedback.`
-              : 'You can close this tab.'}
-          </p>
-          <DoneAutoClose
-            state={autoCloseState}
-            onEnable={() => {
-              updateSetting('autoCloseDelay', '3')
-              enableAndStart()
-            }}
-          />
-        </DoneScreen>
+        <ImageDoneScreen
+          outcome={outcome}
+          annotations={outcome === 'approved' ? [] : state.annotations}
+          replies={replyCount}
+          origin={origin}
+          target={meta?.targetLabel}
+          locate={isVideo ? formatTimes : (isDocument ? pageLabel : null)}
+          snapshot={isVideo || !mediaWidth ? null : {
+            image: lastImageRef.current, width: mediaWidth, height: mediaHeight, marks: review.visible, noun: isDocument ? 'page' : 'image'
+          }}
+          countdown={autoCloseState}
+          onKeepOpen={keepOpen}
+          reconnecting={reconnectState === 'reconnecting'}
+        />
       </div>
     )
   }
 
   return (
     <div className="app-shell">
-      <header className="app-header">
-        <div className="header-left">
-          <Logo className="app-logo" />
-          <span className="version-badge">v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '?'}</span>
-          {ORIGIN_LABELS[origin] && (
-            <span className="origin-badge">{ORIGIN_LABELS[origin]}</span>
-          )}
-          {meta?.targetLabel && <span className="app-target" title={meta.targetLabel}>{meta.targetLabel}</span>}
-        </div>
-        <div className="header-right">
-          <button
-            type="button"
-            onClick={() => submit('feedback')}
-            className="btn btn-feedback"
-            disabled={decisionItemCount === 0 || !!exportProgress}
-            title={submitTitle}
-          >
-            Feedback
-            {decisionItemCount > 0 && <span className="btn-badge">{decisionItemCount}</span>}
-          </button>
-          <button
-            type="button"
-            ref={approveRef}
-            onClick={requestApproval}
-            className="btn btn-approve"
-            disabled={!!exportProgress}
-            title={decisionItemCount > 0
-              ? `Approve as-is and pass ${notesTitle} along as notes`
-              : `Approve the ${subject} as-is`}
-          >
-            {decisionItemCount > 0 ? 'Approve with Notes' : 'Approve'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-            className="btn btn-icon"
-            title="Settings"
-            aria-label="Settings"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={() => setSidebarCollapsed((prev) => !prev)}
-            className="btn btn-icon"
-            title={sidebarCollapsed ? 'Show annotations' : 'Hide annotations'}
-            aria-label={sidebarCollapsed ? 'Show annotations' : 'Hide annotations'}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <line x1="15" y1="3" x2="15" y2="21" />
-            </svg>
-          </button>
-        </div>
-      </header>
+      <AppHeader
+        source={source}
+        target={meta?.targetLabel}
+        facts={facts}
+        round={previous.round === null ? null : previous.round + 1}
+        origin={origin}
+        onOpenShortcuts={openShortcuts}
+        onOpenSettings={() => setSettingsTab('general')}
+        panelCollapsed={sidebarCollapsed}
+        onTogglePanel={() => setSidebarCollapsed((prev) => !prev)}
+        decision={{
+          itemCount: decisionItemCount,
+          title: decisionItemCount > 0 ? `Submit ${notesTitle}` : `Approve the ${subject} as-is`,
+          busy: !!exportProgress,
+          dialogOpen: !!decisionDialog,
+          primaryRef,
+          onPrimary: decidePrimary,
+          onOpenDialog: openDecision
+        }}
+      />
 
       <main className="app-body">
         {isDocument && <PageStrip pages={doc.pages} current={doc.current} counts={doc.counts} previousCounts={previousPageCounts} onSelect={goToPage} />}
         <div className="app-stage">
-          <div className="app-main canvas-surface">
-            <div className="canvas-topbar">
-              <Toolbar
-                activeTool={activeTool}
-                onSelectTool={setActiveTool}
-                elementTool={offersElementTool}
-                textTool={offersTextTool}
-                colorMode={settings.colorMode}
-                fixedColor={settings.fixedColor}
-                onChangeColorMode={(mode) => updateSetting('colorMode', mode)}
-                onChangeFixedColor={(color) => updateSetting('fixedColor', color)}
-              />
-              <div className="canvas-topbar-end">
-                {meta?.capture && (
-                  <ViewportControl capture={meta.capture} busy={!!recapturing} annotationCount={state.annotations.length} onApply={recapture} />
-                )}
-                {isDocument && <PageNav pages={doc.pages} current={doc.current} pageCount={meta.pageCount} onStep={stepPage} />}
-                <ZoomControls zoom={zoom} onZoomBy={zoomBy} onZoomReset={zoomReset} onZoomFit={zoomFit} />
-              </div>
+          <div className="work-area">
+          {meta?.capture && (
+            <div className="floating floating--top-left">
+              <ViewportControl capture={meta.capture} busy={!!recapturing} annotationCount={state.annotations.length} onApply={recapture} />
             </div>
+          )}
+          <div className="floating floating--top-right">
+            {isDocument && <PageNav pages={doc.pages} current={doc.current} pageCount={meta.pageCount} onStep={stepPage} />}
+            <ZoomControls zoom={zoom} onZoomBy={zoomBy} onZoomReset={zoomReset} onZoomFit={zoomFit} />
+          </div>
+          <div className="floating floating--bottom">
+            <Toolbar
+              activeTool={activeTool}
+              onSelectTool={setActiveTool}
+              tools={tools}
+              colorMode={settings.colorMode}
+              fixedColor={settings.fixedColor}
+              onChangeColorMode={(mode) => updateSetting('colorMode', mode)}
+              onChangeFixedColor={(color) => updateSetting('fixedColor', color)}
+              onUndo={undo}
+              canUndo={state.history.length > 0}
+            />
+          </div>
+          <div className="app-main canvas-surface">
             {mediaError && <p className="media-error" role="alert">{mediaError}</p>}
             {doc.pageError && <p className="media-error" role="alert">Page {doc.current} could not be rendered: {doc.pageError}</p>}
             {recapturing && <CaptureOverlay label={recapturing} />}
@@ -592,8 +607,7 @@ export default function App() {
                 activeTool={activeTool}
                 annotations={review.visible}
                 media={pageMedia()}
-                numberFor={isVideo || isDocument ? review.numberFor : null}
-                nextNumber={review.nextNumber}
+                nextNumber={upcomingNumber(state)}
                 onBeforeInteract={isVideo ? beforeCanvasInteract : null}
                 describeTime={isVideo ? describeTime : null}
                 voiceNotes={!!meta.voiceNotes}
@@ -607,10 +621,13 @@ export default function App() {
                 onCommitEdit={commitEditAnnotation}
                 onRemoveAnnotation={removeAnnotation}
                 onRequestEdit={setEditingAnnotationId}
+                onSelectionChange={setSelectedAnnotationId}
                 onUndo={undo}
                 onRedo={redo}
                 colorMode={settings.colorMode}
                 fixedColor={settings.fixedColor}
+                newIntent={settings.defaultIntent}
+                imageRef={keepImage}
                 previousThreads={previousThreads}
                 previousRound={previous.round}
                 onReloadThreads={previous.reload}
@@ -620,6 +637,7 @@ export default function App() {
                 onCloseThread={closeThread}
               />
             )}
+          </div>
           </div>
             {meta?.sourceIsNewer && (
               <p className="document-banner" role="status">
@@ -651,21 +669,7 @@ export default function App() {
         {!sidebarCollapsed && (
           <aside className="app-sidebar" style={{ width: panelWidth }}>
             <div className="panel-header">
-              <h2>Annotations</h2>
-              <span className="panel-badge">{annotationCount}</span>
-              <button
-                type="button"
-                className="panel-icon-btn"
-                onClick={addGlobalComment}
-                title="Add general comment"
-                aria-label="Add general comment"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="16" />
-                  <line x1="8" y1="12" x2="16" y2="12" />
-                </svg>
-              </button>
+              <h2>Feedback</h2>
               {isDocument && (
                 <button
                   type="button"
@@ -691,31 +695,56 @@ export default function App() {
                 onDone={showToast}
               />
             </div>
-            {gateOpen && <ApprovalGate threads={unanswered} round={previous.round} onAnswer={answerQuestions} onApproveAnyway={approveAnyway} />}
-            <PreviousRoundPanel round={previous.round} threads={previous.threads} showOnImage={showPrevious} onToggleShowOnImage={togglePrevious} onShow={showThread} onShowDetached={showEntryThread} />
+            {previous.threads.length > 0 && (
+              <PanelSwitch
+                label="Feedback"
+                panelId="feedback-tabpanel"
+                value={panelTab}
+                onChange={setPanelTab}
+                options={[
+                  { id: 'round', label: `This round · ${annotationCount}` },
+                  { id: 'replies', label: `Replies · ${previous.threads.length}` }
+                ]}
+              />
+            )}
             {entryPopoverThread && (
               <ThreadPopover key={entryPopoverThread.handle} thread={entryPopoverThread} round={previous.round} anchorPoint={entryThread.anchorPoint} onClose={closeThread} onReload={previous.reload} />
             )}
-            <AnnotationPanel
-              annotations={review.ordered}
-              onRemove={removeAnnotation}
-              onEdit={editAnnotation}
-              onEditGlobalComment={editGlobalComment}
-              elements={elements}
-              timeLabelFor={isVideo ? formatTimes : (isDocument ? pageLabel : null)}
-              subject={subject}
-              autoEditId={autoEditId}
-              onAutoEditConsumed={clearAutoEdit}
-              selectedId={editingAnnotationId}
-            />
+            <div
+              className="panel-body"
+              id="feedback-tabpanel"
+              {...(previous.threads.length > 0 ? { role: 'tabpanel', 'aria-labelledby': `panel-tab-${panelTab}` } : {})}
+            >
+              {previous.threads.length > 0 && panelTab === 'replies' ? (
+                <PreviousRoundPanel round={previous.round} threads={previous.threads} showOnImage={showPrevious} onToggleShowOnImage={togglePrevious} onShow={(thread, button) => showThreadFrom(thread, button, 'bottom')} />
+              ) : (
+                <AnnotationPanel
+                  annotations={review.ordered}
+                  hidden={generalComment}
+                  generalEditor={generalEditor}
+                  onRemove={removeAnnotation}
+                  onEdit={editAnnotation}
+                  onEditComment={editGlobalComment}
+                  elements={elements}
+                  timeLabelFor={isVideo ? formatTimes : (isDocument ? pageLabel : null)}
+                  subject={subject}
+                  autoEditId={autoEditId}
+                  onAutoEditConsumed={clearAutoEdit}
+                  selectedId={selectedAnnotationId}
+                  emptyKeys={EMPTY_KEYS}
+                  approves={decisionItemCount === 0}
+                />
+              )}
+            </div>
+            <GeneralCommentRow editor={generalEditor} />
           </aside>
         )}
       </main>
 
       <footer className="app-status">
-        <span role="status">{statusText()}</span>
+        <span className="status-help" role="status">{statusHelp()}</span>
         {mediaWidth && (
-          <span className="image-stats">
+          <span className="status-facts">
             {isDocument && `Page ${doc.current} of ${meta.pageCount} · `}
             {mediaWidth} &times; {mediaHeight}px
           </span>
@@ -730,9 +759,26 @@ export default function App() {
         />
       )}
 
+      {decisionDialog && (
+        <DecisionDialog
+          origin={origin}
+          noteIntents={state.annotations.filter((a) => a !== generalComment).map(intentOf)}
+          generalText={generalComment ? generalComment.text : null}
+          replies={replyCount}
+          info={replyCount > 0 ? `${plural(replyCount, 'pending reply', 'pending replies')} to round ${previous.round} ${replyCount === 1 ? 'goes' : 'go'} out with this.` : null}
+          initialChoice={decisionDialog.choice}
+          warning={unanswered.length > 0 && <UnansweredQuestions threads={unanswered} round={previous.round} onAnswer={answerQuestions} />}
+          busy={!!exportProgress}
+          onSubmit={finishFromDialog}
+          onClose={closeDecision}
+        />
+      )}
+
       <SettingsModal
         isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
+        initialSection={settingsTab ?? undefined}
+        source={source}
+        onClose={() => setSettingsTab(null)}
         settings={settings}
         updateSetting={updateSetting}
         resetSettings={resetSettings}

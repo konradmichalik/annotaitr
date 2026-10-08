@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { formatTimecode, formatTimes, isSpan, layoutMarkerLanes, dragMarkerTimes, MARKER_SIZE_PX } from './timeline.js'
-import { TOOL_ICONS, ACTION_ICONS, PLAYER_ICONS } from '../utils/icons.jsx'
+import { useCallback, useRef, useState } from 'react'
+import { formatTimecode } from './timeline.js'
+import { PLAYER_ICONS } from '../utils/icons.jsx'
 import SpanControls from './SpanControls.jsx'
-import PreviousTimelineMarks from '../threads/PreviousTimelineMarks.jsx'
+import TimelineLanes from './TimelineLanes.jsx'
 
 const RATES = [1, 0.5, 0.25]
-const LANE_GAP_PX = 2
 const PAGE_STEP_SECONDS = 5
 
 const percent = (time, duration) => `${Math.min(100, Math.max(0, (time / duration) * 100))}%`
@@ -60,156 +59,17 @@ function RateSwitch({ rate, onChange }) {
   )
 }
 
-const DRAG_THRESHOLD_PX = 3
-
-const TYPE_LABELS = { box: 'Box', element: 'Element', arrow: 'Arrow', freehand: 'Freehand', highlighter: 'Highlight', pin: 'Pin' }
-
-function typeLabel(marker) {
-  if (marker.type !== 'comment') { return TYPE_LABELS[marker.type] ?? marker.type }
-  return isSpan(marker) ? 'Span comment' : 'Comment'
-}
-
-function markerLabel(marker) {
-  return `Annotation ${marker.number} ${formatTimes(marker, { at: 'at ', from: 'from ' })}, ${typeLabel(marker)}`
-}
-
-/** A span bar has room to say what it holds: a drawing (its tool) or only text. */
-function SpanMarkerContent({ marker }) {
-  // Clipped on its own, so the resize edges can still reach past the bar.
-  return (
-    <span className="timeline-marker-content">
-      <span className="timeline-marker-number">{marker.number}</span>
-      <span className="timeline-marker-icon" aria-hidden="true">
-        {marker.type === 'comment' ? ACTION_ICONS.comment : TOOL_ICONS[marker.type]}
-      </span>
-      {marker.text && <span className="timeline-marker-text">{marker.text}</span>}
-    </span>
-  )
-}
-
 /**
- * Markers seek on click and change their annotation's time on drag: a point
- * or a whole span by its body, a span's start or end by its edge. The player
- * follows the drag, so the frame the drawing will sit on stays in view.
- */
-function Markers({ markers, controller, onSelect, onChangeTimes, rowRef }) {
-  const [width, setWidth] = useState(0)
-  const dragRef = useRef(null)
-  const suppressClickRef = useRef(false)
-  const { duration } = controller
-
-  // Overlap is a question of pixels, not seconds, so the lanes follow the
-  // rendered width of the marker row.
-  useEffect(() => {
-    const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width))
-    observer.observe(rowRef.current)
-    return () => observer.disconnect()
-  }, [rowRef])
-
-  const { lanes, laneCount } = layoutMarkerLanes(markers, duration, width)
-  // One frame of the marker's own start, not of the frame on screen: GIF
-  // frames differ in length, and the shortest span ends on the next frame.
-  const ownFrame = (marker) => controller.frameDurationAt(marker.time)
-  const timesAfter = (marker, mode, delta) => dragMarkerTimes(
-    { time: marker.time, endTime: marker.endTime }, mode, delta,
-    { duration, minSpan: ownFrame(marker), snap: controller.snap }
-  )
-
-  const showFrameOf = (times, mode) => controller.seek(mode === 'end' ? times.endTime : times.time)
-
-  const handlePointerDown = (event, marker) => {
-    if (event.button !== 0) { return }
-    event.currentTarget.setPointerCapture(event.pointerId)
-    dragRef.current = { marker, mode: event.target.dataset.edge ?? 'move', startX: event.clientX, moved: false, times: null }
-  }
-
-  const handlePointerMove = (event) => {
-    const drag = dragRef.current
-    if (!drag || width === 0) { return }
-    const dx = event.clientX - drag.startX
-    if (!drag.moved && Math.abs(dx) < DRAG_THRESHOLD_PX) { return }
-    drag.moved = true
-    drag.times = timesAfter(drag.marker, drag.mode, (dx / width) * duration)
-    onChangeTimes(drag.marker.id, drag.times, 'preview')
-    showFrameOf(drag.times, drag.mode)
-  }
-
-  const handlePointerUp = () => {
-    const drag = dragRef.current
-    dragRef.current = null
-    if (drag?.moved && drag.times) {
-      suppressClickRef.current = true
-      onChangeTimes(drag.marker.id, drag.times, 'commit')
-    }
-  }
-
-  // Alt+arrows move a marker by one frame, with Shift its span's end.
-  const handleKeyDown = (event, marker) => {
-    if (!event.altKey || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) { return }
-    event.preventDefault()
-    const mode = event.shiftKey ? 'end' : 'move'
-    const times = timesAfter(marker, mode, (event.key === 'ArrowLeft' ? -1 : 1) * ownFrame(marker))
-    onChangeTimes(marker.id, times, 'commit')
-    showFrameOf(times, mode)
-  }
-
-  const handleClick = (marker) => {
-    if (suppressClickRef.current) {
-      suppressClickRef.current = false
-      return
-    }
-    onSelect(marker.time)
-  }
-
-  return (
-    <div
-      ref={rowRef}
-      className="timeline-markers"
-      style={{ height: markers.length > 0 ? laneCount * (MARKER_SIZE_PX + LANE_GAP_PX) : 0 }}
-    >
-      {markers.map((marker) => (
-        <button
-          key={marker.id}
-          type="button"
-          className={`timeline-marker${isSpan(marker) ? ' timeline-marker--span' : ''}`}
-          style={{
-            top: (lanes.get(marker.id) ?? 0) * (MARKER_SIZE_PX + LANE_GAP_PX),
-            left: percent(marker.time, duration),
-            width: isSpan(marker) ? `calc(${percent(marker.endTime, duration)} - ${percent(marker.time, duration)})` : undefined,
-            '--marker-color': marker.color
-          }}
-          onPointerDown={(event) => handlePointerDown(event, marker)}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={() => { dragRef.current = null }}
-          onKeyDown={(event) => handleKeyDown(event, marker)}
-          onClick={() => handleClick(marker)}
-          aria-label={markerLabel(marker)}
-          title={`${markerLabel(marker)}${marker.text ? `: ${marker.text}` : ''}\n${isSpan(marker)
-            ? 'Drag to move, drag an edge to resize. Alt+arrows: one frame, with Shift the end.'
-            : 'Drag to move, drag the right handle out to make it a span. Alt+arrows: one frame, Alt+Shift+→: make it a span.'}`}
-        >
-          {isSpan(marker) && <span className="timeline-marker-edge timeline-marker-edge--start" data-edge="start" aria-hidden="true" />}
-          {isSpan(marker) ? <SpanMarkerContent marker={marker} /> : marker.number}
-          <span className="timeline-marker-edge timeline-marker-edge--end" data-edge="end" aria-hidden="true" />
-        </button>
-      ))}
-    </div>
-  )
-}
-
-/**
- * The player docked below the canvas: annotation markers and the scrubber on
- * top, transport and span controls below. The track is the slider; markers
- * sit in their own row, since interactive children inside a slider would be
- * unreachable for assistive technology.
+ * The player docked below the canvas: the Notes and Spans lanes and the
+ * scrubber on top, transport and span controls below. The track is the
+ * slider; markers sit in their own lanes, since interactive children inside
+ * a slider would be unreachable for assistive technology.
  */
 export default function Timeline({
   controller, playerState, markers, range, onMarkStart, onMarkEnd, onClearRange, onCommentRange, onChangeMarkerTimes,
   activeTool, onPickTool, previousThreads = [], previousRound = null, onShowThread
 }) {
   const trackRef = useRef(null)
-  const markersRef = useRef(null)
   const [hover, setHover] = useState(null)
   const { duration } = controller
   const { currentTime, playing, rate, hasAudio, muted, volume } = playerState
@@ -249,42 +109,40 @@ export default function Timeline({
   return (
     <div className="timeline">
       <div className="timeline-scrubber">
-        {previousThreads.length > 0 && (
-          <PreviousTimelineMarks threads={previousThreads} round={previousRound} duration={duration} onShow={onShowThread} />
-        )}
-        <Markers
-          markers={markers} controller={controller}
-          onSelect={controller.seek} onChangeTimes={onChangeMarkerTimes} rowRef={markersRef}
-        />
-        <div
-          ref={trackRef}
-          className="timeline-track"
-          role="slider"
-          tabIndex={0}
-          aria-label="Playback position"
-          aria-valuemin={0}
-          aria-valuemax={Math.round(duration * 10) / 10}
-          aria-valuenow={Math.round(currentTime * 10) / 10}
-          aria-valuetext={formatTimecode(currentTime)}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerLeave={() => setHover(null)}
-          onKeyDown={handleTrackKeyDown}
+        <TimelineLanes
+          controller={controller} currentTime={currentTime} markers={markers} onChangeTimes={onChangeMarkerTimes}
+          previousThreads={previousThreads} previousRound={previousRound} onShowThread={onShowThread}
         >
-          <div className="timeline-rail">
-            <div className="timeline-progress" style={{ width: percent(currentTime, duration) }} />
-            {range.start !== null && range.end === null && (
-              <div className="timeline-range-start" style={{ left: percent(range.start, duration) }} />
-            )}
-            {rangeBar && <div className="timeline-range" style={rangeBar} />}
-          </div>
-          <div className="timeline-knob" style={{ left: percent(currentTime, duration) }} />
-          {hover !== null && (
-            <div className="timeline-hover" style={{ left: percent(hover, duration) }} aria-hidden="true">
-              {formatTimecode(hover)}
+          <div
+            ref={trackRef}
+            className="timeline-track"
+            role="slider"
+            tabIndex={0}
+            aria-label="Playback position"
+            aria-valuemin={0}
+            aria-valuemax={Math.round(duration * 10) / 10}
+            aria-valuenow={Math.round(currentTime * 10) / 10}
+            aria-valuetext={formatTimecode(currentTime)}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerLeave={() => setHover(null)}
+            onKeyDown={handleTrackKeyDown}
+          >
+            <div className="timeline-rail">
+              <div className="timeline-progress" style={{ width: percent(currentTime, duration) }} />
+              {range.start !== null && range.end === null && (
+                <div className="timeline-range-start" style={{ left: percent(range.start, duration) }} />
+              )}
+              {rangeBar && <div className="timeline-range" style={rangeBar} />}
             </div>
-          )}
-        </div>
+            <div className="timeline-knob" style={{ left: percent(currentTime, duration) }} />
+            {hover !== null && (
+              <div className="timeline-hover" style={{ left: percent(hover, duration) }} aria-hidden="true">
+                {formatTimecode(hover)}
+              </div>
+            )}
+          </div>
+        </TimelineLanes>
       </div>
 
       <div className="timeline-controls">

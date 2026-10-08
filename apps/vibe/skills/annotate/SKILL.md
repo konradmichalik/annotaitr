@@ -31,14 +31,19 @@ The command prints the result to stdout:
 - `APPROVED:` → the user approved the file with no changes. Confirm and stop.
 - `APPROVED WITH NOTES:` → the user approved the file as-is but left annotations.
   Do **not** edit the file; read the notes as context, acknowledge them, and stop.
-- Structured annotation feedback → apply the requested edits to the file(s):
-  - **"Remove this"** entries: delete the quoted text.
-  - **"Comment on"** entries: apply the user's comment as a change to the referenced text.
-  - **"Insert text"** entries: insert the provided text at the specified location.
+- Structured annotation feedback → apply the requested edits to the file(s).
+  Each heading names the note's number and intent, such as
+  `## 3. Question · Text (Line 7) [#a3f19c2e]`:
+  - **Change**: apply the user's comment as a change to the quoted text.
+  - **Add**: an `Insertion` inserts the given text after its `After:` context; on a quoted text, add what the comment asks for there.
+  - **Remove**: delete the quoted text.
+  - **Question**: the user asks, they do not request an edit. Answer it, and change the file only if the answer makes the change obvious.
 
-Each annotation heading normally ends with a short handle in brackets, such as
-`[#a3f19c2e]`. The number is positional and is recalculated on every export,
-the handle stays fixed for as long as the annotation exists. Use it whenever you
+A `General comment` has no number and no intent. A note keeps its number for
+the whole round, so numbers can have gaps where the user deleted a note, and
+notes are listed in document order. Each heading normally ends with a short
+handle in brackets, such as `[#a3f19c2e]`, which stays fixed for as long as
+the annotation exists. Use it whenever you
 refer to a specific annotation. The reviewer never sees handles in the
 annotator, so pair each one with a few words naming the passage. If a heading
 carries no handle, refer to that annotation by its number and quoted text

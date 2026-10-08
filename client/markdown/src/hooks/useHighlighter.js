@@ -1,5 +1,18 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import Highlighter from 'web-highlighter'
+import { INTENTS, intentOf } from '../../../shared/utils/intents.js'
+
+const INTENT_CLASSES = INTENTS.map(({ id }) => `intent-${id}`)
+
+/**
+ * The note's stable number sits on the first mark that is its own (overlaps
+ * nest marks of other notes inside it), where CSS draws it as a badge.
+ */
+function showNoteNumber(doms, ann) {
+  doms.forEach((dom) => { if (dom.dataset.highlightId === ann.id) { delete dom.dataset.noteNumber } })
+  const first = doms.find((dom) => dom.dataset.highlightId === ann.id)
+  if (first && Number.isInteger(ann.number)) { first.dataset.noteNumber = String(ann.number) }
+}
 
 /**
  * Shared web-highlighter integration for annotation views.
@@ -13,6 +26,7 @@ import Highlighter from 'web-highlighter'
  * - enrichToolbarState(element) — extra fields for toolbar state on CREATE/CLICK
  * - extraAnnotationFields — static fields merged into new annotations
  * - restoreFilter(ann) — only restore annotations matching this predicate
+ * - restoreInsertion(ann) — place the marker of an INSERTION note, returns whether it was placed
  *
  * Keyboard shortcuts are NOT included — each consumer registers its own.
  */
@@ -27,6 +41,7 @@ export function useHighlighter({
   enrichToolbarState,
   extraAnnotationFields,
   restoreFilter,
+  restoreInsertion,
 }) {
   const containerRef = useRef(null)
   const highlighterRef = useRef(null)
@@ -40,7 +55,7 @@ export function useHighlighter({
   r.current = {
     onAddAnnotation, onEditAnnotation, annotations, toolbarState,
     onBeforeHighlight, enrichToolbarState, extraAnnotationFields,
-    restoreFilter,
+    restoreFilter, restoreInsertion,
   }
 
   // --- Highlighter setup ---
@@ -130,13 +145,18 @@ export function useHighlighter({
         if (doms?.length > 0) {
           if (ann.type === 'DELETION') { highlighter.addClass('deletion', ann.id) }
           else if (ann.type === 'COMMENT') { highlighter.addClass('comment', ann.id) }
+          // The underline and tint follow the intent; an edit can change it.
+          const intent = intentOf(ann)
+          INTENT_CLASSES.forEach((name) => highlighter.removeClass(name, ann.id))
+          if (intent) { highlighter.addClass(`intent-${intent}`, ann.id) }
+          showNoteNumber(doms, ann)
         }
       } catch (_e) { /* ignore */ }
     })
   }, [annotations])
 
   // --- Create annotation from text selection ---
-  const createAnnotationFromSource = useCallback((type, text, label) => {
+  const createAnnotationFromSource = useCallback((type, text, label, intent) => {
     const highlighter = highlighterRef.current
     const source = r.current.toolbarState?.source
     if (!highlighter || !source) { return }
@@ -170,6 +190,7 @@ export function useHighlighter({
       startMeta: source.startMeta,
       endMeta: source.endMeta,
       label: label || null,
+      ...(intent ? { intent } : {}),
       ...r.current.extraAnnotationFields,
     }
 
@@ -180,7 +201,7 @@ export function useHighlighter({
   }, [])
 
   // --- Handle text annotation (edit or new) ---
-  const handleTextAnnotate = useCallback((type, text, label) => {
+  const handleTextAnnotate = useCallback((type, text, label, intent) => {
     if (!toolbarState) { return }
     const highlighter = highlighterRef.current
     if (!highlighter) { return }
@@ -190,9 +211,9 @@ export function useHighlighter({
       highlighter.removeClass('deletion', annotation.id)
       highlighter.removeClass('comment', annotation.id)
       highlighter.addClass(type.toLowerCase(), annotation.id)
-      r.current.onEditAnnotation(annotation.id, type, text, label)
+      r.current.onEditAnnotation(annotation.id, type, text, label, intent)
     } else {
-      createAnnotationFromSource(type, text, label)
+      createAnnotationFromSource(type, text, label, intent)
       pendingSourceRef.current = null
     }
 
@@ -235,7 +256,12 @@ export function useHighlighter({
     containerRef.current?.querySelectorAll(`[data-highlight-id="${id}"]`).forEach(unwrapOrRemove)
   }
 
-  const restoreHighlight = (ann) => {
+  // A delayed restore is handed the notes as loaded. The reducer has numbered them since, and its copy is the one the cards show.
+  const currentNote = (ann) => r.current.annotations.find((a) => a.id === ann.id) ?? ann
+
+  const restoreHighlight = (loaded) => {
+    const ann = currentNote(loaded)
+    if (ann.type === 'INSERTION' && r.current.restoreInsertion) { return r.current.restoreInsertion(ann) }
     if (ann.targetType === 'image' || ann.targetType === 'diagram' ||
         ann.targetType === 'pinpoint' || ann.targetType === 'global' ||
         ann.targetType === 'link' || ann.type === 'NOTES' || ann.type === 'INSERTION') { return true }
@@ -247,6 +273,9 @@ export function useHighlighter({
     try {
       highlighter.fromStore(ann.startMeta, ann.endMeta, ann.originalText, ann.id)
       highlighter.addClass(ann.type.toLowerCase(), ann.id)
+      const intent = intentOf(ann)
+      if (intent) { highlighter.addClass(`intent-${intent}`, ann.id) }
+      showNoteNumber(highlighter.getDoms(ann.id) ?? [], ann)
       return true
     } catch (_e) {
       return false

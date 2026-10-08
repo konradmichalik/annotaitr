@@ -15,7 +15,7 @@ import { formatLabelText } from '../../utils/quickLabels.js'
 import { getItem, setItem } from '../../../../shared/utils/storage.js'
 import { groupHtmlWrappers } from '../../utils/htmlWrappers.js'
 import { isOpenableFileLink } from '../../utils/links.js'
-import { getLinkInfo, removeInsertionMarker, createPersistentInsertionMarker, findAnnotationElement } from '../../utils/viewerDom.js'
+import { getLinkInfo, removeInsertionMarker, createPersistentInsertionMarker, createTemporaryInsertionMarker, insertionPointAfter, findAnnotationElement } from '../../utils/viewerDom.js'
 import { createInsertionAnnotation, createTokenAnnotation, createElementAnnotation, getBlockLabel } from '../../utils/viewerAnnotations.js'
 
 const PINPOINT_HINT_LEARNED_KEY = 'md-annotator-pinpoint-hint-learned'
@@ -35,6 +35,8 @@ export const Viewer = forwardRef(function Viewer({
   krokiServerUrl,
   selectedAnnotationId: _selectedAnnotationId,
   crossFileSearch,
+  newIntent = 'change',
+  toolHints = true,
 }, ref) {
   const [pinpointTarget, setPinpointTarget] = useState(null)
   const [hoverHintTarget, setHoverHintTarget] = useState(null)
@@ -70,6 +72,14 @@ export const Viewer = forwardRef(function Viewer({
     exceptSelectors: ['.code-copy-btn', '.annotatable-image-wrapper', '.diagram-render-area', '.diagram-source', '.diagram-controls'],
     onBeforeHighlight,
     enrichToolbarState,
+    restoreInsertion: (ann) => {
+      const blockEl = containerRef.current?.querySelector(`[data-block-id="${ann.blockId}"]`)
+      if (!blockEl) { return false }
+      if (!blockEl.querySelector(`[data-insertion-id="${ann.id}"]`)) {
+        createPersistentInsertionMarker(ann.id, blockEl, ann.startOffset, ann.number)
+      }
+      return true
+    },
   })
 
   const search = useDocumentSearch(containerRef)
@@ -82,6 +92,17 @@ export const Viewer = forwardRef(function Viewer({
   onAddAnnotationRef.current = onAddAnnotation
   const onEditAnnotationRef = useRef(onEditAnnotation)
   onEditAnnotationRef.current = onEditAnnotation
+
+  // A new insertion gets its number from the reducer, after its marker exists.
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) { return }
+    annotations.forEach((ann) => {
+      if (ann.type !== 'INSERTION' || !Number.isInteger(ann.number)) { return }
+      const marker = container.querySelector(`[data-insertion-id="${CSS.escape(ann.id)}"]`)
+      if (marker) { marker.dataset.noteNumber = String(ann.number) }
+    })
+  }, [annotations, containerRef])
 
   // A pending text selection is dropped as soon as the user targets an element instead
   const clearPendingSource = useCallback(() => {
@@ -97,7 +118,7 @@ export const Viewer = forwardRef(function Viewer({
   }, [setToolbarState, setRequestedToolbarStep])
 
   // --- Viewer-specific annotate (insertion + element + text) ---
-  const handleAnnotate = useCallback((type, text, label) => {
+  const handleAnnotate = useCallback((type, text, label, intent) => {
     if (!toolbarState) { return }
 
     // Insertion annotations bypass web-highlighter
@@ -119,7 +140,7 @@ export const Viewer = forwardRef(function Viewer({
 
     // Token annotations in code blocks
     if (toolbarState.tokenMode && !toolbarState.mode) {
-      onAddAnnotationRef.current(createTokenAnnotation(toolbarState.tokenData, type, text, label))
+      onAddAnnotationRef.current({ ...createTokenAnnotation(toolbarState.tokenData, type, text, label), ...(intent ? { intent } : {}) })
       closeToolbar()
       return
     }
@@ -127,17 +148,34 @@ export const Viewer = forwardRef(function Viewer({
     // Element annotations (image/diagram) bypass web-highlighter
     if (toolbarState.elementMode) {
       if (toolbarState.mode === 'edit') {
-        onEditAnnotationRef.current(toolbarState.annotation.id, type, text)
+        onEditAnnotationRef.current(toolbarState.annotation.id, type, text, undefined, intent)
       } else {
-        onAddAnnotationRef.current(createElementAnnotation(toolbarState.elementData, type, text, label))
+        onAddAnnotationRef.current({ ...createElementAnnotation(toolbarState.elementData, type, text, label), ...(intent ? { intent } : {}) })
       }
       closeToolbar()
       return
     }
 
     // Text annotation — delegate to hook
-    handleTextAnnotate(type, text, label)
+    handleTextAnnotate(type, text, label, intent)
   }, [toolbarState, handleTextAnnotate, closeToolbar, containerRef])
+
+  // Add on a text selection inserts after it: the pending highlight gives way to an insertion point at its end.
+  const handleAddAfter = useCallback(() => {
+    const highlighter = highlighterRef.current
+    const source = toolbarState?.source
+    const last = source && highlighter?.getDoms(source.id)?.at(-1)
+    if (!last) { return }
+    const point = insertionPointAfter(last)
+    if (!point) { return }
+    highlighter.remove(source.id)
+    pendingSourceRef.current = null
+    window.getSelection()?.removeAllRanges()
+    const { blockEl, ...insertionData } = point
+    const marker = createTemporaryInsertionMarker(blockEl, insertionData.offset)
+    setToolbarState({ element: marker, insertionMode: true, insertionData })
+    setRequestedToolbarStep((prev) => (prev ?? 0) + 1)
+  }, [toolbarState, highlighterRef, pendingSourceRef, setToolbarState, setRequestedToolbarStep])
 
   // --- Viewer-specific close (insertion cleanup + base) ---
   const handleToolbarClose = useCallback(() => {
@@ -166,21 +204,6 @@ export const Viewer = forwardRef(function Viewer({
     ...highlightMethods,
     openSearch: crossFileSearch ? crossFileSearch.openSearch : search.openSearch,
     closeSearch: crossFileSearch ? crossFileSearch.closeSearch : search.closeSearch,
-    restoreHighlight(ann) {
-      if (ann.type === 'INSERTION') {
-        const blockEl = containerRef.current?.querySelector(`[data-block-id="${ann.blockId}"]`)
-        if (!blockEl) { return false }
-        const existing = blockEl.querySelector(`[data-insertion-id="${ann.id}"]`)
-        if (!existing) {
-          createPersistentInsertionMarker(ann.id, blockEl, ann.startOffset)
-        }
-        return true
-      }
-      return highlightMethods.restoreHighlight(ann)
-    },
-    restoreHighlights(anns) {
-      anns.forEach(ann => { this.restoreHighlight(ann) })
-    },
     openEditToolbar(ann) {
       if (ELEMENT_TARGET_TYPES.has(ann.targetType)) {
         this.openElementEditToolbar(ann)
@@ -428,6 +451,7 @@ export const Viewer = forwardRef(function Viewer({
         <Toolbar
           highlightElement={toolbarState?.element ?? null}
           onAnnotate={handleAnnotate}
+          onAddAfter={toolbarState?.source && !toolbarState.mode ? handleAddAfter : null}
           onClose={handleToolbarClose}
           onDelete={handleToolbarDelete}
           onQuickLabel={handleQuickLabel}
@@ -437,9 +461,10 @@ export const Viewer = forwardRef(function Viewer({
           insertionMode={toolbarState?.insertionMode || false}
           linkUrl={toolbarState?.linkUrl || null}
           onOpenLink={toolbarState?.linkIsOpenable ? onOpenFile : null}
+          newIntent={newIntent}
         />
         {pinpointMode && <PinpointOverlay target={pinpointTarget} />}
-        {!pinpointMode && <BlockHoverHint target={hoverHintTarget} />}
+        {!pinpointMode && toolHints && <BlockHoverHint target={hoverHintTarget} />}
       </article>
       {activeSearch.isOpen && (
         <SearchBar

@@ -8,7 +8,7 @@ const display = { applied: { icon: '✓', label: 'applied' }, none: { icon: '·'
 describe('StatusChip', () => {
   it('shows the icon hidden from assistive tech and the label as text', () => {
     expect(renderToStaticMarkup(<StatusChip status="applied" display={display} />))
-      .toBe('<span class="status-chip status-chip--applied"><span aria-hidden="true">✓</span> applied</span>')
+      .toBe('<span class="status-chip status-chip--applied"><span aria-hidden="true">✓</span> <span class="status-chip-label">applied</span></span>')
   })
 })
 
@@ -19,6 +19,7 @@ describe('ReplyList', () => {
     )
     expect(html).toContain('<ol class="reply-list">')
     expect(html).toContain('applied</span>')
+    expect(html).not.toContain('reply-list-avatar')
     expect(html).toContain('Moved it')
     expect(html).toContain('dateTime="2026-10-06T12:00:00.000Z"')
   })
@@ -59,5 +60,22 @@ describe('ReplyList', () => {
     expect(html).toContain('pending, sent with your decision')
     expect(html).toContain('<button type="button"')
     expect(html).toContain('Remove')
+  })
+
+  it('gives each author its avatar and shows a message detail after the name', () => {
+    const html = renderToStaticMarkup(
+      <ReplyList display={display} labels={{ human: 'You' }} avatars={{ human: 'You', agent: 'AI' }}
+        replies={[{ author: 'human', text: 'Bigger', meta: 'round 1' }, { status: 'applied', text: 'Done', createdAt: 0 }]} />
+    )
+    expect(html).toContain('<span class="reply-list-avatar" aria-hidden="true">You</span>')
+    expect(html).toContain('<span class="reply-list-avatar" aria-hidden="true">AI</span>')
+    expect(html).toContain('· round 1')
+  })
+
+  it('sets a pending reply apart', () => {
+    const html = renderToStaticMarkup(
+      <ReplyList display={display} pendingLabel="Pending, sent with your decision" replies={[{ id: 'h1', author: 'human', text: 'Green', pending: true }]} />
+    )
+    expect(html).toContain('reply-list-item--pending')
   })
 })

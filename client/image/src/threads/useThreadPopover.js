@@ -66,16 +66,21 @@ export function useThreadPopover({ previousThreads, seekTo }) {
     setEntryThread({ handle: thread.handle, anchorPoint })
   }, [])
 
+  // A thread without a mark has no canvas popover, so it hangs off its opener (panel entry, timeline tick, decision button) at the given edge.
+  const showThreadFrom = useCallback((thread, opener, edge) => {
+    if (hasMark(thread)) { return showThread(thread, opener) }
+    const rect = opener.getBoundingClientRect()
+    showEntryThread(thread, { x: rect.left + rect.width / 2, y: rect[edge] }, opener)
+  }, [showThread, showEntryThread])
+
   // A tick on the timeline is a thread's only entry on a video: with a mark the canvas shows it, a general comment hangs off the tick.
   const showTimelineThread = useCallback((thread, opener) => {
-    if (hasMark(thread)) { return showThread(thread, opener) }
-    seekTo(thread.annotation)
-    const rect = opener.getBoundingClientRect()
-    showEntryThread(thread, { x: rect.left + rect.width / 2, y: rect.top }, opener)
-  }, [showThread, showEntryThread, seekTo])
+    if (!hasMark(thread)) { seekTo(thread.annotation) }
+    showThreadFrom(thread, opener, 'top')
+  }, [showThreadFrom, seekTo])
 
   return {
     showPrevious, openThreadHandle, entryThread,
-    openCanvasThread, showThread, showEntryThread, showTimelineThread, togglePrevious, closeThread
+    openCanvasThread, showThreadFrom, showTimelineThread, togglePrevious, closeThread
   }
 }

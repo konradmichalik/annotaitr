@@ -1,26 +1,14 @@
 import { useEffect, useRef } from 'react'
 import { useDropdown } from '../hooks/useDropdown.js'
+import { moveMenuFocus } from '../utils/menuFocus.js'
 
-const MENU_KEYS = { ArrowDown: 1, ArrowUp: -1 }
-
-/** Arrow keys, Home and End move between the menu's enabled items, wrapping around. */
-function moveFocus(event, list) {
-  const items = [...list.querySelectorAll('[role="menuitem"]:not(:disabled)')]
-  const index = items.indexOf(document.activeElement)
-  let next = null
-  if (event.key in MENU_KEYS) { next = (index + MENU_KEYS[event.key] + items.length) % items.length }
-  if (event.key === 'Home') { next = 0 }
-  if (event.key === 'End') { next = items.length - 1 }
-  if (next === null) { return }
-  event.preventDefault()
-  items[next]?.focus()
-}
+const MENU_ITEMS = '[role="menuitem"]:not(:disabled)'
 
 /** Focus the first item when the menu opens, and the trigger again when it closes. */
 function useMenuFocus(open, listRef, triggerRef) {
   const wasOpen = useRef(false)
   useEffect(() => {
-    if (open) { listRef.current?.querySelector('[role="menuitem"]:not(:disabled)')?.focus() }
+    if (open) { listRef.current?.querySelector(MENU_ITEMS)?.focus() }
     if (!open && wasOpen.current) { triggerRef.current?.focus() }
     wasOpen.current = open
   }, [open, listRef, triggerRef])
@@ -48,7 +36,7 @@ export function PanelMenu({ items }) {
         </svg>
       </button>
       {open && (
-        <div ref={listRef} className="panel-menu-list" role="menu" aria-label="More actions" onKeyDown={(event) => moveFocus(event, listRef.current)}>
+        <div ref={listRef} className="panel-menu-list" role="menu" aria-label="More actions" onKeyDown={(event) => moveMenuFocus(event, listRef.current, MENU_ITEMS)}>
           {items.map(({ id, icon, label, disabled, separated, onClick }) => (
             <button
               key={id} type="button" role="menuitem" disabled={disabled}

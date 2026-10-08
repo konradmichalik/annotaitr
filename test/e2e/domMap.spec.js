@@ -113,25 +113,25 @@ test('the Element tool outlines and picks a page element, other tools only name 
     const contact = elements.find((el) => el.name === 'Contact us')
     const tools = page.getByRole('toolbar', { name: 'Annotation tools' })
 
-    await tools.getByText('Element').click()
+    await tools.getByRole('button', { name: /^Element \(/ }).click()
     const heroSpot = await canvasPoint(page, hero.box)
     await page.mouse.move(heroSpot.x, heroSpot.y)
     await expect(page.locator('.element-highlight')).toHaveCount(1)
-    await expect(page.locator('.element-highlight-label')).toHaveText('img#hero "Team photo" (team.png)')
+    await expect(page.locator('.element-highlight-label')).toHaveText(`${hero.selector} ${Math.round(hero.box.width)}×${Math.round(hero.box.height)}`)
     await page.mouse.click(heroSpot.x, heroSpot.y)
     await expect(page.locator('.comment-popover-element')).toHaveText('Element: img#hero "Team photo" (team.png)')
-    await page.getByPlaceholder('Add a comment (optional)...').fill('Swap the photo')
+    await page.getByPlaceholder('Add a comment…').fill('Swap the photo')
     await page.getByRole('button', { name: 'Add', exact: true }).click()
-    await expect(page.getByText('1. Element')).toBeVisible()
+    await expect(page.getByRole('button', { name: /^1\. Change, Element/ })).toBeVisible()
     await expect(page.locator('.element-highlight')).toHaveCount(0)
 
     // A selected element stays on its element when dragged.
     await page.mouse.down()
     await page.mouse.move(heroSpot.x + 150 * heroSpot.zoom, heroSpot.y + 250 * heroSpot.zoom, { steps: 5 })
     await page.mouse.up()
-    await expect(page.locator('.panel-element')).toHaveText('img#hero "Team photo" (team.png)')
+    await expect(page.locator('.note-quote')).toHaveText('img#hero "Team photo" (team.png)')
 
-    await tools.getByText('Pin').click()
+    await tools.getByRole('button', { name: /^Pin \(/ }).click()
     const contactSpot = await canvasPoint(page, contact.box)
     await page.mouse.move(contactSpot.x, contactSpot.y)
     await expect(page.locator('.element-highlight')).toHaveCount(0)
@@ -139,11 +139,66 @@ test('the Element tool outlines and picks a page element, other tools only name 
     await expect(page.locator('.comment-popover-element')).toHaveText('Element: button#contact "Contact us"')
     await page.getByRole('button', { name: 'Add', exact: true }).click()
 
-    await page.getByRole('button', { name: 'Feedback' }).click()
-    await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
+    await page.getByRole('button', { name: /^Send feedback/ }).click()
+    await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible()
     expect(await new Promise((resolve) => child.on('exit', resolve))).toBe(0)
-    expect(stdout()).toMatch(/### 1\. \[#\w+\] Selected element: .*\nElement: img "Team photo" \("team.png"\) · #hero\n> Swap the photo/)
-    expect(stdout()).toMatch(/### 2\. \[#\w+\] Comment pin: .*\nElement: button "Contact us" · #contact/)
+    expect(stdout()).toMatch(/### 1\. \[#\w+\] Change · Selected element: .*\nElement: img "Team photo" \("team.png"\) · #hero\n> Swap the photo/)
+    expect(stdout()).toMatch(/### 2\. \[#\w+\] Question · Comment pin: .*\nElement: button "Contact us" · #contact/)
+  } finally {
+    if (child.exitCode === null) { child.kill() }
+  }
+})
+
+test('the Element tool walks the page elements from the keyboard and annotates one with Enter', async ({ page }) => {
+  const { child, url } = startCli([baseUrl, '--viewport', '800x600'])
+  try {
+    const appUrl = await url
+    await page.goto(appUrl)
+    const { elements } = (await (await page.request.get(`${appUrl}/api/elements`)).json()).data
+    const caption = (el) => `${el.selector} ${Math.round(el.box.width)}×${Math.round(el.box.height)}`
+    const label = page.locator('.element-highlight-label')
+
+    // The tool is offered once the app has the element map, which arrives after the image.
+    await expect(async () => {
+      await page.keyboard.press('e')
+      await expect(page.getByRole('button', { name: /^Element \(/ })).toHaveAttribute('aria-pressed', 'true', { timeout: 500 })
+    }).toPass()
+    // Reached with Tab, as a keyboard user does: a click on the canvas starts no walk.
+    for (let i = 0; i < 40; i++) {
+      await page.keyboard.press('Tab')
+      if (await page.evaluate(() => document.activeElement?.classList.contains('image-canvas-wrapper'))) { break }
+    }
+    await expect(label).toHaveText(caption(elements[0]))
+    await page.keyboard.press('Tab')
+    await expect(label).toHaveText(caption(elements[1]))
+    await page.keyboard.press('Shift+Tab')
+    await expect(label).toHaveText(caption(elements[0]))
+
+    const contact = elements.find((el) => el.name === 'Contact us')
+    for (let i = 0; i < elements.indexOf(contact); i++) { await page.keyboard.press('Tab') }
+    await expect(label).toHaveText(caption(contact))
+    await page.keyboard.press('ArrowUp')
+    await expect(label).not.toHaveText(caption(contact))
+
+    await page.keyboard.press('Enter')
+    await expect(page.getByPlaceholder('Add a comment…')).toBeFocused()
+    await expect(page.locator('.comment-popover-element')).toContainText('Element: ')
+  } finally {
+    if (child.exitCode === null) { child.kill() }
+  }
+})
+
+test('Capture again captures the page anew with the settings it has', async ({ page }) => {
+  const { child, url } = startCli([baseUrl, '--viewport', '800x600'])
+  try {
+    await page.goto(await url)
+    await expect(page.locator('.viewport-trigger')).toHaveText('Custom · 800')
+    await Promise.all([
+      page.waitForResponse('**/api/recapture'),
+      page.getByRole('button', { name: 'Capture again', exact: true }).click()
+    ])
+    await expect(page.locator('.viewport-trigger')).toHaveText('Custom · 800')
+    await expect(page.getByRole('alert')).toHaveCount(0)
   } finally {
     if (child.exitCode === null) { child.kill() }
   }
@@ -160,41 +215,41 @@ test('the viewport picker captures the page again in place, after confirming tha
     const choose = (name) => page.locator('label', { has: page.getByRole('radio', { name, exact: true }) }).click()
     const captureAgain = () => Promise.all([
       page.waitForResponse('**/api/recapture'),
-      page.getByRole('button', { name: 'Capture again' }).click()
+      page.getByRole('button', { name: 'Capture', exact: true }).click()
     ])
-    await expect(trigger).toHaveText('Custom 800×600')
+    await expect(trigger).toHaveText('Custom · 800')
 
     // Measured on every call: a narrower capture is centered somewhere else.
     const pinAt = async (x, y) => {
       const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
-      await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Pin').click()
+      await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Pin \(/ }).click()
       await page.mouse.click(canvas.x + x, canvas.y + y)
       await page.getByRole('button', { name: 'Add', exact: true }).click()
     }
     await pinAt(60, 300)
-    await expect(page.getByText('1. Pin')).toBeVisible()
+    await expect(page.getByRole('button', { name: /^1\. Question, Pin/ })).toBeVisible()
 
     // Declining keeps the annotation and the capture.
     await trigger.click()
     await choose('Tablet')
     await expect(page.getByText('Discards your annotation')).toBeVisible()
     page.once('dialog', (dialog) => dialog.dismiss())
-    await page.getByRole('button', { name: 'Capture again' }).click()
+    await page.getByRole('button', { name: 'Capture', exact: true }).click()
     await expect(page.getByRole('alert')).toHaveText('Not captured again, your annotation is kept.')
-    await expect(page.getByText('1. Pin')).toBeVisible()
+    await expect(page.getByRole('button', { name: /^1\. Question, Pin/ })).toBeVisible()
 
     page.once('dialog', (dialog) => dialog.accept())
     await choose('Phone')
     await captureAgain()
-    await expect(trigger).toHaveText('Phone 375×812')
-    await expect(page.getByText('1. Pin')).toHaveCount(0)
+    await expect(trigger).toHaveText('Phone · 375')
+    await expect(page.getByRole('button', { name: /^1\. Question, Pin/ })).toHaveCount(0)
     // The fixture's 400px card makes the page wider than the phone, and a full-page capture shows all of it.
     expect((await meta()).capture.viewport).toEqual({ width: 375, height: 812 })
 
     await trigger.click()
     await page.getByRole('button', { name: 'Landscape' }).click()
     await captureAgain()
-    await expect(trigger).toHaveText('Phone landscape 812×375')
+    await expect(trigger).toHaveText('Phone landscape · 812')
     expect((await meta()).capture.viewport).toEqual({ width: 812, height: 375 })
 
     await trigger.click()
@@ -206,12 +261,12 @@ test('the viewport picker captures the page again in place, after confirming tha
     await choose('Anchor')
     await page.getByLabel('Anchor id').fill('pricing')
     await captureAgain()
-    await expect(trigger).toHaveText('Phone landscape 812×375')
+    await expect(trigger).toHaveText('Phone landscape · 812')
     expect(await meta()).toMatchObject({ width: 812, height: 375, capture: { section: { anchor: '#pricing' }, delayMs: 200 } })
 
     await pinAt(30, 30)
-    await page.getByRole('button', { name: 'Feedback' }).click()
-    await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
+    await page.getByRole('button', { name: /^Send feedback/ }).click()
+    await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible()
     expect(await new Promise((resolve) => child.on('exit', resolve))).toBe(0)
     expect(stdout()).toContain('Captured at mobile landscape (812×375), section #pricing, after 200 ms\n')
   } finally {
@@ -225,7 +280,7 @@ test('a recapture answered with an error page shows the status instead of a pars
     await page.goto(await url)
     await page.route('**/api/recapture', (route) => route.fulfill({ status: 500, contentType: 'text/html', body: '<html>Internal Server Error</html>' }))
     await page.locator('.viewport-trigger').click()
-    await page.getByRole('button', { name: 'Capture again' }).click()
+    await page.getByRole('button', { name: 'Capture', exact: true }).click()
     await expect(page.getByRole('alert')).toHaveText('Server responded with 500')
   } finally {
     if (child.exitCode === null) { child.kill() }
@@ -238,11 +293,11 @@ test('the export menu copies the annotated image and the feedback, and saves the
     const appUrl = await url
     await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(appUrl).origin })
     await page.goto(appUrl)
-    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Pin').click()
+    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Pin \(/ }).click()
     const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
     const zoom = canvas.width / 800
     await page.mouse.click(canvas.x + 170 * zoom, canvas.y + 160 * zoom)
-    await page.getByPlaceholder('Add a comment (optional)...').fill('Swap the photo')
+    await page.getByPlaceholder('Add a comment…').fill('Swap the photo')
     await page.getByRole('button', { name: 'Add', exact: true }).click()
 
     const menu = page.getByRole('button', { name: 'More actions', exact: true })

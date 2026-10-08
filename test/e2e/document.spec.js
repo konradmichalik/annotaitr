@@ -7,13 +7,13 @@ import { startCli } from '../helpers/cli.js'
 import { makePdf } from '../helpers/pdfFixtures.js'
 
 async function drawBox(page, from, to) {
-  await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Box').click()
+  await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Box \(/ }).click()
   const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
   await page.mouse.move(canvas.x + from[0], canvas.y + from[1])
   await page.mouse.down()
   await page.mouse.move(canvas.x + to[0], canvas.y + to[1])
   await page.mouse.up()
-  await page.getByPlaceholder('Add a comment (optional)...').fill(`box ${from[0]}`)
+  await page.getByPlaceholder('Add a comment…').fill(`box ${from[0]}`)
   await page.getByRole('button', { name: 'Add', exact: true }).click()
 }
 
@@ -57,15 +57,16 @@ test('a PDF is annotated page by page and the CLI prints per-page feedback with 
     await page.getByRole('button', { name: 'Save' }).click()
 
     await expect(page.locator('.app-sidebar')).toContainText('Page 2')
-    await page.getByRole('button', { name: /^Feedback/ }).click()
-    await expect(page.getByText('Feedback Submitted')).toBeVisible()
+    await page.getByRole('button', { name: /^Send feedback/ }).click()
+    await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible()
 
     expect(await cli.exited).toBe(0)
     const output = cli.stdout()
-    expect(output).toMatch(/^3 annotations on 3 of 3 pages\.\n\nSource: deck\.pptx \(rendered as deck\.pdf\)\n/)
-    expect(output).toMatch(/## Page 1\n[\s\S]*### 1\. \[#[0-9a-f]{8}\] Boxed area/)
-    expect(output).toMatch(/## Page 2\n[\s\S]*### 2\. \[#[0-9a-f]{8}\] Page comment\n> Too dense/)
-    expect(output).toMatch(/## Page 3\n[\s\S]*### 3\. \[#[0-9a-f]{8}\] Boxed area/)
+    expect(output).toMatch(/^3 annotations \(3 Change\) on 3 of 3 pages\.\n\nSource: deck\.pptx \(rendered as deck\.pdf\)\n/)
+    expect(output).toMatch(/## Page 1\n[\s\S]*### 1\. \[#[0-9a-f]{8}\] Change · Boxed area/)
+    // A note keeps the number it was made with: the page 2 comment came last.
+    expect(output).toMatch(/## Page 2\n[\s\S]*### 3\. \[#[0-9a-f]{8}\] Change · Page comment\n> Too dense/)
+    expect(output).toMatch(/## Page 3\n[\s\S]*### 2\. \[#[0-9a-f]{8}\] Change · Boxed area/)
     const overview = output.match(/Overview: (.*)\n/)[1]
     expect((await readdir(dirname(overview))).sort()).toEqual(['overview.png', 'page-01.png', 'page-02.png', 'page-03.png'])
     await rm(dirname(overview), { recursive: true, force: true })
@@ -104,7 +105,7 @@ test('text on a PDF page is selected word by word and quoted in the feedback', a
     await textLoaded
     await expect(page.locator('.page-skeleton')).toHaveCount(0)
     const toolbar = page.getByRole('toolbar', { name: 'Annotation tools' })
-    await toolbar.getByText('Text', { exact: true }).click()
+    await toolbar.getByRole('button', { name: /^Text \(/ }).click()
     // Body lines sit 160pt and 188pt below the top of a 960pt wide slide, in
     // 22pt type from x 60pt. Both points aim at the middle of a word ("North"
     // and "stayed"), since word edges shift with the fonts a system has.
@@ -115,13 +116,13 @@ test('text on a PDF page is selected word by word and quoted in the feedback', a
     await page.mouse.move(canvas.x + 155 * scale, canvas.y + 180 * scale, { steps: 4 })
     await page.mouse.up()
     await expect(page.locator('.comment-popover-element')).toContainText('"North grew 12% South stayed"')
-    await page.getByPlaceholder('Add a comment (optional)...').fill('Say rose')
+    await page.getByPlaceholder('Add a comment…').fill('Say rose')
     await page.getByRole('button', { name: 'Add', exact: true }).click()
-    await expect(page.locator('.app-sidebar')).toContainText('"North grew 12% South stayed"')
+    await expect(page.locator('.app-sidebar')).toContainText('“North grew 12% South stayed”')
 
-    await page.getByRole('button', { name: /^Feedback/ }).click()
+    await page.getByRole('button', { name: /^Send feedback/ }).click()
     expect(await cli.exited).toBe(0)
-    expect(cli.stdout()).toMatch(/### 1\. \[#[0-9a-f]{8}\] Selected text: [^\n]*\nQuote: "North grew 12% South stayed"\n> Say rose/)
+    expect(cli.stdout()).toMatch(/### 1\. \[#[0-9a-f]{8}\] Change · Selected text: [^\n]*\nQuote: "North grew 12% South stayed"\n> Say rose/)
     await rm(cli.stdout().match(/Overview: (.*)\/overview\.png/)[1], { recursive: true, force: true })
   } finally {
     cli.child.kill()

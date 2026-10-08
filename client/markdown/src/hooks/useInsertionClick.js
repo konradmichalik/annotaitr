@@ -17,6 +17,13 @@ export function useInsertionClick({
   annotationsRef,
   onSelectAnnotation,
 }) {
+  // Only on unmount: the click handler below re-binds whenever the toolbar
+  // state changes, and that must not take the marker the toolbar sits on.
+  useEffect(() => {
+    const container = containerRef.current
+    return () => container?.querySelectorAll('.insertion-marker-temp').forEach(removeInsertionMarker)
+  }, [containerRef])
+
   useEffect(() => {
     const container = containerRef.current
     if (!container) { return }
@@ -78,7 +85,6 @@ export function useInsertionClick({
     container.addEventListener('click', handleInsertionMarkerClick)
 
     return () => {
-      container.querySelectorAll('.insertion-marker-temp').forEach(removeInsertionMarker)
       container.removeEventListener('click', handleCursorClick)
       container.removeEventListener('click', handleInsertionMarkerClick)
     }

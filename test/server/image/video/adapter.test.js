@@ -155,7 +155,7 @@ describe('video annotator server', () => {
     expect(decision.approved).toBe(false)
     expect(decision.annotationCount).toBe(3)
     expect(decision.annotations.map((a) => a.id)).toEqual(['a', 'b', 'g'])
-    expect(decision.output).toContain('3 annotations on the recording clip.webm (00:12.000, 40x30).')
+    expect(decision.output).toContain('3 annotations (2 Change, 1 General) on the recording clip.webm (00:12.000, 40x30).')
 
     const overview = decision.output.match(/Overview: (\S+)/)[1]
     const frames = [...decision.output.matchAll(/Frame: (\S+)/g)].map((m) => m[1])
@@ -175,7 +175,7 @@ describe('video annotator server', () => {
     await post('/api/approve', {})
     const decision = await server.waitForDecision()
     expect(decision.approved).toBe(true)
-    expect(decision.output).toMatch(/^APPROVED WITH NOTES: 1 note\./)
+    expect(decision.output).toMatch(/^APPROVED WITH NOTES: 1 note \(1 Change\)\./)
   })
 
   it('refuses a new frame plan and a second decision once a decision was made', async () => {
@@ -194,7 +194,7 @@ describe('video annotator server', () => {
     await uploadAll(times)
     await post('/api/feedback', {})
     const { output } = await server.waitForDecision()
-    expect(output).toContain('### 2. at 00:02.000, Boxed area')
+    expect(output).toContain('### 2. Change · at 00:02.000, Boxed area')
     expect(output).toMatch(/close to annotation 1/)
   })
 

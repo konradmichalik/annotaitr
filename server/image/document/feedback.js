@@ -1,6 +1,6 @@
 import { describePosition, findNearbyAnnotationNumbers } from '../common/geometry.js'
-import { annotationLabel } from '../common/feedback.js'
-import { annotationHandle } from '../../core/annotationHandle.js'
+import { annotationLabel, entryMarker } from '../common/feedback.js'
+import { intentCounts } from '../../core/notes.js'
 import { isPaged } from './pages.js'
 import { matchAnnotation } from '../common/elementMatch.js'
 
@@ -53,10 +53,8 @@ function textLine(annotation, elements) {
   return matches.length > 0 ? `Text: ${matches.map(({ tag, name }) => `${tag} ${quoteText(name)}`).join(' → ')}\n` : ''
 }
 
-function entry(annotation, number, document, nearby, elements) {
-  const handle = annotationHandle(annotation.id)
-  const marker = handle ? `${number}. [#${handle}]` : `${number}.`
-  return `### ${marker} ${heading(annotation, document, nearby)}\n${textLine(annotation, elements)}${quote(annotation.text)}\n`
+function entry(annotation, document, nearby, elements) {
+  return `### ${entryMarker(annotation)}${heading(annotation, document, nearby)}\n${textLine(annotation, elements)}${quote(annotation.text)}\n`
 }
 
 function formatSections({ ordered, plan, document, files, elements = new Map() }) {
@@ -64,15 +62,13 @@ function formatSections({ ordered, plan, document, files, elements = new Map() }
   const sections = plan.map(({ page, entries }) => {
     const image = files ? `Annotated page: ${files.pages.get(page)}\n` : ''
     const body = entries
-      .map((e) => entry(e.annotation, e.number, document, nearby.get(e.annotation) ?? [], elements.get(page)))
+      .map((e) => entry(e.annotation, document, nearby.get(e.annotation) ?? [], elements.get(page)))
       .join('\n')
     return `## Page ${page}\n${image}\n${body}`
   })
-  const general = ordered
-    .map((annotation, index) => ({ annotation, number: index + 1 }))
-    .filter(({ annotation }) => !isPaged(annotation))
+  const general = ordered.filter((annotation) => !isPaged(annotation))
   if (general.length > 0) {
-    sections.push(`## General\n${general.map((e) => entry(e.annotation, e.number, document, [])).join('\n')}`)
+    sections.push(`## General\n${general.map((annotation) => entry(annotation, document, [])).join('\n')}`)
   }
   return sections.join('\n')
 }
@@ -109,7 +105,7 @@ function pageCountLine(plan, document) {
  */
 export function exportDocumentFeedback(context) {
   const { ordered, plan, document } = context
-  return `${plural(ordered.length, 'annotation')} on ${pageCountLine(plan, document)}.\n\n` +
+  return `${plural(ordered.length, 'annotation')} (${intentCounts(ordered)}) on ${pageCountLine(plan, document)}.\n\n` +
     header(context) +
     'Look at each page image, then match each note below to the visible element or quoted text.\n' +
     `${textNotice(context)}\n` +
@@ -117,7 +113,7 @@ export function exportDocumentFeedback(context) {
 }
 
 export function formatDocumentApprovalWithNotes(context) {
-  return `APPROVED WITH NOTES: ${plural(context.ordered.length, 'note')}. ` +
+  return `APPROVED WITH NOTES: ${plural(context.ordered.length, 'note')} (${intentCounts(context.ordered)}). ` +
     'The document is approved as-is. Treat the notes below as context, not as change requests.\n\n' +
     header(context) + textNotice(context) + '\n' +
     formatSections(context) + '\n'

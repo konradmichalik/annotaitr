@@ -1,3 +1,5 @@
+import { defaultIntent } from '../../../shared/utils/intents.js'
+
 export const initialAnnotationState = {
   annotations: [],
   history: [],
@@ -30,6 +32,9 @@ export function annotationReducer(state, action) {
       if (!original) {return state}
       const updated = { ...original, type: action.annotationType, text: action.text }
       if (action.label !== undefined) { updated.label = action.label }
+      // A note that changes type (a deletion turned into a comment) takes the new type's intent unless one was picked.
+      if (action.intent !== undefined) { updated.intent = action.intent }
+      else if (action.annotationType !== original.type) { updated.intent = defaultIntent(action.annotationType) }
       return {
         annotations: state.annotations.map(a => a.id === action.id ? updated : a),
         history: [...state.history, { action: 'edit', annotation: original, updated }],

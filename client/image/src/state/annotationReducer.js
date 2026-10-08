@@ -1,3 +1,5 @@
+import { isNumbered, intentOf, nextNumber, normalizeNotes } from '../../../shared/utils/intents.js'
+
 export const initialAnnotationState = {
   annotations: [],
   history: [],
@@ -20,14 +22,31 @@ function annotationsAfterRedo(annotations, entry) {
   return annotations
 }
 
+/** Every note this round has numbered, also the ones undo or redo can bring back. */
+const numberedSoFar = (state) => [
+  ...state.annotations,
+  ...[...state.history, ...state.redo].flatMap((entry) => [entry.annotation, entry.before, entry.after])
+]
+
+/** The number the next note gets. Deleting a note never hands its number to another one. */
+export const upcomingNumber = (state) => nextNumber(numberedSoFar(state))
+
+// A new note gets its intent and the next number, unless it already has them.
+function prepared(annotation, state) {
+  if (!isNumbered(annotation)) { return annotation }
+  return { ...annotation, intent: intentOf(annotation), number: annotation.number ?? upcomingNumber(state) }
+}
+
 export function annotationReducer(state, action) {
   switch (action.type) {
-    case 'ADD':
+    case 'ADD': {
+      const annotation = prepared(action.annotation, state)
       return {
-        annotations: [...state.annotations, action.annotation],
-        history: [...state.history, { action: 'add', annotation: action.annotation }],
+        annotations: [...state.annotations, annotation],
+        history: [...state.history, { action: 'add', annotation }],
         redo: []
       }
+    }
     case 'UPDATE':
       // Live/preview update while a drag is in progress: applied continuously
       // (every mousemove) so it must not grow history - EDIT below is the one
@@ -57,7 +76,8 @@ export function annotationReducer(state, action) {
       }
     }
     case 'SET_ALL':
-      return { ...state, annotations: action.annotations, history: [], redo: [] }
+      // Loaded, imported or decided notes: data from before intents and numbers were stored gets them here.
+      return { ...state, annotations: normalizeNotes(action.annotations, { order: action.order }), history: [], redo: [] }
     case 'UNDO': {
       if (state.history.length === 0) { return state }
       const entry = state.history[state.history.length - 1]

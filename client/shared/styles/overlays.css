@@ -1,4 +1,4 @@
-/* Floating layers: comment popover, dropdowns, modals and the settings dialog. */
+/* Floating layers: dropdowns and modals. The settings dialog lives in settings.css, the note composer in composer.css. */
 
 /* === Modal === */
 .modal-backdrop {
@@ -8,7 +8,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgb(0 0 0 / 50%);
+  background: var(--scrim);
 }
 
 .modal {
@@ -81,172 +81,18 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.5rem;
+  gap: var(--space-2);
   padding: 1rem 1.25rem;
   border-top: 1px solid var(--border);
-}
-
-.settings-tabs {
-  display: flex;
-  gap: 0;
-  padding: 0 1.25rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.settings-tab {
-  padding: 0.625rem 1rem;
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: none;
-  color: var(--text-muted);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: color var(--transition-fast), border-color var(--transition-fast);
-}
-
-.settings-tab:hover {
-  color: var(--text);
-}
-
-.settings-tab.active {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
-}
-
-.settings-tab-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.settings-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.settings-row-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  flex: 1;
-  min-width: 0;
-}
-
-.settings-row-label {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--text);
-}
-
-.settings-row-desc {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-}
-
-.settings-row-control {
-  flex-shrink: 0;
-}
-
-/* Segmented Control */
-.settings-segmented {
-  display: flex;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-secondary);
-}
-
-.settings-segmented-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.5rem;
-  border: none;
-  border-radius: 4px;
-  background: none;
-  color: var(--text-muted);
-  font-size: 0.6875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
-  white-space: nowrap;
-}
-
-.settings-segmented-btn:hover {
-  color: var(--text);
-}
-
-.settings-segmented-btn.active {
-  background: var(--bg-card);
-  color: var(--text);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
-}
-
-.settings-segmented-icon {
-  display: flex;
-  align-items: center;
-}
-
-/* Footer */
-.settings-footer {
-  justify-content: space-between;
-}
-
-.settings-reset-btn {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  border-color: transparent;
-}
-
-.settings-reset-btn:hover:not(:disabled) {
-  color: var(--danger);
-  border-color: var(--danger);
-}
-
-/* Shortcuts */
-.shortcuts-group + .shortcuts-group {
-  margin-top: 1rem;
-}
-
-.shortcuts-group-title {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 0.5rem;
-}
-
-.shortcuts-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-
-.shortcut-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.shortcut-desc {
-  font-size: 0.8125rem;
-  color: var(--text-muted);
-  text-align: right;
 }
 
 .modal-preview {
   background: var(--bg-secondary);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
-  padding: 1rem;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 0.75rem;
+  padding: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: break-word;
@@ -257,13 +103,13 @@
 .btn-export {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   color: var(--primary);
   border-color: var(--primary);
 }
 
 .btn-export:hover:not(:disabled) {
-  background: rgb(94 129 172 / 10%);
+  background: color-mix(in srgb, var(--focus) var(--tint), transparent);
 }
 
 /* === Dropdown === */
@@ -279,8 +125,8 @@
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
-  padding: 0.25rem;
+  box-shadow: var(--elev-2);
+  padding: var(--space-1);
   z-index: 10;
 }
 
@@ -302,13 +148,13 @@
 }
 
 .dropdown-item-label {
-  font-size: 0.8125rem;
+  font-size: var(--fs-md);
   font-weight: 500;
   color: var(--text);
 }
 
 .dropdown-item-hint {
-  font-size: 0.7rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
@@ -321,184 +167,12 @@
 }
 
 .modal-error {
-  margin-top: 0.5rem;
-  font-size: 0.8125rem;
+  margin-top: var(--space-2);
+  font-size: var(--fs-md);
   color: var(--danger);
 }
 
 @keyframes dropdown-in {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
-}
-
-/* === Settings Modal === */
-.settings-modal {
-  max-width: 520px;
-}
-
-.settings-body {
-  padding: 1rem 1.25rem;
-}
-
-.about-tab {
-  align-items: center;
-  text-align: center;
-  padding: 1rem 0 0.5rem;
-}
-
-.about-logo {
-  height: 1.75rem;
-  transform: none;
-}
-
-.about-version {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.about-description {
-  font-size: 0.8125rem;
-  color: var(--text-muted);
-  line-height: 1.5;
-  max-width: 320px;
-}
-
-.about-link {
-  font-size: 0.8125rem;
-  color: var(--primary);
-  text-decoration: none;
-}
-
-.about-link:hover {
-  text-decoration: underline;
-}
-
-/* Toggle */
-.settings-toggle {
-  position: relative;
-  width: 36px;
-  height: 20px;
-  border: none;
-  border-radius: 10px;
-  background: var(--border);
-  cursor: pointer;
-  transition: background var(--transition-fast);
-  padding: 0;
-}
-
-.settings-toggle.active {
-  background: var(--primary);
-}
-
-.settings-toggle-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--bg-card);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 15%);
-  transition: transform var(--transition-fast);
-}
-
-.settings-toggle.active .settings-toggle-thumb {
-  transform: translateX(16px);
-}
-
-/* === Comment Popover === */
-.comment-popover {
-  position: fixed;
-  z-index: 101;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  flex-direction: column;
-}
-
-@keyframes popover-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.comment-popover-body {
-  position: relative;
-  padding: 0.5rem;
-}
-
-.comment-popover-textarea {
-  background: transparent;
-  border: none;
-  outline: none;
-  font-size: 0.8125rem;
-  font-family: inherit;
-  line-height: 1.5;
-  color: var(--text);
-  width: 100%;
-  min-height: 3rem;
-  max-height: 10rem;
-  resize: none;
-  padding: 0.375rem 0.5rem;
-  field-sizing: content;
-}
-
-.comment-popover-textarea::placeholder {
-  color: var(--text-muted);
-}
-
-.comment-popover-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.375rem 0.5rem;
-  border-top: 1px solid var(--border-light);
-}
-
-.comment-popover-hint {
-  font-size: 0.6875rem;
-  color: var(--text-muted);
-}
-
-.comment-popover-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.comment-popover-cancel-btn {
-  padding: 0.25rem 0.625rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-
-.comment-popover-cancel-btn:hover {
-  background: var(--bg-secondary);
-}
-
-.comment-popover-submit-btn {
-  padding: 0.25rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-secondary);
-  color: var(--text);
-  font-size: 0.75rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
-}
-
-.comment-popover-submit-btn:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.comment-popover-submit-btn:hover:not(:disabled) {
-  background: var(--border);
 }

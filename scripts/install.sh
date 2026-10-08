@@ -24,14 +24,16 @@ If arguments contain file path(s), use those files.
 Otherwise, ask the user which markdown file they want to annotate.
 
 The user can:
-- Select text and mark it for deletion
-- Select text and add comments
+- Select text and ask for a change, an addition, a removal or ask a question about it
 - Insert text at specific locations
 - Approve the file with no changes
 
 After the user submits their decision:
 - If approved: No action needed
-- If feedback provided: Apply the requested changes to the file
+- If feedback provided: Apply the requested changes to the file. Each numbered note states its intent
+  after the number (`## 3. Question · Text (Line 7)`): Change applies the comment, Add inserts the text
+  after its `After:` context or adds what the comment asks, Remove deletes the quoted text, Question asks
+  without requesting an edit, so answer it. Numbers stay fixed for the round, so they can have gaps.
 
 ## Re-review loop
 

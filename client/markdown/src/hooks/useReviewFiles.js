@@ -55,7 +55,7 @@ export function useReviewFiles({ viewerRef, setStatus, setErrorStatus }) {
         filesDispatch({ type: 'INIT_FILES', files: loadedFiles })
         setOrigin(json.data.origin || 'cli')
         if (json.data.config) { setServerConfig(json.data.config) }
-        setStatus('Select text to annotate, then Approve or Submit Feedback.')
+        setStatus('')
         return loadedFiles
       } else {
         setErrorStatus('Error: ' + json.error)

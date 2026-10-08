@@ -70,15 +70,22 @@ regenerate the PDF and re-open it with the same `--source`.
 
 **Markdown feedback** — a `# Annotation Feedback` document (or `APPROVED:` /
 `APPROVED WITH NOTES:` with no such document) with one block per annotation,
-each giving a line reference and the requested change:
+each giving a line reference and the requested change.
 
-- **"Remove this"** entries: delete the quoted text
-- **"Comment on"** entries: apply the comment as a change to the referenced text
-- **"Insert text"** entries: insert the given text at the specified location
+In both shapes, every numbered note states its intent after the number, such
+as `## 3. Question · Text (Line 7)` or `### 2. [#a3f19c2e] Remove · Boxed area:`:
 
-In both shapes, an annotation heading normally carries a short handle in
-brackets, such as `[#a3f19c2e]`. The number is positional and is recalculated
-on every export, the handle stays fixed for as long as the annotation exists.
+- **Change**: apply the comment as a change to what the note points at
+- **Add**: add something there; a markdown `Insertion` gives the text to insert after its `After:` context
+- **Remove**: remove what the note points at
+- **Question**: the reviewer asks, they do not request a change. Answer it, and change something only if the answer makes the change obvious
+
+A general comment has no number and no intent. A note keeps its number for the
+whole round, the same number as on the marker in an annotated image: numbers
+can have gaps where the reviewer deleted a note, and notes are listed by
+position (line, page or time), not by number. An annotation heading normally
+also carries a short handle in brackets, such as `[#a3f19c2e]`, which stays
+fixed for as long as the annotation exists.
 Use it whenever you refer to a specific annotation when reporting back to the
 user. The reviewer never sees handles in the annotator, so pair each one with a
 few words naming the passage: "fixed `#a3f19c2e` (intro wording), left

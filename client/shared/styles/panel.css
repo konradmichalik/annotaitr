@@ -4,7 +4,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.25rem;
+  padding: var(--space-1);
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -13,51 +13,29 @@
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 
-.panel-delete-btn {
-  border: none;
-  background: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 1.125rem;
-  line-height: 1;
-  padding: 0 0.25rem;
-  border-radius: 3px;
-  opacity: 0;
-  transition: opacity var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
-}
-
-.panel-delete-btn:hover { color: var(--danger); background: var(--deletion-bg); }
-
-.panel-global-comment {
-  padding: 0.625rem 1rem;
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-
 .panel-global-textarea {
   width: 100%;
   padding: 0.375rem 0.5rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line-control);
   border-radius: var(--radius-sm);
   background: var(--bg-card);
   color: var(--text);
   font-family: inherit;
-  font-size: 0.8125rem;
+  font-size: var(--fs-md);
   line-height: 1.5;
   resize: vertical;
   min-height: 2.5rem;
-  outline: none;
-  margin-top: 0.25rem;
+  margin-top: var(--space-1);
 }
 
 .panel-global-save-btn {
   align-self: flex-end;
-  padding: 0.25rem 0.75rem;
-  border: 1px solid var(--border);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--line-control);
   border-radius: var(--radius-sm);
   background: var(--bg-card);
   color: var(--text);
-  font-size: 0.75rem;
+  font-size: var(--fs-sm);
   font-family: inherit;
   cursor: pointer;
   transition: background var(--transition-fast), border-color var(--transition-fast);
@@ -65,18 +43,17 @@
 
 .panel-header {
   display: flex;
+  flex-shrink: 0;
+  gap: var(--space-2);
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  background: var(--bg-sidebar);
-  z-index: 1;
+  min-height: 52px;
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface);
 }
 
 .panel-header h2 {
-  font-size: 0.875rem;
+  margin-right: auto;
+  font-size: var(--fs-lg);
   font-weight: 600;
 }
 
@@ -85,13 +62,14 @@
   min-width: 1.125rem;
   height: 1.125rem;
   padding: 0 0.3125rem;
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   background: var(--badge-bg);
   color: var(--badge-text);
-  font-size: 0.6875rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   line-height: 1.125rem;
   text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .panel-icon-btn:hover {
@@ -100,26 +78,57 @@
 }
 
 .panel-empty {
-  padding: 1.5rem 1rem;
-  font-size: 0.8125rem;
-  color: var(--text-muted);
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-4);
+  color: var(--ink);
+  font-size: var(--fs-md);
 }
 
-.panel-list {
+.panel-empty-title {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.panel-empty-lead {
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+
+.panel-empty-keys {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
   list-style: none;
-  flex: 1;
 }
 
-.panel-item {
-  padding: 0.875rem 1rem;
-  border-bottom: 1px solid var(--border-light);
-  cursor: pointer;
-  transition: all var(--transition-fast);
+.panel-empty-keys li {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
 }
 
-.panel-item:hover {
-  background: var(--bg-card);
+.panel-empty-note {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+
+.panel-empty-note svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.panel-empty-note strong {
+  color: var(--ink);
 }
 
 .panel-item-header {
@@ -129,32 +138,23 @@
   margin-bottom: 0.375rem;
 }
 
-.panel-item-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.125rem;
-}
-
-.panel-edit-btn:hover {
-  color: var(--primary);
-  background: var(--bg-secondary);
-}
-
 .panel-comment-text {
-  font-size: 0.8125rem;
+  font-size: var(--fs-md);
   color: var(--text);
   line-height: 1.4;
 }
 
 .panel-global-textarea:focus {
-  border-color: var(--primary);
+  border-color: var(--focus);
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
 }
 
 .panel-global-edit {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
-  margin-top: 0.25rem;
+  margin-top: var(--space-1);
 }
 
 .panel-global-save-btn:hover {
@@ -168,64 +168,12 @@
   margin-left: auto;
 }
 
-.panel-item:not(.selected):hover {
-  box-shadow: inset 2px 0 0 var(--border);
-}
-
-.panel-item.selected {
-  background: var(--bg);
-  box-shadow: inset 3px 0 0 var(--primary);
-}
-
+/* A label colour on a light tint of its intent, in sentence case. */
 .panel-type-badge {
-  font-size: 0.6875rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
   padding: 0.125rem 0.375rem;
-  border-radius: 3px;
-}
-
-.panel-type-badge.global {
-  background: rgb(94 129 172 / 15%);
-  color: var(--primary);
-}
-
-.panel-edit-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0.125rem 0.25rem;
-  border-radius: 3px;
-  opacity: 0;
-  transition: opacity var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
-}
-
-.panel-item:hover .panel-edit-btn,
-.panel-item.selected .panel-edit-btn {
-  opacity: 1;
-}
-
-.panel-item:hover .panel-delete-btn,
-.panel-item.selected .panel-delete-btn {
-  opacity: 1;
-}
-
-.panel-global-comment:hover {
-  background: var(--bg-card);
-}
-
-.panel-global-comment:not(.selected):hover {
-  box-shadow: inset 2px 0 0 var(--border);
-}
-
-.panel-global-comment.selected {
-  background: var(--bg);
-  box-shadow: inset 3px 0 0 var(--primary);
+  border-radius: var(--radius-sm);
 }
 
 .panel-global-edit .panel-global-textarea {
@@ -237,38 +185,25 @@
   font-style: italic;
 }
 
-.panel-global-comment .panel-edit-btn,
-.panel-global-comment .panel-delete-btn {
-  opacity: 1;
-}
-
 .panel-global-edit-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.375rem;
 }
 
-.panel-empty-hint {
-  margin-top: 0.5rem;
-  font-size: 0.75rem;
+.panel-cancel-btn {
+  padding: 0.25rem 0.625rem;
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
 }
 
-/* A shape on the image: its number, tool icon and color, as in the canvas marker. */
-.panel-type-badge.shape {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  background: var(--badge-bg);
-  color: var(--badge-text);
-}
-
-.panel-type-icon {
-  display: inline-flex;
-}
-
-.panel-type-badge.shape svg {
-  width: 12px;
-  height: 12px;
+.panel-cancel-btn:hover {
+  background: var(--surface-sunken);
 }
 
 .panel-menu-list {
@@ -279,7 +214,7 @@
   display: flex;
   flex-direction: column;
   min-width: 12rem;
-  padding: 0.25rem;
+  padding: var(--space-1);
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -297,7 +232,7 @@
   background: transparent;
   color: var(--text);
   font-family: inherit;
-  font-size: 0.8125rem;
+  font-size: var(--fs-md);
   text-align: left;
   white-space: nowrap;
   cursor: pointer;
@@ -305,7 +240,7 @@
 
 /* Separates an action of a different kind, such as the JSON export. */
 .panel-menu-item--separated {
-  margin-top: 0.25rem;
+  margin-top: var(--space-1);
   border-top: 1px solid var(--border-light);
   border-radius: 0 0 var(--radius-sm) var(--radius-sm);
 }
@@ -350,101 +285,154 @@
   display: inline-flex;
   padding: 0;
   border: 0;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   background: none;
   color: inherit;
   font: inherit;
   cursor: pointer;
 }
 
-/* Agent reply status. The text always uses the body colour, so contrast holds in both themes, and the status colour only tints the background and border. */
+/* Agent reply status: icon and word in the status colour on its own tint. The status tokens hold 4.5:1 on that tint in both themes. */
 .status-chip {
   display: inline-flex;
-  gap: 0.25rem;
+  gap: var(--space-1);
   align-items: center;
-  padding: 0 0.5rem;
-  border: 1px solid var(--status-fg, var(--border));
-  border-radius: 9999px;
-  background: var(--status-bg, var(--bg-secondary));
-  color: var(--text);
-  font-size: 0.75rem;
-  line-height: 1.5;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--chip-fg) var(--tint), transparent);
+  color: var(--chip-fg);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  line-height: 20px;
   white-space: nowrap;
+
+  --chip-fg: var(--ink-muted);
 }
 
-/* One palette per status. The chip, the reply rule and the badge on the image all read these two properties. */
-.status-chip--applied,
-.status--applied,
-.reply-list-item:has(.status-chip--applied) {
+/* The labels are lower case in the data and in aria text, sentence case on screen. */
+.status-chip-label {
+  display: inline-block;
+}
+
+.status-chip-label::first-letter {
+  text-transform: uppercase;
+}
+
+.status-chip--applied {
+  --chip-fg: var(--status-ok);
+}
+
+.status-chip--partial,
+.status-chip--deferred {
+  --chip-fg: var(--status-warn);
+}
+
+.status-chip--declined {
+  --chip-fg: var(--status-danger);
+}
+
+.status-chip--question {
+  --chip-fg: var(--status-info);
+}
+
+.status--applied {
   --status-fg: var(--success);
   --status-bg: var(--success-bg);
 }
 
-.status-chip--partial,
-.status-chip--deferred,
 .status--partial,
-.status--deferred,
-.reply-list-item:has(.status-chip--partial),
-.reply-list-item:has(.status-chip--deferred) {
+.status--deferred {
   --status-fg: var(--comment-border);
   --status-bg: var(--comment-bg);
 }
 
-.status-chip--declined,
-.status--declined,
-.reply-list-item:has(.status-chip--declined) {
+.status--declined {
   --status-fg: var(--danger);
   --status-bg: var(--deletion-bg);
 }
 
-.status-chip--question,
-.status--question,
-.reply-list-item:has(.status-chip--question) {
+.status--question {
   --status-fg: var(--warning);
   --status-bg: var(--warning-bg);
-}
-
-.status-chip--none {
-  color: var(--text-muted);
 }
 
 .reply-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-/* Agent replies are indented behind a rule in the status colour, so they read as an answer to the quote above them. */
 .reply-list-item {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--space-2);
   align-items: flex-start;
-  padding-left: 0.625rem;
-  border-left: 3px solid var(--status-fg, var(--border));
+}
+
+.reply-list-avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface-sunken);
+  color: var(--ink);
+  font-size: var(--fs-key);
+  font-weight: 600;
+}
+
+.reply-list-item--agent .reply-list-avatar {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+.reply-list-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.reply-list-item--pending .reply-list-body {
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--line-control);
+  border-radius: var(--radius-card);
+  background: var(--surface-sunken);
+}
+
+.reply-list-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
 }
 
 .reply-list-author {
-  color: var(--text-muted);
-  font-size: 0.6875rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .reply-list-text {
   margin: 0;
-  color: var(--text);
-  font-size: 0.8125rem;
+  color: var(--ink);
+  font-size: var(--fs-md);
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
 
 .reply-list-pending {
-  color: var(--text-muted);
-  font-size: 0.6875rem;
-  font-style: italic;
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
 }
 
 .reply-list-remove {
@@ -452,18 +440,287 @@
   padding: 0 0.25rem;
   border: 0;
   background: none;
-  color: var(--text-muted);
-  font-size: 0.6875rem;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: var(--fs-sm);
   text-decoration: underline;
   cursor: pointer;
 }
 
-.reply-list-remove:focus-visible {
-  outline: 2px solid var(--primary);
+.reply-list-time {
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+}
+
+/* The scrolling part of the panel, between the switch and the general comment. */
+.panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* === Two-way switch === */
+.panel-switch {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+  margin: 0 var(--space-4) var(--space-2);
+  padding: 2px;
+  border-radius: var(--radius-card);
+  background: var(--surface-sunken);
+}
+
+.panel-switch-tab {
+  flex: 1;
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.panel-switch-tab.active {
+  background: var(--card);
+  color: var(--ink);
+  font-weight: 500;
+  box-shadow: var(--elev-1);
+}
+
+.panel-switch-tab:focus-visible {
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
-.reply-list-time {
-  color: var(--text-muted);
-  font-size: 0.6875rem;
+/* === Cards === */
+.note-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-4) var(--space-4);
+  list-style: none;
+}
+
+.note-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--card);
+  cursor: pointer;
+}
+
+.note-card.selected {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 1px var(--focus);
+}
+
+.note-card-head {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 24px;
+}
+
+.note-card-select {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.note-card-select:focus-visible,
+.note-card-action:focus-visible,
+.general-comment-row:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.note-number {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.note-type {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  color: var(--ink);
+  font-size: var(--fs-md);
+  font-weight: 500;
+}
+
+.note-type svg {
+  width: 14px;
+  height: 14px;
+}
+
+.note-type--change { color: var(--intent-change-label); }
+.note-type--add { color: var(--intent-add-label); }
+.note-type--remove { color: var(--intent-remove-label); }
+.note-type--question { color: var(--intent-question-label); }
+
+/* A long location (a deep section, a selector) wraps instead of hiding behind the actions. */
+.note-location {
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.note-card-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+}
+
+.note-location + .note-card-actions {
+  margin-left: 0;
+}
+
+.note-card-select + .note-card-actions {
+  margin-left: auto;
+}
+
+.note-card:hover .note-card-actions,
+.note-card:focus-within .note-card-actions {
+  opacity: 1;
+}
+
+.note-card-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.note-card-action svg {
+  width: 14px;
+  height: 14px;
+}
+
+.note-card-action:hover {
+  background: var(--surface-sunken);
+  color: var(--ink);
+}
+
+.note-card-action--remove:hover {
+  color: var(--status-danger);
+}
+
+.note-quote {
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.note-text {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* === General comment === */
+.general-comment {
+  flex-shrink: 0;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.general-comment--open {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.general-comment-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px dashed var(--line-control);
+  border-radius: var(--radius-card);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-md);
+  text-align: left;
+  cursor: pointer;
+}
+
+.general-comment-row:hover {
+  background: var(--surface-sunken);
+}
+
+.general-comment-label {
+  flex-shrink: 0;
+}
+
+.general-comment-row .key-cap {
+  margin-left: auto;
+  color: var(--ink-muted);
+}
+
+.general-comment-field-label {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+/* A file's group of cards under All files. */
+.note-file-title {
+  padding: var(--space-3) var(--space-4) 0;
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

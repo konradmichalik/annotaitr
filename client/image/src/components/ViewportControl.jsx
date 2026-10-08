@@ -140,7 +140,9 @@ function usePanelFocus(open, panelRef, triggerRef) {
 }
 
 /**
- * Viewport, section and delay of a captured URL, next to the zoom controls.
+ * The capture control at the top left: one button naming the viewport
+ * (`Desktop · 1440`) that opens viewport, section and delay, and an icon
+ * button that captures the page again as it is set.
  * `onApply(request, label)` captures the page again and resolves to an
  * error message, or null once the new screenshot is in.
  */
@@ -166,17 +168,32 @@ export default function ViewportControl({ capture, busy, annotationCount, onAppl
     if (!message) { setOpen(false) }
   }
 
+  // Again with the settings it was captured with, without opening the panel.
+  const captureAgain = async () => {
+    const settings = formFromCapture(capture)
+    setError(await onApply(requestFromForm(settings, capture.presets), formLabel(settings, capture.presets)))
+  }
+
   return (
     <div className="viewport-control" ref={wrapperRef}>
-      <button
-        ref={triggerRef} type="button" className="viewport-trigger" onClick={openPanel} disabled={busy}
-        aria-haspopup="dialog" aria-expanded={open} title={`Captured at ${capture.description}`}
-      >
-        <span className={current.rotated ? 'viewport-icon--rotated' : undefined}>{VIEWPORT_ICONS[current.preset]}</span>
-        <span>{current.label}</span>{' '}
-        <span className="viewport-trigger-size">{current.size}</span>
-        {CAPTURE_ICONS.chevron}
-      </button>
+      <div className="viewport-bar">
+        <button
+          ref={triggerRef} type="button" className="viewport-trigger" onClick={openPanel} disabled={busy}
+          aria-haspopup="dialog" aria-expanded={open} aria-label={`Capture settings: ${current.label} ${current.size}`}
+          title={`Captured at ${capture.description}`}
+        >
+          <span className={current.rotated ? 'viewport-icon--rotated' : undefined}>{VIEWPORT_ICONS[current.preset]}</span>
+          <span>{current.label} · {capture.viewport.width}</span>
+          {CAPTURE_ICONS.chevron}
+        </button>
+        <button
+          type="button" className="viewport-again" onClick={captureAgain} disabled={busy}
+          aria-label="Capture again" title={`Capture again (${current.label} ${current.size})`}
+        >
+          {CAPTURE_ICONS.capture}
+        </button>
+      </div>
+      {error && !open && <p className="viewport-error viewport-error--bar" role="alert">{error}</p>}
       {open && (
         <form ref={panelRef} className="viewport-panel" role="dialog" aria-label="Capture settings" onSubmit={handleSubmit}>
           <ViewportFields form={form} update={update} presets={capture.presets} idPrefix={idPrefix} />
@@ -193,7 +210,7 @@ export default function ViewportControl({ capture, busy, annotationCount, onAppl
             <button type="button" className="viewport-cancel" onClick={() => setOpen(false)}>Cancel</button>
             <button type="submit" className="viewport-submit" disabled={busy}>
               {CAPTURE_ICONS.capture}
-              Capture again
+              Capture
             </button>
           </div>
         </form>

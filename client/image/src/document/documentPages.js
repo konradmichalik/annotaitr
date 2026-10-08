@@ -1,8 +1,8 @@
 /**
  * Page-axis helpers for reviewing a PDF. isPaged and
  * orderDocumentAnnotations mirror server/image/document/pages.js (client and server
- * share no modules, so the duplication is deliberate): the numbers shown
- * here must match the numbers in the agent's feedback.
+ * share no modules, so the duplication is deliberate): cards and marks are
+ * listed in the order the agent's feedback lists them.
  */
 
 export function isPaged(annotation) {
@@ -12,11 +12,6 @@ export function isPaged(annotation) {
 export function orderDocumentAnnotations(annotations) {
   const paged = annotations.filter(isPaged).sort((a, b) => a.page - b.page)
   return [...paged, ...annotations.filter((a) => !isPaged(a))]
-}
-
-/** The number a mark added on `page` will get: after everything on this and earlier pages. */
-export function nextNumberOnPage(ordered, page) {
-  return ordered.filter((a) => isPaged(a) && a.page <= page).length + 1
 }
 
 export function pageAnnotationCounts(annotations) {

@@ -38,9 +38,9 @@ Which mode runs is auto-detected from the target: see Usage below and
 
 **Markdown and plain-text review:**
 
-- **Multi-file support**: review multiple files in one session with a tabbed interface
+- **Multi-file support**: review multiple files in one session, with a Files overview of notes and reviewed files
 - **Config and data files**: annotate YAML, JSON, TOML, CSV, XML and more as raw source with line numbers
-- **Linked navigation**: click relative `.md` links to open them as new tabs
+- **Linked navigation**: click relative `.md` links to add them to the review
 - **LaTeX math, Mermaid, PlantUML, and Kroki diagrams**: rendered inline, annotatable as a whole
 - **File references**: type `@` in a comment to autocomplete other project files
 - **Quick labels**: categorize a selection instantly with a predefined label
@@ -157,6 +157,7 @@ Full flag and environment variable reference: [docs/usage.md](docs/usage.md).
 | [Usage](docs/usage.md) | Every flag, environment variable, exit code, and the mode-detection rules |
 | [How it works](docs/how-it-works.md) | The annotation and review-loop mechanism behind each mode |
 | [Development](docs/development.md) | Local setup, build commands, plugin testing |
+| [Design](docs/design/rules.md) | Design rules for the UI and the [reference screens](docs/design/screens.md) |
 
 ## 🧑‍💻 Contributing
 

@@ -56,7 +56,7 @@ describe('image annotator server', () => {
     })
     await fetch(`${server.url}/api/feedback`, { method: 'POST' })
     const decision = await server.waitForDecision()
-    expect(decision.annotations).toEqual([annotation])
+    expect(decision.annotations).toEqual([{ ...annotation, intent: 'question', number: 1 }])
     expect(decision.domMap).toEqual(domMap)
   })
 
@@ -140,7 +140,7 @@ describe('image annotator server', () => {
     await fetch(`${server.url}/api/approve`, { method: 'POST' })
     const decision = await server.waitForDecision()
     expect(decision.approved).toBe(true)
-    expect(decision.output).toContain('APPROVED WITH NOTES: 1 note.')
+    expect(decision.output).toContain('APPROVED WITH NOTES: 1 note (1 Question).')
     expect(decision.annotationCount).toBe(1)
   })
 
@@ -160,7 +160,7 @@ describe('image annotator server', () => {
     await fetch(`${server.url}/api/feedback`, { method: 'POST' })
     const decision = await server.waitForDecision()
     expect(decision.approved).toBe(false)
-    expect(decision.output).toContain('1 annotation on the screenshot.')
+    expect(decision.output).toContain('1 annotation (1 Change) on the screenshot.')
     expect(decision.annotationCount).toBe(1)
   })
 

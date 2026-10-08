@@ -62,12 +62,18 @@ spacing between two points rather than pointing at a single target.
 - The output includes a path to an **annotated image** (the original
   image with the markup baked in as pixels). Read that image directly to
   see exactly what was marked and where.
-- Each annotation lists its type, a coarse position (e.g. "top right, ~15%
-  from top, ~85% from left"), and its comment text.
-- Each heading normally carries a short handle in brackets after the number,
-  such as `### 1. [#a3f19c2e]`. The number matches the marker drawn in the image
-  and is positional, the handle stays fixed for as long as the annotation
-  exists. Use the handle when you report back which annotations you addressed.
+- Each heading reads `### 3. [#a3f19c2e] Question · Comment pin: <position>`:
+  the number, a handle, the intent, the type and a coarse position (e.g. "top
+  right, ~15% from top, ~85% from left"), then the comment text.
+- The intent says what to do: **Change** what the mark points at as the
+  comment says, **Add** something there, **Remove** it, or answer a
+  **Question** (the reviewer asks, they do not request a change; change
+  something only if the answer makes it obvious). A general comment has no
+  number and no intent.
+- The number matches the marker drawn in the image, on the intent's colour.
+  A note keeps it for the whole round, so numbers can have gaps where the
+  reviewer deleted a note. The handle stays fixed for as long as the
+  annotation exists. Use the handle when you report back which annotations you addressed.
   The reviewer never sees handles in the annotator, so pair each one with a few
   words naming the spot: "fixed `#a3f19c2e` (header spacing), left `#7b210e44`
   (footer gap) alone because that spacing is intentional". If a heading carries
@@ -167,7 +173,8 @@ annotaitr reply --session <id> --to a3f19c2e --status applied --text "Moved the 
 
 `--status` is `applied`, `partial`, `declined`, `deferred` or `question`. The
 text says what changed, what is left, why you declined, when you will do it, or
-what you need to know. Replies are independent, so run them in parallel. A
+what you need to know. Answer a **Question** mark with `applied` and the answer
+as the text. Replies are independent, so run them in parallel. A
 `question` reply only records the question: if the answer blocks you, ask it in
 chat too. Then re-open the target as below, so the reviewer sees the replies
 next to their marks.

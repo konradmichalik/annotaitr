@@ -11,7 +11,7 @@ export function useTimelineShortcuts({ controller, disabled, onMarkStart, onMark
   useEffect(() => {
     if (!controller) { return }
     const handleKeyDown = (event) => {
-      if (disabled || event.metaKey || event.ctrlKey || event.altKey) { return }
+      if (disabled || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) { return }
       const tag = document.activeElement?.tagName
       if (TEXT_ENTRY_TAGS.has(tag)) { return }
       const key = event.key

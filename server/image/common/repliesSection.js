@@ -1,4 +1,5 @@
 import { annotationLabel } from './feedback.js'
+import { isNumbered, intentOf, intentWord } from '../../core/notes.js'
 import { describePosition } from './geometry.js'
 import { formatTimecode } from '../video/timeline.js'
 
@@ -19,16 +20,20 @@ function location(annotation, { kind, width, height }) {
   return null
 }
 
+// The number belongs to the earlier round, so it stays out of the heading and goes into the quote.
 function heading(thread, view) {
-  if (thread.annotation.type === 'comment') { return `### [#${thread.handle}] General comment` }
-  const where = location(thread.annotation, view)
-  return `### [#${thread.handle}] ${annotationLabel(thread.annotation)}${where ? `: ${where}` : ''}`
+  const { annotation } = thread
+  if (!isNumbered(annotation)) { return `### [#${thread.handle}] General comment` }
+  const where = location(annotation, view)
+  const what = annotation.type === 'comment' ? 'Comment' : annotationLabel(annotation)
+  return `### [#${thread.handle}] ${intentWord(intentOf(annotation))} · ${what}${where ? `: ${where}` : ''}`
 }
 
 // The reviewer's original words are quoted line by line so a multi-line comment stays one block.
 function quote(origin, text) {
   const [first, ...rest] = lines(text)
-  return [`> Round ${origin.round}, mark ${origin.number}: ${first}`, ...rest.map((line) => `> ${line}`)].join('\n')
+  const mark = origin.number === null || origin.number === undefined ? 'general comment' : `mark ${origin.number}`
+  return [`> Round ${origin.round}, ${mark}: ${first}`, ...rest.map((line) => `> ${line}`)].join('\n')
 }
 
 function replyLine(reply) {

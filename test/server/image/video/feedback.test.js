@@ -27,27 +27,27 @@ function render(annotations, formatter = exportVideoFeedback) {
 describe('exportVideoFeedback', () => {
   it('opens with count, recording label, duration and size, then the output paths', () => {
     const output = render([box])
-    expect(output).toMatch(/^1 annotation on the recording demo\.mov \(00:14\.200, 1000x500\)\./)
+    expect(output).toMatch(/^1 annotation \(1 Change\) on the recording demo\.mov \(00:14\.200, 1000x500\)\./)
     expect(output).toContain('Frames: /tmp/out')
     expect(output).toContain('Overview: /tmp/out/overview.png')
   })
 
   it('anchors a point annotation to its time, position and frame', () => {
     const output = render([box])
-    expect(output).toContain('### 1. [#a3f00000] at 00:03.240, Boxed area: top right')
+    expect(output).toContain('### 1. [#a3f00000] Change · at 00:03.240, Boxed area: top right')
     expect(output).toContain('Frame: /tmp/out/frame-1.png')
     expect(output).toContain('> Button flickers')
   })
 
   it('gives a span its start and end, its frame and a strip', () => {
     const output = render([spanPin])
-    expect(output).toContain('### 1. from 00:05.000 to 00:07.480, Comment pin: center')
+    expect(output).toContain('### 1. Question · from 00:05.000 to 00:07.480, Comment pin: center')
     expect(output).toContain('Strip: /tmp/out/strip-1.png')
   })
 
   it('describes a span without drawing by time only', () => {
     const output = render([spanComment])
-    expect(output).toContain('### 1. from 00:08.000 to 00:09.000, Span comment\n')
+    expect(output).toContain('### 1. Change · from 00:08.000 to 00:09.000, Span comment\n')
     expect(output).toContain('Frame: /tmp/out/frame-1.png')
     expect(output).toContain('Strip: /tmp/out/strip-1.png')
   })
@@ -55,8 +55,8 @@ describe('exportVideoFeedback', () => {
   it('numbers in time order and lists general comments last', () => {
     const output = render([general, spanComment, box])
     expect(output.indexOf('### 1. [#a3f00000]')).toBeGreaterThan(-1)
-    expect(output).toContain('### 2. from 00:08.000')
-    expect(output).toContain('### 3. General comment about the whole recording')
+    expect(output).toContain('### 2. Change · from 00:08.000')
+    expect(output).toContain('### General comment about the whole recording')
   })
 
   it('flags nearby annotations only within the same frame', () => {
@@ -71,7 +71,7 @@ describe('exportVideoFeedback', () => {
 describe('formatVideoApprovalWithNotes', () => {
   it('marks the recording approved and the notes as context', () => {
     const output = render([box], formatVideoApprovalWithNotes)
-    expect(output).toMatch(/^APPROVED WITH NOTES: 1 note\. The recording is approved as-is\./)
+    expect(output).toMatch(/^APPROVED WITH NOTES: 1 note \(1 Change\)\. The recording is approved as-is\./)
     expect(output).toContain('Frame: /tmp/out/frame-1.png')
   })
 })
@@ -80,5 +80,19 @@ describe('comment quoting', () => {
   it('keeps every line of a comment inside the quote, whatever the line ending', () => {
     const output = render([{ ...box, text: 'one\rtwo\r\nthree\nfour' }])
     expect(output).toContain('> one\n> two\n> three\n> four')
+  })
+})
+
+describe('stable numbers in a recording', () => {
+  it('keeps the number a note was drawn with, even when an earlier one in time came later', () => {
+    const late = { id: 'b', type: 'box', text: 'late', time: 9, number: 1, geometry: { x: 10, y: 10, width: 20, height: 20 } }
+    const early = { id: 'c', type: 'pin', text: 'early', time: 2, number: 3, intent: 'remove', geometry: { x: 500, y: 300 } }
+    const ordered = orderVideoAnnotations([late, early])
+    expect(ordered.map((a) => a.number)).toEqual([3, 1])
+    const plan = planFrames(ordered, 14.2)
+    const files = { dir: '/tmp/out', overview: '/tmp/out/overview.png', frames: new Map(plan.frames.map((f, i) => [f.time, `/tmp/out/frame-${i + 1}.png`])), strips: new Map() }
+    const output = exportVideoFeedback({ ordered, plan, files, media: { label: 'demo.mov', duration: 14.2, width: 1000, height: 500 } })
+    expect(output.indexOf('### 3. Remove · at 00:02.000')).toBeLessThan(output.indexOf('### 1. Change · at 00:09.000'))
+    expect(plan.overview.numbersByTile.flat().sort()).toEqual([1, 3])
   })
 })

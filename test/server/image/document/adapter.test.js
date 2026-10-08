@@ -224,11 +224,11 @@ describe('document annotator server', () => {
     expect(approved).toBe(false)
     expect(annotationCount).toBe(4)
     expect(annotations.map((a) => a.id)).toEqual(['a', 'b', 'c', 'g'])
-    expect(output).toMatch(/^4 annotations on 2 of 3 pages\.\n\nSource: deck\.pptx \(rendered as deck\.pdf\)\n/)
-    expect(output).toMatch(/## Page 1\nAnnotated page: .*page-01\.png\n\n### 1\. Boxed area/)
-    expect(output).toMatch(/## Page 3\nAnnotated page: .*page-03\.png\n\n### 2\. Boxed area[^\n]*\nText: text "Three"\n> note b\n\n### 3\. Page comment\n> Too dense/)
+    expect(output).toMatch(/^4 annotations \(3 Change, 1 General\) on 2 of 3 pages\.\n\nSource: deck\.pptx \(rendered as deck\.pdf\)\n/)
+    expect(output).toMatch(/## Page 1\nAnnotated page: .*page-01\.png\n\n### 1\. Change · Boxed area/)
+    expect(output).toMatch(/## Page 3\nAnnotated page: .*page-03\.png\n\n### 2\. Change · Boxed area[^\n]*\nText: text "Three"\n> note b\n\n### 3\. Change · Page comment\n> Too dense/)
     expect(output).toContain('Text and Quote lines are read from the PDF')
-    expect(output).toMatch(/## General\n### 4\. General comment about the whole document/)
+    expect(output).toMatch(/## General\n### General comment about the whole document/)
 
     const overview = output.match(/Overview: (.*)\n/)[1]
     expect((await readdir(dirname(overview))).sort()).toEqual(['overview.png', 'page-01.png', 'page-03.png'])
@@ -292,7 +292,7 @@ describe('document annotator server', () => {
   it('describes annotations as Markdown without temp paths', async () => {
     await start()
     const body = await (await post('/api/feedback-text', { annotations: [box('a', 2)] })).json()
-    expect(body.data.text).toMatch(/^1 annotation on 1 of 3 pages\./)
+    expect(body.data.text).toMatch(/^1 annotation \(1 Change\) on 1 of 3 pages\./)
     expect(body.data.text).not.toMatch(/\/tmp|annotaitr-/)
   })
 

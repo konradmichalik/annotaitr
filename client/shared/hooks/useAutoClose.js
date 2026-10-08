@@ -1,56 +1,29 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useEffect, useReducer, useCallback } from 'react'
+import { IDLE, countdownReducer } from '../utils/autoClose.js'
 
-/**
- * Phases of the auto-close lifecycle after form submission:
- *
- * - idle:        nothing submitted yet
- * - counting:    countdown is ticking (seconds remaining in `remaining`)
- * - prompt:      auto-close is disabled; offer the user a checkbox to opt in
- * - closed:      window.close() succeeded (terminal state)
- * - closeFailed: window.close() was blocked by the browser
- */
+// window.close() is ignored for a tab no script opened; whether it worked shows only a moment later.
+const CLOSE_CHECK_MS = 300
 
-function tryClose(onFail) {
-  window.close()
-  // window.close() is silently ignored when the tab wasn't opened by script.
-  // Check after a short delay whether we're still alive.
-  setTimeout(() => {
-    if (!window.closed) {onFail()}
-  }, 300)
-}
-
+/** Runs the countdown once `active` turns true. `keepOpen` stops it. */
 export function useAutoClose(active, delay = 'off') {
-  const [state, setState] = useState({ phase: 'idle' })
+  const [state, dispatch] = useReducer(countdownReducer, IDLE)
 
   useEffect(() => {
-    if (!active) {return}
-
-    if (delay === '0') {
-      tryClose(() => setState({ phase: 'closeFailed' }))
-      setState({ phase: 'closed' })
-    } else if (delay !== 'off') {
-      setState({ phase: 'counting', remaining: Number(delay) })
-    } else {
-      setState({ phase: 'prompt' })
-    }
+    if (active) { dispatch({ type: 'start', delay }) }
   }, [active, delay])
 
   useEffect(() => {
-    if (state.phase !== 'counting') {return}
-    if (state.remaining <= 0) {
-      tryClose(() => setState({ phase: 'closeFailed' }))
-      return
+    if (state.phase === 'counting') {
+      const timer = setTimeout(() => dispatch({ type: 'tick' }), 1000)
+      return () => clearTimeout(timer)
     }
-    const timer = setTimeout(
-      () => setState(prev => prev.phase === 'counting' ? { phase: 'counting', remaining: prev.remaining - 1 } : prev),
-      1000
-    )
-    return () => clearTimeout(timer)
+    if (state.phase === 'closing') {
+      window.close()
+      const timer = setTimeout(() => { if (!window.closed) { dispatch({ type: 'failed' }) } }, CLOSE_CHECK_MS)
+      return () => clearTimeout(timer)
+    }
   }, [state])
 
-  const enableAndStart = useCallback(() => {
-    setState({ phase: 'counting', remaining: 3 })
-  }, [])
-
-  return { state, enableAndStart }
+  const keepOpen = useCallback(() => dispatch({ type: 'keep' }), [])
+  return { state, keepOpen }
 }

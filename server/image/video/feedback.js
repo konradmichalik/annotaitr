@@ -1,6 +1,6 @@
 import { describePosition, findNearbyAnnotationNumbers } from '../common/geometry.js'
-import { annotationLabel } from '../common/feedback.js'
-import { annotationHandle } from '../../core/annotationHandle.js'
+import { annotationLabel, entryMarker } from '../common/feedback.js'
+import { intentCounts } from '../../core/notes.js'
 import { formatTimecode, isTimed } from './timeline.js'
 
 function timeLabel(annotation) {
@@ -42,13 +42,10 @@ function heading(annotation, media, nearby) {
 
 function formatEntries({ ordered, plan, media, files }) {
   const nearbyByAnnotation = nearbyNumbersByAnnotation(plan, media)
-  return ordered.map((annotation, index) => {
-    const number = index + 1
-    const handle = annotationHandle(annotation.id)
-    const marker = handle ? `${number}. [#${handle}]` : `${number}.`
-    const lines = [`### ${marker} ${heading(annotation, media, nearbyByAnnotation.get(annotation) ?? [])}`]
+  return ordered.map((annotation) => {
+    const lines = [`### ${entryMarker(annotation)}${heading(annotation, media, nearbyByAnnotation.get(annotation) ?? [])}`]
     if (isTimed(annotation)) { lines.push(`Frame: ${files.frames.get(annotation.time)}`) }
-    if (files.strips.has(number)) { lines.push(`Strip: ${files.strips.get(number)}`) }
+    if (files.strips.has(annotation.number)) { lines.push(`Strip: ${files.strips.get(annotation.number)}`) }
     // A bare \r would otherwise end the quote and let text pass as a heading.
     lines.push(annotation.text ? `> ${annotation.text.replace(/\r\n?|\n/g, '\n> ')}` : '> (no comment text)')
     return lines.join('\n') + '\n'
@@ -67,7 +64,7 @@ function formatPaths(files) {
 export function exportVideoFeedback(context) {
   const { ordered, media } = context
   const count = ordered.length
-  return `${count} annotation${count === 1 ? '' : 's'} on the recording ${media.label} ` +
+  return `${count} annotation${count === 1 ? '' : 's'} (${intentCounts(ordered)}) on the recording ${media.label} ` +
     `(${formatTimecode(media.duration)}, ${media.width}x${media.height}).\n\n` +
     formatPaths(context.files) +
     'Each annotation points to the frame it was drawn on. Read the frame, then match the note to the visible element. ' +
@@ -77,7 +74,7 @@ export function exportVideoFeedback(context) {
 
 export function formatVideoApprovalWithNotes(context) {
   const count = context.ordered.length
-  return `APPROVED WITH NOTES: ${count} note${count === 1 ? '' : 's'}. ` +
+  return `APPROVED WITH NOTES: ${count} note${count === 1 ? '' : 's'} (${intentCounts(context.ordered)}). ` +
     'The recording is approved as-is. Treat the notes below as context, not as change requests.\n\n' +
     formatPaths(context.files) + '\n' +
     formatEntries(context) + '\n'

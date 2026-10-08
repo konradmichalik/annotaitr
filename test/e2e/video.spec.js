@@ -21,8 +21,13 @@ function makeGif(path) {
   return writeFile(path, buffer.slice(0, writer.end()))
 }
 
+// A round of its own per test: marks of an earlier run would show as an earlier round.
+let sessionDir
+test.beforeEach(async () => { sessionDir = await mkdtemp(join(tmpdir(), 'annotaitr-video-sessions-')) })
+test.afterEach(async () => { await rm(sessionDir, { recursive: true, force: true }) })
+
 async function drawBox(page, from, to) {
-  await page.getByRole('toolbar', { name: 'Annotation tools' }).getByText('Box').click()
+  await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Box \(/ }).click()
   const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
   await page.mouse.move(canvas.x + from[0], canvas.y + from[1])
   await page.mouse.down()
@@ -31,12 +36,12 @@ async function drawBox(page, from, to) {
 }
 
 async function addComment(page, text) {
-  await page.getByPlaceholder('Add a comment (optional)...').fill(text)
+  await page.getByPlaceholder('Add a comment…').fill(text)
   await page.getByRole('button', { name: 'Add', exact: true }).click()
 }
 
 test('a video gets a point and a span annotation and the CLI prints frames for both', async ({ page }) => {
-  const cli = startCli([WEBM_FIXTURE])
+  const cli = startCli([WEBM_FIXTURE], { ANNOTAITR_SESSION_DIR: sessionDir })
   try {
     await page.goto(await cli.url)
     const time = page.locator('.timeline-time')
@@ -68,17 +73,17 @@ test('a video gets a point and a span annotation and the CLI prints frames for b
     await page.locator('.panel-global-textarea').fill('Span without drawing')
     await page.getByRole('button', { name: 'Save' }).click()
 
-    await expect(page.getByRole('button', { name: /Annotation 1 from 00:00.900 to 00:01.200/ })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Annotation 2 at 00:01.000/ })).toBeVisible()
+    // Numbers follow the order the notes were made in, not time: the box came first.
+    await expect(page.getByRole('button', { name: /Annotation 2 from 00:00.900 to 00:01.200/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Annotation 1 at 00:01.000/ })).toBeVisible()
 
-    await page.getByRole('button', { name: 'Feedback' }).click()
-    await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible({ timeout: 20_000 })
+    await page.getByRole('button', { name: /^Send feedback/ }).click()
+    await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible({ timeout: 20_000 })
 
     expect(await cli.exited).toBe(0)
     const stdout = cli.stdout()
-    expect(stdout).toContain('2 annotations on the recording clip.webm (00:02.000, 160x90).')
-    expect(stdout).toMatch(/### 1\. \[#\w+\] from 00:00\.900 to 00:01\.200, Span comment/)
-    expect(stdout).toMatch(/### 2\. \[#\w+\] at 00:01\.000, Boxed area/)
+    expect(stdout).toContain('2 annotations (2 Change) on the recording clip.webm (00:02.000, 160x90).')
+    expect(stdout).toMatch(/### 2\. \[#\w+\] Change · from 00:00\.900 to 00:01\.200, Span comment[\s\S]*### 1\. \[#\w+\] Change · at 00:01\.000, Boxed area/)
     for (const [, path] of stdout.matchAll(/(?:Frame|Strip|Overview): (\S+)/g)) {
       expect(existsSync(path)).toBe(true)
     }
@@ -88,7 +93,7 @@ test('a video gets a point and a span annotation and the CLI prints frames for b
 })
 
 test('dragging a span marker resizes and moves it, and undo restores it', async ({ page }) => {
-  const cli = startCli([WEBM_FIXTURE])
+  const cli = startCli([WEBM_FIXTURE], { ANNOTAITR_SESSION_DIR: sessionDir })
   try {
     await page.goto(await cli.url)
     const time = page.locator('.timeline-time')
@@ -132,8 +137,37 @@ test('dragging a span marker resizes and moves it, and undo restores it', async 
   }
 })
 
+test('dragging a point marker across a neighbour completes and can be undone', async ({ page }) => {
+  const cli = startCli([WEBM_FIXTURE], { ANNOTAITR_SESSION_DIR: sessionDir })
+  try {
+    await page.goto(await cli.url)
+    await expect(page.locator('.timeline-time')).toContainText('/ 00:02.000')
+
+    await drawBox(page, [20, 20], [80, 60])
+    await addComment(page, 'First')
+    await page.keyboard.press('Shift+ArrowRight')
+    await drawBox(page, [20, 20], [80, 60])
+    await addComment(page, 'Second')
+    const first = await page.getByRole('button', { name: /Annotation 1 at 00:00.000/ }).boundingBox()
+    const track = await page.locator('.timeline-track').boundingBox()
+    const y = first.y + first.height / 2
+
+    // From 0 s past the note at 1 s to 1.5 s: the marker passes within a marker width of its neighbour.
+    await page.mouse.move(first.x + first.width / 2, y)
+    await page.mouse.down()
+    await page.mouse.move(first.x + first.width / 2 + track.width * 0.75, y, { steps: 30 })
+    await page.mouse.up()
+    await expect(page.getByRole('button', { name: /Annotation 1 at 00:01.[45]\d\d/ })).toBeVisible()
+
+    await page.keyboard.press('ControlOrMeta+z')
+    await expect(page.getByRole('button', { name: /Annotation 1 at 00:00.000/ })).toBeVisible()
+  } finally {
+    if (cli.child.exitCode === null) { cli.child.kill() }
+  }
+})
+
 test('a point annotation becomes a span by dragging its handle or with Alt+Shift+Right', async ({ page }) => {
-  const cli = startCli([WEBM_FIXTURE])
+  const cli = startCli([WEBM_FIXTURE], { ANNOTAITR_SESSION_DIR: sessionDir })
   try {
     await page.goto(await cli.url)
     await expect(page.locator('.timeline-time')).toContainText('/ 00:02.000')
@@ -168,7 +202,7 @@ test('a GIF steps frame by frame and exports the annotated frame', async ({ page
   const dir = await mkdtemp(join(tmpdir(), 'annotaitr-e2e-gif-'))
   const gifPath = join(dir, 'anim.gif')
   await makeGif(gifPath)
-  const cli = startCli([gifPath])
+  const cli = startCli([gifPath], { ANNOTAITR_SESSION_DIR: sessionDir })
   try {
     await page.goto(await cli.url)
     const time = page.locator('.timeline-time')
@@ -179,14 +213,88 @@ test('a GIF steps frame by frame and exports the annotated frame', async ({ page
     await drawBox(page, [5, 5], [30, 25])
     await addComment(page, 'Second frame')
 
-    await page.getByRole('button', { name: 'Feedback' }).click()
-    await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible({ timeout: 20_000 })
+    await page.getByRole('button', { name: /^Send feedback/ }).click()
+    await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible({ timeout: 20_000 })
 
     expect(await cli.exited).toBe(0)
-    expect(cli.stdout()).toMatch(/### 1\. \[#\w+\] at 00:00\.200, Boxed area/)
+    expect(cli.stdout()).toMatch(/### 1\. \[#\w+\] Change · at 00:00\.200, Boxed area/)
     expect(cli.stdout()).toMatch(/Frame: \S+frame-01-00m00\.200s\.png/)
   } finally {
     await rm(dir, { recursive: true, force: true })
+    if (cli.child.exitCode === null) { cli.child.kill() }
+  }
+})
+
+async function commentSpan(page, startFrames, endFrames, text) {
+  await page.locator('.timeline-track').focus()
+  await page.keyboard.press('Home')
+  for (let i = 0; i < startFrames; i++) { await page.keyboard.press('ArrowRight') }
+  await page.keyboard.press('i')
+  for (let i = startFrames; i < endFrames; i++) { await page.keyboard.press('ArrowRight') }
+  await page.keyboard.press('o')
+  await page.getByRole('button', { name: 'Comment span' }).click()
+  await page.locator('.panel-global-textarea').fill(text)
+  await page.getByRole('button', { name: 'Save' }).click()
+}
+
+test('close notes merge into a cluster whose list opens above the lanes and works from the keyboard', async ({ page }) => {
+  const cli = startCli([WEBM_FIXTURE], { ANNOTAITR_SESSION_DIR: sessionDir })
+  try {
+    await page.goto(await cli.url)
+    await expect(page.locator('.timeline-time')).toContainText('/ 00:02.000')
+    await page.keyboard.press('Shift+ArrowRight')
+    await drawBox(page, [20, 20], [80, 60])
+    await addComment(page, 'Box')
+    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Pin \(/ }).click()
+    const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
+    await page.mouse.click(canvas.x + 120, canvas.y + 60)
+    await addComment(page, 'Pin')
+
+    const chip = page.getByRole('button', { name: '2 notes around 00:01.000' })
+    await expect(page.getByRole('button', { name: /^Annotation 1 at/ })).toHaveCount(0)
+    await page.keyboard.press('Home')
+    await chip.focus()
+    await page.keyboard.press('Enter')
+    await expect(chip).toHaveAttribute('aria-expanded', 'true')
+    const list = page.getByRole('group', { name: '2 notes around 00:01.000' })
+    const first = list.getByRole('button', { name: /^1\s*Change\s*00:01\.000/ })
+    await expect(first).toBeFocused()
+
+    const listBox = await list.boundingBox()
+    const lanes = await page.locator('.timeline-lanes').boundingBox()
+    const controls = await page.locator('.timeline-controls').boundingBox()
+    expect(listBox.y + listBox.height).toBeLessThanOrEqual(lanes.y)
+    expect(listBox.y + listBox.height).toBeLessThan(controls.y)
+
+    await page.keyboard.press('ArrowDown')
+    await expect(list.getByRole('button', { name: /^2\s*Question/ })).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(list).toHaveCount(0)
+    await expect(chip).toBeFocused()
+
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('Enter')
+    await expect(list).toHaveCount(0)
+    await expect(page.locator('.timeline-time')).toContainText('00:01.000 /')
+  } finally {
+    if (cli.child.exitCode === null) { cli.child.kill() }
+  }
+})
+
+test('overlapping spans each get their own row on the Spans lane', async ({ page }) => {
+  const cli = startCli([WEBM_FIXTURE], { ANNOTAITR_SESSION_DIR: sessionDir })
+  try {
+    await page.goto(await cli.url)
+    await expect(page.locator('.timeline-time')).toContainText('/ 00:02.000')
+    await commentSpan(page, 2, 10, 'First')
+    await commentSpan(page, 5, 15, 'Second')
+    const spans = page.getByRole('group', { name: 'Spans' })
+    const first = await spans.getByRole('button', { name: /^Annotation 1 from/ }).boundingBox()
+    const second = await spans.getByRole('button', { name: /^Annotation 2 from/ }).boundingBox()
+    expect(second.y).toBeGreaterThanOrEqual(first.y + first.height)
+    await expect(page.getByRole('group', { name: 'Notes' }).getByRole('button')).toHaveCount(0)
+  } finally {
     if (cli.child.exitCode === null) { cli.child.kill() }
   }
 })

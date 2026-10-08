@@ -2,19 +2,24 @@ import { useRef, useState, useCallback, useEffect, useReducer } from 'react'
 import {
   clampPoint, boxFromPoints, findAnnotationAt, translateGeometry,
   annotationCentroid, annotationBottomAnchor, annotationTopAnchor, resizeGeometry, freehandBounds,
-  isPointsGeometry, HIGHLIGHTER_OPACITY, dimensionCapLines, dimensionTickLengthFor, MAX_POINTS_PER_ANNOTATION
+  isPointsGeometry, MAX_POINTS_PER_ANNOTATION
 } from '../utils/drawing.js'
-import { resolveArrowStyle, strokeWidthOf, dashArrayFor, pickStyleFields } from '../utils/annotationStyles.js'
+import { pickStyleFields } from '../utils/annotationStyles.js'
 import { cursorForTool } from '../utils/cursors.js'
+import { intentChangeForKey } from '../utils/toolShortcuts.js'
+import { elementCaption } from '../utils/elementWalk.js'
+import { useElementWalk } from '../hooks/useElementWalk.js'
 import { matchAnnotation, matchPoint, describeElements } from '../utils/elementMatch.js'
 import { wordIndexAt, selectWords } from '../document/textSelection.js'
-import { ANNOTATION_COLORS } from '../utils/annotationColors.js'
+import { markColor, intentMark } from '../utils/annotationColors.js'
 import { ACTION_ICONS } from '../utils/icons.jsx'
 import CommentPopover from './CommentPopover.jsx'
+import { noteType } from '../../../shared/utils/noteTypes.js'
+import { defaultIntent, intentOf } from '../../../shared/utils/intents.js'
 import PreviousRoundLayer from '../threads/PreviousRoundLayer.jsx'
+import { AnnotationShape, ArrowMarkers } from './AnnotationShapes.jsx'
 import ThreadPopover from '../threads/ThreadPopover.jsx'
 
-const DEFAULT_COLOR = ANNOTATION_COLORS[0].hex
 const MOVE_THRESHOLD = 4
 
 /** Tools that draw by capturing a continuous stream of points while dragging. */
@@ -32,134 +37,6 @@ function pointFromEvent(event, wrapperRef, imageWidth, imageHeight, zoom) {
 function toClientPoint(wrapperRef, point, zoom) {
   const rect = wrapperRef.current.getBoundingClientRect()
   return { x: rect.left + point.x * zoom, y: rect.top + point.y * zoom }
-}
-
-function BoxShape({ geometry, color, strokeWidth, dash, selectionProps }) {
-  const { x, y, width, height } = geometry
-  return (
-    <>
-      {selectionProps && <rect x={x - 3} y={y - 3} width={width + 6} height={height + 6} fill="none" {...selectionProps} />}
-      <rect x={x} y={y} width={width} height={height} fill="none" stroke={color} strokeWidth={strokeWidth} strokeDasharray={dash} />
-    </>
-  )
-}
-
-function ArrowShape({ annotation, color, strokeWidth, dash, markerId, selectionProps }) {
-  const { x1, y1, x2, y2 } = annotation.geometry
-  const style = resolveArrowStyle(annotation.arrowStyle)
-  const ticks = style === 'dimension' ? dimensionCapLines(annotation.geometry, dimensionTickLengthFor(annotation)) : null
-  const markerUrl = `url(#${markerId})`
-  const markerEnd = style === 'head' || style === 'double' ? markerUrl : undefined
-  const markerStart = style === 'double' ? markerUrl : undefined
-  return (
-    <>
-      {selectionProps && (
-        <>
-          <line x1={x1} y1={y1} x2={x2} y2={y2} {...selectionProps} />
-          {ticks && ticks.map((tick, i) => <line key={i} {...tick} {...selectionProps} />)}
-        </>
-      )}
-      <line
-        x1={x1} y1={y1} x2={x2} y2={y2}
-        stroke={color} strokeWidth={strokeWidth} strokeDasharray={dash}
-        markerEnd={markerEnd} markerStart={markerStart}
-      />
-      {ticks && ticks.map((tick, i) => (
-        <line key={i} {...tick} stroke={color} strokeWidth={strokeWidth} />
-      ))}
-    </>
-  )
-}
-
-function FreehandShape({ geometry, color, strokeWidth, dash, selectionProps }) {
-  const points = geometry.points.map((p) => `${p.x},${p.y}`).join(' ')
-  return (
-    <>
-      {selectionProps && <polyline points={points} fill="none" {...selectionProps} strokeLinecap="round" strokeLinejoin="round" />}
-      <polyline
-        points={points} fill="none" stroke={color} strokeWidth={strokeWidth} strokeDasharray={dash}
-        strokeLinecap="round" strokeLinejoin="round"
-      />
-    </>
-  )
-}
-
-function HighlighterShape({ geometry, color, strokeWidth, dash, selectionProps }) {
-  const points = geometry.points.map((p) => `${p.x},${p.y}`).join(' ')
-  return (
-    <>
-      {selectionProps && (
-        <polyline
-          points={points} fill="none" stroke="var(--primary)" strokeWidth={strokeWidth + 4}
-          strokeOpacity={0.35} strokeLinecap="round" strokeLinejoin="round"
-        />
-      )}
-      <polyline
-        points={points} fill="none" stroke={color} strokeWidth={strokeWidth} strokeDasharray={dash}
-        strokeOpacity={HIGHLIGHTER_OPACITY} strokeLinecap="round" strokeLinejoin="round"
-      />
-    </>
-  )
-}
-
-function PinShape({ geometry, color, number, selectionProps }) {
-  const { x, y } = geometry
-  return (
-    <>
-      {selectionProps && <circle cx={x} cy={y} r="18" fill="none" {...selectionProps} />}
-      <circle cx={x} cy={y} r="14" fill={color} />
-      <text x={x} y={y} textAnchor="middle" dominantBaseline="central" fill="#fff" fontSize="13" fontWeight="700">
-        {number}
-      </text>
-    </>
-  )
-}
-
-// The light fill tells a selected page element apart from a hand-drawn box,
-// matching the server's rendering in server/image/common/render.js.
-function ElementShape({ geometry, color, selectionProps }) {
-  const { x, y, width, height } = geometry
-  return (
-    <>
-      {selectionProps && <rect x={x - 3} y={y - 3} width={width + 6} height={height + 6} fill="none" {...selectionProps} />}
-      <rect x={x} y={y} width={width} height={height} fill={color} fillOpacity={0.15} stroke={color} strokeWidth={3} />
-    </>
-  )
-}
-
-// Painted like a marker over the selected lines, matching the server's
-// rendering in server/image/common/render.js.
-function TextShape({ geometry, color, number, selectionProps }) {
-  const [first] = geometry.rects
-  return (
-    <>
-      {geometry.rects.map(({ x, y, width, height }) => (
-        <rect key={`${x}-${y}`} x={x} y={y} width={width} height={height} fill={color} fillOpacity={0.3} {...(selectionProps ?? {})} />
-      ))}
-      <circle cx={first.x} cy={first.y} r="11" fill={color} />
-      <text x={first.x} y={first.y} textAnchor="middle" dominantBaseline="central" fill="#fff" fontSize="12" fontWeight="700">{number}</text>
-    </>
-  )
-}
-
-function AnnotationShape({ annotation, number, markerId, dashed = false, selected = false }) {
-  const color = annotation.color || DEFAULT_COLOR
-  const strokeWidth = strokeWidthOf(annotation)
-  // The live "uncommitted preview" dash always wins over a stored dashStyle:
-  // a not-yet-drawn annotation has no dashStyle chosen yet, and this is the
-  // only path where `dashed` is ever true (see the `dashed` prop's call sites).
-  const dash = dashed ? '6 4' : dashArrayFor(annotation.dashStyle, strokeWidth)
-  const selectionProps = selected ? { stroke: 'var(--primary)', strokeWidth: strokeWidth + 3, strokeOpacity: 0.35 } : null
-  const { type, geometry } = annotation
-
-  if (type === 'element') { return <ElementShape geometry={geometry} color={color} selectionProps={selectionProps} /> }
-  if (type === 'text') { return <TextShape geometry={geometry} color={color} number={number} selectionProps={selectionProps} /> }
-  if (type === 'box') { return <BoxShape geometry={geometry} color={color} strokeWidth={strokeWidth} dash={dash} selectionProps={selectionProps} /> }
-  if (type === 'arrow') { return <ArrowShape annotation={annotation} color={color} strokeWidth={strokeWidth} dash={dash} markerId={markerId} selectionProps={selectionProps} /> }
-  if (type === 'freehand') { return <FreehandShape geometry={geometry} color={color} strokeWidth={strokeWidth} dash={dash} selectionProps={selectionProps} /> }
-  if (type === 'highlighter') { return <HighlighterShape geometry={geometry} color={color} strokeWidth={strokeWidth} dash={dash} selectionProps={selectionProps} /> }
-  if (type === 'pin') { return <PinShape geometry={geometry} color={color} number={number} selectionProps={selectionProps} /> }
-  return null
 }
 
 const BOX_HANDLES = ['nw', 'ne', 'sw', 'se']
@@ -210,7 +87,7 @@ function SelectionToolbar({ point, onEdit, onRemove, onClose }) {
       onMouseDown={(event) => event.stopPropagation()}
     >
       <div className="annotation-toolbar-menu">
-        <button type="button" onClick={onRemove} className="annotation-toolbar-btn annotation-toolbar-btn-remove" title="Remove annotation">
+        <button type="button" onClick={onRemove} className="annotation-toolbar-btn annotation-toolbar-btn-remove" title="Delete annotation">
           {ACTION_ICONS.remove}
           <span className="annotation-toolbar-label">Remove</span>
         </button>
@@ -230,17 +107,17 @@ function SelectionToolbar({ point, onEdit, onRemove, onClose }) {
 export default function ImageCanvas({
   imageUrl, imageAlt = 'Image being annotated', imageWidth, imageHeight, activeTool, annotations, zoom, onZoomBy,
   editingAnnotationId, onAddAnnotation, onUpdateAnnotation, onCommitEdit, onRemoveAnnotation, onRequestEdit,
-  onUndo, onRedo, colorMode = 'rotate', fixedColor = DEFAULT_COLOR,
+  onUndo, onRedo, colorMode = 'intent', fixedColor = null, newIntent = 'change', imageRef = null,
   // A video passes its player element, the frame-visible subset of its
-  // annotations, their recording-wide numbers, and a hook to pause playback
-  // before any pointer interaction.
+  // annotations and a hook to pause playback before any pointer interaction.
+  // `nextNumber` is the number the note being drawn will keep.
   // describeTime(annotation | null) names what an annotation is pinned to in
   // time, null meaning the one being drawn.
-  media = null, numberFor = null, nextNumber = annotations.length + 1, onBeforeInteract = null, describeTime = null,
+  media = null, nextNumber = 1, onBeforeInteract = null, describeTime = null,
   // A PDF page's words in reading order, for the Text tool.
   voiceNotes = false, elements = [], words = [],
   // Last round's marks (placed threads only), drawn read-only and opened with the Select tool.
-  previousThreads = [], previousRound = null, showPrevious = false, openThreadHandle = null, onOpenThread = null, onCloseThread = null, onReloadThreads = null
+  previousThreads = [], previousRound = null, showPrevious = false, openThreadHandle = null, onOpenThread = null, onCloseThread = null, onReloadThreads = null, onSelectionChange = null
 }) {
   const wrapperRef = useRef(null)
   // A thread opened from the panel on another page mounts this canvas with its popover already due, before the wrapper exists to anchor it to.
@@ -298,6 +175,8 @@ export default function ImageCanvas({
   const [strokePoints, setStrokePoints] = useState([])
   const [pending, setPending] = useState(null)
   const [selectedId, setSelectedId] = useState(null)
+  // The panel follows the selection, so the mark's card is selected and scrolled into view.
+  useEffect(() => { onSelectionChange?.(selectedId) }, [selectedId, onSelectionChange])
   const [hoveringAnnotation, setHoveringAnnotation] = useState(false)
   // Where the pointer rests over the image, for outlining the page element a
   // mark placed there would be matched to. Only tracked for a captured page.
@@ -305,9 +184,6 @@ export default function ImageCanvas({
   const [isGrabbing, setIsGrabbing] = useState(false)
   const moveState = useRef(null)
   const resizeState = useRef(null)
-  // Ever-incrementing count of annotations created this session, seeded from
-  // whatever was already restored - see nextColor below.
-  const createdCountRef = useRef(annotations.length)
 
   // Delete/Backspace removes the selected annotation, so it doesn't require
   // opening the sidebar. Skipped while the comment popover is open (so
@@ -326,6 +202,20 @@ export default function ImageCanvas({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [selectedId, pending, onRemoveAnnotation])
+
+  // 1 to 4 set the intent of the selected mark, undoable like any other edit.
+  useEffect(() => {
+    if (!selectedId || pending) { return }
+    const handleKeyDown = (event) => {
+      const before = annotations.find((a) => a.id === selectedId)
+      const intent = intentChangeForKey(event, before)
+      if (!intent) { return }
+      event.preventDefault()
+      onCommitEdit(selectedId, before, { ...before, intent })
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedId, pending, annotations, onCommitEdit])
 
   // Cmd/Ctrl+Z to undo, Cmd/Ctrl+Shift+Z or Ctrl+Y to redo. Same guards as
   // Delete/Backspace above: skipped while the popover is open or another
@@ -409,28 +299,18 @@ export default function ImageCanvas({
     onRequestEdit(null)
   }, [editingAnnotationId, annotations, onRequestEdit, zoom, openEditPopover])
 
-  // The starting color for a new annotation: either the next color in the
-  // palette, cycling by how many annotations have been CREATED this session
-  // (createdCountRef - not annotations.length, which would repeat a color
-  // that's still in use as soon as an earlier annotation is deleted) - or a
-  // fixed color the user picked in Settings. Either way it's just a starting
-  // point - the comment popover still lets the color be changed per
-  // annotation, and editing an existing annotation keeps its stored color
-  // untouched.
-  const nextColor = colorMode === 'fixed'
-    ? fixedColor
-    : ANNOTATION_COLORS[createdCountRef.current % ANNOTATION_COLORS.length].hex
+  // A new mark has no ink of its own and takes its intent's colour, unless
+  // the reviewer fixed an ink in the dock. The composer can still change it.
+  const nextColor = colorMode === 'fixed' ? fixedColor : null
 
   const previousVisible = showPrevious && previousThreads.length > 0
 
   const handleMouseDown = useCallback((event) => {
-    // A mousedown that closes the open popover (see CommentPopover's own
-    // outside-click handler) reaches this handler too, since the popover's
-    // dismissal doesn't stop propagation to the canvas. This early return is
-    // what keeps that same click from also starting a new draw underneath
-    // the popover - it works because `pending` is state (not a ref), so this
-    // closure still sees it as truthy even though CommentPopover's listener
-    // already called setPending(null) via onClose in the same event.
+    // While the comment popover is open, a press on the canvas never starts
+    // a new mark: an untouched popover closes on it (the composer's own
+    // outside-click handler), one holding a draft stays open. `pending` is
+    // state, not a ref, so this closure still sees it as truthy even when
+    // that handler already called setPending(null) in the same event.
     if (pending) { return }
     event.preventDefault()
     previousClickRef.current = null
@@ -531,16 +411,13 @@ export default function ImageCanvas({
     }
   }, [activeTool, strokePoints.length, dragStart, imageWidth, imageHeight, zoom, onUpdateAnnotation, pending, annotations, elements])
 
-  // Wraps every `setPending` call that starts a brand-new annotation (as
-  // opposed to editing an existing one) so the created-count increment can't
-  // drift out of sync with it - see nextColor above for why the count exists.
+  // Every `setPending` call that starts a brand-new annotation (as opposed to editing an existing one).
   const createPending = useCallback((partial) => {
-    setPending(partial)
+    setPending({ ...partial, intent: defaultIntent(partial.type, newIntent) })
     // The pointer now rests on the new mark, so the hover outline would
     // otherwise linger over it until the next mouse move.
     setHoverPoint(null)
-    createdCountRef.current += 1
-  }, [])
+  }, [newIntent])
 
   // The tool-specific dispatch for "a drag/click just finished, and it was a
   // draw gesture rather than a move/resize/select" - split out of
@@ -636,15 +513,15 @@ export default function ImageCanvas({
 
   const handleCommentSubmit = useCallback((fields) => {
     if (pending) {
-      const { text, color } = fields
+      const { text, color, intent } = fields
       const styleFields = pickStyleFields(pending.type, fields)
       if (pending.id) {
-        const after = { ...pending.before, text, color, ...styleFields }
+        const after = { ...pending.before, text, color, intent, ...styleFields }
         onCommitEdit(pending.id, pending.before, after)
       } else {
         // A text selection carries the words it selected along with its geometry.
         const quote = pending.type === 'text' ? { quote: pending.quote } : {}
-        onAddAnnotation({ type: pending.type, geometry: pending.geometry, text, color, ...styleFields, ...quote })
+        onAddAnnotation({ type: pending.type, geometry: pending.geometry, text, color, intent, ...styleFields, ...quote })
       }
     }
     setPending(null)
@@ -658,24 +535,31 @@ export default function ImageCanvas({
   // Computed fresh every render (not stored in state) so the scroll-triggered
   // re-render above actually moves it - see the effect that owns forceRerenderOnScroll.
   const pendingAnchorPoint = pending ? toClientPoint(wrapperRef, annotationBottomAnchor(pending), zoom) : null
+  const pendingNumber = pending?.id ? pending.before.number : nextNumber
 
   const openThread = previousVisible && openThreadHandle ? previousThreads.find((t) => t.handle === openThreadHandle) : null
 
   let livePreview = null
+  const previewIntent = (type) => defaultIntent(type, newIntent)
   if (activeTool === 'box' && dragStart && dragPoint) {
-    livePreview = { type: 'box', geometry: boxFromPoints(dragStart, dragPoint), color: nextColor }
+    livePreview = { type: 'box', geometry: boxFromPoints(dragStart, dragPoint), color: nextColor, intent: previewIntent('box') }
   } else if (activeTool === 'arrow' && dragStart && dragPoint) {
-    livePreview = { type: 'arrow', geometry: { x1: dragStart.x, y1: dragStart.y, x2: dragPoint.x, y2: dragPoint.y }, color: nextColor, arrowStyle: 'head' }
+    livePreview = { type: 'arrow', geometry: { x1: dragStart.x, y1: dragStart.y, x2: dragPoint.x, y2: dragPoint.y }, color: nextColor, arrowStyle: 'head', intent: previewIntent('arrow') }
   } else if (isPointCollectingTool(activeTool) && strokePoints.length > 1) {
-    livePreview = { type: activeTool, geometry: { points: strokePoints }, color: nextColor }
+    livePreview = { type: activeTool, geometry: { points: strokePoints }, color: nextColor, intent: previewIntent(activeTool) }
   } else if (activeTool === 'text' && dragStart && dragPoint) {
     const selection = selectWords(words, wordIndexAt(words, dragStart), wordIndexAt(words, dragPoint))
-    livePreview = selection ? { type: 'text', ...selection, color: nextColor } : null
+    livePreview = selection ? { type: 'text', ...selection, color: nextColor, intent: previewIntent('text') } : null
   }
 
   // Only the Element tool outlines what is under the pointer; every tool
   // names the matched element in the comment popover.
-  const hovered = !pending && hoverPoint ? matchPoint(elements, hoverPoint) : null
+  const walk = useElementWalk({
+    active: activeTool === 'element' && !pending,
+    elements,
+    onPick: (element) => createPending({ type: 'element', geometry: { ...element.box }, color: nextColor })
+  })
+  const hovered = walk.current ?? (!pending && hoverPoint ? matchPoint(elements, hoverPoint) : null)
   const highlighted = hovered ? [hovered] : []
   const elementHint = pending?.type === 'text' ? `"${pending.quote}"` : describeElements(matchAnnotation(elements, pending))
 
@@ -691,8 +575,9 @@ export default function ImageCanvas({
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => setHoverPoint(null)}
+      {...walk.canvasProps}
     >
-      {media ?? <img src={imageUrl} alt={imageAlt} width={imageWidth * zoom} height={imageHeight * zoom} draggable={false} />}
+      {media ?? <img ref={imageRef} src={imageUrl} alt={imageAlt} width={imageWidth * zoom} height={imageHeight * zoom} draggable={false} />}
       <svg
         className="annotation-overlay"
         width={imageWidth * zoom} height={imageHeight * zoom}
@@ -700,18 +585,9 @@ export default function ImageCanvas({
       >
         <defs>
           <marker id="arrowhead-preview" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 Z" fill={nextColor} />
+            <path d="M0,0 L10,5 L0,10 Z" fill={pending ? markColor(pending) : (nextColor ?? intentMark(defaultIntent('arrow', newIntent)))} />
           </marker>
-          {annotations.map((annotation) => annotation.type === 'arrow'
-            && ['head', 'double'].includes(resolveArrowStyle(annotation.arrowStyle)) && (
-            <marker
-              key={`marker-${annotation.id}`}
-              id={`arrowhead-${annotation.id}`}
-              markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse"
-            >
-              <path d="M0,0 L10,5 L0,10 Z" fill={annotation.color || DEFAULT_COLOR} />
-            </marker>
-          ))}
+          <ArrowMarkers annotations={annotations} />
         </defs>
         {highlighted.map(({ selector, box }) => (
           <rect
@@ -719,10 +595,10 @@ export default function ImageCanvas({
             x={box.x} y={box.y} width={box.width} height={box.height} vectorEffect="non-scaling-stroke"
           />
         ))}
-        {previousVisible && <PreviousRoundLayer threads={previousThreads} Shape={AnnotationShape} fallbackColor={DEFAULT_COLOR} />}
-        {annotations.map((annotation, index) => (
+        {previousVisible && <PreviousRoundLayer threads={previousThreads} Shape={AnnotationShape} />}
+        {annotations.map((annotation) => (
           <AnnotationShape
-            key={annotation.id} annotation={annotation} number={numberFor ? numberFor(annotation) : index + 1}
+            key={annotation.id} annotation={annotation} number={annotation.number}
             markerId={`arrowhead-${annotation.id}`} selected={annotation.id === selectedId}
           />
         ))}
@@ -737,10 +613,12 @@ export default function ImageCanvas({
         <span
           className="element-highlight-label" aria-hidden="true"
           style={{ left: hovered.box.x * zoom, top: Math.max(0, hovered.box.y * zoom - 24) }}
+          ref={(label) => { if (walk.current) { label?.scrollIntoView({ block: 'nearest', inline: 'nearest' }) } }}
         >
-          {describeElements(highlighted)}
+          {elementCaption(hovered)}
         </span>
       )}
+      {walk.current && <span className="visually-hidden" aria-live="polite">{describeElements(highlighted)}</span>}
       {!pending && selectedAnnotation && (
         <SelectionToolbar
           point={toClientPoint(wrapperRef, annotationTopAnchor(selectedAnnotation), zoom)}
@@ -764,7 +642,9 @@ export default function ImageCanvas({
       {pending && (
         <CommentPopover
           anchorPoint={pendingAnchorPoint}
+          title={`Note ${pendingNumber}, ${noteType(pending).shape.toLowerCase()}`}
           initialText={pending.text || ''}
+          initialIntent={pending.id ? intentOf(pending.before) : pending.intent}
           initialColor={pending.color}
           annotationType={pending.type}
           initialArrowStyle={pending.arrowStyle}
@@ -774,6 +654,7 @@ export default function ImageCanvas({
           timeBadge={describeTime ? describeTime(pending.id ? pending.before : null) : null}
           voiceNotes={voiceNotes}
           elementHint={elementHint}
+          onIntentChange={(intent) => setPending((current) => (current && !current.id ? { ...current, intent } : current))}
           onSubmit={handleCommentSubmit}
           onClose={handleCommentClose}
         />

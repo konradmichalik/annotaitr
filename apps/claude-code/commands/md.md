@@ -12,13 +12,18 @@ args: files
 
 Address the annotation feedback above. The user has reviewed the markdown file in the browser UI and provided specific annotations:
 
-- **"Remove this"** entries: Delete the quoted text from the file
-- **"Comment on"** entries: Apply the user's comment as a change to the referenced text
-- **"Insert text"** entries: Insert the provided text at the specified location
+Each heading names the note's number, its intent and what it points at, such
+as `## 3. Question · Text (Line 7) [#a3f19c2e]`. The intent says what to do:
 
-Each heading normally ends with a short handle in brackets, such as
-`[#a3f19c2e]`. The number is positional and is recalculated on every export,
-the handle stays fixed for as long as the annotation exists. Use it whenever you
+- **Change**: apply the user's comment as a change to the quoted text
+- **Add**: an `Insertion` inserts the given text after its `After:` context; on a quoted text, add what the comment asks for there
+- **Remove**: delete the quoted text (a comment, if there is one, says what exactly)
+- **Question**: the user asks, they do not request an edit. Answer it when you report back, and change the file only if the answer makes the change obvious
+
+A `General comment` has no number and no intent. A note keeps its number for
+the whole round: numbers can have gaps where the user deleted a note, and the
+notes are listed in document order, not by number. The handle at the end of
+the heading stays fixed for as long as the annotation exists. Use it whenever you
 refer to a specific annotation. The reviewer never sees handles in the
 annotator, so pair each one with a few words naming the passage: "fixed
 `#a3f19c2e` (intro wording), left `#7b210e44` (install steps) alone because the

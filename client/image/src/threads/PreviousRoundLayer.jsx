@@ -4,9 +4,9 @@ import { statusDisplay, threadStatus, badgeShowsNumber, threadNumber, pendingRep
 const BADGE_HEIGHT = 20
 const MARKER_SIZE = 16
 const GAP = 4
-// SVG text cannot be measured before it renders, so the chip is sized from the character count: about 6.5px per
-// glyph at the 11px badge font, plus 16px of padding.
-const CHAR_WIDTH = 6.5
+// SVG text cannot be measured before it renders, so the chip is sized from the character count: about 7px per
+// glyph at the 12px badge font, plus 16px of padding.
+const CHAR_WIDTH = 7
 const PADDING = 16
 
 function Badge({ thread, anchor }) {
@@ -34,20 +34,20 @@ function Badge({ thread, anchor }) {
 }
 
 /** Last round's marks inside the canvas SVG: never part of the annotations state, only drawn. The canvas hands in its own shape renderer. */
-export default function PreviousRoundLayer({ threads, Shape, fallbackColor }) {
+export default function PreviousRoundLayer({ threads, Shape }) {
   return (
     <g className="previous-round">
       <defs>
         {threads.map(({ annotation, handle }) => annotation.type === 'arrow' && (
           <marker key={handle} id={`arrowhead-prev-${handle}`} markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 Z" fill={annotation.color || fallbackColor} />
+            <path className="previous-round-arrowhead" d="M0,0 L10,5 L0,10 Z" />
           </marker>
         ))}
       </defs>
       {threads.map((thread) => (
         <g key={thread.handle} className={`previous-round-mark previous-round--${thread.anchor}`}>
           <g className="previous-round-shape">
-            <Shape annotation={{ ...thread.annotation, id: `prev-${thread.handle}` }} number={threadNumber(thread)} markerId={`arrowhead-prev-${thread.handle}`} />
+            <Shape annotation={{ ...thread.annotation, id: `prev-${thread.handle}` }} number={threadNumber(thread)} badge={false} markerId={`arrowhead-prev-${thread.handle}`} />
           </g>
           <Badge thread={thread} anchor={annotationTopAnchor(thread.annotation)} />
         </g>

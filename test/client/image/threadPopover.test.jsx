@@ -15,7 +15,8 @@ describe('ThreadPopoverContent', () => {
     expect(html).toContain('#a3f19c2e')
     expect(html).toContain('Make it bigger')
     expect(html).toContain('No reply from the agent yet.')
-    expect(html).not.toContain('reply-list')
+    expect(html).not.toContain('reply-list-item--agent')
+    expect(html).toContain('status-chip--none')
   })
 
   it('shows replies, the ghost reason and the element line when present', () => {
@@ -46,7 +47,14 @@ describe('ThreadPopoverContent', () => {
 
   it('names a carried thread by its origin', () => {
     const html = render({ ...base, number: null, origin: { round: 1, number: 2 } })
-    expect(html).toContain('Round 1 · mark 2')
-    expect(html).not.toContain('mark null')
+    expect(html).toContain('Round 1 · note 2')
+    expect(html).toContain('· round 1')
+    expect(html).not.toContain('note null')
+  })
+
+  it('marks the agent replies as coming after the round and offers no close button without a handler', () => {
+    const html = render({ ...base, replies: [{ status: 'applied', text: 'Done', createdAt: 0 }] })
+    expect(html).toContain('· after round 3')
+    expect(html).not.toContain('aria-label="Close"')
   })
 })
