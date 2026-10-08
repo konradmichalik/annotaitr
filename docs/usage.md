@@ -33,6 +33,7 @@ The same for every target:
 | One or more existing files, all markdown/plain-text | Markdown |
 | A single `http(s)` URL | Image (capture) |
 | A single existing file with a supported image extension (`.png`, `.jpg`, `.jpeg`, `.webp`, `.svg`) | Image (local file) |
+| Several existing files, all with a supported image extension | Image (a set, switched in the annotator) |
 | A single existing video or GIF (`.mp4`, `.m4v`, `.webm`, `.mov`, `.gif`) | Image (video, on a timeline) |
 | A single existing PDF | Image (document, page by page) |
 | A single existing `.pptx`, `.ppt`, `.odp`, `.key`, `.docx`, `.doc`, `.odt`, `.rtf` or `.pages` | Prints a `CONVERT TO PDF FIRST:` hint and exits `0` |
@@ -41,6 +42,7 @@ The same for every target:
 ```bash
 annotaitr README.md docs/guide.md    # markdown: multiple files, Files overview
 annotaitr ./mockup.png               # image: local file
+annotaitr ./sm.png ./md.png ./lg.png # image: several files, one session
 annotaitr http://localhost:3000      # image: capture
 annotaitr                            # image: clipboard (macOS), or help
 annotaitr ./diagram.svg              # image: SVG, rasterized to PNG

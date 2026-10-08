@@ -22,10 +22,9 @@ If the output above starts with `PASTED CHAT IMAGE:`, the user passed an
 `annotaitr --origin claude-code '<path>'` with the Bash tool and
 `run_in_background: true`, since it blocks until the user submits. Tell the
 user in one line that the annotator is open and end your turn; when the
-command finishes, read its output and handle it as described below. Only one
-image can be opened at a time: if several chips were given, ask which one. If
-no source line exists, ask the user to save the image or copy it to the
-clipboard.
+command finishes, read its output and handle it as described below. If several
+chips were given, pass every source path in the same command. If no source
+line exists, ask the user to save the image or copy it to the clipboard.
 
 If the output above starts with `CONVERT TO PDF FIRST:`, the target is an
 office document, which annotaitr only reviews as PDF. Render it to PDF with

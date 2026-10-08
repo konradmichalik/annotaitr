@@ -8,6 +8,12 @@ annotaitr ./diagram.svg
 annotaitr                 # clipboard, macOS only
 ```
 
+Pass several image files to review them in one session:
+
+```bash
+annotaitr ./mobile.png ./tablet.png ./desktop.png
+```
+
 ![An image in the dark theme with a note being written](../../site/images/06-image-dark.png)
 
 ## Clipboard
@@ -23,3 +29,9 @@ least 1600px and at most 8000px: icons are scaled up, oversized drawings
 scaled down, both as vectors without loss. Transparent areas get a white
 background. The SVG needs a `width`/`height` in px (or unitless) or a
 `viewBox`, otherwise it has no size to render at and is rejected.
+
+## Several images
+
+A set of image files opens in one annotator with a thumbnail strip to switch between them. Each image keeps its own notes and its own numbering, and one decision covers the whole set. The output lists the notes per image under `## Image N of M: <path>`, with one annotated screenshot per image that has notes.
+
+A set takes local image files only. URLs, the clipboard, videos and PDFs stay single-target, and a set starts no [review session](sessions.md), so `--session` and `--new-session` do not apply.
