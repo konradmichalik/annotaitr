@@ -632,6 +632,19 @@
   border-color: var(--text);
 }
 
+.comment-popover-body:has(.voice-note) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.comment-popover-body:has(.voice-note) .comment-popover-textarea {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+
 .voice-note {
   display: inline-flex;
   align-items: center;
@@ -795,6 +808,11 @@ button.voice-note:hover {
   gap: var(--space-1);
 }
 
+/* Eleven swatches share one row of the panel. */
+.style-palette-options:has(.style-palette-option--swatch) {
+  gap: 3px;
+}
+
 .style-palette-option {
   display: inline-flex;
   align-items: center;
@@ -819,8 +837,8 @@ button.voice-note:hover {
 }
 
 .style-palette-option--swatch {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: var(--swatch);
 }
