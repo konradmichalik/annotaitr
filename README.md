@@ -11,7 +11,7 @@ For Claude Code, OpenCode and Mistral Vibe. [Landing page](https://konradmichali
 [![Test](https://github.com/konradmichalik/annotaitr/actions/workflows/test.yml/badge.svg)](https://github.com/konradmichalik/annotaitr/actions/workflows/test.yml)
 [![License](https://img.shields.io/github/license/konradmichalik/annotaitr)](LICENSE)
 
-![annotaitr reviewing a PDF: numbered marks on the page, a dock of tools at the bottom and a feedback panel with four notes on the right](docs/images/01-pdf.png)
+![annotaitr reviewing a PDF: numbered marks on the page, a dock of tools at the bottom and a feedback panel with four notes on the right](site/images/01-pdf.png)
 
 </div>
 
@@ -30,7 +30,7 @@ The mode is auto-detected from what you open, see [Usage](docs/usage.md). The me
 ### Web pages
 
 
-![Web page capture with the Element tool outlining a section and its selector](docs/images/03-web-capture.png)
+![Web page capture with the Element tool outlining a section and its selector](site/images/03-web-capture.png)
 
 - [**Page capture**](docs/usage/web-pages.md): full-page screenshot of any `http(s)` URL via Playwright, at a chosen viewport and optional delay; switch viewport, section or delay from the open tab to capture again in place
 - [**Page element names**](docs/usage/web-pages.md): the Element tool picks a page element straight from the screenshot, and feedback names it (tag, alt or text, media file, short selector), so the agent can find it in the source
@@ -38,7 +38,7 @@ The mode is auto-detected from what you open, see [Usage](docs/usage.md). The me
 ### Videos and GIFs
 
 
-![A video on a timeline with note markers, a cluster of two close notes and two overlapping spans](docs/images/04-video.png)
+![A video on a timeline with note markers, a cluster of two close notes and two overlapping spans](site/images/04-video.png)
 
 - [**Timeline review**](docs/usage/video.md): annotate a screen recording as single moments or spans
 - [**Frames for the agent**](docs/usage/video.md): each annotated frame as a PNG, plus a strip per span and an overview
@@ -46,7 +46,7 @@ The mode is auto-detected from what you open, see [Usage](docs/usage.md). The me
 ### Markdown and plain text
 
 
-![A Markdown review with a Files overview and numbered notes](docs/images/05-markdown.png)
+![A Markdown review with a Files overview and numbered notes](site/images/05-markdown.png)
 
 - [**Multi-file review**](docs/usage/markdown.md): several files in one session, with a Files overview of notes and reviewed files
 - [**Config and data files**](docs/usage/markdown.md): YAML, JSON, TOML, CSV, XML and more as raw source with line numbers
@@ -57,7 +57,7 @@ The mode is auto-detected from what you open, see [Usage](docs/usage.md). The me
 ### Images and PDFs
 
 
-![An image in the dark theme with a note being written](docs/images/06-image-dark.png)
+![An image in the dark theme with a note being written](site/images/06-image-dark.png)
 
 - [**Drawing tools**](docs/usage/images.md): boxes, arrows (with an optional dimension-line style for marking distance), freehand, highlighter and numbered pins, each with an optional comment and colour
 - [**Clipboard**](docs/usage/images.md): run with no target to annotate the screenshot on the (macOS) clipboard, or pass one pasted into the Claude Code chat

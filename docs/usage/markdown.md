@@ -7,7 +7,7 @@ annotaitr README.md
 annotaitr README.md docs/guide.md config.yaml
 ```
 
-![A Markdown review with a Files overview and numbered notes](../images/05-markdown.png)
+![A Markdown review with a Files overview and numbered notes](../../site/images/05-markdown.png)
 
 ## Supported files
 

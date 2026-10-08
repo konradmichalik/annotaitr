@@ -7,7 +7,7 @@ annotaitr ./bug-recording.mov
 annotaitr ./demo.gif
 ```
 
-![A video on a timeline with note markers, a cluster of two close notes and two overlapping spans](../images/04-video.png)
+![A video on a timeline with note markers, a cluster of two close notes and two overlapping spans](../../site/images/04-video.png)
 
 A video or GIF opens with a player docked below the canvas. Pause on a
 frame and draw on it with the usual tools: each annotation is pinned to the

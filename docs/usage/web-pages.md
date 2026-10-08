@@ -7,7 +7,7 @@ annotaitr http://localhost:3000
 annotaitr --viewport mobile --delay 1500 http://localhost:3000/checkout
 ```
 
-![Web page capture with the Element tool outlining a section and its selector](../images/03-web-capture.png)
+![Web page capture with the Element tool outlining a section and its selector](../../site/images/03-web-capture.png)
 
 ## Capture
 

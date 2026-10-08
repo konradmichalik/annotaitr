@@ -8,7 +8,7 @@ annotaitr ./diagram.svg
 annotaitr                 # clipboard, macOS only
 ```
 
-![An image in the dark theme with a note being written](../images/06-image-dark.png)
+![An image in the dark theme with a note being written](../../site/images/06-image-dark.png)
 
 ## Clipboard
 

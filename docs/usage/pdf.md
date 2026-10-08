@@ -2,7 +2,7 @@
 
 A PDF is reviewed page by page. Shared flags, session handling and the output format are in the [CLI reference](../usage.md).
 
-![annotaitr reviewing a PDF: numbered marks on the page, a dock of tools at the bottom and a feedback panel](../images/01-pdf.png)
+![annotaitr reviewing a PDF: numbered marks on the page, a dock of tools at the bottom and a feedback panel](../../site/images/01-pdf.png)
 
 A PDF opens with a strip of page thumbnails on the left and previous/next
 buttons next to the zoom controls. Draw on the page shown with the usual
