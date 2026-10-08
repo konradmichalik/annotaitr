@@ -1,36 +1,14 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { highlightMatches, setActiveMatch, clearSearchHighlights } from '../utils/searchHighlight.js'
 
 const DEBOUNCE_MS = 150
 
-function countTextMatches(text, query) {
-  if (!query || !text) { return 0 }
-  const lower = text.toLowerCase()
-  const q = query.toLowerCase()
-  let count = 0
-  let pos = 0
-  while ((pos = lower.indexOf(q, pos)) !== -1) {
-    count++
-    pos += q.length
-  }
-  return count
-}
-
-export function useDocumentSearch(containerRef, files) {
+export function useDocumentSearch(containerRef) {
   const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [matches, setMatches] = useState([])
   const [activeIndex, setActiveIndex] = useState(0)
   const debounceRef = useRef(null)
-
-  // Cross-file match counts (text-based, not DOM)
-  const fileMatches = useMemo(() => {
-    if (!query || !files || files.length <= 1) { return null }
-    return files.map(f => ({
-      path: f.path,
-      count: countTextMatches(f.content, query)
-    }))
-  }, [query, files])
 
   // Run search when the query changes or the bar reopens (debounced).
   // Depending on isOpen re-highlights a query that was kept from the last open.
@@ -106,6 +84,5 @@ export function useDocumentSearch(containerRef, files) {
     openSearch,
     closeSearch,
     stepMatch,
-    fileMatches,
   }
 }
