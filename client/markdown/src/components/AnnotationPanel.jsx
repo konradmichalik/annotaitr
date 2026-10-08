@@ -203,7 +203,9 @@ export function AnnotationPanel({
         {!empty && (showAll ? allFiles : <ul className="note-list">{activeCards}</ul>)}
         {!showAll && <AgentNotes notes={agentNotes} selectedAnnotationId={selectedAnnotationId} onSelect={onSelect} />}
       </div>
+      {/* Keyed by file: an open draft is discarded on a file switch, so a save can never reach another file. */}
       <GeneralCommentRow
+        key={files[activeFileIndex]?.path}
         text={generalComment?.text || null}
         onSave={onSaveGeneralComment}
         disabled={generalDisabled}
