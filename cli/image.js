@@ -84,6 +84,26 @@ function imageSessionTarget(target, clipboardPath) {
   return { identity: resolvePath(target), target: { kind: 'file', label: target } }
 }
 
+/** Review several local image files in one session. Review sessions follow one target, so a set starts none. */
+async function runImageSet({ targets, origin, viewportSpec, delaySpec, session }) {
+  const flagError = captureFlagError('local image files', { viewportSpec, delaySpec })
+  if (flagError) { fail(flagError); return }
+  if (session.sessionId || session.newSession) { fail('--session and --new-session only apply to a single image target.'); return }
+  const unusable = targets.find((target) => isSupportedCaptureUrl(target) || isPdfTarget(target) || isVideoTarget(target))
+  if (unusable) { fail(`Several targets must all be image files, got: ${unusable}`); return }
+  const paths = targets.map((target) => resolvePath(target))
+  for (const path of paths) {
+    if (!(await fileExists(path))) { fail(`File not found: ${path}`); return }
+  }
+
+  const { loadImageFromFile, buildImageServer } = await loadImageRuntime()
+  const images = await Promise.all(paths.map(async (path, i) => {
+    const { buffer, width, height } = await loadImageFromFile(path)
+    return { buffer, width, height, label: targets[i] }
+  }))
+  await serveUntilDecision(await buildImageServer({ images, origin, targetLabel: `${images.length} images` }))
+}
+
 export async function runImage({
   targets, origin, viewportSpec, delaySpec = null, clipboardPath, sourceSpec = null, pageRanges = null, session = {}
 }) {
@@ -93,6 +113,10 @@ export async function runImage({
   }
   if (targets.length === 1 && isVideoTarget(targets[0])) {
     await runVideo({ target: targets[0], origin, viewportSpec, delaySpec, session })
+    return
+  }
+  if (targets.length > 1) {
+    await runImageSet({ targets, origin, viewportSpec, delaySpec, session })
     return
   }
   const opened = await openSession({ ...imageSessionTarget(targets[0], clipboardPath), ...session })

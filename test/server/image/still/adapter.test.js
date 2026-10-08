@@ -468,4 +468,84 @@ describe('image annotator server', () => {
     expect((await lateReply(server.url)).status).toBe(409)
     expect(await server.waitForDecision()).toMatchObject({ replyCount: 1, annotationCount: 1 })
   })
+
+  describe('with several images', () => {
+    const pin = (id) => ({ id, type: 'pin', geometry: { x: 5, y: 5 }, text: 'Fix' })
+    const post = (index, annotations) => fetch(`${server.url}/api/annotations?index=${index}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ annotations })
+    })
+
+    async function startSet() {
+      return start({
+        images: [
+          { buffer: makeFixturePng(40, 30), width: 40, height: 30, label: 'a.png' },
+          { buffer: makeFixturePng(60, 50), width: 60, height: 50, label: 'b.png' }
+        ],
+        imageBuffer: undefined
+      })
+    }
+
+    it('lists the images in the metadata', async () => {
+      await startSet()
+      const { data } = await (await fetch(`${server.url}/api/meta`)).json()
+      expect(data.images).toEqual([
+        { label: 'a.png', width: 40, height: 30 },
+        { label: 'b.png', width: 60, height: 50 }
+      ])
+    })
+
+    it('answers the size of the image behind the index', async () => {
+      await startSet()
+      const { data } = await (await fetch(`${server.url}/api/meta?index=1`)).json()
+      expect(data).toMatchObject({ width: 60, height: 50 })
+    })
+
+    it('serves each image and keeps its annotations apart', async () => {
+      await startSet()
+      expect((await fetch(`${server.url}/api/image?index=1`)).status).toBe(200)
+      await post(1, [pin('a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d')])
+      const first = await (await fetch(`${server.url}/api/annotations?index=0`)).json()
+      const second = await (await fetch(`${server.url}/api/annotations?index=1`)).json()
+      expect(first.data.annotations).toEqual([])
+      expect(second.data.annotations).toHaveLength(1)
+    })
+
+    it('exports the image behind the index and rejects one outside the set', async () => {
+      await startSet()
+      const post = (path) => fetch(`${server.url}${path}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ annotations: [pin('a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d')] })
+      })
+      expect((await post('/api/feedback-text?index=1')).status).toBe(200)
+      expect((await post('/api/annotated-image?index=1')).headers.get('content-type')).toBe('image/png')
+      expect((await post('/api/annotated-image?index=2')).status).toBe(404)
+    })
+
+    it('rejects an index outside the set', async () => {
+      await startSet()
+      expect((await fetch(`${server.url}/api/image?index=2`)).status).toBe(404)
+      expect((await fetch(`${server.url}/api/annotations?index=-1`)).status).toBe(404)
+    })
+
+    it('groups the feedback per image and counts every note in the decision', async () => {
+      await startSet()
+      await post(0, [pin('a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d')])
+      await post(1, [pin('b4a29d3f-2c5e-4a8b-8d4f-3e6a9b2c7d5e')])
+      await fetch(`${server.url}/api/feedback`, { method: 'POST' })
+      const decision = await server.waitForDecision()
+      expect(decision.annotationCount).toBe(2)
+      expect(decision.output).toContain('## Image 1 of 2: a.png')
+      expect(decision.output).toContain('## Image 2 of 2: b.png')
+    })
+
+    it('approves the whole set without notes', async () => {
+      await startSet()
+      await fetch(`${server.url}/api/approve`, { method: 'POST' })
+      expect(await server.waitForDecision()).toMatchObject({ approved: true, output: 'APPROVED: No changes requested.\n' })
+    })
+
+    it('refuses to submit feedback when no image has a note', async () => {
+      await startSet()
+      expect((await fetch(`${server.url}/api/feedback`, { method: 'POST' })).status).toBe(400)
+    })
+  })
 })

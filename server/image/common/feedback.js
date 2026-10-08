@@ -123,3 +123,28 @@ export function exportFeedback(annotations, imageWidth, imageHeight, annotatedIm
   output += formatAnnotationList(notes, imageWidth, imageHeight, domMap)
   return output
 }
+
+/**
+ * Format one decision over a set of images. Every image keeps its own note
+ * numbering, because the numbers are baked into that image's annotated
+ * screenshot. `images` entries carry `label`, `notes` (already normalized),
+ * `width`, `height`, `annotatedImagePath`, `domMap` and `note`.
+ */
+export function formatImageSetOutput(images, { approved }) {
+  const all = images.flatMap((image) => image.notes)
+  const count = all.length
+  const where = `on ${images.length} screenshots`
+  const head = approved
+    ? `APPROVED WITH NOTES: ${count} note${count === 1 ? '' : 's'} (${intentCounts(all)}) ${where}. ` +
+      'The screenshots are approved as-is. Treat the notes below as context, not as change requests.\n\n'
+    : `${count} annotation${count === 1 ? '' : 's'} (${intentCounts(all)}) ${where}.\n` +
+      'Look at each image, then match each note below to the visible element or nearby text.\n\n'
+  const sections = images.map((image, i) => {
+    const title = `## Image ${i + 1} of ${images.length}: ${image.label}\n`
+    if (image.notes.length === 0) { return `${title}No annotations.\n` }
+    const path = image.annotatedImagePath ? `Annotated screenshot: ${image.annotatedImagePath}\n` : ''
+    const body = formatAnnotationList(image.notes, image.width, image.height, image.domMap)
+    return `${title}${path}${captureLine(image.note)}${elementNotice(image.domMap)}\n${body}`
+  })
+  return head + sections.join('\n')
+}

@@ -4,7 +4,7 @@ import { success, failure } from '../../core/http.js'
 import { annotationsFromBody } from '../common/annotationLimits.js'
 import { flattenAnnotations } from '../common/render.js'
 import { writeAnnotatedImage } from './output.js'
-import { formatApprovalOutput, formatApprovalWithNotesOutput, exportFeedback } from '../common/feedback.js'
+import { formatApprovalOutput, formatApprovalWithNotesOutput, exportFeedback, formatImageSetOutput } from '../common/feedback.js'
 import { parseCaptureSettings, describeCapture, VIEWPORT_PRESETS } from '../common/config.js'
 import { normalizeNotes } from '../../core/notes.js'
 
@@ -34,14 +34,38 @@ function captureMeta(settings) {
   return settings ? { ...settings, description: describeCapture(settings), presets: VIEWPORT_PRESETS } : null
 }
 
-/** Everything a decision needs from the capture as it is right now, which a recapture may have replaced. */
+/** Sets `req.entry` to the image behind `?index=` (the first one without it), or answers 404 when the index is outside the set. */
+const imageAt = (state) => (req, res, next) => {
+  const index = req.query.index === undefined ? 0 : Number(req.query.index)
+  req.entry = Number.isInteger(index) ? state.images[index] : undefined
+  if (!req.entry) { return res.status(404).json(failure('No such image')) }
+  next()
+}
+
+const totalNotes = (state) => state.images.reduce((sum, entry) => sum + entry.annotations.length, 0)
+
+/** Everything a decision needs from the captures as they are right now, which a recapture may have replaced. */
 async function decisionInputs(state) {
-  const { buffer, width, height, domMap, settings } = state.capture
-  // Image, text and session take the numbers from the same list, so they always agree.
-  const notes = normalizeNotes(state.annotations)
-  const annotatedImagePath = await writeAnnotatedImage(await flattenAnnotations(buffer, notes))
-  const note = settings ? describeCapture(settings) : null
-  return { notes, width, height, annotatedImagePath, domMap, note }
+  return Promise.all(state.images.map(async ({ label, capture, annotations }) => {
+    const { buffer, width, height, domMap, settings } = capture
+    // Image, text and session take the numbers from the same list, so they always agree.
+    const notes = normalizeNotes(annotations)
+    const annotatedImagePath = notes.length > 0 ? await writeAnnotatedImage(await flattenAnnotations(buffer, notes)) : null
+    return { label, notes, width, height, annotatedImagePath, domMap, note: settings ? describeCapture(settings) : null }
+  }))
+}
+
+function renderDecision(inputs, approved) {
+  if (inputs.length > 1) { return formatImageSetOutput(inputs, { approved }) }
+  const [{ notes, width, height, annotatedImagePath, domMap, note }] = inputs
+  return approved
+    ? formatApprovalWithNotesOutput(notes, width, height, annotatedImagePath, domMap, note)
+    : exportFeedback(notes, width, height, annotatedImagePath, domMap, note)
+}
+
+function decisionOf(inputs, output, approved, frozen) {
+  const annotations = inputs.flatMap((input) => input.notes)
+  return { approved, output, annotationCount: annotations.length, annotations, domMap: inputs[0].domMap, ...frozen }
 }
 
 /**
@@ -60,8 +84,7 @@ function mountRecapture(router, { state, recapture }) {
     running = true
     try {
       const capture = await recapture(settings)
-      state.capture = { ...capture, settings }
-      state.annotations = []
+      state.images[0] = { ...state.images[0], capture: { ...capture, settings }, annotations: [] }
       res.json(success({ width: capture.width, height: capture.height, capture: captureMeta(settings) }))
     } catch (captureError) {
       res.status(502).json(failure(captureError.message))
@@ -76,21 +99,21 @@ function mountRecapture(router, { state, recapture }) {
  * saving from the annotator. They come with the request rather than from
  * state, which the client only saves after a pause, and nothing is decided.
  */
-function mountExport(router, { state }) {
-  router.post('/api/annotated-image', async (req, res) => {
+function mountExport(router, { image }) {
+  router.post('/api/annotated-image', image, async (req, res) => {
     const { annotations, error } = annotationsFromBody(req.body)
     if (error) { return res.status(400).json(failure(error)) }
     try {
-      res.type('png').send(await flattenAnnotations(state.capture.buffer, normalizeNotes(annotations)))
+      res.type('png').send(await flattenAnnotations(req.entry.capture.buffer, normalizeNotes(annotations)))
     } catch (renderError) {
       res.status(500).json(failure(renderError.message))
     }
   })
 
-  router.post('/api/feedback-text', (req, res) => {
+  router.post('/api/feedback-text', image, (req, res) => {
     const { annotations, error } = annotationsFromBody(req.body)
     if (error) { return res.status(400).json(failure(error)) }
-    const { width, height, domMap, settings } = state.capture
+    const { width, height, domMap, settings } = req.entry.capture
     const note = settings ? describeCapture(settings) : null
     try {
       res.json(success({ text: exportFeedback(annotations, width, height, null, domMap, note) }))
@@ -103,36 +126,40 @@ function mountExport(router, { state }) {
 
 export function createApiRouter({ origin, targetLabel, state, voiceNotes = false, recapture = null, replies = null, resolveDecision }) {
   const router = Router()
+  const image = imageAt(state)
 
-  router.get('/api/image', (_req, res) => {
+  router.get('/api/image', image, (req, res) => {
     // A recapture replaces the image behind the same URL.
-    res.set('Cache-Control', 'no-store').type(sniffImageType(state.capture.buffer)).send(state.capture.buffer)
+    res.set('Cache-Control', 'no-store').type(sniffImageType(req.entry.capture.buffer)).send(req.entry.capture.buffer)
   })
 
-  router.get('/api/meta', (_req, res) => {
-    const { width, height, settings } = state.capture
-    res.json(success({ width, height, origin, targetLabel, voiceNotes, capture: captureMeta(settings) }))
+  router.get('/api/meta', image, (req, res) => {
+    const { width, height, settings } = req.entry.capture
+    const images = state.images.length > 1
+      ? { images: state.images.map(({ label, capture }) => ({ label, width: capture.width, height: capture.height })) }
+      : {}
+    res.json(success({ width, height, origin, targetLabel, voiceNotes, capture: captureMeta(settings), ...images }))
   })
 
   // Lets the client outline the element under the pointer and name the
   // element each annotation will be matched to, before anything is submitted.
-  router.get('/api/elements', (_req, res) => {
-    res.json(success({ elements: state.capture.domMap ?? [] }))
+  router.get('/api/elements', image, (req, res) => {
+    res.json(success({ elements: req.entry.capture.domMap ?? [] }))
   })
 
-  router.get('/api/annotations', (_req, res) => {
-    res.json(success({ annotations: state.annotations }))
+  router.get('/api/annotations', image, (req, res) => {
+    res.json(success({ annotations: req.entry.annotations }))
   })
 
-  router.post('/api/annotations', (req, res) => {
+  router.post('/api/annotations', image, (req, res) => {
     const { annotations, error } = annotationsFromBody(req.body)
     if (error) { return res.status(400).json(failure(error)) }
-    state.annotations = [...annotations]
+    req.entry.annotations = [...annotations]
     res.json(success({ saved: true, count: annotations.length }))
   })
 
   mountRecapture(router, { state, recapture })
-  mountExport(router, { state })
+  mountExport(router, { image })
 
   // safeResolve keeps only the first decision; a second click must hear that instead of a success that is thrown away.
   const rejectWhileDeciding = (_req, res, next) => {
@@ -140,68 +167,51 @@ export function createApiRouter({ origin, targetLabel, state, voiceNotes = false
     next()
   }
 
-  router.post('/api/approve', rejectWhileDeciding, async (_req, res) => {
-    if (state.annotations.length === 0) {
-      state.decided = true
-      const frozen = freezeReplies(replies)
-      const pending = frozen.replyCount
-      res.json(success({ message: pending > 0 ? 'Approved with notes' : 'Approved' }))
-      setTimeout(() => resolveDecision(pending > 0
-        ? { approved: true, output: '', annotationCount: pending, annotations: [], repliesOnly: true, domMap: state.capture.domMap, ...frozen }
-        : { approved: true, output: formatApprovalOutput(), annotations: [], domMap: state.capture.domMap, ...frozen }), 100)
-      return
-    }
+  /** Freeze the replies, answer the browser and hand the decision to the waiting CLI a moment later. `build(frozen)` returns the `message` and the `decision`. */
+  function decide(res, build) {
+    state.decided = true
+    const { message, decision } = build(freezeReplies(replies))
+    res.json(success({ message }))
+    setTimeout(() => resolveDecision(decision), 100)
+  }
+
+  /** Render the notes of every image into a decision; shared by approving with notes and submitting feedback. */
+  async function decideWithNotes(res, message, approved) {
     state.deciding = true
     try {
-      const { notes, width, height, annotatedImagePath, domMap, note } = await decisionInputs(state)
-      const output = formatApprovalWithNotesOutput(notes, width, height, annotatedImagePath, domMap, note)
-      state.decided = true
-      const frozen = freezeReplies(replies)
-      res.json(success({ message: 'Approved with notes' }))
-      setTimeout(
-        () => resolveDecision({
-          approved: true, output, annotationCount: notes.length, annotations: notes, domMap: state.capture.domMap, ...frozen
-        }),
-        100
-      )
+      const inputs = await decisionInputs(state)
+      const output = renderDecision(inputs, approved)
+      decide(res, (frozen) => ({ message, decision: decisionOf(inputs, output, approved, frozen) }))
     } catch (error) {
       console.error(error)
       res.status(500).json(failure(error.message))
     } finally {
       state.deciding = false
     }
+  }
+
+  const domMapOf = () => state.images[0].capture.domMap
+
+  router.post('/api/approve', rejectWhileDeciding, async (_req, res) => {
+    if (totalNotes(state) > 0) { return decideWithNotes(res, 'Approved with notes', true) }
+    decide(res, (frozen) => {
+      const pending = frozen.replyCount
+      return pending > 0
+        ? {
+          message: 'Approved with notes',
+          decision: { approved: true, output: '', annotationCount: pending, annotations: [], repliesOnly: true, domMap: domMapOf(), ...frozen }
+        }
+        : { message: 'Approved', decision: { approved: true, output: formatApprovalOutput(), annotations: [], domMap: domMapOf(), ...frozen } }
+    })
   })
 
   router.post('/api/feedback', rejectWhileDeciding, async (_req, res) => {
-    if (state.annotations.length === 0) {
-      if ((replies?.count() ?? 0) === 0) { return res.status(400).json(failure('No annotations to submit: use Approve instead')) }
-      state.decided = true
-      const frozen = freezeReplies(replies)
-      res.json(success({ message: 'Feedback submitted' }))
-      setTimeout(() => resolveDecision({
-        approved: false, output: '', annotationCount: frozen.replyCount, annotations: [], repliesOnly: true, domMap: state.capture.domMap, ...frozen
-      }), 100)
-      return
-    }
-    state.deciding = true
-    try {
-      const { notes, width, height, annotatedImagePath, domMap, note } = await decisionInputs(state)
-      const output = exportFeedback(notes, width, height, annotatedImagePath, domMap, note)
-      state.decided = true
-      const frozen = freezeReplies(replies)
-      res.json(success({ message: 'Feedback submitted' }))
-      setTimeout(
-        () => resolveDecision({
-          approved: false, output, annotationCount: notes.length, annotations: notes, domMap: state.capture.domMap, ...frozen
-        }),
-        100
-      )
-    } catch (error) {
-      console.error(error)
-      res.status(500).json(failure(error.message))
-    } finally {
-      state.deciding = false
-    }
+    if (totalNotes(state) > 0) { return decideWithNotes(res, 'Feedback submitted', false) }
+    if ((replies?.count() ?? 0) === 0) { return res.status(400).json(failure('No annotations to submit: use Approve instead')) }
+    decide(res, (frozen) => ({
+      message: 'Feedback submitted',
+      decision: { approved: false, output: '', annotationCount: frozen.replyCount, annotations: [], repliesOnly: true, domMap: domMapOf(), ...frozen }
+    }))
   })
 
   return router

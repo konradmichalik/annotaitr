@@ -17,6 +17,7 @@ Which mode runs is auto-detected from the target:
   - one or more existing files, all markdown/plain-text   -> markdown mode
   - a single http(s) URL                                   -> image mode (capture)
   - a single existing image file (.png, .jpg, .jpeg, .webp, .svg) -> image mode
+  - several existing image files                           -> image mode, one session
   - a single existing video or GIF (${videoExtensions().join(', ')}) -> image mode,
     annotated on a timeline, with every annotated frame exported as PNG
   - a single existing PDF                                  -> image mode, page by page,
