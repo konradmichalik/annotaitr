@@ -16,6 +16,12 @@ export function isTypingTarget(target) {
   return false
 }
 
+/** Whether `target` is neither a field typed into nor inside a menu, dialog or listbox, which use keys themselves. */
+function isOutsideFieldsAndMenus(target) {
+  if (isTypingTarget(target)) { return false }
+  return !target?.closest?.('[role="menu"], [role="dialog"], [role="listbox"]')
+}
+
 /**
  * Whether a key press can serve as a single-key shortcut: no modifier held
  * (so Cmd+Z, Shift for the temporary mode and friends keep working), not
@@ -24,9 +30,7 @@ export function isTypingTarget(target) {
  */
 export function isPlainKeyPress(event) {
   if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) { return false }
-  const target = event.target
-  if (isTypingTarget(target)) { return false }
-  return !target?.closest?.('[role="menu"], [role="dialog"], [role="listbox"]')
+  return isOutsideFieldsAndMenus(event.target)
 }
 
 /**
@@ -44,7 +48,5 @@ export function isSaveKey(event) {
  */
 export function isShortcutListKey(event) {
   if (event.key !== '?' || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) { return false }
-  const target = event.target
-  if (isTypingTarget(target)) { return false }
-  return !target?.closest?.('[role="menu"], [role="dialog"], [role="listbox"]')
+  return isOutsideFieldsAndMenus(event.target)
 }
