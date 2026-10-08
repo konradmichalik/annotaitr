@@ -7,6 +7,7 @@ describe('origin labels', () => {
     expect(agentName('codex')).toBe('Codex')
     expect(agentName('opencode')).toBe('OpenCode')
     expect(agentName('vibe')).toBe('Mistral Vibe')
+    expect(agentName('gemini')).toBe('Gemini CLI')
   })
 
   it('has no agent name for a plain terminal or an unknown origin', () => {
@@ -19,6 +20,7 @@ describe('origin labels', () => {
     expect(waitingLabel('claude-code')).toBe('Claude Code is waiting')
     expect(waitingLabel('opencode')).toBe('OpenCode is waiting')
     expect(waitingLabel('vibe')).toBe('Mistral Vibe is waiting')
+    expect(waitingLabel('gemini')).toBe('Gemini CLI is waiting')
     expect(waitingLabel('cli')).toBe('Terminal is waiting')
     expect(waitingLabel(undefined)).toBe('Terminal is waiting')
   })

@@ -4,7 +4,7 @@ import { readEnvWithFallback } from '../server/core/config.js'
 import { parsePageRanges } from '../server/image/document/pages.js'
 import { isSessionId } from '../server/core/session/identity.js'
 
-const VALID_ORIGINS = ['cli', 'claude-code', 'codex', 'opencode', 'vibe']
+const VALID_ORIGINS = ['cli', 'claude-code', 'codex', 'opencode', 'vibe', 'gemini']
 export const VALID_MODES = ['image', 'markdown']
 const AS_ERROR = `--as requires a value (${VALID_MODES.join(', ')})`
 
@@ -30,7 +30,7 @@ function parseFeedbackNotes(value) {
  * turns the raw value into `{ value }` or `{ error }`.
  */
 const VALUE_OPTIONS = {
-  '--origin': { key: 'origin', noFlagValue: true, missing: '--origin requires a value (cli, claude-code, codex, opencode, vibe)' },
+  '--origin': { key: 'origin', noFlagValue: true, missing: '--origin requires a value (cli, claude-code, codex, opencode, vibe, gemini)' },
   '--as': {
     key: 'modeOverride',
     missing: AS_ERROR,

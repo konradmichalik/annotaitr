@@ -106,6 +106,7 @@ The header always says who is waiting for the decision. It comes from `--origin`
 | `claude-code` | Claude Code is waiting |
 | `opencode` | OpenCode is waiting |
 | `vibe` | Mistral Vibe is waiting |
+| `gemini` | Gemini CLI is waiting |
 | `cli` | Terminal is waiting |
 
 A status dot plus the words, never the dot alone. The tooltip names the caller (`Started from Claude Code`) and says the decision is printed back to that session. It does not name the slash command: the client never receives it, and the caller is what the reviewer needs to know.

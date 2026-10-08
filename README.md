@@ -134,6 +134,18 @@ mkdir -p ~/.vibe/skills/annotate
 curl -fsSL https://raw.githubusercontent.com/konradmichalik/annotaitr/main/apps/vibe/skills/annotate/SKILL.md -o ~/.vibe/skills/annotate/SKILL.md
 ```
 
+### Gemini CLI command
+
+Covers every target kind and drives the standalone CLI, so install that too:
+
+```bash
+curl -fsSL https://konradmichalik.github.io/annotaitr/install.sh | bash
+mkdir -p ~/.gemini/commands
+curl -fsSL https://raw.githubusercontent.com/konradmichalik/annotaitr/main/apps/gemini/commands/review.toml -o ~/.gemini/commands/annotaitr.toml
+```
+
+Then run `/annotaitr <target>` in Gemini CLI. Gemini CLI shell-escapes the arguments as one string, so pass a single target and no flags (untested).
+
 ### Standalone CLI
 
 ```bash
