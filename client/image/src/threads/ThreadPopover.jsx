@@ -99,21 +99,20 @@ export default function ThreadPopover({ thread, round, anchorPoint, onClose, onR
   // The real height is only known after rendering, and it changes as the thread grows, so the placement is measured before paint.
   const { x: anchorX, y: anchorY } = anchorPoint
   const [layout, setLayout] = useState(() => computeLayout(anchorPoint, 0))
-  const [viewportTick, setViewportTick] = useState(0)
-  useLayoutEffect(() => {
-    const onResize = () => setViewportTick((n) => n + 1)
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
   useLayoutEffect(() => {
     const el = popoverRef.current
     const parts = ['.thread-popover-header', '.thread-popover-body', '.reply-form']
-    const natural = parts.reduce((sum, selector) => {
-      const part = el.querySelector(selector)
-      return sum + (part ? (selector === '.thread-popover-body' ? part.scrollHeight : part.offsetHeight) : 0)
-    }, el.offsetHeight - el.clientHeight)
-    setLayout(computeLayout({ x: anchorX, y: anchorY }, natural))
-  }, [thread, anchorX, anchorY, viewportTick])
+    const measure = () => {
+      const natural = parts.reduce((sum, selector) => {
+        const part = el.querySelector(selector)
+        return sum + (part ? (selector === '.thread-popover-body' ? part.scrollHeight : part.offsetHeight) : 0)
+      }, el.offsetHeight - el.clientHeight)
+      setLayout(computeLayout({ x: anchorX, y: anchorY }, natural))
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [thread, anchorX, anchorY])
 
   return createPortal(
     <div
