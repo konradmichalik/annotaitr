@@ -320,7 +320,17 @@ saved, a warning goes to stderr and the decision is printed as usual. Several
 ### Replying to the agent
 
 In round 2 the reviewer can answer a thread from the previous round in the
-annotator. A decision may carry only replies and no new marks. Its first line
+annotator. Opening a thread, from its badge on the canvas or from the "Round 1
+replies" panel, shows a "Reply to the agent" field. Send, or Ctrl/Cmd+Enter,
+stores the reply as "pending, sent with your decision". It can be removed
+until the decision is submitted. The panel shows the reviewer's reply as
+"You: ..." and counts them as "· N to send", and a thread with a pending reply
+carries a ↩ mark on its canvas badge. A decision may carry only replies and no
+new marks, so Feedback is enabled with replies alone.
+
+Approving while the agent's questions are unanswered opens a warning: "The
+agent asked N questions you have not answered", with Answer and Approve
+anyway. It never blocks the approval. The decision's first line
 then reads `Feedback: 1 reply to round 1, no new marks.`, or
 `APPROVED WITH NOTES: 1 reply to round 1. ...` when the target is approved.
 

@@ -18,9 +18,11 @@ import PageNav from './document/PageNav.jsx'
 import PageImage from './document/PageImage.jsx'
 import { usePreviousRound } from './threads/usePreviousRound.js'
 import { useThreadPopover } from './threads/useThreadPopover.js'
+import ApprovalGate from './threads/ApprovalGate.jsx'
+import { useApprovalGate } from './threads/useApprovalGate.js'
 import PreviousRoundPanel from './threads/PreviousRoundPanel.jsx'
 import ThreadPopover from './threads/ThreadPopover.jsx'
-import { placedThreads, threadPageCounts, hasMark } from './threads/threadView.js'
+import { placedThreads, threadPageCounts, hasMark, pendingReplyCount } from './threads/threadView.js'
 import { useSettings } from './hooks/useSettings.js'
 import { useMediaPlayer } from './video/useMediaPlayer.js'
 import { useVideoReview } from './video/useVideoReview.js'
@@ -102,6 +104,8 @@ export default function App() {
     showPrevious, openThreadHandle, entryThread,
     openCanvasThread, showThread, showEntryThread, showTimelineThread, togglePrevious, closeThread
   } = useThreadPopover({ previousThreads, seekTo })
+  // Looked up in the current threads so a reload (a sent or removed reply) reaches the open popover.
+  const entryPopoverThread = entryThread && previous.threads.find((t) => t.handle === entryThread.handle)
   const markedThreads = previous.threads.filter(hasMark)
   const previousPageCounts = isDocument && showPrevious ? threadPageCounts(markedThreads) : undefined
   const timelineThreads = isVideo && showPrevious ? previous.threads.filter((t) => t.anchor !== 'orphan' && typeof t.annotation.time === 'number') : []
@@ -366,6 +370,10 @@ export default function App() {
     }
   }, [setErrorStatus, state.annotations, controller])
 
+  const { gateOpen, unanswered, approveRef, requestApproval, answerQuestions, approveAnyway } = useApprovalGate({
+    threads: previous.threads, submit, showThread, showEntryThread
+  })
+
   const zoomBy = useCallback((delta) => {
     setZoom((z) => Math.round(Math.max(0.1, Math.min(3, z + delta)) * 100) / 100)
   }, [])
@@ -393,6 +401,10 @@ export default function App() {
   }, [isDocument, zoomFit])
 
   const annotationCount = state.annotations.length
+  const replyCount = pendingReplyCount(previous.threads)
+  const decisionItemCount = annotationCount + replyCount
+  const notesTitle = [annotationCount > 0 && `${annotationCount} annotation${annotationCount === 1 ? '' : 's'}`, replyCount > 0 && `${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`].filter(Boolean).join(' and ')
+  const submitTitle = decisionItemCount === 0 ? 'Add annotations first' : `Submit ${notesTitle}`
   const origin = meta?.origin
 
   function statusText() {
@@ -458,13 +470,13 @@ export default function App() {
         <DoneScreen
           variant={decision}
           title={decision === 'approved'
-            ? (annotationCount > 0 ? 'Approved with Notes' : 'Approved')
+            ? (decisionItemCount > 0 ? 'Approved with Notes' : 'Approved')
             : 'Feedback Submitted'}
           message={decision === 'approved'
-            ? (annotationCount > 0
-              ? `Approved as-is. ${annotationCount} annotation${annotationCount === 1 ? '' : 's'} passed along as notes.`
+            ? (decisionItemCount > 0
+              ? `Approved as-is. ${notesTitle} passed along as notes.`
               : `No changes requested. The ${subject} was approved as-is.`)
-            : `${annotationCount} annotation${annotationCount === 1 ? '' : 's'} ${ORIGIN_LABELS[origin] ? `sent to ${ORIGIN_LABELS[origin]}` : 'submitted'}.`}
+            : `${notesTitle} ${ORIGIN_LABELS[origin] ? `sent to ${ORIGIN_LABELS[origin]}` : 'submitted'}.`}
         >
           <p className="done-hint">
             {decision === 'feedback' && ORIGIN_LABELS[origin]
@@ -499,22 +511,23 @@ export default function App() {
             type="button"
             onClick={() => submit('feedback')}
             className="btn btn-feedback"
-            disabled={annotationCount === 0 || !!exportProgress}
-            title={annotationCount === 0 ? 'Add annotations first' : `Submit ${annotationCount} annotation(s)`}
+            disabled={decisionItemCount === 0 || !!exportProgress}
+            title={submitTitle}
           >
             Feedback
-            {annotationCount > 0 && <span className="btn-badge">{annotationCount}</span>}
+            {decisionItemCount > 0 && <span className="btn-badge">{decisionItemCount}</span>}
           </button>
           <button
             type="button"
-            onClick={() => submit('approve')}
+            ref={approveRef}
+            onClick={requestApproval}
             className="btn btn-approve"
             disabled={!!exportProgress}
-            title={annotationCount > 0
-              ? `Approve as-is and pass ${annotationCount} annotation(s) along as notes`
+            title={decisionItemCount > 0
+              ? `Approve as-is and pass ${notesTitle} along as notes`
               : `Approve the ${subject} as-is`}
           >
-            {annotationCount > 0 ? 'Approve with Notes' : 'Approve'}
+            {decisionItemCount > 0 ? 'Approve with Notes' : 'Approve'}
           </button>
           <button
             type="button"
@@ -600,6 +613,7 @@ export default function App() {
                 fixedColor={settings.fixedColor}
                 previousThreads={previousThreads}
                 previousRound={previous.round}
+                onReloadThreads={previous.reload}
                 showPrevious={showPrevious}
                 openThreadHandle={openThreadHandle}
                 onOpenThread={openCanvasThread}
@@ -677,9 +691,10 @@ export default function App() {
                 onDone={showToast}
               />
             </div>
+            {gateOpen && <ApprovalGate threads={unanswered} round={previous.round} onAnswer={answerQuestions} onApproveAnyway={approveAnyway} />}
             <PreviousRoundPanel round={previous.round} threads={previous.threads} showOnImage={showPrevious} onToggleShowOnImage={togglePrevious} onShow={showThread} onShowDetached={showEntryThread} />
-            {entryThread && (
-              <ThreadPopover key={entryThread.thread.handle} thread={entryThread.thread} round={previous.round} anchorPoint={entryThread.anchorPoint} onClose={closeThread} />
+            {entryPopoverThread && (
+              <ThreadPopover key={entryPopoverThread.handle} thread={entryPopoverThread} round={previous.round} anchorPoint={entryThread.anchorPoint} onClose={closeThread} onReload={previous.reload} />
             )}
             <AnnotationPanel
               annotations={review.ordered}

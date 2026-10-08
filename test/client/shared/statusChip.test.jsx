@@ -49,4 +49,15 @@ describe('ReplyList', () => {
     expect(html).toContain('Moved it')
     expect(html).not.toContain('<time')
   })
+
+  it('shows no status chip for a reviewer reply and marks a pending one', () => {
+    const html = renderToStaticMarkup(
+      <ReplyList display={display} labels={{ human: 'You' }} pendingLabel="pending, sent with your decision"
+        replies={[{ id: 'h1', author: 'human', text: 'Green', createdAt: 1, pending: true }]} onRemove={() => {}} />
+    )
+    expect(html).not.toContain('status-chip')
+    expect(html).toContain('pending, sent with your decision')
+    expect(html).toContain('<button type="button"')
+    expect(html).toContain('Remove')
+  })
 })

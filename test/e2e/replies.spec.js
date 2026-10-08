@@ -62,6 +62,94 @@ test.describe('replies from the last round', () => {
   })
   test.afterEach(async () => { await rm(dir, { recursive: true, force: true }) })
 
+  test('submits a round that only carries a reply', async ({ page }) => {
+    await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Button colour', color: '#bf616a' }, 'question', 'Green or blue?')
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      const section = page.getByRole('region', { name: /Round 1 replies/ })
+      await section.getByRole('button', { name: /1\..*question/ }).click()
+      const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
+      await dialog.getByLabel('Reply to the agent').fill('Green')
+      await dialog.getByRole('button', { name: 'Send' }).click()
+      await page.keyboard.press('Escape')
+      await expect(section.getByText('You: Green')).toBeVisible()
+      await expect(section.getByText('1 to send')).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Approve with Notes' })).toBeVisible()
+      await expect(page.locator('.previous-round-badge[aria-label*="reply pending"]')).toHaveCount(1)
+      const feedback = page.getByRole('button', { name: /^Feedback/ })
+      await expect(feedback).toBeEnabled()
+      await expect(feedback).toHaveAttribute('title', 'Submit 1 reply')
+      await feedback.click()
+      await expect(page.getByRole('heading', { name: 'Feedback Submitted' })).toBeVisible()
+      await expect(page.getByText(/^1 reply (sent to|submitted)/)).toBeVisible()
+      await cli.exited
+      const out = cli.stdout()
+      expect(out).toMatch(/^Feedback: 1 reply to round 1, no new marks\./)
+      expect(out).toContain('Reviewer: Green')
+
+      const sessionId = out.match(/Session: ([0-9a-f]{12})/)[1]
+      spawnSync('node', ['index.js', 'reply', '--session', sessionId, '--to', UUID.slice(0, 8), '--status', 'applied', '--text', 'Green it is'], {
+        env: { ...process.env, ...env }, encoding: 'utf-8'
+      })
+      const third = startCli([image], env)
+      try {
+        await page.goto(await third.url)
+        await page.getByRole('region', { name: /replies/ }).getByRole('button', { name: /1\./ }).click()
+        await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' })).toBeVisible()
+      } finally {
+        third.child.kill()
+      }
+    } finally {
+      cli.child.kill()
+    }
+  })
+
+  test('answers the agent in the popover, removes and resends the reply', async ({ page }) => {
+    await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Button colour', color: '#bf616a' }, 'question', 'Green or blue?')
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      await page.getByRole('region', { name: /Round 1 replies/ }).getByRole('button', { name: /1\..*question/ }).click()
+      const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
+      const field = dialog.getByLabel('Reply to the agent')
+      await field.fill('x'.repeat(4001))
+      await dialog.getByRole('button', { name: 'Send' }).click()
+      await expect(dialog.getByRole('alert')).toContainText('longer than 4000')
+      await expect(field).toHaveValue('x'.repeat(4001))
+      await field.fill('Green, the dark one')
+      await field.press('Control+Enter')
+      await expect(dialog.getByText('pending, sent with your decision')).toBeVisible()
+      await expect(field).toHaveValue('')
+      await dialog.getByRole('button', { name: 'Remove your reply' }).click()
+      await expect(dialog.getByText('pending, sent with your decision')).toHaveCount(0)
+      await field.fill('Green')
+      await dialog.getByRole('button', { name: 'Send' }).click()
+      await expect(dialog.getByText('Green', { exact: true })).toBeVisible()
+    } finally {
+      cli.child.kill()
+    }
+  })
+
+  test('keeps a popover opened from the panel in sync when replying to a mark outside the image', async ({ page }) => {
+    await firstRoundWithReply(image, env, { id: UUID, type: 'pin', geometry: { x: 380, y: 280 }, text: 'Corner', color: '#bf616a' }, 'question', 'Which corner?')
+    await writeFile(image, makeFixturePng(200, 150))
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      await page.getByRole('region', { name: /Round 1 replies/ }).getByRole('button', { name: /1\./ }).click()
+      const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
+      const field = dialog.getByLabel('Reply to the agent')
+      await field.fill('The top one')
+      await field.press('Control+Enter')
+      await expect(dialog.getByText('pending, sent with your decision')).toBeVisible()
+      await dialog.getByRole('button', { name: 'Remove your reply' }).click()
+      await expect(dialog.getByText('pending, sent with your decision')).toHaveCount(0)
+    } finally {
+      cli.child.kill()
+    }
+  })
+
   test('shows the mark with its reply, opens the thread from the canvas and hides it on demand', async ({ page }) => {
     await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Button too close', color: '#bf616a' })
     const cli = startCli([image], env)
@@ -387,6 +475,147 @@ test.describe('replies from the last round', () => {
       await expect(page.locator('.timeline-time')).not.toContainText('00:01.000 /')
       await expect(page.getByRole('dialog')).toHaveCount(0)
       await expect(entry).not.toBeFocused()
+    } finally {
+      cli.child.kill()
+    }
+  })
+
+  test('warns before approving with an unanswered question and lets the reviewer answer or approve anyway', async ({ page }) => {
+    await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Button colour', color: '#bf616a' }, 'question', 'Green or blue?')
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      const approve = page.getByRole('button', { name: /^Approve/ })
+      await approve.click()
+      const gate = page.getByRole('dialog', { name: /question.*not answered/ })
+      await expect(gate.getByText('Green or blue?')).toBeVisible()
+      await expect(gate.getByRole('button', { name: 'Answer' })).toBeFocused()
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' })).toBeVisible()
+      await page.keyboard.press('Escape')
+      await approve.click()
+      await page.getByRole('dialog', { name: /question.*not answered/ }).getByRole('button', { name: 'Approve anyway' }).click()
+      await expect(page.getByRole('heading', { name: /Approved/ })).toBeVisible()
+      await cli.exited
+      expect(cli.stdout()).toMatch(/^APPROVED/)
+    } finally {
+      cli.child.kill()
+    }
+  })
+
+  test('answers a question on a general comment from the gate', async ({ page }) => {
+    await firstRoundWithReply(image, env, { id: UUID, type: 'comment', geometry: null, text: 'Overall' }, 'question', 'Which tone?')
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      await page.getByRole('button', { name: /^Approve/ }).click()
+      await page.getByRole('dialog', { name: /question.*not answered/ }).getByRole('button', { name: 'Answer' }).click()
+      await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' })).toBeVisible()
+    } finally {
+      cli.child.kill()
+    }
+  })
+
+  test('keeps the reply form inside a short viewport as the thread grows', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 640 })
+    await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 200, width: 120, height: 90 }, text: 'Button colour', color: '#bf616a' }, 'question', 'Green or blue?')
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      await page.getByRole('region', { name: /Round 1 replies/ }).getByRole('button', { name: /1\..*question/ }).click()
+      const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
+      const field = dialog.getByLabel('Reply to the agent')
+      for (const text of ['Green', 'Dark green please', 'Really the dark one']) {
+        await field.fill(text)
+        await dialog.getByRole('button', { name: 'Send' }).click()
+        await expect(dialog.getByText(text, { exact: true })).toBeVisible()
+      }
+      const box = await field.boundingBox()
+      const popover = await dialog.boundingBox()
+      expect(box.y + box.height).toBeLessThanOrEqual(640)
+      expect(box.y).toBeGreaterThanOrEqual(0)
+      expect(popover.y).toBeGreaterThanOrEqual(0)
+      expect(popover.y + popover.height).toBeLessThanOrEqual(640)
+    } finally {
+      cli.child.kill()
+    }
+  })
+
+  test('keeps the round title readable with a reply to send, focuses the field after Remove and removes once', async ({ page }) => {
+    await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Button colour', color: '#bf616a' }, 'question', 'Green or blue?')
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      const section = page.getByRole('region', { name: /Round 1 replies/ })
+      await section.getByRole('button', { name: /1\..*question/ }).click()
+      const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
+      const field = dialog.getByLabel('Reply to the agent')
+      await field.fill('Green')
+      await dialog.getByRole('button', { name: 'Send' }).click()
+      await expect(section.getByText('1 to send')).toBeVisible()
+      const fits = await section.locator('.previous-round-title').evaluate((el) => el.scrollWidth <= el.clientWidth)
+      expect(fits).toBe(true)
+      for (const selector of ['.reply-list-remove', '.reply-form-send']) {
+        expect((await dialog.locator(selector).boundingBox()).height).toBeGreaterThanOrEqual(44)
+      }
+      let deletes = 0
+      page.on('request', (req) => { if (req.method() === 'DELETE') { deletes += 1 } })
+      await dialog.getByRole('button', { name: 'Remove your reply' }).dblclick()
+      await expect(dialog.getByText('pending, sent with your decision')).toHaveCount(0)
+      await expect(field).toBeFocused()
+      await expect(dialog.getByRole('alert')).toHaveCount(0)
+      expect(deletes).toBe(1)
+    } finally {
+      cli.child.kill()
+    }
+  })
+
+  test('does not warn when every question has a pending reply', async ({ page }) => {
+    await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Button colour', color: '#bf616a' }, 'question', 'Green or blue?')
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      await page.getByRole('region', { name: /Round 1 replies/ }).getByRole('button', { name: /1\..*question/ }).click()
+      const dialog = page.getByRole('dialog', { name: 'Round 1, mark 1' })
+      await dialog.getByLabel('Reply to the agent').fill('Green')
+      await dialog.getByRole('button', { name: 'Send' }).click()
+      await expect(dialog.getByText('pending, sent with your decision')).toBeVisible()
+      await page.keyboard.press('Escape')
+      await page.getByRole('button', { name: /^Approve/ }).click()
+      await expect(page.getByRole('dialog', { name: /not answered/ })).toHaveCount(0)
+      await expect(page.getByRole('heading', { name: 'Approved with Notes' })).toBeVisible()
+      await expect(page.getByText(/1 reply passed along as notes/)).toBeVisible()
+      await cli.exited
+      expect(cli.stdout()).toMatch(/^APPROVED WITH NOTES: 1 reply to round 1\./)
+    } finally {
+      cli.child.kill()
+    }
+  })
+
+  test('keeps focus inside the approval gate and returns it to Approve', async ({ page }) => {
+    await firstRoundWithReply(image, env, { id: UUID, type: 'box', geometry: { x: 40, y: 40, width: 120, height: 80 }, text: 'Button colour', color: '#bf616a' }, 'question', 'Green or blue?')
+    const cli = startCli([image], env)
+    try {
+      await page.goto(await cli.url)
+      const approve = page.getByRole('button', { name: /^Approve/ })
+      await approve.click()
+      const gate = page.getByRole('dialog', { name: /question.*not answered/ })
+      const answer = gate.getByRole('button', { name: 'Answer' })
+      await expect(answer).toBeFocused()
+      // An app re-render behind the gate must not move focus.
+      await page.getByRole('button', { name: /zoom in/i }).evaluate((b) => b.click())
+      await expect(answer).toBeFocused()
+      await page.keyboard.press('Shift+Tab')
+      await expect(gate.getByRole('button', { name: 'Approve anyway' })).toBeFocused()
+      await page.keyboard.press('Tab')
+      await expect(answer).toBeFocused()
+      await page.keyboard.press('Shift+Tab')
+      await page.keyboard.press('Shift+Tab')
+      await expect(answer).toBeFocused()
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('dialog', { name: 'Round 1, mark 1' })).toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(approve).toBeFocused()
     } finally {
       cli.child.kill()
     }

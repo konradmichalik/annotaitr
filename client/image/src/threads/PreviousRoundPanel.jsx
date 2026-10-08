@@ -1,17 +1,18 @@
 import StatusChip from '../../../shared/components/StatusChip.jsx'
 import { ACTION_ICONS } from '../utils/icons.jsx'
-import { STATUS_DISPLAY, AUTHOR_LABELS, threadStatus, orphanThreads, hasMark } from './threadView.js'
+import { STATUS_DISPLAY, AUTHOR_LABELS, threadStatus, threadLabel, orphanThreads, hasMark, pendingReplies, pendingReplyCount } from './threadView.js'
 
-function ThreadEntry({ thread, onActivate }) {
+function ThreadEntry({ thread, round, onActivate }) {
   const lastReply = thread.replies.at(-1)
+  const hasPending = pendingReplies(thread).length > 0
   return (
     <li>
       <button type="button" className="previous-round-entry" onClick={(event) => onActivate(thread, event.currentTarget)}>
-        <span className="previous-round-entry-number">{thread.number}.</span>
+        <span className="previous-round-entry-number">{threadLabel(thread, round)}.</span>
         <StatusChip status={threadStatus(thread)} display={STATUS_DISPLAY} />
         <span className="previous-round-entry-text">{thread.annotation.text}</span>
         {lastReply && (
-          <span className="previous-round-entry-reply">{AUTHOR_LABELS.agent}: {lastReply.text}</span>
+          <span className={`previous-round-entry-reply${hasPending ? ' previous-round-entry-reply--pending' : ''}`}>{AUTHOR_LABELS[lastReply.author ?? 'agent']}: {lastReply.text}</span>
         )}
         {thread.anchor === 'orphan' && thread.reason && <span className="previous-round-entry-reason">{thread.reason}</span>}
       </button>
@@ -22,6 +23,7 @@ function ThreadEntry({ thread, onActivate }) {
 export default function PreviousRoundPanel({ round, threads, showOnImage, onToggleShowOnImage, onShow, onShowDetached }) {
   if (threads.length === 0) { return null }
 
+  const toSend = pendingReplyCount(threads)
   const orphans = orphanThreads(threads)
   const placed = threads.filter((t) => t.anchor !== 'orphan')
 
@@ -53,18 +55,19 @@ export default function PreviousRoundPanel({ round, threads, showOnImage, onTogg
       <details open>
         <summary id="previous-round-summary">
           <span className="previous-round-icon">{ACTION_ICONS.history}</span>
-          Round {round} replies <span className="panel-badge">{threads.length}</span>
+          <span className="previous-round-title">Round {round} replies</span> <span className="panel-badge">{threads.length}</span>
+          {toSend > 0 && <span className="previous-round-to-send">· {toSend} to send</span>}
         </summary>
         {placed.length > 0 && (
           <ul className="previous-round-list">
-            {placed.map((t) => <ThreadEntry key={t.handle} thread={t} onActivate={activate} />)}
+            {placed.map((t) => <ThreadEntry key={t.handle} thread={t} round={round} onActivate={activate} />)}
           </ul>
         )}
         {orphans.length > 0 && (
           <>
             <h3 className="previous-round-heading">No longer in the target</h3>
             <ul className="previous-round-list">
-              {orphans.map((t) => <ThreadEntry key={t.handle} thread={t} onActivate={activate} />)}
+              {orphans.map((t) => <ThreadEntry key={t.handle} thread={t} round={round} onActivate={activate} />)}
             </ul>
           </>
         )}

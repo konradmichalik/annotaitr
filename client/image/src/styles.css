@@ -809,12 +809,19 @@ button.voice-note:hover {
 .thread-popover-body {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   gap: 0.375rem;
-  max-height: 60vh;
+  min-height: 0;
   padding: 0.75rem;
   overflow-y: auto;
   color: var(--text);
   font-size: 0.8125rem;
+}
+
+.thread-popover-footer {
+  flex: none;
+  padding: 0.5rem 0.75rem 0.75rem;
+  border-top: 1px solid var(--border);
 }
 
 .thread-popover-title {
@@ -869,6 +876,60 @@ button.voice-note:hover {
 
 .thread-popover-empty {
   color: var(--text-muted);
+}
+
+.reply-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.reply-form-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.reply-form-field {
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-card);
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}
+
+.reply-form-field:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.reply-form-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.75rem;
+}
+
+.reply-form-send {
+  align-self: flex-end;
+  min-height: 2.75rem;
+  padding: 0.25rem 1rem;
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  background: var(--primary);
+  color: var(--on-primary-strong);
+  font: inherit;
+  cursor: pointer;
+}
+
+.reply-form-send:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.reply-form-send:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .resize-handle {
@@ -1690,6 +1751,7 @@ button.voice-note:hover {
 .previous-round-panel summary {
   display: flex;
   gap: 0.375rem;
+  flex-wrap: wrap;
   align-items: center;
   padding: 0.25rem var(--switch-room) 0.25rem 1rem;
   white-space: nowrap;
@@ -1855,6 +1917,24 @@ button.voice-note:hover {
   white-space: nowrap;
 }
 
+.previous-round-entry-reply--pending {
+  font-style: italic;
+}
+
+.previous-round-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.previous-round-to-send {
+  flex-basis: 100%;
+  padding-left: 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
 .previous-round-entry-reason {
   flex-basis: 100%;
   font-size: 0.75rem;
@@ -1910,4 +1990,24 @@ button.voice-note:hover {
     forced-color-adjust: none;
     border: 1px solid CanvasText;
   }
+}
+
+.approval-gate-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.approval-gate-text,
+.approval-gate-question {
+  margin: 0.25rem 0 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.approval-gate-question {
+  color: var(--text-muted);
+  font-style: italic;
 }

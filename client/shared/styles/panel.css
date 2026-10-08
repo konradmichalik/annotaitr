@@ -441,6 +441,28 @@
   white-space: pre-wrap;
 }
 
+.reply-list-pending {
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  font-style: italic;
+}
+
+.reply-list-remove {
+  min-height: 2.75rem;
+  padding: 0 0.25rem;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.reply-list-remove:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 .reply-list-time {
   color: var(--text-muted);
   font-size: 0.6875rem;

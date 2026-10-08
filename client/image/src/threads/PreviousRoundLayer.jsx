@@ -1,5 +1,5 @@
 import { annotationTopAnchor } from '../utils/drawing.js'
-import { statusDisplay, threadStatus, badgeShowsNumber } from './threadView.js'
+import { statusDisplay, threadStatus, badgeShowsNumber, threadNumber, pendingReplies } from './threadView.js'
 
 const BADGE_HEIGHT = 20
 const MARKER_SIZE = 16
@@ -11,21 +11,24 @@ const PADDING = 16
 
 function Badge({ thread, anchor }) {
   const { label } = statusDisplay(thread)
-  const chipWidth = label.length * CHAR_WIDTH + PADDING
+  const replyPending = pendingReplies(thread).length > 0
+  // The two extra characters make room for the ' ↩' appended to the label.
+  const chipWidth = (label.length + (replyPending ? 2 : 0)) * CHAR_WIDTH + PADDING
   const markerWidth = badgeShowsNumber(thread) ? MARKER_SIZE + GAP : 0
   const width = markerWidth + chipWidth
   return (
-    <g className={`previous-round-badge status--${threadStatus(thread)}`} transform={`translate(${anchor.x - width / 2} ${Math.max(0, anchor.y - BADGE_HEIGHT - 4)})`}>
+    <g className={`previous-round-badge status--${threadStatus(thread)}`} transform={`translate(${anchor.x - width / 2} ${Math.max(0, anchor.y - BADGE_HEIGHT - 4)})`} role={replyPending ? 'img' : undefined} aria-label={replyPending ? `${label}, reply pending` : undefined}>
+      {replyPending && <title>{label}, reply pending</title>}
       {markerWidth > 0 && (
         <>
           <circle className="previous-round-badge-marker" cx={MARKER_SIZE / 2} cy={BADGE_HEIGHT / 2} r={MARKER_SIZE / 2} />
-          <text className="previous-round-badge-number" x={MARKER_SIZE / 2} y={BADGE_HEIGHT / 2} textAnchor="middle" dominantBaseline="central">{thread.number}</text>
+          <text className="previous-round-badge-number" x={MARKER_SIZE / 2} y={BADGE_HEIGHT / 2} textAnchor="middle" dominantBaseline="central">{threadNumber(thread)}</text>
         </>
       )}
       {/* The tint is translucent like the sidebar chip, so an opaque plate underneath keeps the label readable over any image. */}
       <rect className="previous-round-badge-plate" x={markerWidth} width={chipWidth} height={BADGE_HEIGHT} rx={BADGE_HEIGHT / 2} />
       <rect className="previous-round-badge-chip" x={markerWidth} width={chipWidth} height={BADGE_HEIGHT} rx={BADGE_HEIGHT / 2} />
-      <text className="previous-round-badge-label" x={markerWidth + chipWidth / 2} y={BADGE_HEIGHT / 2} textAnchor="middle" dominantBaseline="central">{label}</text>
+      <text className="previous-round-badge-label" x={markerWidth + chipWidth / 2} y={BADGE_HEIGHT / 2} textAnchor="middle" dominantBaseline="central">{label}{replyPending ? ' ↩' : ''}</text>
     </g>
   )
 }
@@ -44,7 +47,7 @@ export default function PreviousRoundLayer({ threads, Shape, fallbackColor }) {
       {threads.map((thread) => (
         <g key={thread.handle} className={`previous-round-mark previous-round--${thread.anchor}`}>
           <g className="previous-round-shape">
-            <Shape annotation={{ ...thread.annotation, id: `prev-${thread.handle}` }} number={thread.number} markerId={`arrowhead-prev-${thread.handle}`} />
+            <Shape annotation={{ ...thread.annotation, id: `prev-${thread.handle}` }} number={threadNumber(thread)} markerId={`arrowhead-prev-${thread.handle}`} />
           </g>
           <Badge thread={thread} anchor={annotationTopAnchor(thread.annotation)} />
         </g>

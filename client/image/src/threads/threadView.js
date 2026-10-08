@@ -13,9 +13,23 @@ export const STATUS_DISPLAY = {
   none: { icon: '·', label: 'no reply' }
 }
 
+// The status of the last sent reply: a reviewer's answer reads as no reply until the agent responds, a pending one is not sent yet.
 export function threadStatus(thread) {
-  return thread.replies.at(-1)?.status ?? 'none'
+  const last = thread.replies.findLast((r) => !r.pending)
+  return last?.author === 'human' ? 'none' : (last?.status ?? 'none')
 }
+
+/** A thread carried into this round has no number of its own, it keeps the round and number it was raised with. */
+export const threadRound = (thread, round) => thread.origin?.round ?? round
+export const threadNumber = (thread) => thread.origin?.number ?? thread.number
+// The panel lists carried threads beside this round's own, so a number from another round carries its round.
+export const threadLabel = (thread, round) => (threadRound(thread, round) === round ? `${threadNumber(thread)}` : `${threadRound(thread, round)}·${threadNumber(thread)}`)
+export const threadTitle = (thread, round) => `Round ${threadRound(thread, round)} · mark ${threadNumber(thread)}`
+
+export const pendingReplies = (thread) => thread.replies.filter((r) => r.pending)
+export const pendingReplyCount = (threads) => threads.reduce((sum, t) => sum + pendingReplies(t).length, 0)
+
+export const openQuestions = (threads) => threads.filter((t) => threadStatus(t) === 'question' && pendingReplies(t).length === 0)
 
 // A status from a hand-edited session must not crash the canvas, it reads as no reply.
 export function statusDisplay(thread) {
