@@ -1,6 +1,6 @@
 # Development
 
-## Getting Started
+## Getting started
 
 ```bash
 git clone https://github.com/konradmichalik/annotaitr.git
@@ -21,7 +21,7 @@ npm run test:e2e           # Playwright E2E tests
 `dev:client`/`dev:client:image` serve the client alone; point them at a
 separately-running server with `ANNOTAITR_NO_OPEN=1 node index.js <target>`.
 
-## Claude Code Plugin Testing
+## Claude Code plugin testing
 
 ```bash
 # Install local plugin
@@ -31,7 +31,7 @@ claude plugin install ./apps/claude-code --scope user
 claude --plugin-dir ./apps/claude-code
 ```
 
-## OpenCode Plugin Testing
+## OpenCode plugin testing
 
 The OpenCode plugin bundles the entire server + client into a single file via tsup. To test locally:
 
@@ -86,6 +86,6 @@ After changes to the client, server, or plugin source:
 npm run build && cd apps/opencode && npm run build && cd ../..
 ```
 
-## Environment Variables
+## Environment variables
 
 See [Usage](usage.md#environment-variables) for the full `ANNOTAITR_*` list (`MD_ANNOTATOR_*` still works as a deprecated fallback).
