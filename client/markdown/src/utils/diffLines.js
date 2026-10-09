@@ -1,7 +1,9 @@
 const HUNK_HEADER = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/
 
-function isMetaLine(text) {
-  return text.startsWith('--- ') || text.startsWith('+++ ') || text.startsWith('\\') ||
+// File headers only come before the first hunk. Inside a hunk a line such as
+// `--- old comment` is a removed `-- old comment`, not a header.
+function isFileHeader(text) {
+  return text.startsWith('--- ') || text.startsWith('+++ ') ||
     text.startsWith('diff --git ') || text.startsWith('index ')
 }
 
@@ -20,7 +22,7 @@ export function parseDiffLines(content) {
       newNo = Number(hunk[2])
       return { kind: 'hunk', text, oldNo: null, newNo: null }
     }
-    if (isMetaLine(text)) {
+    if (text.startsWith('\\') || (oldNo === null && isFileHeader(text))) {
       return { kind: 'meta', text, oldNo: null, newNo: null }
     }
     if (text.startsWith('+')) {

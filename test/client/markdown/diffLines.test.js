@@ -32,6 +32,14 @@ describe('parseDiffLines', () => {
       { kind: 'context', text: ' b', oldNo: null, newNo: null }
     ])
   })
+
+  it('reads lines that look like file headers inside a hunk as changes', () => {
+    const lines = parseDiffLines('--- a/q.sql\n+++ b/q.sql\n@@ -1,2 +1,2 @@\n--- old comment\n+++ new comment\n x')
+    expect(lines.map((l) => [l.kind, l.oldNo, l.newNo])).toEqual([
+      ['meta', null, null], ['meta', null, null], ['hunk', null, null],
+      ['del', 1, null], ['add', null, 1], ['context', 2, 2]
+    ])
+  })
 })
 
 describe('countDiffLines', () => {
