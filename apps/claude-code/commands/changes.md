@@ -56,12 +56,12 @@ open and end your turn. When the command finishes, read its output.
 - `APPROVED WITH NOTES:`: commit as above. Treat the notes as context, mention them briefly, change nothing because of them.
 - Annotation feedback: revise, then present again (step 5). Do not commit.
 
-Each feedback heading names the note's number and intent, such as
-`## 3. Question · Text (Lines 40-42) [#a3f19c2e]`. Its line numbers refer to
-the walkthrough, not to the source. Find the place in the source from the
-quoted text and the `## <path>` section it sits in: `+` lines are the new
-code, `-` lines the old one, and a quote from your own explanation refers to
-the explanation or the commit message.
+Each feedback heading names the note's number, its intent and where it
+points. A note on the diff names the file and the line in it:
+`## 3. Change · Text (new Lines 43-49 in src/Foo.php) [#a3f19c2e]`. `new`
+lines are the code after your change, `old` lines the code that was removed.
+A note on your own text, such as the summary or the commit message, names a
+line of the walkthrough instead (`(Line 5)`); its quote shows which part it is.
 
 - **Change**: apply the comment to the quoted code or text
 - **Add**: add what the comment asks for there; an `Insertion` gives the text to insert after its `After:` context

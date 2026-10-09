@@ -1,3 +1,4 @@
+// A copy of client/markdown/src/utils/diffLines.js: server and client share no modules.
 const HUNK_HEADER = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/
 
 function isMetaLine(text) {

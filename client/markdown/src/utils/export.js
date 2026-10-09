@@ -5,6 +5,7 @@
 
 import { intentOf, intentWord } from '../../../shared/utils/intents.js'
 import { annotationHandle } from '../../../shared/utils/annotationId.js'
+import { diffLineRef } from './diffLines.js'
 
 function handleTag(id) {
   const handle = annotationHandle(id)
@@ -100,11 +101,13 @@ export function formatAnnotationsForExport(annotations, blocks, filePath) {
     const blockContent = block?.content || ''
     const textBeforeSelection = blockContent.slice(0, ann.startOffset)
     const linesBeforeSelection = (textBeforeSelection.match(/\n/g) || []).length
-    const startLine = blockStartLine + linesBeforeSelection
+    // A code block starts at its opening fence, its first line of code is the next one.
+    const startLine = blockStartLine + (block?.type === 'code' ? 1 : 0) + linesBeforeSelection
     const newlinesInSelection = (ann.originalText.match(/\n/g) || []).length
     const endLine = startLine + newlinesInSelection
 
-    const lineRef = startLine === endLine ? `Line ${startLine}` : `Lines ${startLine}-${endLine}`
+    const lineRef = diffLineRef(block, linesBeforeSelection, linesBeforeSelection + newlinesInSelection) ??
+      (startLine === endLine ? `Line ${startLine}` : `Lines ${startLine}-${endLine}`)
 
     output += `## ${heading}`
 

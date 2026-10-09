@@ -99,6 +99,6 @@ export async function runChanges(args) {
   if (parsed.error) { return { error: `${parsed.error}\n${CHANGES_USAGE}` } }
   const prepared = await prepareWalkthrough(parsed)
   if (prepared.error || prepared.output) { return prepared }
-  await runMarkdown({ targets: [prepared.path], origin: parsed.origin, feedbackNotes: parsed.feedbackNotes })
+  await runMarkdown({ targets: [prepared.path], origin: parsed.origin, feedbackNotes: parsed.feedbackNotes, kind: 'changes' })
   return {}
 }

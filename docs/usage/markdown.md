@@ -65,4 +65,6 @@ The explanation is a JSON object, every field optional:
 
 The walkthrough is written to `changes.md` in the git directory, so it is never committed, and opens in Markdown mode with one file card per changed file. Files without a line in `files` are listed as `Not explained`, explanations for paths that did not change as `Explained but unchanged`. Lock files, binary files and files with more than 1000 changed lines show their counts instead of their hunks. With nothing to review, it prints `NO CHANGES:` and exits `0`.
 
+A note on a diff line names the changed file and the line in it, `new` for the code after the change and `old` for removed code: `## 1. Change · Text (new Lines 43-49 in src/Foo.php) [#a3f19c2e]`. A note on the explanation names its line in the walkthrough.
+
 In Claude Code, `/annotaitr:changes [base]` runs the whole loop: the agent writes the explanation, opens the walkthrough, commits with the proposed message after Approve and presents again after Send feedback.

@@ -266,3 +266,19 @@ describe('shortFileNames', () => {
     expect(shortFileNames(['a\\README.md', 'b\\README.md'])).toEqual(['a/README.md', 'b/README.md'])
   })
 })
+
+describe('formatAnnotationsForExport in code blocks', () => {
+  it('counts code lines from the line after the opening fence', () => {
+    const blocks = [makeBlock({ type: 'code', content: 'a\nb', language: 'js', startLine: 4 })]
+    const output = formatAnnotationsForExport([makeAnnotation({ originalText: 'b', startOffset: 2, endOffset: 3 })], blocks, 'x.md')
+    expect(output).toContain('Comment (Line 6)')
+  })
+
+  it('names the file and the new line for a selection in a diff block', () => {
+    const content = '@@ -1 +1 @@\n-a\n+b'
+    const blocks = [makeBlock({ type: 'code', content, language: 'diff src/x.js', startLine: 4 })]
+    const startOffset = content.indexOf('+b')
+    const output = formatAnnotationsForExport([makeAnnotation({ originalText: '+b', startOffset, endOffset: startOffset + 2 })], blocks, 'x.md')
+    expect(output).toContain('Comment (new Line 1 in src/x.js)')
+  })
+})

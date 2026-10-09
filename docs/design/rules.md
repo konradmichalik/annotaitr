@@ -295,7 +295,7 @@ The intent is a field of every annotation and part of the stdout output. Adding 
 Changes is designed but not built; code and later diff rounds are deferred. Changes adds to the contract in both directions:
 
 - **In:** the agent's explanation, read from a file it writes: title, summary, proposed commit message, one line per file and per hunk. annotaitr reads the diff from git itself and matches the explanation to it by path and line range; text for a path without changes is shown as a warning, not dropped.
-- **Out:** each note names its file, the side (`old` or `new`) and the line or line range, keeping the heading grammar (`## 1. Change · Lines (new Lines 43-49) [#a3f19c2e]`), followed by the quoted lines and the comment. A code suggestion follows as `Replaces:` and `Suggested code:` blocks. Notes on the overview name `Overview` or `Commit message`. The output starts with one line naming what was compared, and the decision says whether the agent may commit.
+- **Out:** each note names its file, the side (`old` or `new`) and the line or line range, keeping the heading grammar (`## 1. Change · Text (new Lines 43-49 in src/Foo.php) [#a3f19c2e]`), followed by the quoted lines and the comment. A code suggestion follows as `Replaces:` and `Suggested code:` blocks. Notes on the overview name `Overview` or `Commit message`. The output starts with one line naming what was compared, and the decision says whether the agent may commit.
 
 All of it goes with tests and an update to [usage.md](../usage.md) in the same pull request as the mode.
 

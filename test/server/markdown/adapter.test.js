@@ -28,4 +28,18 @@ describe('buildMarkdownServer', () => {
     server = await buildMarkdownServer({ filePaths: [readablePath] })
     expect(server.port).toBeGreaterThan(0)
   })
+
+  it('tells the client whether a file is a changes walkthrough', async () => {
+    await writeFile(readablePath, '# Changes')
+    server = await buildMarkdownServer({ filePaths: [readablePath], kind: 'changes' })
+    const body = await (await fetch(`${server.url}/api/files`)).json()
+    expect(body.data.files[0].kind).toBe('changes')
+  })
+
+  it('marks an ordinary file as a document', async () => {
+    await writeFile(readablePath, '# Hello')
+    server = await buildMarkdownServer({ filePaths: [readablePath] })
+    const body = await (await fetch(`${server.url}/api/files`)).json()
+    expect(body.data.files[0].kind).toBe('document')
+  })
 })
