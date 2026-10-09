@@ -5,13 +5,13 @@ export const CHAT_IMAGE_HINT =
   'Find the `[Image: source: <path>]` line for it in the conversation and run annotaitr on that path.\n'
 
 const HELP_TEXT = `
-annotaitr — Annotate an image, a captured web page, a video or GIF, or
-Markdown/plain-text files in the browser
+annotaitr — Annotate an image, a captured web page, a video or GIF, a PDF,
+or Markdown/plain-text files in the browser
 
 Usage:
   annotaitr [options] [target ...]
   annotaitr reply --session <id> --to <handle> --status <status> --text <text>
-  annotaitr changes [--base <ref>] [--explain <file>]
+  annotaitr changes [--base <ref>] [--explain <file>] [--origin <name>] [--feedback-notes <json|path>]
                                Review the uncommitted changes, or with --base the
                                whole branch against its merge base with <ref>,
                                with the agent's explanation from <file>
