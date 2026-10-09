@@ -74,10 +74,10 @@ takes its colour:
 
 | Intent | Meaning for the agent | Default for |
 | --- | --- | --- |
-| Change | Apply the comment to what the note points at | Shapes, text selections, comments on a page or a time, markdown comments (unless **Default intent** in the settings names another) |
+| Change | Apply the comment to what the note points at | Shapes, pins, text selections, comments on a page or a time, markdown comments (unless **Default intent** in the settings names another) |
 | Add | Add something there; a markdown insertion carries the text | Markdown insertions |
 | Remove | Remove what the note points at | Markdown deletions |
-| Question | The reviewer asks, no edit is requested | Pins |
+| Question | The reviewer asks, no edit is requested | Chosen by the reviewer (key `4`) |
 
 The composer's footer starts with the intent chip (`✎ Change ▾`), which opens
 a menu of the four. The keys `1` to `4` switch it while focus is in the
@@ -97,7 +97,7 @@ number they were raised with (`Round 1, mark 2`).
 
 Notes saved before intents and numbers existed (a JSON export, a restored
 draft, a session file from an earlier round) load as they are: the intent
-comes from the type (a pin is a Question, a markdown deletion a Remove), the
+comes from the type (an old pin is a Question, a markdown deletion a Remove), the
 number from the order the earlier version used.
 
 Marks take their intent's colour. A shape can carry its own ink instead, for
@@ -150,7 +150,7 @@ kept in cookies on `localhost`, so they carry over between runs and modes;
 | General | Close tab after a decision | Never (default), Now, 3 s, 5 s |
 | General | Keep drafts | Markdown only: unsent notes survive a reload or a closed tab (default on). Image modes keep the notes on the server until the decision |
 | General | Tool hints | The help line in the status bar, and in markdown mode the first-run hint for Shift+click (default on) |
-| General | Default intent | The intent new shapes and text selections start with (default Change). Pins always start as Question |
+| General | Default intent | The intent new pins, shapes and text selections start with (default Change) |
 | Markdown | Content width, Font size, Starting mode | Markdown mode only |
 | Shortcuts | | The keys of the open mode, searchable, also opened with `?` |
 | About | | Version and repository |

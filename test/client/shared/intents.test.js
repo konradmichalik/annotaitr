@@ -10,8 +10,8 @@ describe('INTENTS', () => {
 })
 
 describe('defaultIntent', () => {
-  it('starts a pin as a question and every other mark as a change', () => {
-    expect(defaultIntent('pin')).toBe('question')
+  it('starts every mark, pins included, as a change', () => {
+    expect(defaultIntent('pin')).toBe('change')
     expect(defaultIntent('box')).toBe('change')
     expect(defaultIntent('text')).toBe('change')
     expect(defaultIntent('COMMENT')).toBe('change')
@@ -22,10 +22,10 @@ describe('defaultIntent', () => {
     expect(defaultIntent('INSERTION')).toBe('add')
   })
 
-  it('starts new marks with the preferred intent, except pins and fixed types', () => {
+  it('starts new marks with the preferred intent, except fixed types', () => {
     expect(defaultIntent('box', 'remove')).toBe('remove')
     expect(defaultIntent('COMMENT', 'question')).toBe('question')
-    expect(defaultIntent('pin', 'add')).toBe('question')
+    expect(defaultIntent('pin', 'add')).toBe('add')
     expect(defaultIntent('DELETION', 'add')).toBe('remove')
     expect(defaultIntent('box', 'praise')).toBe('change')
   })
