@@ -171,8 +171,10 @@ export function useHighlighter({
       while (parent && !parent.dataset.blockId) { parent = parent.parentElement }
       if (parent?.dataset.blockId) {
         blockId = parent.dataset.blockId
+        // In a code block, count from the code itself: the toolbar and a diff header come first in the DOM.
+        const code = el.closest('pre > code')
         const range = document.createRange()
-        range.selectNodeContents(parent)
+        range.selectNodeContents(code && parent.contains(code) ? code : parent)
         range.setEnd(el, 0)
         startOffset = range.toString().length
       }

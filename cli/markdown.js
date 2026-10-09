@@ -23,7 +23,7 @@ async function resolveMarkdownTargets(targets) {
   return { absolutePaths }
 }
 
-export async function runMarkdown({ targets, origin, feedbackNotes }) {
+export async function runMarkdown({ targets, origin, feedbackNotes, kind, label = null, routes = null, onDecision = null }) {
   if (targets.length === 0) {
     fail('No file specified.')
     return
@@ -32,13 +32,15 @@ export async function runMarkdown({ targets, origin, feedbackNotes }) {
   const { absolutePaths, error } = await resolveMarkdownTargets(targets)
   if (error) { fail(error); return }
 
-  const server = withLifecycle(await buildMarkdownServer({ filePaths: absolutePaths, origin, feedbackNotes }))
+  const server = withLifecycle(await buildMarkdownServer({ filePaths: absolutePaths, origin, feedbackNotes, kind, label, routes }))
   process.stderr.write(`Server running at ${server.url}\n`)
   process.stderr.write(`Annotating: ${absolutePaths.join(', ')}\n`)
   await openBrowser(server.url)
 
   const decision = await server.waitForDecision()
-  await handleOutcome(server, decision, () => (
+  // A mode may put a note in front of the decision, such as a warning that the reviewed changes moved.
+  const note = (await onDecision?.()) ?? ''
+  await handleOutcome(server, decision, () => note + (
     decision.approved
       ? formatMarkdownApproval(decision)
       : decision.feedback + '\n'

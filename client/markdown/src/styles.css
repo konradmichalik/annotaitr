@@ -1,4 +1,6 @@
 @import url('../../shared/styles/common.css');
+@import url('./styles/diff.css');
+@import url('./styles/changes.css');
 
 .app-main {
   display: flex;

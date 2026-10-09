@@ -11,6 +11,10 @@ Markdown/plain-text files in the browser
 Usage:
   annotaitr [options] [target ...]
   annotaitr reply --session <id> --to <handle> --status <status> --text <text>
+  annotaitr changes [--base <ref>] [--explain <file>]
+                               Review the uncommitted changes, or with --base the
+                               whole branch against its merge base with <ref>,
+                               with the agent's explanation from <file>
 
 Which mode runs is auto-detected from the target:
   - no target                  reads an image from the clipboard (macOS only)

@@ -1,0 +1,379 @@
+/* The changes walkthrough: cards in the viewer and the changed files tree */
+
+/* Changes walkthrough: the overview and one card per changed file, like a pull request */
+.viewer-article.is-changes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 1100px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+}
+
+.change-overview,
+.change-file {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--card);
+}
+
+.change-overview {
+  padding: var(--space-4) var(--space-5);
+}
+
+.change-overview-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+  user-select: none;
+}
+
+.change-overview .heading-1 {
+  margin: var(--space-2) 0 var(--space-3);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.change-overview .block-paragraph {
+  margin: var(--space-2) 0;
+  line-height: 1.55;
+}
+
+.change-file {
+  overflow: hidden;
+}
+
+/* A group of the agent's: a chapter title over its file cards */
+.change-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+.change-group-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.change-group-header .heading-1 {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.change-group-meta {
+  margin-left: auto;
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.change-group > .change-why {
+  border: 1px solid color-mix(in srgb, var(--focus) 20%, var(--line));
+  border-radius: var(--radius-card);
+}
+
+.change-file.is-unexplained {
+  border-style: dashed;
+  border-color: var(--line-control);
+}
+
+.change-file-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 0 var(--space-3) 0 var(--space-2);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  font-size: var(--fs-sm);
+  user-select: none;
+}
+
+.change-file-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 var(--space-1);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.change-file-toggle:hover {
+  background: var(--canvas);
+}
+
+.change-file-status {
+  width: 14px;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  text-align: center;
+}
+
+.change-file-path {
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+}
+
+.change-file-counts {
+  flex: 0 0 auto;
+  margin-right: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.change-pill {
+  padding: 1px var(--space-2);
+  border: 1px dashed var(--line-control);
+  border-radius: var(--radius-full);
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.change-review-btn,
+.change-whole-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-control);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.change-review-btn:hover,
+.change-whole-btn:hover {
+  background: var(--canvas);
+}
+
+.change-whole-btn[aria-pressed="true"] {
+  border-color: var(--ink);
+  font-weight: 500;
+}
+
+.change-review-btn[aria-pressed="true"] {
+  border-color: var(--status-ok);
+  color: var(--status-ok);
+  font-weight: 500;
+}
+
+/* The agent's text, tinted so it stands apart from the neutral greys of the diff */
+.change-why {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid color-mix(in srgb, var(--focus) 20%, var(--line));
+  background: color-mix(in srgb, var(--focus) 7%, var(--card));
+}
+
+.change-why:last-child {
+  border-bottom: 0;
+}
+
+.change-why-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--space-1);
+  color: var(--focus);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  user-select: none;
+}
+
+.change-why .block-paragraph {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.change-file.is-unexplained .change-why .block-paragraph {
+  color: var(--ink-muted);
+  font-style: italic;
+}
+
+.change-file-body .block-diff-wrapper {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+/* A reviewed file keeps its header and the agent's line, the rest folds away */
+.change-file.is-collapsed .change-file-body > :not(.change-why) {
+  display: none;
+}
+
+.viewer-article.search-open .change-file.is-collapsed .change-file-body > :not(.change-why) {
+  display: revert;
+}
+
+/* === Changed files (changes walkthrough) === */
+.changed-files-panel {
+  min-width: 300px;
+  padding-top: var(--space-3);
+}
+
+.changed-files-filter {
+  padding: 0 var(--space-3) var(--space-2);
+}
+
+.changed-files-filter input {
+  width: 100%;
+  min-height: 30px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-control);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-sm);
+}
+
+.changed-files-nav {
+  flex: 1 1 auto;
+  padding: 0 var(--space-2) var(--space-3);
+}
+
+.changed-tree {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.changed-tree-folder,
+.changed-tree-file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 28px;
+  padding-right: var(--space-2);
+  font-size: var(--fs-sm);
+}
+
+.changed-tree-folder {
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.changed-tree-folder:hover {
+  background: var(--card);
+  color: var(--ink);
+}
+
+.changed-tree-chevron,
+.changed-tree-folder-icon {
+  flex: 0 0 auto;
+}
+
+.changed-tree-counts {
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.changed-tree-file {
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.changed-tree-file:hover {
+  background: var(--card);
+}
+
+.changed-tree-file.is-current {
+  border-color: var(--line);
+  background: var(--card);
+}
+
+.changed-tree-overview {
+  margin-bottom: var(--space-1);
+  padding-left: var(--space-2);
+  font-weight: 500;
+}
+
+.changed-tree-status {
+  flex: 0 0 14px;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  text-align: center;
+}
+
+.changed-tree-name {
+  min-width: 0;
+  overflow-wrap: break-word;
+  font-family: var(--font-mono);
+}
+
+.changed-tree-overview .changed-tree-name {
+  font-family: var(--font-sans);
+}
+
+.changed-tree-meta {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+/* Not explained: the dashed outline of the card, small enough to leave the name its room */
+.changed-tree-unexplained {
+  width: 10px;
+  height: 10px;
+  border: 1.5px dashed var(--line-control);
+  border-radius: var(--radius-full);
+}
+
+.changed-files-empty {
+  padding: var(--space-2);
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+}
+
+/* The whole file, read only: it takes the place of the hunks until the reviewer switches back */
+.change-file.is-whole .change-file-body > .block-diff-wrapper {
+  display: none;
+}
+
+.change-whole-note {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+}

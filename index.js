@@ -10,6 +10,7 @@ import { convertHint } from './cli/document.js'
 import { runImage, runBareInvocation } from './cli/image.js'
 import { runMarkdown } from './cli/markdown.js'
 import { runReply } from './cli/reply.js'
+import { runChanges } from './cli/changes.js'
 
 async function main() {
   // A subcommand, not a target: it must not reach the target parser, which rejects its flags.
@@ -21,6 +22,17 @@ async function main() {
       return
     }
     process.stdout.write(output)
+    return
+  }
+
+  if (process.argv[2] === 'changes') {
+    const { output, error } = await runChanges(process.argv.slice(3))
+    if (error) {
+      process.stderr.write(`Error: ${error}\n`)
+      process.exit(1)
+      return
+    }
+    if (output) { process.stdout.write(output) }
     return
   }
 

@@ -204,10 +204,10 @@ describe('exportMultiFileFeedback', () => {
       endOffset: 18
     })]
     const output = exportFeedback(annotations, blocks)
-    expect(output).toContain('## 1. Change · Token (Line 10)')
+    expect(output).toContain('## 1. Change · Token (Line 11)')
     expect(output).toContain('Token: `processOrder`')
     expect(output).toContain('> Rename this function')
-    expect(output).toContain('Line 10')
+    expect(output).toContain('Line 11')
   })
 
   it('formats a token deletion annotation', () => {
@@ -220,9 +220,47 @@ describe('exportMultiFileFeedback', () => {
       endOffset: 15
     })]
     const output = exportFeedback(annotations, blocks)
-    expect(output).toContain('## 1. Remove · Token (Line 6)')
-    expect(output).toContain('Line 6')
+    expect(output).toContain('## 1. Remove · Token (Line 7)')
+    expect(output).toContain('Line 7')
     expect(output).toContain('Token: `y`')
+  })
+
+  it('counts code lines from the line after the opening fence', () => {
+    const blocks = [makeBlock({ type: 'code', content: 'let x = 1\nlet y = 2', language: 'javascript', startLine: 5 })]
+    const output = exportFeedback([makeAnnotation({ originalText: 'let y', startOffset: 10, endOffset: 15 })], blocks)
+    expect(output).toContain('## 1. Change · Text (Line 7)')
+  })
+
+  it('names the file and the new lines for a selection in a diff block', () => {
+    const content = '@@ -41,3 +41,4 @@\n a\n-b\n+c\n+d\n e'
+    const blocks = [makeBlock({ type: 'code', content, language: 'diff src/Foo.php', startLine: 20 })]
+    const startOffset = content.indexOf('+c')
+    const output = exportFeedback([makeAnnotation({ originalText: '+c\n+d', startOffset, endOffset: startOffset + 5 })], blocks)
+    expect(output).toContain('## 1. Change · Text (new Lines 42-43 in src/Foo.php)')
+  })
+
+  it('names the old line for a selection on a removed line', () => {
+    const content = '@@ -41,3 +41,4 @@\n a\n-b\n+c\n+d\n e'
+    const blocks = [makeBlock({ type: 'code', content, language: 'diff src/Foo.php', startLine: 20 })]
+    const startOffset = content.indexOf('-b') + 1
+    const output = exportFeedback([makeAnnotation({ type: 'DELETION', originalText: 'b', startOffset, endOffset: startOffset + 1 })], blocks)
+    expect(output).toContain('## 1. Remove · Text (old Line 42 in src/Foo.php)')
+  })
+
+  it('names both sides when a selection spans removed and added lines', () => {
+    const content = '@@ -41,3 +41,4 @@\n a\n-b\n+c\n+d\n e'
+    const blocks = [makeBlock({ type: 'code', content, language: 'diff src/Foo.php', startLine: 20 })]
+    const startOffset = content.indexOf('-b')
+    const output = exportFeedback([makeAnnotation({ originalText: '-b\n+c', startOffset, endOffset: startOffset + 5 })], blocks)
+    expect(output).toContain('(new Line 42, old Line 42 in src/Foo.php)')
+  })
+
+  it('falls back to walkthrough lines for a diff block without a path or on a hunk header', () => {
+    const content = '@@ -1 +1 @@\n-a\n+b'
+    const plain = exportFeedback([makeAnnotation({ originalText: '@@', startOffset: 0, endOffset: 2 })], [makeBlock({ type: 'code', content, language: 'diff src/x.js', startLine: 3 })])
+    expect(plain).toContain('(Line 4)')
+    const noPath = exportFeedback([makeAnnotation({ originalText: '+b', startOffset: content.indexOf('+b'), endOffset: content.indexOf('+b') + 2 })], [makeBlock({ type: 'code', content, language: 'diff', startLine: 3 })])
+    expect(noPath).toContain('(new Line 1)')
   })
 
   it('skips files without annotations and uses single-file format', () => {

@@ -18,6 +18,9 @@ The rules behind these screens are in [rules.md](rules.md). The previews are exp
 | 4 | Video, GIF | Timeline with Notes and Spans lanes, cluster chip for close notes, overlapping spans, timecodes on cards | <a href="screens/04-video.png"><img src="screens/04-video.png" width="200" alt="Board 4"></a> |
 | 5 | Markdown | Files overview with review state, contents with counts, selection bar with intents, This file and All files | <a href="screens/05-markdown.png"><img src="screens/05-markdown.png" width="200" alt="Board 5"></a> |
 | 6 | Image, dark theme | Dark tokens, marks that keep their colours, the composer in dark | <a href="screens/06-image-dark.png"><img src="screens/06-image-dark.png" width="200" alt="Board 6"></a> |
+| 12 | Changes (planned) | Changed files as a folder tree, agent overview with commit message, explanation per file and hunk, Not explained, line notes on the diff. A sketch board sits next to it | not exported yet |
+| 13 | Changes, round 2 (deferred) | Since round and Whole branch, earlier notes inline with their thread | not exported yet |
+| 14 | Code (deferred) | File tree with review state, line notes in the gutter, inline composer with a code suggestion | not exported yet |
 
 ## Details
 

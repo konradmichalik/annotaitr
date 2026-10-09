@@ -6,9 +6,9 @@ import { join } from 'node:path'
  * once the server is up (or rejects if the CLI exits first), `exited` with
  * the exit code, and `stdout()` returns everything printed so far.
  */
-export function startCli(args, env = {}) {
+export function startCli(args, env = {}, { cwd = process.cwd() } = {}) {
   const child = spawn('node', [join(process.cwd(), 'index.js'), ...args], {
-    cwd: process.cwd(),
+    cwd,
     env: { ...process.env, ANNOTAITR_PORT: '0', ANNOTAITR_NO_OPEN: '1', ...env }
   })
   let stdout = ''

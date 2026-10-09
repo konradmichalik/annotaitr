@@ -169,7 +169,7 @@ Opens `README.md` in the browser; approve it or leave annotations, and
 /annotaitr:review ./anything      # auto-detects image vs. markdown
 ```
 
-Or force a mode directly: `/annotaitr:md README.md`, `/annotaitr:img ./mockup.png`.
+Or force a mode directly: `/annotaitr:md README.md`, `/annotaitr:img ./mockup.png`. Before a commit, `/annotaitr:changes` has Claude present its changes with explanations.
 
 A screenshot pasted into the chat works as a target too: `/annotaitr:img [Image #1]`. Claude looks up the saved image and opens the annotator on it in the background, which takes a few seconds longer than passing a path.
 

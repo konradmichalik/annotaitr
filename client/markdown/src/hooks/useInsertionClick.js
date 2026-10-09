@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { removeInsertionMarker } from '../utils/viewerDom.js'
+import { removeInsertionMarker, textRootOf } from '../utils/viewerDom.js'
 
 const CURSOR_CLICK_SKIP_SELECTOR = '.annotation-toolbar, button, a[href], .code-copy-btn, .annotatable-image-wrapper, .diagram-render-area, .diagram-source, .diagram-controls, .block-note-border, .insertion-marker'
 
@@ -49,9 +49,11 @@ export function useInsertionClick({
         if (range.startContainer.parentElement?.closest('[data-highlight-id]')) { return }
 
         const blockId = blockEl.dataset.blockId
-        const blockText = blockEl.textContent || ''
+        const root = textRootOf(blockEl)
+        if (!root.contains(range.startContainer)) { return }
+        const blockText = root.textContent || ''
         const preRange = document.createRange()
-        preRange.selectNodeContents(blockEl)
+        preRange.selectNodeContents(root)
         preRange.setEnd(range.startContainer, range.startOffset)
         const offset = preRange.toString().length
         const afterContext = blockText.slice(Math.max(0, offset - 50), offset)

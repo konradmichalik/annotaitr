@@ -15,6 +15,7 @@ annotaitr [options] [target ...]
 | Video, GIF | [Videos and GIFs](usage/video.md) | |
 | PDF | [PDFs](usage/pdf.md) | `--source`, `--pages` |
 | Markdown, plain text, config files | [Markdown and plain text](usage/markdown.md) | `--feedback-notes` |
+| Changes of a git branch | [Presenting changes before a commit](usage/markdown.md#presenting-changes-before-a-commit) | `annotaitr changes`, `--base`, `--explain` |
 
 The same for every target:
 
@@ -149,7 +150,7 @@ number nor intent (`### [#c01d9e55] General comment about the whole image`).
 
 | Exit code | Meaning |
 |-----------|---------|
-| `0` | Approved, or feedback submitted: stdout carries the formatted decision. Also a hint printed instead of opening the annotator (`PASTED CHAT IMAGE:`, `CONVERT TO PDF FIRST:`). `annotaitr reply` exits `0` once the reply is saved |
+| `0` | Approved, or feedback submitted: stdout carries the formatted decision. Also a hint printed instead of opening the annotator (`PASTED CHAT IMAGE:`, `CONVERT TO PDF FIRST:`). `annotaitr reply` exits `0` once the reply is saved, `annotaitr changes` exits `0` with `NO CHANGES:` when there is nothing to review |
 | `1` | An error (bad arguments, unsupported target), the browser tab was closed with no decision, or the process was interrupted (`Ctrl+C`), or `annotaitr reply` rejected its arguments |
 
 `md-annotator` works as an alias for the same binary, for existing scripts
