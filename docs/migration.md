@@ -21,7 +21,7 @@ claude plugin install annotaitr@annotaitr
 ```
 
 The commands themselves are renamed too: `/annotate:md` is now
-`/annotaitr:md`. `/annotaitr:image` and `/annotaitr:review` are new.
+`/annotaitr:md`. `/annotaitr:img` and `/annotaitr:review` are new.
 
 ## CLI
 
