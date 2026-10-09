@@ -27,9 +27,10 @@ const CONTROL_CHARS = /[\u0000-\u001f\u007f]/
  * has no escapes, so a backtick becomes the look-alike U+02CB, and a path with
  * a newline or another control character is shown quoted, as JSON.
  */
+const quoted = (text) => (CONTROL_CHARS.test(text) ? JSON.stringify(text) : text)
+
 export function inlineCode(text) {
-  const shown = CONTROL_CHARS.test(text) ? JSON.stringify(text) : text
-  return `\`${shown.replaceAll('`', '\u02CB')}\``
+  return `\`${quoted(text).replaceAll('`', '\u02CB')}\``
 }
 
 const oneLine = (text) => text.replace(/\s*\n\s*/g, ' ')
@@ -84,8 +85,7 @@ function fileSection(file, why) {
   }
   const hunks = hunksOnly(file.diff ?? '')
   const fence = fenceFor(hunks)
-  const fencePath = CONTROL_CHARS.test(file.path) ? JSON.stringify(file.path) : file.path
-  lines.push(`${fence}diff ${fencePath}\n${hunks}\n${fence}`)
+  lines.push(`${fence}diff ${quoted(file.path)}\n${hunks}\n${fence}`)
   return lines
 }
 
@@ -98,11 +98,12 @@ function orderInGroups(files, groups = []) {
   if (groups.length === 0) { return [{ title: null, files }] }
   const byPath = new Map(files.map((f) => [f.path, f]))
   const placed = new Set()
-  const ordered = groups.map((group) => ({
-    title: group.title,
-    why: group.why,
-    files: group.files.filter((p) => byPath.has(p) && !placed.has(p) && placed.add(p)).map((p) => byPath.get(p))
-  })).filter((g) => g.files.length > 0)
+  const ordered = []
+  for (const group of groups) {
+    const own = group.files.filter((p) => byPath.has(p) && !placed.has(p))
+    own.forEach((p) => placed.add(p))
+    if (own.length > 0) { ordered.push({ title: group.title, why: group.why, files: own.map((p) => byPath.get(p)) }) }
+  }
   const rest = files.filter((f) => !placed.has(f.path))
   return rest.length > 0 ? [...ordered, { title: 'Everything else', files: rest }] : ordered
 }
@@ -117,7 +118,6 @@ export function unchangedPaths({ files: lines = {}, groups = [] }, files) {
 export function buildWalkthrough({ explanation = {}, compared, files }) {
   const explained = explanation.files ?? {}
   const lineFor = (path) => (Object.hasOwn(explained, path) ? explained[path] : null)
-  const paths = new Set(files.map((f) => f.path))
   const notExplained = files.filter((f) => !lineFor(f.path)).map((f) => f.path)
   const unchanged = unchangedPaths(explanation, files)
   const blocks = [

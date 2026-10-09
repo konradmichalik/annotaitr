@@ -77,10 +77,12 @@ test('the header names what is compared and a card opens its whole file to read'
       await expect(page.locator('.header-facts')).toHaveText('2 files · +2 \u22121')
 
       const card = page.getByRole('region', { name: 'cache.js' })
-      await card.getByRole('button', { name: 'Show whole file' }).click()
+      const whole = card.getByRole('button', { name: 'Whole file' })
+      await whole.click()
+      await expect(whole).toHaveAttribute('aria-pressed', 'true')
       await expect(card.locator('.change-whole')).toContainText('export default key')
       await expect(card.locator('.block-diff-wrapper')).toBeHidden()
-      await card.getByRole('button', { name: 'Show hunks' }).click()
+      await whole.click()
       await expect(card.locator('.change-whole')).toHaveCount(0)
       await expect(card.locator('.block-diff-wrapper')).toBeVisible()
     } finally {

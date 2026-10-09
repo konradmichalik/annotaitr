@@ -41,29 +41,31 @@ function FileBody({ blocks, agent, blockProps }) {
 
 /** The file's diff with its whole content as context, loaded the first time the reviewer asks for it. */
 function useWholeFile(path) {
-  const [whole, setWhole] = useState({ open: false, diff: null, error: null })
+  const [whole, setWhole] = useState({ open: false, loading: false, diff: null, error: null })
   const toggle = async () => {
-    if (whole.open || whole.diff !== null) {
+    if (whole.loading) { return }
+    if (whole.diff !== null || whole.error) {
       setWhole((prev) => ({ ...prev, open: !prev.open }))
       return
     }
-    setWhole({ open: true, diff: null, error: null })
+    setWhole((prev) => ({ ...prev, open: true, loading: true }))
     try {
       const json = await (await fetch(`/api/changes/full?path=${encodeURIComponent(path)}`)).json()
-      setWhole({ open: true, diff: json.success ? json.data.diff : null, error: json.success ? null : 'The whole file is not available.' })
+      setWhole((prev) => ({ ...prev, loading: false, diff: json.success ? json.data.diff : null, error: json.success ? null : 'The whole file is not available.' }))
     } catch {
-      setWhole({ open: true, diff: null, error: 'Could not load the whole file.' })
+      setWhole((prev) => ({ ...prev, loading: false, error: 'Could not load the whole file.' }))
     }
   }
   return [whole, toggle]
 }
 
 function WholeFile({ whole }) {
-  if (whole.error) { return <p className="change-whole-note">{whole.error}</p> }
-  if (whole.diff === null) { return <p className="change-whole-note">Loading the whole file…</p> }
+  if (whole.error || whole.loading) {
+    return <p className="change-whole-note" role="status">{whole.error ?? 'Loading the whole file…'}</p>
+  }
   return (
     <div className="change-whole">
-      <p className="change-whole-note">Whole file, to read. Notes go on the hunks: switch back with Show hunks.</p>
+      <p className="change-whole-note">Whole file, to read. Notes go on the hunks: turn Whole file off to see them again.</p>
       <pre className="block-code block-diff"><code><DiffCode lines={parseDiffLines(whole.diff)} /></code></pre>
     </div>
   )
@@ -86,8 +88,8 @@ function FileCard({ file, agent, collapsed, reviewed, onToggle, onReview, blockP
         <DiffCounts className="change-file-counts" added={file.added} removed={file.removed} />
         {!file.explained && <span className="change-pill">Not explained</span>}
         {file.hasDiff && (
-          <button type="button" className="change-whole-btn" aria-pressed={whole.open} onClick={toggleWhole}>
-            {whole.open ? 'Show hunks' : 'Show whole file'}
+          <button type="button" className="change-whole-btn" aria-pressed={whole.open} aria-busy={whole.loading} onClick={toggleWhole}>
+            Whole file
           </button>
         )}
         <button type="button" className="change-review-btn" aria-pressed={reviewed} onClick={() => onReview(file.path, !reviewed)}>

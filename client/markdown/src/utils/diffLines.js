@@ -48,6 +48,8 @@ export function countDiffLines(lines) {
   }
 }
 
+export const countNewlines = (text) => ((text ?? '').match(/\n/g) || []).length
+
 /** A fence info string such as `diff src/Foo.php` holds the language first, then free text. */
 export function splitCodeInfo(info) {
   const [language = '', ...rest] = (info ?? '').trim().split(/\s+/)

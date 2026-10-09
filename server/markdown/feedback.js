@@ -1,6 +1,6 @@
 import { annotationHandle } from '../core/annotationHandle.js'
 import { normalizeNotes, intentWord, intentCounts } from '../core/notes.js'
-import { diffLineRef } from './diffLines.js'
+import { countNewlines, diffLineRef } from './diffLines.js'
 
 /**
  * Format an approval decision for stdout.
@@ -49,8 +49,6 @@ function elementBody(ann, block) {
   return `\`\`\`\n${(block?.content || ann.originalText || '').slice(0, 200)}\n\`\`\`\n`
 }
 
-const newlinesIn = (text) => ((text ?? '').match(/\n/g) || []).length
-
 /** What the heading names and where it is, plus the body under the heading. */
 function describeAnnotation(ann, block) {
   const blockStartLine = block?.startLine || 1
@@ -65,19 +63,19 @@ function describeAnnotation(ann, block) {
   }
 
   if (ann.targetType === 'token') {
-    const lineOffset = newlinesIn((block?.content || '').slice(0, ann.startOffset))
+    const lineOffset = countNewlines((block?.content || '').slice(0, ann.startOffset))
     const body = `Token: \`${ann.originalText}\`\n` + (ann.type === 'DELETION' ? '> User wants this token removed.\n' : quoted(ann.text))
     return { what: 'Token', where: diffLineRef(block, lineOffset, lineOffset) ?? `Line ${contentStartLine + lineOffset}`, body }
   }
 
   // A source view note's blockId is "source-line-N" (0-indexed); any other selection counts lines inside its block.
   const sourceMatch = ann.targetType === 'source' ? ann.blockId?.match(/^source-line-(\d+)$/) : null
-  const lineOffset = newlinesIn((block?.content || '').slice(0, ann.startOffset))
+  const lineOffset = countNewlines((block?.content || '').slice(0, ann.startOffset))
   const startLine = ann.targetType === 'source'
     ? (sourceMatch ? parseInt(sourceMatch[1], 10) + 1 : 1)
     : contentStartLine + lineOffset
-  const endLine = startLine + newlinesIn(ann.originalText)
-  const inDiff = ann.targetType === 'source' ? null : diffLineRef(block, lineOffset, lineOffset + newlinesIn(ann.originalText))
+  const endLine = startLine + countNewlines(ann.originalText)
+  const inDiff = ann.targetType === 'source' ? null : diffLineRef(block, lineOffset, lineOffset + countNewlines(ann.originalText))
   const where = inDiff ?? `${lineRefOf(startLine, endLine)}${ann.targetType === 'source' ? ', source' : ''}`
 
   if (ann.type === 'INSERTION') {
