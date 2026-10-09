@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdtemp, readFile, writeFile, rm, realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { parseChangesArgs, prepareWalkthrough, validateExplanation } from '../../cli/changes.js'
+import { decisionNote, parseChangesArgs, prepareWalkthrough, validateExplanation } from '../../cli/changes.js'
 
 const env = { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@example.com', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@example.com' }
 
@@ -76,6 +76,25 @@ describe('prepareWalkthrough', () => {
 
   it('reports an unknown base', async () => {
     expect((await prepareWalkthrough({ cwd: dir, base: 'nope' })).error).toContain('Unknown base "nope"')
+  })
+
+  it('adds nothing to the decision when the changes stayed as they were shown', async () => {
+    await writeFile(join(dir, 'a.js'), 'three\n')
+    const prepared = await prepareWalkthrough({ cwd: dir })
+    expect(await decisionNote(prepared)).toBe('')
+  })
+
+  it('warns when the changes moved while the review was open', async () => {
+    await writeFile(join(dir, 'a.js'), 'four\n')
+    const prepared = await prepareWalkthrough({ cwd: dir })
+    await writeFile(join(dir, 'a.js'), 'five\n')
+    expect(await decisionNote(prepared)).toMatch(/^CHANGED DURING REVIEW: /)
+  })
+
+  it('tells the agent about explained paths that are not part of the changes', async () => {
+    await writeFile(join(dir, 'explain.json'), JSON.stringify({ files: { 'gone.js': 'x', 'a.js': 'y' } }))
+    const prepared = await prepareWalkthrough({ cwd: dir, explain: join(dir, 'explain.json') })
+    expect(await decisionNote(prepared)).toContain('NOTE: the explanation names paths that are not part of these changes: gone.js.')
   })
 
   it('reports a broken explanation file', async () => {

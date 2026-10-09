@@ -52,6 +52,11 @@ open and end your turn. When the command finishes, read its output.
 
 ### 4. Act on the decision
 
+The output may start with a note before the decision:
+
+- `CHANGED DURING REVIEW:` the changes moved while the user looked at them. Do not commit, whatever the decision says: present them again (step 5).
+- `NOTE:` your explanation named paths that are not part of the changes. Fix the paths in `explain.json` before you present again.
+
 - `APPROVED:`: commit with the proposed message. Stage only the files of the walkthrough. Push or open a pull request only if the user asked for that in this conversation.
 - `APPROVED WITH NOTES:`: commit as above. Treat the notes as context, mention them briefly, change nothing because of them.
 - Annotation feedback: revise, then present again (step 5). Do not commit.

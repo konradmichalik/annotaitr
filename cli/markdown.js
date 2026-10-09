@@ -38,8 +38,9 @@ export async function runMarkdown({ targets, origin, feedbackNotes, kind, onDeci
   await openBrowser(server.url)
 
   const decision = await server.waitForDecision()
-  await onDecision?.()
-  await handleOutcome(server, decision, () => (
+  // A mode may put a note in front of the decision, such as a warning that the reviewed changes moved.
+  const note = (await onDecision?.()) ?? ''
+  await handleOutcome(server, decision, () => note + (
     decision.approved
       ? formatMarkdownApproval(decision)
       : decision.feedback + '\n'

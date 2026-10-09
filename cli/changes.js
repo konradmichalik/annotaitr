@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, resolve as resolvePath } from 'node:path'
 import { collectChanges, compareInfo, gitPath, listCommits, repoRoot, resolveBase } from '../server/changes/git.js'
@@ -57,9 +58,23 @@ async function readExplanation(path) {
   return result.error ? { error: `--explain: ${result.error}` } : result
 }
 
+/** What the walkthrough compares and every changed file, as git sees them right now. */
+async function snapshot(root, base) {
+  const info = await compareInfo(root, base ? await resolveBase(root, base) : null)
+  const compared = info.uncommitted ? info : { ...info, commits: await listCommits(root, info.mergeBase) }
+  const files = await collectChanges(root, compared.mergeBase)
+  return { compared, files }
+}
+
+function fingerprint({ compared, files }) {
+  const shown = { mergeBase: compared.mergeBase, commits: compared.commits ?? [], files }
+  return createHash('sha256').update(JSON.stringify(shown)).digest('hex')
+}
+
 /**
- * Writes the walkthrough into the git directory and returns its path, or
- * `{ output }` when there is nothing to review.
+ * Writes the walkthrough into the git directory and returns its path, with
+ * what decisionNote needs to check it at the decision, or `{ output }` when
+ * there is nothing to review.
  */
 export async function prepareWalkthrough({ base, explain, cwd = process.cwd() }) {
   let root
@@ -71,15 +86,13 @@ export async function prepareWalkthrough({ base, explain, cwd = process.cwd() })
   const explained = explain ? await readExplanation(explain) : { explanation: {} }
   if (explained.error) { return { error: explained.error } }
 
-  let compared
-  let files
+  let shown
   try {
-    const info = await compareInfo(root, base ? await resolveBase(root, base) : null)
-    compared = info.uncommitted ? info : { ...info, commits: await listCommits(root, info.mergeBase) }
-    files = await collectChanges(root, compared.mergeBase)
+    shown = await snapshot(root, base)
   } catch (err) {
     return { error: err.message }
   }
+  const { compared, files } = shown
   if (files.length === 0) {
     const against = compared.uncommitted
       ? `nothing uncommitted on ${compared.branch}`
@@ -87,15 +100,37 @@ export async function prepareWalkthrough({ base, explain, cwd = process.cwd() })
     return { output: `NO CHANGES: ${against}.\n` }
   }
 
+  const changedPaths = new Set(files.map((f) => f.path))
+  const unchangedPaths = Object.keys(explained.explanation.files ?? {}).filter((p) => !changedPaths.has(p))
   try {
     const dir = await gitPath(root, 'annotaitr')
     await mkdir(dir, { recursive: true })
     const path = join(dir, 'changes.md')
     await writeFile(path, buildWalkthrough({ explanation: explained.explanation, compared, files }))
-    return { path }
+    return { path, root, base, fingerprint: fingerprint(shown), unchangedPaths }
   } catch (err) {
     return { error: `Could not write the walkthrough: ${err.message}` }
   }
+}
+
+/**
+ * What the agent must know besides the decision: the changes moved while the
+ * reviewer looked at them, or its explanation named paths that are not part
+ * of them. Empty when neither applies.
+ */
+export async function decisionNote({ root, base, fingerprint: seen, unchangedPaths }) {
+  const notes = []
+  try {
+    if (fingerprint(await snapshot(root, base)) !== seen) {
+      notes.push('CHANGED DURING REVIEW: the changes differ from what the reviewer saw. Present them again before you commit.')
+    }
+  } catch (err) {
+    notes.push(`CHANGED DURING REVIEW: could not compare the changes again (${err.message}). Present them again before you commit.`)
+  }
+  if (unchangedPaths.length > 0) {
+    notes.push(`NOTE: the explanation names paths that are not part of these changes: ${unchangedPaths.join(', ')}. Check the paths in explain.json.`)
+  }
+  return notes.length > 0 ? `${notes.join('\n')}\n\n` : ''
 }
 
 export async function runChanges(args) {
@@ -106,8 +141,12 @@ export async function runChanges(args) {
   if (prepared.error || prepared.output) { return prepared }
   // The walkthrough holds code from the working tree, so it goes as soon as the reviewer has decided.
   const removeWalkthrough = () => rm(prepared.path, { force: true })
+  const onDecision = async () => {
+    await removeWalkthrough()
+    return decisionNote(prepared)
+  }
   try {
-    await runMarkdown({ targets: [prepared.path], origin: parsed.origin, feedbackNotes: parsed.feedbackNotes, kind: 'changes', onDecision: removeWalkthrough })
+    await runMarkdown({ targets: [prepared.path], origin: parsed.origin, feedbackNotes: parsed.feedbackNotes, kind: 'changes', onDecision })
   } catch (err) {
     await removeWalkthrough()
     return { error: err.message }
