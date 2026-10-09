@@ -91,6 +91,32 @@ test('the header names what is compared and a card opens its whole file to read'
   })
 })
 
+test('a whole file that failed to load is requested again on the next open', async ({ page }) => {
+  await withRepo(async ({ dir, explain }) => {
+    const cli = startCli(['changes', '--explain', explain], {}, { cwd: dir })
+    try {
+      let failed = false
+      await page.route('**/api/changes/full?*', (route) => {
+        if (failed) { return route.continue() }
+        failed = true
+        return route.abort()
+      })
+      await page.goto(await cli.url)
+
+      const card = page.getByRole('region', { name: 'cache.js' })
+      const whole = card.getByRole('button', { name: 'Whole file' })
+      await whole.click()
+      await expect(card.getByRole('status')).toHaveText('Could not load the whole file.')
+      await whole.click()
+      await expect(card.getByRole('status')).toHaveCount(0)
+      await whole.click()
+      await expect(card.locator('.change-whole')).toContainText('export default key')
+    } finally {
+      if (cli.child.exitCode === null) { cli.child.kill() }
+    }
+  })
+})
+
 test('marking a file as reviewed folds its card to the explanation', async ({ page }) => {
   await withRepo(async ({ dir, explain }) => {
     const cli = startCli(['changes', '--explain', explain], {}, { cwd: dir })

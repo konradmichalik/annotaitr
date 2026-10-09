@@ -44,8 +44,13 @@ function useWholeFile(path) {
   const [whole, setWhole] = useState({ open: false, loading: false, diff: null, error: null })
   const toggle = async () => {
     if (whole.loading) { return }
-    if (whole.diff !== null || whole.error) {
+    if (whole.diff !== null) {
       setWhole((prev) => ({ ...prev, open: !prev.open }))
+      return
+    }
+    // Closing a failed load forgets the error, so the next open asks again.
+    if (whole.error) {
+      setWhole((prev) => ({ ...prev, open: false, error: null }))
       return
     }
     setWhole((prev) => ({ ...prev, open: true, loading: true }))
