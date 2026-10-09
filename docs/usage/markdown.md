@@ -39,16 +39,16 @@ ANNOTAITR_FEEDBACK_NOTES='[{"text":"Rewrote intro","line":5}]' annotaitr README.
 
 ## Presenting changes before a commit
 
-`annotaitr changes` opens the changes of the current branch as a walkthrough, so an agent can explain its work before it commits. The diff always comes from git: everything that differs from the merge base with the base branch, working tree and untracked files included. The agent only supplies the text around it.
+`annotaitr changes` opens changes as a walkthrough, so an agent can explain its work before it commits or opens a pull request. The diff always comes from git, the agent only supplies the text around it. Without `--base` it shows the uncommitted changes against `HEAD`, untracked files included. With `--base` it shows the whole branch against its merge base with that base, working tree included.
 
 ```bash
 annotaitr changes --explain .git/annotaitr/explain.json
-annotaitr changes --base develop --explain explain.json
+annotaitr changes --base main --explain explain.json
 ```
 
 | Flag | Meaning |
 |------|---------|
-| `--base <ref>` | Compare against the merge base with this branch, tag or commit. Default: `origin/HEAD`, then `main`, then `master` |
+| `--base <ref>` | Show the whole branch against its merge base with this branch, tag or commit, for a review before a pull request. Default: only the uncommitted changes |
 | `--explain <file>` | The agent's explanation, see below. Without it every file is shown as not explained |
 | `--origin`, `--feedback-notes` | As for Markdown files |
 

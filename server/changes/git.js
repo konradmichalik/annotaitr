@@ -40,25 +40,27 @@ async function commitOf(root, ref) {
   }
 }
 
-/** The base to compare against: the given ref, else the default branch. */
+/** The commit a `--base` ref names. */
 export async function resolveBase(root, ref) {
-  if (ref) {
-    const sha = await commitOf(root, ref)
-    if (!sha) { throw new Error(`Unknown base "${ref}": not a commit, branch or tag in this repository`) }
-    return { name: ref, sha }
-  }
-  const remoteHead = (await git(['symbolic-ref', '--quiet', '--short', 'refs/remotes/origin/HEAD'], { cwd: root, okCodes: [0, 1] })).trim()
-  for (const candidate of [remoteHead, 'main', 'master'].filter(Boolean)) {
-    const sha = await commitOf(root, candidate)
-    if (sha) { return { name: candidate, sha } }
-  }
-  throw new Error('No default branch found (origin/HEAD, main or master). Pass --base <ref>.')
+  const sha = await commitOf(root, ref)
+  if (!sha) { throw new Error(`Unknown base "${ref}": not a commit, branch or tag in this repository`) }
+  return { name: ref, sha }
 }
 
+/**
+ * What the walkthrough compares: the uncommitted changes against HEAD, or with
+ * a base the whole branch against its merge base with that base.
+ */
 export async function compareInfo(root, base) {
-  const mergeBase = (await git(['merge-base', 'HEAD', base.sha], { cwd: root })).trim()
+  const head = await commitOf(root, 'HEAD')
+  if (!head) { throw new Error('No commit yet: nothing to compare the changes against') }
   const branch = (await git(['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: root })).trim()
-  return { branch: branch === 'HEAD' ? mergeBase.slice(0, 7) : branch, base: base.name, mergeBase }
+  const branchName = branch === 'HEAD' ? head.slice(0, 7) : branch
+  if (!base) {
+    return { branch: branchName, base: 'HEAD', mergeBase: head, uncommitted: true }
+  }
+  const mergeBase = (await git(['merge-base', 'HEAD', base.sha], { cwd: root })).trim()
+  return { branch: branchName, base: base.name, mergeBase, uncommitted: false }
 }
 
 function splitZ(output) {

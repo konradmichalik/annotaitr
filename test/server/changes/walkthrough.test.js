@@ -34,6 +34,11 @@ describe('buildWalkthrough', () => {
     expect(md).toContain('**After approval:** `fix: it`')
   })
 
+  it('names uncommitted changes against HEAD', () => {
+    const md = buildWalkthrough({ explanation: {}, compared: { branch: 'feature/x', base: 'HEAD', mergeBase: '9b2d4c1aa', uncommitted: true }, files })
+    expect(md).toContain('**Compared:** uncommitted changes on `feature/x` against `HEAD` (`9b2d4c1`), untracked files included. 2 files, +4 −1.')
+  })
+
   it('gives every file a section with the real hunks in a path fence', () => {
     const md = buildWalkthrough({ explanation: { files: { 'a.js': 'Renames a.' } }, compared, files })
     expect(md).toContain('## a.js\n\nRenames a.\n\n````diff a.js\n@@ -1 +1 @@\n-a\n+b\n````')

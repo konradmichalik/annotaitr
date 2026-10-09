@@ -51,7 +51,7 @@ describe('prepareWalkthrough', () => {
   })
 
   it('says so when nothing changed, without writing a walkthrough', async () => {
-    expect(await prepareWalkthrough({ cwd: dir })).toEqual({ output: expect.stringMatching(/^NO CHANGES: nothing differs from main/) })
+    expect(await prepareWalkthrough({ cwd: dir })).toEqual({ output: 'NO CHANGES: nothing uncommitted on main.\n' })
   })
 
   it('writes the walkthrough with the explanation into the git directory', async () => {
@@ -63,6 +63,15 @@ describe('prepareWalkthrough', () => {
     expect(md).toContain('# Rename')
     expect(md).toContain('## a.js\n\nSays two.\n\n````diff a.js\n@@ -1 +1 @@\n-one\n+two\n````')
     expect(md).toContain('**Not explained:** `explain.json`')
+  })
+
+  it('compares the whole branch with --base', async () => {
+    const { path } = await prepareWalkthrough({ cwd: dir, base: 'main' })
+    expect(await readFile(path, 'utf-8')).toContain('against `main` (merge base')
+  })
+
+  it('reports an unknown base', async () => {
+    expect((await prepareWalkthrough({ cwd: dir, base: 'nope' })).error).toContain('Unknown base "nope"')
   })
 
   it('reports a broken explanation file', async () => {

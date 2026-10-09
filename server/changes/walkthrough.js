@@ -29,7 +29,10 @@ function overview({ explanation, compared, files, notExplained, unchanged }) {
   const count = `${files.length} ${files.length === 1 ? 'file' : 'files'}, +${added} −${removed}`
   const lines = [`# ${explanation.title || `Changes on ${compared.branch}`}`]
   if (explanation.summary) { lines.push(explanation.summary) }
-  lines.push(`**Compared:** \`${compared.branch}\` against \`${compared.base}\` (merge base \`${compared.mergeBase.slice(0, 7)}\`), working tree and untracked files included. ${count}.`)
+  const sha = compared.mergeBase.slice(0, 7)
+  lines.push(compared.uncommitted
+    ? `**Compared:** uncommitted changes on \`${compared.branch}\` against \`HEAD\` (\`${sha}\`), untracked files included. ${count}.`
+    : `**Compared:** \`${compared.branch}\` against \`${compared.base}\` (merge base \`${sha}\`), working tree and untracked files included. ${count}.`)
   if (explanation.commit) { lines.push(`**After approval:** \`${explanation.commit}\``) }
   if (notExplained.length > 0) { lines.push(`**Not explained:** ${codeList(notExplained)}`) }
   if (unchanged.length > 0) { lines.push(`**Explained but unchanged:** ${codeList(unchanged)}`) }

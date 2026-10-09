@@ -12,8 +12,8 @@ opens it. Do not commit, push or open a pull request before the user approves.
 
 ### 1. Check what changed
 
-You usually know your changes already. Run `git status --short` so no file is
-missed, and read a diff only where you are unsure what it holds. Do not copy
+You usually know your changes already. Run `git status --short` (or
+`git diff --stat <base>...HEAD` with a base) so no file is missed, and read a diff only where you are unsure what it holds. Do not copy
 any diff anywhere: annotaitr reads it from git itself.
 
 ### 2. Write the explanation
@@ -41,9 +41,10 @@ Explain intent, not syntax.
 
 Run `annotaitr changes --origin claude-code --explain <explain.json path>`
 with the Bash tool and `run_in_background: true`, since it blocks until the
-user decides. Add `--base $ARGUMENTS` if a base was given; otherwise it
-compares against the merge base with the default branch, working tree and
-untracked files included. Tell the user in one line that the walkthrough is
+user decides. Without a base it shows the uncommitted changes against `HEAD`,
+untracked files included, which is the review before a commit. Add
+`--base $ARGUMENTS` if a base was given, or `--base <target branch>` when the
+user wants the whole branch reviewed before a pull request. Tell the user in one line that the walkthrough is
 open and end your turn. When the command finishes, read its output.
 
 `NO CHANGES:` means there is nothing to present: tell the user and stop. An

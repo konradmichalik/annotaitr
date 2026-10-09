@@ -74,13 +74,16 @@ export async function prepareWalkthrough({ base, explain, cwd = process.cwd() })
   let compared
   let files
   try {
-    compared = await compareInfo(root, await resolveBase(root, base))
+    compared = await compareInfo(root, base ? await resolveBase(root, base) : null)
     files = await collectChanges(root, compared.mergeBase)
   } catch (err) {
     return { error: err.message }
   }
   if (files.length === 0) {
-    return { output: `NO CHANGES: nothing differs from ${compared.base} (merge base ${compared.mergeBase.slice(0, 7)}).\n` }
+    const against = compared.uncommitted
+      ? `nothing uncommitted on ${compared.branch}`
+      : `nothing differs from ${compared.base} (merge base ${compared.mergeBase.slice(0, 7)})`
+    return { output: `NO CHANGES: ${against}.\n` }
   }
 
   const dir = await gitPath(root, 'annotaitr')

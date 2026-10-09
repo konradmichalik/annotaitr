@@ -34,13 +34,20 @@ describe('changes git layer', () => {
     await rm(dir, { recursive: true, force: true })
   })
 
-  it('finds the default branch and the merge base', async () => {
+  it('compares the uncommitted changes against HEAD without a base', async () => {
     const root = await repoRoot(dir)
-    const base = await resolveBase(root)
-    expect(base.name).toBe('main')
+    const info = await compareInfo(root, null)
+    expect(info).toMatchObject({ branch: 'feature/x', base: 'HEAD', uncommitted: true })
+    expect(info.mergeBase).toBe(run(dir, 'rev-parse', 'HEAD').trim())
+    const files = await collectChanges(root, info.mergeBase)
+    expect(files.map((f) => f.path)).toEqual(['new.md', 'package-lock.json'])
+  })
+
+  it('compares the whole branch against its merge base with a base', async () => {
+    const root = await repoRoot(dir)
+    const base = await resolveBase(root, 'main')
     const info = await compareInfo(root, base)
-    expect(info.branch).toBe('feature/x')
-    expect(info.mergeBase).toBe(base.sha)
+    expect(info).toMatchObject({ branch: 'feature/x', base: 'main', mergeBase: base.sha, uncommitted: false })
   })
 
   it('rejects a base that is not a commit, including one that looks like an option', async () => {
@@ -49,7 +56,7 @@ describe('changes git layer', () => {
   })
 
   it('collects committed, uncommitted and untracked changes with real hunks', async () => {
-    const base = await resolveBase(dir)
+    const base = await resolveBase(dir, 'main')
     const files = await collectChanges(dir, base.sha)
     expect(files.map((f) => [f.path, f.status])).toEqual([
       ['a.js', 'M'], ['gone.txt', 'D'], ['new.md', 'A'], ['package-lock.json', 'M']
@@ -62,7 +69,7 @@ describe('changes git layer', () => {
   })
 
   it('names a lock file instead of showing its hunks', async () => {
-    const base = await resolveBase(dir)
+    const base = await resolveBase(dir, 'main')
     const lock = (await collectChanges(dir, base.sha)).find((f) => f.path === 'package-lock.json')
     expect(lock).toMatchObject({ omitted: 'lock file', diff: null })
   })
