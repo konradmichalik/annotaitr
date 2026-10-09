@@ -1883,6 +1883,15 @@ button.voice-note:hover {
   fill: var(--intent-earlier-mark);
 }
 
+.previous-round-badge {
+  cursor: pointer;
+}
+
+.previous-round-badge:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 .previous-round-badge-plate {
   fill: var(--bg);
 }

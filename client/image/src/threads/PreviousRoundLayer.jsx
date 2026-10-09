@@ -9,7 +9,7 @@ const GAP = 4
 const CHAR_WIDTH = 7
 const PADDING = 16
 
-function Badge({ thread, anchor }) {
+function Badge({ thread, anchor, onOpen }) {
   const { label } = statusDisplay(thread)
   const replyPending = pendingReplies(thread).length > 0
   // The two extra characters make room for the ' ↩' appended to the label.
@@ -17,7 +17,20 @@ function Badge({ thread, anchor }) {
   const markerWidth = badgeShowsNumber(thread) ? MARKER_SIZE + GAP : 0
   const width = markerWidth + chipWidth
   return (
-    <g className={`previous-round-badge status--${threadStatus(thread)}`} transform={`translate(${anchor.x - width / 2} ${Math.max(0, anchor.y - BADGE_HEIGHT - 4)})`} role={replyPending ? 'img' : undefined} aria-label={replyPending ? `${label}, reply pending` : undefined}>
+    <g
+      className={`previous-round-badge status--${threadStatus(thread)}`}
+      transform={`translate(${anchor.x - width / 2} ${Math.max(0, anchor.y - BADGE_HEIGHT - 4)})`}
+      role="button" tabIndex={0} aria-label={replyPending ? `${label}, reply pending` : label}
+      // The canvas starts a mark or a selection on a press, so the badge keeps it to itself and opens its thread on the click.
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={() => onOpen?.(thread.handle)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onOpen?.(thread.handle)
+        }
+      }}
+    >
       {replyPending && <title>{label}, reply pending</title>}
       {markerWidth > 0 && (
         <>
@@ -34,7 +47,7 @@ function Badge({ thread, anchor }) {
 }
 
 /** Last round's marks inside the canvas SVG: never part of the annotations state, only drawn. The canvas hands in its own shape renderer. */
-export default function PreviousRoundLayer({ threads, Shape }) {
+export default function PreviousRoundLayer({ threads, Shape, onOpen }) {
   return (
     <g className="previous-round">
       <defs>
@@ -49,7 +62,7 @@ export default function PreviousRoundLayer({ threads, Shape }) {
           <g className="previous-round-shape">
             <Shape annotation={{ ...thread.annotation, id: `prev-${thread.handle}` }} number={threadNumber(thread)} badge={false} markerId={`arrowhead-prev-${thread.handle}`} />
           </g>
-          <Badge thread={thread} anchor={annotationTopAnchor(thread.annotation)} />
+          <Badge thread={thread} anchor={annotationTopAnchor(thread.annotation)} onOpen={onOpen} />
         </g>
       ))}
     </g>
