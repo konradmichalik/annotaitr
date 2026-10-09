@@ -39,7 +39,7 @@ test('a note on a diff line names the file and its new line', async ({ page }) =
       await page.goto(await cli.url)
       await expect(page.getByRole('region', { name: 'Overview' })).toContainText('Key the cache per workspace')
       const tree = page.getByRole('navigation', { name: 'Changed files' })
-      await expect(tree.getByRole('button', { name: 'notes.md, 0 notes, added, not explained' })).toBeVisible()
+      await expect(tree.getByRole('button', { name: 'notes.md, 0 notes, +1 \u22120, added, not explained' })).toBeVisible()
 
       const card = page.getByRole('region', { name: 'cache.js' })
       await expect(card).toContainText('Adds the workspace to the key.')

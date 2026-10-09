@@ -1,8 +1,9 @@
 import { useId, useMemo, useState } from 'react'
-import { buildFileTree, filterFileTree } from '../utils/fileTree.js'
+import { buildFileTree, filterFileTree, nameParts } from '../utils/fileTree.js'
 import { MarkReviewedButton } from './FilesSection.jsx'
 
 const STATUS_WORD = { A: 'added', M: 'modified', D: 'deleted' }
+const STATUS_TITLE = { A: 'Added', M: 'Modified', D: 'Deleted' }
 
 const FolderIcon = () => (
   <svg className="changed-tree-folder-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" aria-hidden="true">
@@ -16,37 +17,65 @@ const CheckIcon = () => (
   </svg>
 )
 
+const Chevron = ({ open }) => (
+  <svg className="changed-tree-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d={open ? 'm6 9 6 6 6-6' : 'm9 6 6 6-6 6'} />
+  </svg>
+)
+
 function fileLabel(file, count, reviewed) {
   const notes = count === 1 ? '1 note' : `${count} notes`
   const state = [STATUS_WORD[file.status], !file.explained && 'not explained', reviewed && 'reviewed'].filter(Boolean)
-  return `${file.path}, ${notes}, ${state.join(', ')}`
+  return `${file.path}, ${notes}, +${file.added} \u2212${file.removed}, ${state.join(', ')}`
 }
 
-function TreeNodes({ nodes, depth, current, counts, reviewed, onSelect }) {
+/** A name with line break opportunities only where a break reads well. */
+function Name({ name }) {
+  return (
+    <span className="changed-tree-name">
+      {nameParts(name).map((part, i) => <span key={i}>{i > 0 && <wbr />}{part}</span>)}
+    </span>
+  )
+}
+
+function TreeNodes({ nodes, depth, current, counts, reviewed, closed, onToggleFolder, onSelect }) {
+  const childProps = { current, counts, reviewed, closed, onToggleFolder, onSelect }
   return (
     <ul className="changed-tree" role="list">
       {nodes.map((node) => (node.type === 'folder' ? (
         <li key={node.path}>
-          <span className="changed-tree-folder" style={{ paddingLeft: `${8 + depth * 14}px` }}>
+          <button
+            type="button"
+            className="changed-tree-folder"
+            style={{ paddingLeft: `${4 + depth * 14}px` }}
+            aria-expanded={!closed.has(node.path)}
+            title={node.path}
+            onClick={() => onToggleFolder(node.path)}
+          >
+            <Chevron open={!closed.has(node.path)} />
             <FolderIcon />
-            <span className="changed-tree-name">{node.name}</span>
-          </span>
-          <TreeNodes nodes={node.children} depth={depth + 1} current={current} counts={counts} reviewed={reviewed} onSelect={onSelect} />
+            <Name name={node.name} />
+          </button>
+          {!closed.has(node.path) && <TreeNodes nodes={node.children} depth={depth + 1} {...childProps} />}
         </li>
       ) : (
         <li key={node.path}>
           <button
             type="button"
             className={`changed-tree-file${node.path === current ? ' is-current' : ''}`}
-            style={{ paddingLeft: `${8 + depth * 14}px` }}
+            style={{ paddingLeft: `${22 + depth * 14}px` }}
             aria-current={node.path === current ? 'true' : undefined}
             aria-label={fileLabel(node.file, counts.get(node.path) ?? 0, reviewed.has(node.path))}
             title={node.path}
             onClick={() => onSelect(node.path)}
           >
-            <span className="changed-tree-status" aria-hidden="true">{node.file.status}</span>
-            <span className="changed-tree-name">{node.name}</span>
+            <span className="changed-tree-status" aria-hidden="true" title={STATUS_TITLE[node.file.status]}>{node.file.status}</span>
+            <Name name={node.name} />
             <span className="changed-tree-meta" aria-hidden="true">
+              <span className="changed-tree-counts">
+                <span className="diff-count-add">+{node.file.added}</span>{' '}
+                <span className="diff-count-del">{'\u2212'}{node.file.removed}</span>
+              </span>
               {!node.file.explained && <span className="changed-tree-unexplained" title="Not explained" />}
               {(counts.get(node.path) ?? 0) > 0 && <span className="files-item-count">{counts.get(node.path)}</span>}
               {reviewed.has(node.path) && <span className="files-item-check"><CheckIcon /></span>}
@@ -67,6 +96,12 @@ export function ChangedFilesPanel({ sections, counts, reviewed, current, onSelec
   const headingId = useId()
   const filterId = useId()
   const [query, setQuery] = useState('')
+  const [closedFolders, setClosedFolders] = useState(() => new Set())
+  const toggleFolder = (path) => setClosedFolders((prev) => {
+    const next = new Set(prev)
+    if (next.has(path)) { next.delete(path) } else { next.add(path) }
+    return next
+  })
   const tree = useMemo(() => buildFileTree(sections.files), [sections.files])
   const visible = useMemo(() => filterFileTree(tree, query), [tree, query])
   if (collapsed) { return null }
@@ -89,10 +124,19 @@ export function ChangedFilesPanel({ sections, counts, reviewed, current, onSelec
           aria-current={current === null ? 'true' : undefined}
           onClick={() => onSelect(null)}
         >
-          <span className="changed-tree-name">Overview</span>
+          <Name name="Overview" />
           {counts.overview > 0 && <span className="changed-tree-meta"><span className="files-item-count">{counts.overview}</span></span>}
         </button>
-        <TreeNodes nodes={visible} depth={0} current={current} counts={counts.byPath} reviewed={reviewed} onSelect={onSelect} />
+        <TreeNodes
+          nodes={visible}
+          depth={0}
+          current={current}
+          counts={counts.byPath}
+          reviewed={reviewed}
+          closed={query.trim() ? new Set() : closedFolders}
+          onToggleFolder={toggleFolder}
+          onSelect={onSelect}
+        />
         {visible.length === 0 && <p className="changed-files-empty">No file matches “{query}”.</p>}
       </nav>
       {current !== null && (

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildFileTree, filterFileTree } from '../../../client/markdown/src/utils/fileTree.js'
+import { buildFileTree, filterFileTree, nameParts } from '../../../client/markdown/src/utils/fileTree.js'
 
 const file = (path) => ({ path })
 const shape = (nodes) => nodes.map((n) => (n.type === 'folder' ? { [n.name]: shape(n.children) } : n.name))
@@ -34,5 +34,13 @@ describe('filterFileTree', () => {
 
   it('returns the tree unchanged for an empty query', () => {
     expect(filterFileTree(tree, '  ')).toBe(tree)
+  })
+})
+
+describe('nameParts', () => {
+  it('splits before inner capitals and before dots, dashes and underscores', () => {
+    expect(nameParts('ChangedFilesPanel.jsx')).toEqual(['Changed', 'Files', 'Panel', '.jsx'])
+    expect(nameParts('use-changes_review.test.js')).toEqual(['use', '-changes', '_review', '.test', '.js'])
+    expect(nameParts('README.md')).toEqual(['README', '.md'])
   })
 })

@@ -1688,7 +1688,7 @@
 
 /* === Changed files (changes walkthrough) === */
 .changed-files-panel {
-  min-width: 260px;
+  min-width: 300px;
   padding-top: var(--space-3);
 }
 
@@ -1736,7 +1736,36 @@
 }
 
 .changed-tree-folder {
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
   color: var(--ink-muted);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.changed-tree-folder:hover {
+  background: var(--card);
+  color: var(--ink);
+}
+
+.changed-tree-folder:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.changed-tree-chevron,
+.changed-tree-folder-icon {
+  flex: 0 0 auto;
+}
+
+.changed-tree-counts {
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .changed-tree-file {
@@ -1780,7 +1809,7 @@
 
 .changed-tree-name {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   font-family: var(--font-mono);
 }
 

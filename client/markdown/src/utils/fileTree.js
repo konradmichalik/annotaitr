@@ -44,3 +44,11 @@ export function filterFileTree(nodes, query) {
     return children.length > 0 ? [{ ...node, children }] : []
   })
 }
+
+/**
+ * A file or folder name in pieces, split where a line break reads well:
+ * before an inner capital (`Changed|Files|Panel`) and before `.`, `-` and `_`.
+ */
+export function nameParts(name) {
+  return name.split(/(?<=[a-z0-9])(?=[A-Z])|(?=[._-])/).filter(Boolean)
+}
