@@ -48,6 +48,19 @@ describe('noteNumbers', () => {
 })
 
 describe('noteLocation', () => {
+  it('names the file and its new or old line for a note on a diff, as the feedback does', () => {
+    const content = '@@ -41,2 +41,3 @@\n a\n-b\n+c\n+d'
+    const diff = [{ id: 'd', type: 'code', language: 'diff src/Foo.php', content, startLine: 10 }]
+    const at = content.indexOf('+c')
+    expect(noteLocation({ ...note('x', 'd', at), originalText: '+c\n+d' }, diff)).toBe('Foo.php · new L42-43')
+    expect(noteLocation({ ...note('x', 'd', content.indexOf('-b')), originalText: '-b' }, diff)).toBe('Foo.php · old L42')
+  })
+
+  it('drops the code marks around a path heading', () => {
+    const walk = [{ id: 'h', type: 'heading', content: '`src/a.js` (new file)', startLine: 1 }, { id: 'p', type: 'paragraph', content: 'Why', startLine: 3 }]
+    expect(noteLocation(note('x', 'p', 0), walk)).toBe('src/a.js (new file) · L3')
+  })
+
   it('names the section and the line', () => {
     expect(noteLocation(note('x', 'block-3', 0), blocks)).toBe('Usage · L7')
     expect(noteLocation(note('x', 'block-1', 0), blocks)).toBe('Intro · L3')

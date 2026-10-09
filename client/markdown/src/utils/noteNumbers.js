@@ -1,3 +1,5 @@
+import { diffLineRef, splitCodeInfo } from './diffLines.js'
+
 // Mirrors getBlockOrder and sortAnnotations in server/markdown/feedback.js, so the
 // cards list the notes in the order the feedback the agent reads lists them.
 function sourceLine(blockId) {
@@ -34,10 +36,25 @@ export function noteNumbers(files) {
 }
 
 /** Where a note sits: the section it falls in and its line, or null when its block is unknown. */
+const newlines = (text) => ((text ?? '').match(/\n/g) || []).length
+
+/** `Foo.php · new L43-49` for a note on a `diff <path>` block, or null for any other note. */
+function diffLocation(annotation, blocks) {
+  const block = blocks.find((b) => b.id === annotation.blockId)
+  const { meta } = splitCodeInfo(block?.language)
+  const first = newlines((block?.content ?? '').slice(0, annotation.startOffset))
+  const ref = diffLineRef(block, first, first + newlines(annotation.originalText))
+  if (!ref || !meta) { return null }
+  const short = ref.replace(` in ${meta}`, '').replace(/Lines? /g, 'L')
+  return `${meta.split('/').pop()} · ${short}`
+}
+
 export function noteLocation(annotation, blocks) {
   const line = lineOf(annotation.blockId, blocks)
   if (!line) { return null }
+  const inDiff = diffLocation(annotation, blocks)
+  if (inDiff) { return inDiff }
   const heading = blocks.filter((block) => block.type === 'heading' && block.startLine <= line).at(-1)
-  const title = heading?.content.replace(/<[^>]*>/g, '').trim()
+  const title = heading?.content.replace(/<[^>]*>/g, '').replace(/`/g, '').trim()
   return title ? `${title} · L${line}` : `L${line}`
 }
