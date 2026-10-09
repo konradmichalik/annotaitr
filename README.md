@@ -6,7 +6,7 @@
 
 annotaitr opens an [image](#images-and-pdfs), a [web page](#web-pages), a [video](#videos-and-gifs), a [PDF](#images-and-pdfs) or a [Markdown](#markdown-and-plain-text) file in your browser. You mark it up. The agent receives numbered, structured feedback it can act on, instead of pixel coordinates and line numbers you typed by hand.
 
-For Claude Code, OpenCode and Mistral Vibe. [Landing page](https://konradmichalik.github.io/annotaitr/)
+For Claude Code, Codex, OpenCode, Mistral Vibe and Gemini CLI. [Landing page](https://konradmichalik.github.io/annotaitr/)
 
 [![Test](https://github.com/konradmichalik/annotaitr/actions/workflows/test.yml/badge.svg)](https://github.com/konradmichalik/annotaitr/actions/workflows/test.yml)
 [![License](https://img.shields.io/github/license/konradmichalik/annotaitr)](LICENSE)
@@ -53,6 +53,13 @@ The mode is auto-detected from what you open, see [Usage](docs/usage.md). The me
 - [**Rich content**](docs/usage/markdown.md): LaTeX math, Mermaid, PlantUML and Kroki diagrams render inline and are annotatable as a whole
 - [**Linked navigation**](docs/usage/markdown.md): click relative `.md` links to add them to the review
 - [**File references and quick labels**](docs/usage/markdown.md): type `@` in a comment to autocomplete project files, or categorize a selection with a predefined label
+
+### Changes before a commit
+
+![A changes walkthrough with the changed files as a tree, the agent's overview with its commits and a question on a diff line](site/images/07-changes.png)
+
+- [**Changes walkthrough**](docs/usage/markdown.md#presenting-changes-before-a-commit): the agent presents its uncommitted changes, or a whole branch against its base, laid out like a pull request: an overview with the proposed commit message, the changed files as a tree and one card per file with the agent's explanation and the diff
+- [**Notes on diff lines**](docs/usage/markdown.md#presenting-changes-before-a-commit): a note names the file and its old or new line; in Claude Code, `/annotaitr:changes` commits with the proposed message once you approve
 
 ### Images and PDFs
 
@@ -201,7 +208,7 @@ Every flag, environment variable and exit code: [docs/usage.md](docs/usage.md).
 
 | Topic | What's inside |
 |-------|----------------|
-| [Usage](docs/usage.md) | Every flag, environment variable, exit code and the mode-detection rules, with one guide per target: [web pages](docs/usage/web-pages.md), [images](docs/usage/images.md), [video](docs/usage/video.md), [PDFs](docs/usage/pdf.md), [Markdown](docs/usage/markdown.md) |
+| [Usage](docs/usage.md) | Every flag, environment variable, exit code and the mode-detection rules, with one guide per target: [web pages](docs/usage/web-pages.md), [images](docs/usage/images.md), [video](docs/usage/video.md), [PDFs](docs/usage/pdf.md), [Markdown](docs/usage/markdown.md) and [changes before a commit](docs/usage/markdown.md#presenting-changes-before-a-commit) |
 | [Review sessions](docs/usage/sessions.md) | Rounds, `annotaitr reply`, its statuses and replying to the agent |
 | [Tools and the feedback panel](docs/usage/interface.md) | Tool keys, writing a note, intents, finishing a review, settings |
 | [How it works](docs/how-it-works.md) | The annotation and review-loop mechanism behind each mode |
