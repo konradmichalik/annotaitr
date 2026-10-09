@@ -63,7 +63,7 @@ The explanation is a JSON object, every field optional:
 }
 ```
 
-The walkthrough is written to `changes.md` in the git directory, so it is never committed, and opens in Markdown mode with one file card per changed file. Files without a line in `files` are listed as `Not explained`, explanations for paths that did not change as `Explained but unchanged`. Lock files, binary files and files with more than 1000 changed lines show their counts instead of their hunks. With nothing to review, it prints `NO CHANGES:` and exits `0`.
+The walkthrough is written to `changes.md` in the git directory, so it is never committed. It opens laid out like a pull request: the changed files as a folder tree on the left, the agent's overview with the proposed commit message, and one card per file with the agent's line and the diff with old and new line numbers. `Mark file as reviewed` folds a card to its explanation, `J` and `K` move to the next and previous file. Files without a line in `files` are marked as not explained, explanations for paths that did not change are listed as `Explained but unchanged`. Lock files, binary files and files with more than 1000 changed lines show their counts instead of their hunks. With nothing to review, it prints `NO CHANGES:` and exits `0`.
 
 A note on a diff line names the changed file and the line in it, `new` for the code after the change and `old` for removed code: `## 1. Change · Text (new Lines 43-49 in src/Foo.php) [#a3f19c2e]`. A note on the explanation names its line in the walkthrough.
 
