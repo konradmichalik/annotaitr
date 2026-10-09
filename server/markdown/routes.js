@@ -35,7 +35,8 @@ export function createApiRouter(filePaths, resolveDecision, origin = 'cli', stor
             contentHash: currentHash,
             hashMismatch: currentHash !== store.contentHash,
             isPlainText: isPlainTextFile(store.absolutePath),
-            kind: store.kind ?? 'document'
+            kind: store.kind ?? 'document',
+            label: store.label ?? null
           }
         })
       )

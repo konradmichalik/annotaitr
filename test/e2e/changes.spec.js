@@ -68,6 +68,27 @@ test('a note on a diff line names the file and its new line', async ({ page }) =
   })
 })
 
+test('the header names what is compared and a card opens its whole file to read', async ({ page }) => {
+  await withRepo(async ({ dir, explain }) => {
+    const cli = startCli(['changes', '--explain', explain], {}, { cwd: dir })
+    try {
+      await page.goto(await cli.url)
+      await expect(page.locator('.app-target')).toHaveText('main · uncommitted')
+      await expect(page.locator('.header-facts')).toHaveText('2 files · +2 \u22121')
+
+      const card = page.getByRole('region', { name: 'cache.js' })
+      await card.getByRole('button', { name: 'Show whole file' }).click()
+      await expect(card.locator('.change-whole')).toContainText('export default key')
+      await expect(card.locator('.block-diff-wrapper')).toBeHidden()
+      await card.getByRole('button', { name: 'Show hunks' }).click()
+      await expect(card.locator('.change-whole')).toHaveCount(0)
+      await expect(card.locator('.block-diff-wrapper')).toBeVisible()
+    } finally {
+      if (cli.child.exitCode === null) { cli.child.kill() }
+    }
+  })
+})
+
 test('marking a file as reviewed folds its card to the explanation', async ({ page }) => {
   await withRepo(async ({ dir, explain }) => {
     const cli = startCli(['changes', '--explain', explain], {}, { cwd: dir })

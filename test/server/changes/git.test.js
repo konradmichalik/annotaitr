@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdtemp, writeFile, rm, realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { collectChanges, compareInfo, gitPath, listCommits, repoRoot, resolveBase } from '../../../server/changes/git.js'
+import { collectChanges, compareInfo, fullFileDiff, gitPath, listCommits, repoRoot, resolveBase } from '../../../server/changes/git.js'
 
 const env = { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@example.com', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@example.com' }
 
@@ -106,6 +106,22 @@ describe('changes git layer', () => {
     const budgeted = await collectChanges(dir, sha, { budget: 10 })
     expect(budgeted.filter((f) => f.diff !== null)).toHaveLength(1)
     expect(budgeted.find((f) => f.omitted === 'walkthrough size limit reached')).toBeDefined()
+  })
+
+  it('reads a changed file with its whole content as context', async () => {
+    await writeFile(join(dir, 'long.txt'), Array.from({ length: 30 }, (_, i) => `line ${i + 1}`).join('\n') + '\n')
+    run(dir, 'add', 'long.txt')
+    run(dir, 'commit', '-q', '-m', 'long')
+    await writeFile(join(dir, 'long.txt'), Array.from({ length: 30 }, (_, i) => (i === 14 ? 'LINE 15' : `line ${i + 1}`)).join('\n') + '\n')
+    const head = run(dir, 'rev-parse', 'HEAD').trim()
+    const [file] = (await collectChanges(dir, head)).filter((f) => f.path === 'long.txt')
+    expect(file.diff).not.toContain('line 1\n')
+    const full = await fullFileDiff(dir, head, file)
+    expect(full).toContain(' line 1\n')
+    expect(full).toContain(' line 30')
+    expect(await fullFileDiff(dir, head, { ...file, omitted: 'lock file', diff: null })).toBeNull()
+    run(dir, 'reset', '-q', 'HEAD~1')
+    await rm(join(dir, 'long.txt'))
   })
 
   it('places the walkthrough inside the git directory', async () => {

@@ -23,7 +23,7 @@ import { FilesSection, MarkReviewedButton } from './components/FilesSection.jsx'
 import { useChangesReview } from './hooks/useChangesReview.js'
 import { useChangesNavigation } from './hooks/useChangesNavigation.js'
 import { ChangedFilesPanel } from './components/ChangedFilesPanel.jsx'
-import { groupChangeSections, noteCounts } from './utils/changeSections.js'
+import { changesFacts, groupChangeSections, noteCounts } from './utils/changeSections.js'
 import { agentName } from '../../shared/utils/origin.js'
 import { initialAnnotationState } from './state/annotationReducer.js'
 import { useAutoClose } from '../../shared/hooks/useAutoClose.js'
@@ -451,8 +451,8 @@ export default function App() {
           </button>
         )}
         source={isChanges ? 'changes' : isPlainTextFile ? 'text' : 'markdown'}
-        target={filePath}
-        facts={isMultiFile ? `file ${activeFileIndex + 1} of ${files.length}` : null}
+        target={isChanges ? (activeFile?.label ?? filePath) : filePath}
+        facts={changeSections ? changesFacts(changeSections.files) : isMultiFile ? `file ${activeFileIndex + 1} of ${files.length}` : null}
         origin={origin}
         onOpenShortcuts={openShortcuts}
         onOpenSettings={() => setSettingsTab('general')}

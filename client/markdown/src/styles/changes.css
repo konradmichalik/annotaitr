@@ -382,3 +382,36 @@
   color: var(--ink-muted);
   font-size: var(--fs-sm);
 }
+
+/* The whole file, read only: it takes the place of the hunks until the reviewer switches back */
+.change-whole-btn {
+  min-height: 28px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-control);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.change-whole-btn:hover {
+  background: var(--canvas);
+}
+
+.change-whole-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.change-file.is-whole .change-file-body > .block-diff-wrapper {
+  display: none;
+}
+
+.change-whole-note {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+}

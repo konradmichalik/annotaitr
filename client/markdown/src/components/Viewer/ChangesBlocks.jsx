@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import { groupHtmlWrappers } from '../../utils/htmlWrappers.js'
+import { parseDiffLines } from '../../utils/diffLines.js'
+import { DiffCode } from './CodeBlock.jsx'
 import { ViewerBlocks } from './ViewerBlocks.jsx'
 import { DiffCounts } from './DiffCounts.jsx'
 import { CheckIcon } from '../FilesSection.jsx'
@@ -36,9 +39,40 @@ function FileBody({ blocks, agent, blockProps }) {
   )))
 }
 
+/** The file's diff with its whole content as context, loaded the first time the reviewer asks for it. */
+function useWholeFile(path) {
+  const [whole, setWhole] = useState({ open: false, diff: null, error: null })
+  const toggle = async () => {
+    if (whole.open || whole.diff !== null) {
+      setWhole((prev) => ({ ...prev, open: !prev.open }))
+      return
+    }
+    setWhole({ open: true, diff: null, error: null })
+    try {
+      const json = await (await fetch(`/api/changes/full?path=${encodeURIComponent(path)}`)).json()
+      setWhole({ open: true, diff: json.success ? json.data.diff : null, error: json.success ? null : 'The whole file is not available.' })
+    } catch {
+      setWhole({ open: true, diff: null, error: 'Could not load the whole file.' })
+    }
+  }
+  return [whole, toggle]
+}
+
+function WholeFile({ whole }) {
+  if (whole.error) { return <p className="change-whole-note">{whole.error}</p> }
+  if (whole.diff === null) { return <p className="change-whole-note">Loading the whole file…</p> }
+  return (
+    <div className="change-whole">
+      <p className="change-whole-note">Whole file, to read. Notes go on the hunks: switch back with Show hunks.</p>
+      <pre className="block-code block-diff"><code><DiffCode lines={parseDiffLines(whole.diff)} /></code></pre>
+    </div>
+  )
+}
+
 function FileCard({ file, agent, collapsed, reviewed, onToggle, onReview, blockProps }) {
+  const [whole, toggleWhole] = useWholeFile(file.path)
   const bodyId = `change-file-body-${file.heading.id}`
-  const classes = ['change-file', collapsed && 'is-collapsed', !file.explained && 'is-unexplained'].filter(Boolean).join(' ')
+  const classes = ['change-file', collapsed && 'is-collapsed', !file.explained && 'is-unexplained', whole.open && 'is-whole'].filter(Boolean).join(' ')
   return (
     <section className={classes} data-path={file.path} aria-label={file.path}>
       {/* The header sits outside every data-block-id, so it never shifts the offsets of a selection. */}
@@ -51,6 +85,11 @@ function FileCard({ file, agent, collapsed, reviewed, onToggle, onReview, blockP
         </button>
         <DiffCounts className="change-file-counts" added={file.added} removed={file.removed} />
         {!file.explained && <span className="change-pill">Not explained</span>}
+        {file.hasDiff && (
+          <button type="button" className="change-whole-btn" aria-pressed={whole.open} onClick={toggleWhole}>
+            {whole.open ? 'Show hunks' : 'Show whole file'}
+          </button>
+        )}
         <button type="button" className="change-review-btn" aria-pressed={reviewed} onClick={() => onReview(file.path, !reviewed)}>
           <CheckIcon />
           {reviewed ? 'Reviewed' : 'Mark as reviewed'}
@@ -58,6 +97,7 @@ function FileCard({ file, agent, collapsed, reviewed, onToggle, onReview, blockP
       </div>
       <div id={bodyId} className="change-file-body">
         <FileBody blocks={file.blocks} agent={agent} blockProps={{ ...blockProps, inChangeCard: true }} />
+        {whole.open && <WholeFile whole={whole} />}
       </div>
     </section>
   )

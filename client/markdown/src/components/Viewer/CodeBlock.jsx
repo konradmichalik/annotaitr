@@ -18,7 +18,7 @@ function getTokenOffset(codeEl, tokenSpan) {
  * empty gutter spans, so the text of the block stays exactly the fenced source
  * and selections, quotes and restored highlights match it character for character.
  */
-function DiffCode({ lines }) {
+export function DiffCode({ lines }) {
   return lines.map((line, i) => [
     i > 0 && '\n',
     <span key={i} className={`diff-line diff-${line.kind}`}>

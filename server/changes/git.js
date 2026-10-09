@@ -155,7 +155,9 @@ async function untrackedEntries(root) {
 }
 
 async function readEntry(root, mergeBase, entry, budget) {
-  const result = (omitted, diff = null) => ({ path: entry.path, status: entry.status, added: entry.added, removed: entry.removed, diff, omitted })
+  const result = (omitted, diff = null) => ({
+    path: entry.path, status: entry.status, added: entry.added, removed: entry.removed, diff, omitted, untracked: !entry.tracked
+  })
   if (!entry.tracked && looksLikeSecret(entry.path)) { return result('possible secret') }
   if (entry.status !== 'D') {
     const reason = await fileOmission(root, entry.path)
@@ -208,6 +210,20 @@ export async function collectChanges(root, mergeBase, limits = DEFAULT_LIMITS) {
   const spent = { used: 0, limit: budget }
   const read = await mapLimit(shown, CONCURRENCY, (entry) => readEntry(root, mergeBase, entry, spent))
   return [...trimToBudget(read, budget), ...beyond]
+}
+
+// More context lines than any file within the size limit has, so a hunk spans the whole file.
+const WHOLE_FILE_CONTEXT = '-U100000'
+
+/**
+ * A changed file's diff with the whole file as context, for the reviewer who
+ * wants to see more than the hunks. Null for a file whose hunks are not shown.
+ * An untracked file's diff already holds all of it.
+ */
+export async function fullFileDiff(root, mergeBase, file) {
+  if (file.diff === null || file.omitted) { return null }
+  if (file.untracked) { return file.diff }
+  return git(['diff', ...DIFF_FLAGS, WHOLE_FILE_CONTEXT, '--end-of-options', mergeBase, '--', file.path], { cwd: root })
 }
 
 /** A path inside the git directory, which is never committed and never part of the diff. */

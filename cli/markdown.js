@@ -23,7 +23,7 @@ async function resolveMarkdownTargets(targets) {
   return { absolutePaths }
 }
 
-export async function runMarkdown({ targets, origin, feedbackNotes, kind, onDecision = null }) {
+export async function runMarkdown({ targets, origin, feedbackNotes, kind, label = null, routes = null, onDecision = null }) {
   if (targets.length === 0) {
     fail('No file specified.')
     return
@@ -32,7 +32,7 @@ export async function runMarkdown({ targets, origin, feedbackNotes, kind, onDeci
   const { absolutePaths, error } = await resolveMarkdownTargets(targets)
   if (error) { fail(error); return }
 
-  const server = withLifecycle(await buildMarkdownServer({ filePaths: absolutePaths, origin, feedbackNotes, kind }))
+  const server = withLifecycle(await buildMarkdownServer({ filePaths: absolutePaths, origin, feedbackNotes, kind, label, routes }))
   process.stderr.write(`Server running at ${server.url}\n`)
   process.stderr.write(`Annotating: ${absolutePaths.join(', ')}\n`)
   await openBrowser(server.url)

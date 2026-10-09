@@ -33,6 +33,7 @@ function fileEntry(heading, blocks) {
     status: suffix === 'new file' ? 'A' : suffix === 'deleted' ? 'D' : 'M',
     heading,
     blocks,
+    hasDiff: blocks.some(isDiffBlock),
     explained: !blocks.some((b) => b.type === 'paragraph' && b.content.trim() === NOT_EXPLAINED),
     ...counts
   }
@@ -84,4 +85,11 @@ export function noteCounts(sections, annotations) {
     if (path) { byPath.set(path, (byPath.get(path) ?? 0) + 1) }
   }
   return { overview, byPath }
+}
+
+/** `4 files · +26 −7`, the header facts of a walkthrough. */
+export function changesFacts(files) {
+  const added = files.reduce((sum, f) => sum + f.added, 0)
+  const removed = files.reduce((sum, f) => sum + f.removed, 0)
+  return `${files.length} ${files.length === 1 ? 'file' : 'files'} · +${added} \u2212${removed}`
 }

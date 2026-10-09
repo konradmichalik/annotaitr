@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { parseMarkdownToBlocks } from '../../../client/markdown/src/utils/parser.js'
-import { groupChangeSections, noteCounts } from '../../../client/markdown/src/utils/changeSections.js'
+import { changesFacts, groupChangeSections, noteCounts } from '../../../client/markdown/src/utils/changeSections.js'
 
 const walkthrough = [
   '# Scope the cache',
@@ -100,5 +100,12 @@ describe('groupChangeSections with groups', () => {
       ['Everything else', [], ['docs/b.md']]
     ])
     expect(files.map((f) => f.path)).toEqual(['src/a.js', 'docs/b.md'])
+  })
+})
+
+describe('changesFacts', () => {
+  it('sums the files and lines for the header', () => {
+    expect(changesFacts([{ added: 20, removed: 5 }, { added: 6, removed: 2 }])).toBe('2 files · +26 \u22127')
+    expect(changesFacts([{ added: 1, removed: 0 }])).toBe('1 file · +1 \u22120')
   })
 })

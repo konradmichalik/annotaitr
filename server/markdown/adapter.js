@@ -37,12 +37,14 @@ function resolveNotesForFile(feedbackNotes, fileIndex, content) {
  * @param {string} [options.origin='cli']
  * @param {Array} [options.feedbackNotes] - AI notes to attach to the first file
  * @param {string} [options.kind] - 'changes' for a walkthrough from `annotaitr changes`, which the client lays out like a pull request
+ * @param {string} [options.label] - what the header names instead of the file path, such as `feature/x → main`
+ * @param {import('express').Router} [options.routes] - extra API routes of the mode
  * @param {string} [options.htmlContent] - pre-loaded HTML to serve instead of the
  *   built client/dist bundle (used by apps/opencode, which bundles its own copy)
  * @param {Function} [options.onReady] - (url, port) => void
  */
 export async function buildMarkdownServer(options) {
-  const { filePaths, origin = 'cli', feedbackNotes = null, kind = 'document', htmlContent = null, onReady = null } = options
+  const { filePaths, origin = 'cli', feedbackNotes = null, kind = 'document', label = null, routes = null, htmlContent = null, onReady = null } = options
 
   // Compute content hash per file for annotation persistence. A read failure
   // here (e.g. a file over the size limit) must reject startup — swallowing
@@ -52,7 +54,7 @@ export async function buildMarkdownServer(options) {
       const content = await readAnnotatableFile(fp)
       const contentHash = createHash('sha256').update(content).digest('hex')
       const notes = resolveNotesForFile(feedbackNotes, index, content)
-      return { absolutePath: fp, contentHash, annotations: notes, kind }
+      return { absolutePath: fp, contentHash, annotations: notes, kind, label }
     })
   )
 
@@ -68,6 +70,7 @@ export async function buildMarkdownServer(options) {
     staticDirs: [...servedDirs],
     onReady,
     mountRoutes(app, { safeResolve }) {
+      if (routes) { app.use(routes) }
       app.use(createApiRouter(filePaths, safeResolve, origin, stores))
     }
   })

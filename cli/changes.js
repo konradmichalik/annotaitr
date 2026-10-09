@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, resolve as resolvePath } from 'node:path'
-import { collectChanges, compareInfo, gitPath, listCommits, repoRoot, resolveBase } from '../server/changes/git.js'
-import { buildWalkthrough } from '../server/changes/walkthrough.js'
+import { collectChanges, compareInfo, fullFileDiff, gitPath, listCommits, repoRoot, resolveBase } from '../server/changes/git.js'
+import { createChangesRouter } from '../server/changes/routes.js'
+import { buildWalkthrough, hunksOnly } from '../server/changes/walkthrough.js'
 import { parseArgs } from './args.js'
 import { runMarkdown } from './markdown.js'
 
@@ -121,7 +122,8 @@ export async function prepareWalkthrough({ base, explain, cwd = process.cwd() })
     await mkdir(dir, { recursive: true })
     const path = join(dir, 'changes.md')
     await writeFile(path, buildWalkthrough({ explanation: explained.explanation, compared, files }))
-    return { path, root, base, fingerprint: fingerprint(shown), unchangedPaths }
+    const label = compared.uncommitted ? `${compared.branch} · uncommitted` : `${compared.branch} → ${compared.base}`
+    return { path, root, base, label, compared, files, fingerprint: fingerprint(shown), unchangedPaths }
   } catch (err) {
     return { error: `Could not write the walkthrough: ${err.message}` }
   }
@@ -155,12 +157,19 @@ export async function runChanges(args) {
   if (prepared.error || prepared.output) { return prepared }
   // The walkthrough holds code from the working tree, so it goes as soon as the reviewer has decided.
   const removeWalkthrough = () => rm(prepared.path, { force: true })
+  // Only the files of this walkthrough can be read in full, by their exact path.
+  const byPath = new Map(prepared.files.map((f) => [f.path, f]))
+  const fullDiff = async (path) => {
+    const file = byPath.get(path)
+    const diff = file ? await fullFileDiff(prepared.root, prepared.compared.mergeBase, file) : null
+    return diff === null ? null : hunksOnly(diff)
+  }
   const onDecision = async () => {
     await removeWalkthrough()
     return decisionNote(prepared)
   }
   try {
-    await runMarkdown({ targets: [prepared.path], origin: parsed.origin, feedbackNotes: parsed.feedbackNotes, kind: 'changes', onDecision })
+    await runMarkdown({ targets: [prepared.path], origin: parsed.origin, feedbackNotes: parsed.feedbackNotes, kind: 'changes', label: prepared.label, routes: createChangesRouter(fullDiff), onDecision })
   } catch (err) {
     await removeWalkthrough()
     return { error: err.message }
