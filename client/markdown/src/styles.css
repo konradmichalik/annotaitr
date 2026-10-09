@@ -505,6 +505,124 @@
   font-family: 'SF Mono', 'Fira Code', monospace;
 }
 
+/* Diff blocks: a file card as in a pull request, wrapped so no code hides off to the side */
+.block-diff-wrapper {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--card);
+  overflow: hidden;
+}
+
+.diff-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0 calc(var(--space-6) + var(--space-3)) 0 var(--space-3);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  font-size: var(--fs-sm);
+  user-select: none;
+}
+
+.diff-path {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  color: var(--ink);
+}
+
+.diff-counts {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.diff-count-add {
+  color: var(--diff-add-text);
+}
+
+.diff-count-del {
+  color: var(--diff-del-text);
+}
+
+.block-code.block-diff {
+  margin: 0;
+  padding: var(--space-1) 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: var(--card);
+  font-size: 12.5px;
+  line-height: 20px;
+}
+
+.block-diff code {
+  display: block;
+  font-family: var(--font-mono);
+  white-space: normal;
+  color: var(--ink);
+}
+
+/* Block, not flex: a highlight wraps part of the text in a span, which must stay inline */
+.diff-line {
+  position: relative;
+  display: block;
+  min-height: 20px;
+  padding: 0 var(--space-3) 0 84px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.diff-gutter {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: flex;
+  width: 76px;
+  color: var(--ink-muted);
+  user-select: none;
+}
+
+.diff-gutter::before,
+.diff-gutter::after {
+  flex: 1 1 0;
+  padding-right: var(--space-2);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.diff-gutter::before {
+  content: attr(data-old);
+}
+
+.diff-gutter::after {
+  content: attr(data-new);
+}
+
+.diff-add {
+  background: var(--diff-add);
+}
+
+.diff-add .diff-gutter {
+  background: var(--diff-add-gutter);
+  color: var(--diff-add-text);
+}
+
+.diff-del {
+  background: var(--diff-del);
+}
+
+.diff-del .diff-gutter {
+  background: var(--diff-del-gutter);
+  color: var(--diff-del-text);
+}
+
+.diff-hunk,
+.diff-meta {
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+}
+
 /* Token-level selection in code blocks */
 .block-code.token-selectable .hljs span:not(:empty):hover {
   text-decoration: underline;

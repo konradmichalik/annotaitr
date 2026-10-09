@@ -23,7 +23,7 @@ Write it to `$(git rev-parse --git-path annotaitr)/changes.md`, inside the git
 directory, so it is never committed and never shows up in the diff. Create the
 directory if needed. Structure:
 
-````markdown
+`````markdown
 # <What the change does, as a title>
 
 <Two to four sentences: what changed and why.>
@@ -38,14 +38,15 @@ directory if needed. Structure:
 
 <Optional one line for the next hunk.>
 
-```diff
-<the hunk, copied verbatim from git diff, starting at its @@ line>
-```
+````diff <path/of/file>
+<the hunks, copied verbatim from git diff, starting at the first @@ line>
 ````
+`````
 
 Rules for the walkthrough:
 
 - **Every changed file gets a section**, ordered by path like a file tree, untracked files included. A file you consider trivial still gets its one line.
+- **One `diff <path>` block per file** with all its hunks, the path after `diff` on the fence line, so annotaitr shows it as a file card with line numbers. Fence it with four backticks (` ```` `), or more if the hunk itself holds a run of four, so a code fence inside the changed file cannot end the block early. To explain a single hunk, split the file into several blocks, each with the same path and its one line above it.
 - **Copy hunks verbatim** from the `git diff` output. Never shorten, reformat or rewrite them. The reviewer must see exactly what will be committed. For a binary file, a file over 300 changed lines, or a lock file, name it with its `--stat` line instead of the hunks.
 - Explain intent, not syntax. Do not repeat what the diff already shows.
 - Mention anything the reviewer might not expect, such as a changed config, a removed test or a new dependency, in the summary.

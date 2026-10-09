@@ -43,6 +43,14 @@
   --mark-halo: rgb(255 255 255 / 60%);
   --scrim: rgb(15 17 20 / 50%);
 
+  /* Diff lines. Added and removed also differ by their sign and line number column. */
+  --diff-add: #eaf6ee;
+  --diff-add-gutter: #d7eedf;
+  --diff-add-text: #1a6a35;
+  --diff-del: #fcecec;
+  --diff-del-gutter: #f6d6d6;
+  --diff-del-text: #a32626;
+
   /* Search hits in the reviewed text */
   --search-hit: #ffe48a;
   --search-hit-active: #f0a020;
@@ -98,6 +106,12 @@
   --intent-add-label: #f0c05a;
   --intent-remove-label: #f0abd0;
   --intent-question-label: #8fd0f5;
+  --diff-add: #12261a;
+  --diff-add-gutter: #183420;
+  --diff-add-text: #7fd39a;
+  --diff-del: #2a1416;
+  --diff-del-gutter: #3a1a1d;
+  --diff-del-text: #ff9a9a;
   --search-hit: #5c4a12;
   --search-hit-active: #8a5a00;
   --elev-1: 0 1px 2px rgb(0 0 0 / 40%);
