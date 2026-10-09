@@ -135,6 +135,24 @@ async function fileOmission(root, path) {
   }
 }
 
+/** Why the version of a file at the merge base is not read: it is too large. Null when it can be read. */
+async function blobOmission(root, mergeBase, path) {
+  try {
+    const size = Number((await git(['cat-file', '-s', `${mergeBase}:${path}`], { cwd: root })).trim())
+    return size > MAX_FILE_BYTES ? `larger than ${MAX_FILE_BYTES / 1024} KB` : null
+  } catch {
+    return null
+  }
+}
+
+// A deleted or shrunk file can still have a huge old version, which counts as
+// one changed line but would be read in full.
+async function sizeOmission(root, mergeBase, entry) {
+  const current = entry.status === 'D' ? null : await fileOmission(root, entry.path)
+  if (current || entry.untracked || entry.status === 'A') { return current }
+  return blobOmission(root, mergeBase, entry.path)
+}
+
 /** Run `fn` over `items`, at most `limit` at a time, keeping the order of the results. */
 async function mapLimit(items, limit, fn) {
   const results = new Array(items.length)
@@ -169,7 +187,7 @@ function diffArgs(mergeBase, entry, extra = []) {
 /** An entry with its line counts and, when its hunks will not be shown, why. Nothing is read yet. */
 async function countEntry(root, mergeBase, entry) {
   if (entry.untracked && looksLikeSecret(entry.path)) { return { ...entry, omitted: 'possible secret' } }
-  const tooLarge = entry.status === 'D' ? null : await fileOmission(root, entry.path)
+  const tooLarge = await sizeOmission(root, mergeBase, entry)
   if (tooLarge) { return { ...entry, omitted: tooLarge } }
   const counted = entry.untracked
     ? { ...entry, ...[...parseNumstat(await git(diffArgs(mergeBase, entry, ['--numstat', '-z']), { cwd: root, okCodes: [0, 1] })).values()][0] }
@@ -192,7 +210,7 @@ async function readEntry(root, mergeBase, entry) {
   const { path, status, added, removed, untracked } = entry
   if (entry.omitted) { return { path, status, added, removed, untracked, diff: null, omitted: entry.omitted } }
   const diff = await git(diffArgs(mergeBase, entry), { cwd: root, okCodes: [0, 1] })
-  // A file under the size limit can still have a huge old version, a minified line for example.
+  // Old and new version are each under the size limit, but a rewrite shows both in full.
   if (Buffer.byteLength(diff) > MAX_DIFF_BYTES) {
     return { path, status, added, removed, untracked, diff: null, omitted: `diff larger than ${MAX_DIFF_BYTES / 1024} KB` }
   }

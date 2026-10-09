@@ -99,6 +99,20 @@ describe('changes git layer', () => {
     await rm(join(dir, 'big.min.js'))
   })
 
+  it('names a file whose old version is over the size limit instead of reading it', async () => {
+    await writeFile(join(dir, 'old.min.js'), 'x'.repeat(300 * 1024))
+    await writeFile(join(dir, 'shrunk.min.js'), 'y'.repeat(300 * 1024))
+    run(dir, 'add', 'old.min.js', 'shrunk.min.js')
+    run(dir, 'commit', '-q', '-m', 'big')
+    await rm(join(dir, 'old.min.js'))
+    await writeFile(join(dir, 'shrunk.min.js'), 'y\n')
+    const files = await collectChanges(dir, run(dir, 'rev-parse', 'HEAD').trim())
+    expect(files.find((f) => f.path === 'old.min.js')).toMatchObject({ status: 'D', omitted: 'larger than 256 KB', diff: null })
+    expect(files.find((f) => f.path === 'shrunk.min.js')).toMatchObject({ status: 'M', omitted: 'larger than 256 KB', diff: null })
+    run(dir, 'reset', '-q', 'HEAD~1')
+    await rm(join(dir, 'shrunk.min.js'))
+  })
+
   it('stops showing hunks past the file count, the line count and the size budget, in path order', async () => {
     const sha = (await resolveBase(dir, 'main')).sha
     const capped = await collectChanges(dir, sha, { maxFiles: 2 })
