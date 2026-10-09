@@ -61,7 +61,7 @@ describe('prepareWalkthrough', () => {
     expect(path).toBe(join(dir, '.git', 'annotaitr', 'changes.md'))
     const md = await readFile(path, 'utf-8')
     expect(md).toContain('# Rename')
-    expect(md).toContain('## a.js\n\nSays two.\n\n````diff a.js\n@@ -1 +1 @@\n-one\n+two\n````')
+    expect(md).toContain('## `a.js`\n\nSays two.\n\n````diff a.js\n@@ -1 +1 @@\n-one\n+two\n````')
     expect(md).toContain('**Not explained:** `explain.json`')
   })
 
@@ -71,7 +71,7 @@ describe('prepareWalkthrough', () => {
     const { path } = await prepareWalkthrough({ cwd: dir, base: 'main' })
     const md = await readFile(path, 'utf-8')
     expect(md).toContain('against `main` (merge base')
-    expect(md).toMatch(/\*\*Commits:\*\*\n\n- `[0-9a-f]{7,}` feat: on the branch/)
+    expect(md).toMatch(/\*\*Commits:\*\*\n\n- `[0-9a-f]{7,}` `feat: on the branch`/)
   })
 
   it('reports an unknown base', async () => {

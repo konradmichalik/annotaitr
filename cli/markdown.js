@@ -23,7 +23,7 @@ async function resolveMarkdownTargets(targets) {
   return { absolutePaths }
 }
 
-export async function runMarkdown({ targets, origin, feedbackNotes, kind }) {
+export async function runMarkdown({ targets, origin, feedbackNotes, kind, onDecision = null }) {
   if (targets.length === 0) {
     fail('No file specified.')
     return
@@ -38,6 +38,7 @@ export async function runMarkdown({ targets, origin, feedbackNotes, kind }) {
   await openBrowser(server.url)
 
   const decision = await server.waitForDecision()
+  await onDecision?.()
   await handleOutcome(server, decision, () => (
     decision.approved
       ? formatMarkdownApproval(decision)

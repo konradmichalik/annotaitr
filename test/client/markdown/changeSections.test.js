@@ -9,7 +9,7 @@ const walkthrough = [
   '',
   '**Compared:** uncommitted changes on `main` against `HEAD` (`9b2d4c1`), untracked files included. 3 files, +3 −1.',
   '',
-  '## src/a.js',
+  '## `src/a.js`',
   '',
   'Renames a.',
   '',
@@ -20,7 +20,7 @@ const walkthrough = [
   '+c',
   '````',
   '',
-  '## docs/new.md (new file)',
+  '## `docs/new.md` (new file)',
   '',
   'The agent did not mention this change.',
   '',
@@ -29,7 +29,7 @@ const walkthrough = [
   '+# New',
   '````',
   '',
-  '## package-lock.json',
+  '## `package-lock.json`',
   '',
   'The agent did not mention this change.',
   '',
@@ -63,7 +63,7 @@ describe('groupChangeSections', () => {
   })
 
   it('reads a deleted file from its heading', () => {
-    const { files: deleted } = groupChangeSections(parseMarkdownToBlocks('# T\n\n## gone.txt (deleted)\n\nWhy.\n'))
+    const { files: deleted } = groupChangeSections(parseMarkdownToBlocks('# T\n\n## `gone.txt` (deleted)\n\nWhy.\n'))
     expect(deleted[0]).toMatchObject({ path: 'gone.txt', status: 'D' })
   })
 })

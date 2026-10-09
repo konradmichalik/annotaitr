@@ -26,7 +26,8 @@ function fileEntry(heading, blocks) {
       return { added: sum.added + c.added, removed: sum.removed + c.removed }
     }, { added: 0, removed: 0 })
   return {
-    path: heading.content.replace(STATUS_SUFFIX, ''),
+    // The walkthrough writes the path as inline code, so markdown in a file name stays literal.
+    path: heading.content.replace(STATUS_SUFFIX, '').replace(/^`(.*)`$/, '$1'),
     status: suffix === 'new file' ? 'A' : suffix === 'deleted' ? 'D' : 'M',
     heading,
     blocks,

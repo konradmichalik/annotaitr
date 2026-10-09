@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildWalkthrough, fenceFor, hunksOnly } from '../../../server/changes/walkthrough.js'
+import { buildWalkthrough, fenceFor, hunksOnly, inlineCode } from '../../../server/changes/walkthrough.js'
 
 const compared = { branch: 'feature/x', base: 'main', mergeBase: '3e1f0a7c9d' }
 const diff = 'diff --git a/a.js b/a.js\nindex 1..2 100644\n--- a/a.js\n+++ b/a.js\n@@ -1 +1 @@\n-a\n+b\n'
@@ -14,6 +14,13 @@ describe('fenceFor', () => {
 describe('hunksOnly', () => {
   it('drops the file headers before the first hunk and the trailing newline', () => {
     expect(hunksOnly(diff)).toBe('@@ -1 +1 @@\n-a\n+b')
+  })
+})
+
+describe('inlineCode', () => {
+  it('keeps text in one code span, with backticks and control characters made harmless', () => {
+    expect(inlineCode('fix: escape `x`')).toBe('`fix: escape \u02CBx\u02CB`')
+    expect(inlineCode('a\nb.js')).toBe('`"a\\nb.js"`')
   })
 })
 
@@ -40,8 +47,8 @@ describe('buildWalkthrough', () => {
       compared: { ...compared, commits: [{ sha: 'a1b2c3d', subject: 'feat: add a' }, { sha: 'e4f5a6b', subject: 'fix: typo' }] },
       files
     })
-    expect(md).toContain('**Commits:**\n\n- `a1b2c3d` feat: add a\n- `e4f5a6b` fix: typo')
-    expect(md.indexOf('**Commits:**')).toBeLessThan(md.indexOf('## a.js'))
+    expect(md).toContain('**Commits:**\n\n- `a1b2c3d` `feat: add a`\n- `e4f5a6b` `fix: typo`')
+    expect(md.indexOf('**Commits:**')).toBeLessThan(md.indexOf('## `a.js`'))
   })
 
   it('names uncommitted changes against HEAD', () => {
@@ -51,14 +58,14 @@ describe('buildWalkthrough', () => {
 
   it('gives every file a section with the real hunks in a path fence', () => {
     const md = buildWalkthrough({ explanation: { files: { 'a.js': 'Renames a.' } }, compared, files })
-    expect(md).toContain('## a.js\n\nRenames a.\n\n````diff a.js\n@@ -1 +1 @@\n-a\n+b\n````')
-    expect(md).toContain('## b.json (new file)')
+    expect(md).toContain('## `a.js`\n\nRenames a.\n\n````diff a.js\n@@ -1 +1 @@\n-a\n+b\n````')
+    expect(md).toContain('## `b.json` (new file)')
   })
 
   it('flags files the agent did not explain, in the overview and in their section', () => {
     const md = buildWalkthrough({ explanation: { files: { 'a.js': 'Renames a.' } }, compared, files })
     expect(md).toContain('**Not explained:** `b.json`')
-    expect(md).toContain('## b.json (new file)\n\nThe agent did not mention this change.')
+    expect(md).toContain('## `b.json` (new file)\n\nThe agent did not mention this change.')
   })
 
   it('counts the files the agent did not explain once there are more than five', () => {
@@ -78,8 +85,15 @@ describe('buildWalkthrough', () => {
       compared,
       files: [{ path: 'package-lock.json', status: 'M', added: 120, removed: 80, diff: null, omitted: 'lock file' }]
     })
-    expect(md).toContain('## package-lock.json\n\nThe agent did not mention this change.\n\n+120 −80, not shown: lock file.')
+    expect(md).toContain('## `package-lock.json`\n\nThe agent did not mention this change.\n\n+120 −80, not shown: lock file.')
     expect(md).not.toContain('````diff package-lock.json')
+  })
+
+  it('keeps a title, a commit message and a file line on one line', () => {
+    const md = buildWalkthrough({ explanation: { title: 'One\n## Two', commit: 'fix: a\nb', files: { 'a.js': 'Line\n## x' } }, compared, files })
+    expect(md.startsWith('# One ## Two\n')).toBe(true)
+    expect(md).toContain('**After approval:** `fix: a b`')
+    expect(md).toContain('Line ## x')
   })
 
   it('falls back to a neutral title without an explanation', () => {

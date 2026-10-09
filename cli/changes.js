@@ -1,11 +1,11 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, resolve as resolvePath } from 'node:path'
 import { collectChanges, compareInfo, gitPath, listCommits, repoRoot, resolveBase } from '../server/changes/git.js'
 import { buildWalkthrough } from '../server/changes/walkthrough.js'
 import { parseArgs } from './args.js'
 import { runMarkdown } from './markdown.js'
 
-export const CHANGES_USAGE = 'Usage: annotaitr changes [--base <ref>] [--explain <file>] [--origin <name>] [--feedback-notes <json|path>]'
+const CHANGES_USAGE = 'Usage: annotaitr changes [--base <ref>] [--explain <file>] [--origin <name>] [--feedback-notes <json|path>]'
 
 const OWN_OPTIONS = { '--base': 'base', '--explain': 'explain' }
 const TEXT_FIELDS = ['title', 'summary', 'commit']
@@ -87,11 +87,15 @@ export async function prepareWalkthrough({ base, explain, cwd = process.cwd() })
     return { output: `NO CHANGES: ${against}.\n` }
   }
 
-  const dir = await gitPath(root, 'annotaitr')
-  await mkdir(dir, { recursive: true })
-  const path = join(dir, 'changes.md')
-  await writeFile(path, buildWalkthrough({ explanation: explained.explanation, compared, files }))
-  return { path }
+  try {
+    const dir = await gitPath(root, 'annotaitr')
+    await mkdir(dir, { recursive: true })
+    const path = join(dir, 'changes.md')
+    await writeFile(path, buildWalkthrough({ explanation: explained.explanation, compared, files }))
+    return { path }
+  } catch (err) {
+    return { error: `Could not write the walkthrough: ${err.message}` }
+  }
 }
 
 export async function runChanges(args) {
@@ -100,6 +104,13 @@ export async function runChanges(args) {
   if (parsed.error) { return { error: `${parsed.error}\n${CHANGES_USAGE}` } }
   const prepared = await prepareWalkthrough(parsed)
   if (prepared.error || prepared.output) { return prepared }
-  await runMarkdown({ targets: [prepared.path], origin: parsed.origin, feedbackNotes: parsed.feedbackNotes, kind: 'changes' })
+  // The walkthrough holds code from the working tree, so it goes as soon as the reviewer has decided.
+  const removeWalkthrough = () => rm(prepared.path, { force: true })
+  try {
+    await runMarkdown({ targets: [prepared.path], origin: parsed.origin, feedbackNotes: parsed.feedbackNotes, kind: 'changes', onDecision: removeWalkthrough })
+  } catch (err) {
+    await removeWalkthrough()
+    return { error: err.message }
+  }
   return {}
 }

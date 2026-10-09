@@ -36,6 +36,13 @@ describe('buildMarkdownServer', () => {
     expect(body.data.files[0].kind).toBe('changes')
   })
 
+  it('serves no files next to a changes walkthrough', async () => {
+    await writeFile(readablePath, '# Changes')
+    server = await buildMarkdownServer({ filePaths: [readablePath], kind: 'changes' })
+    const res = await fetch(`${server.url}/${readablePath.split('/').pop()}`)
+    expect(res.status).toBe(404)
+  })
+
   it('marks an ordinary file as a document', async () => {
     await writeFile(readablePath, '# Hello')
     server = await buildMarkdownServer({ filePaths: [readablePath] })

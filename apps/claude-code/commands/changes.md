@@ -85,6 +85,6 @@ naming the passage:
 annotaitr changes --origin claude-code --explain <explain.json path> --feedback-notes '[{"text":"#a3f19c2e (cache key): now injected through the constructor"}]'
 ```
 
-Repeat until the user approves, then act as in step 4. Delete `explain.json`
-and `changes.md` in that directory once the changes are committed or the user
-stops the review.
+Repeat until the user approves, then act as in step 4. annotaitr deletes the
+walkthrough itself once the user decides; delete `explain.json` once the
+changes are committed or the user stops the review.

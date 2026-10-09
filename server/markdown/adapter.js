@@ -57,9 +57,10 @@ export async function buildMarkdownServer(options) {
   )
 
   // Serve static files from each annotated file's directory (relative images,
-  // etc.), plus cwd as a fallback for absolute-style paths.
-  const servedDirs = new Set(filePaths.map(dirname))
-  servedDirs.add(process.cwd())
+  // etc.), plus cwd as a fallback for absolute-style paths. A changes
+  // walkthrough references no files, and its cwd is a source tree that may hold secrets.
+  const servedDirs = new Set(kind === 'changes' ? [] : filePaths.map(dirname))
+  if (kind !== 'changes') { servedDirs.add(process.cwd()) }
 
   return startAnnotatorServer({
     bundleDir,

@@ -1,6 +1,7 @@
 // test/e2e/changes.spec.js
 // `annotaitr changes`: the walkthrough of a repository's uncommitted changes, laid out like a pull request.
 import { execFileSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -60,6 +61,7 @@ test('a note on a diff line names the file and its new line', async ({ page }) =
       expect(await cli.exited).toBe(0)
       expect(cli.stdout()).toMatch(/## 1\. Change · Text \(new Line 1 in cache\.js\) \[#[0-9a-f]{8}\]/)
       expect(cli.stdout()).toContain('> Use the language too')
+      expect(existsSync(join(dir, '.git', 'annotaitr', 'changes.md'))).toBe(false)
     } finally {
       if (cli.child.exitCode === null) { cli.child.kill() }
     }
