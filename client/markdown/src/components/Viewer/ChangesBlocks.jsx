@@ -20,7 +20,30 @@ function Chevron({ open }) {
   )
 }
 
-function FileCard({ file, collapsed, reviewed, onToggle, blockProps }) {
+function CheckIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m5 12 5 5 9-10" />
+    </svg>
+  )
+}
+
+/**
+ * The file's blocks with every paragraph, which is always the agent's text,
+ * set apart from the diffs and labelled with the agent's name.
+ */
+function FileBody({ blocks, agent, blockProps }) {
+  return blocks.map((block) => (block.type === 'paragraph' ? (
+    <div key={block.id} className="change-why">
+      <span className="change-why-label"><AgentIcon />{agent}</span>
+      <ViewerBlocks nodes={groupHtmlWrappers([block])} {...blockProps} />
+    </div>
+  ) : (
+    <ViewerBlocks key={block.id} nodes={groupHtmlWrappers([block])} {...blockProps} />
+  )))
+}
+
+function FileCard({ file, agent, collapsed, reviewed, onToggle, onReview, blockProps }) {
   const bodyId = `change-file-body-${file.heading.id}`
   const classes = ['change-file', collapsed && 'is-collapsed', !file.explained && 'is-unexplained'].filter(Boolean).join(' ')
   return (
@@ -37,10 +60,13 @@ function FileCard({ file, collapsed, reviewed, onToggle, blockProps }) {
           <span className="diff-count-del">{'−'}{file.removed}</span>
         </span>
         {!file.explained && <span className="change-pill">Not explained</span>}
-        {reviewed && <span className="change-reviewed">Reviewed</span>}
+        <button type="button" className="change-review-btn" aria-pressed={reviewed} onClick={() => onReview(file.path, !reviewed)}>
+          <CheckIcon />
+          {reviewed ? 'Reviewed' : 'Mark as reviewed'}
+        </button>
       </div>
       <div id={bodyId} className="change-file-body">
-        <ViewerBlocks nodes={groupHtmlWrappers(file.blocks)} {...blockProps} />
+        <FileBody blocks={file.blocks} agent={agent} blockProps={blockProps} />
       </div>
     </section>
   )
@@ -62,9 +88,11 @@ export function ChangesBlocks({ sections, changes, ...blockProps }) {
         <FileCard
           key={file.path}
           file={file}
+          agent={changes.agent}
           collapsed={changes.collapsed.has(file.path)}
           reviewed={changes.reviewed.has(file.path)}
           onToggle={changes.toggle}
+          onReview={changes.markReviewed}
           blockProps={blockProps}
         />
       ))}

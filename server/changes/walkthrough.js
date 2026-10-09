@@ -33,6 +33,9 @@ function overview({ explanation, compared, files, notExplained, unchanged }) {
   lines.push(compared.uncommitted
     ? `**Compared:** uncommitted changes on \`${compared.branch}\` against \`HEAD\` (\`${sha}\`), untracked files included. ${count}.`
     : `**Compared:** \`${compared.branch}\` against \`${compared.base}\` (merge base \`${sha}\`), working tree and untracked files included. ${count}.`)
+  if (compared.commits?.length > 0) {
+    lines.push('**Commits:**', compared.commits.map((c) => `- \`${c.sha}\` ${c.subject}`).join('\n'))
+  }
   if (explanation.commit) { lines.push(`**After approval:** \`${explanation.commit}\``) }
   if (notExplained.length > 0) { lines.push(`**Not explained:** ${codeList(notExplained)}`) }
   if (unchanged.length > 0) { lines.push(`**Explained but unchanged:** ${codeList(unchanged)}`) }

@@ -62,6 +62,10 @@ points. A note on the diff names the file and the line in it:
 lines are the code after your change, `old` lines the code that was removed.
 A note on your own text, such as the summary or the commit message, names a
 line of the walkthrough instead (`(Line 5)`); its quote shows which part it is.
+With a base, the overview lists the branch's commits: a note on one quotes its
+short sha and subject and asks you to reword, split or squash that commit
+before the pull request. Rewrite commits that are already pushed only if the
+user agrees.
 
 - **Change**: apply the comment to the quoted code or text
 - **Add**: add what the comment asks for there; an `Insertion` gives the text to insert after its `After:` context

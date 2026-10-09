@@ -63,6 +63,15 @@ export async function compareInfo(root, base) {
   return { branch: branchName, base: base.name, mergeBase, uncommitted: false }
 }
 
+/** The commits between the merge base and HEAD, oldest first, as short sha and subject. */
+export async function listCommits(root, mergeBase) {
+  const output = await git(['log', '--no-color', '--reverse', '--format=%h%x1f%s%x1e', '--end-of-options', `${mergeBase}..HEAD`], { cwd: root })
+  return output.split('\x1e').map((entry) => entry.trim()).filter(Boolean).map((entry) => {
+    const [sha, subject] = entry.split('\x1f')
+    return { sha, subject }
+  })
+}
+
 function splitZ(output) {
   return output.split('\0').filter(Boolean)
 }

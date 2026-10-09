@@ -743,21 +743,67 @@
   font-weight: 500;
 }
 
-.change-reviewed {
+.change-review-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-control);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.change-review-btn:hover {
+  background: var(--canvas);
+}
+
+.change-review-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.change-review-btn[aria-pressed="true"] {
+  border-color: var(--status-ok);
   color: var(--status-ok);
   font-weight: 500;
 }
 
-.change-file-body > .block-paragraph {
-  margin: 0;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--line);
-  background: var(--surface-sunken);
-  line-height: 1.5;
+/* The agent's text, tinted so it stands apart from the neutral greys of the diff */
+.change-why {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid color-mix(in srgb, var(--focus) 20%, var(--line));
+  background: color-mix(in srgb, var(--focus) 7%, var(--card));
 }
 
-.change-file-body > .block-paragraph:last-child {
+.change-why:last-child {
   border-bottom: 0;
+}
+
+.change-why-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--space-1);
+  color: var(--focus);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  user-select: none;
+}
+
+.change-why .block-paragraph {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.change-file.is-unexplained .change-why .block-paragraph {
+  color: var(--ink-muted);
+  font-style: italic;
 }
 
 .change-file-body .block-diff-wrapper {
@@ -771,11 +817,11 @@
 }
 
 /* A reviewed file keeps its header and the agent's line, the rest folds away */
-.change-file.is-collapsed .change-file-body > :not(:first-child) {
+.change-file.is-collapsed .change-file-body > :not(.change-why) {
   display: none;
 }
 
-.viewer-article.search-open .change-file.is-collapsed .change-file-body > :not(:first-child) {
+.viewer-article.search-open .change-file.is-collapsed .change-file-body > :not(.change-why) {
   display: revert;
 }
 

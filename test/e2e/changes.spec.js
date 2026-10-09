@@ -77,12 +77,18 @@ test('marking a file as reviewed folds its card to the explanation', async ({ pa
 
       const card = page.getByRole('region', { name: 'cache.js' })
       await expect(card.getByRole('button', { name: /cache\.js/ })).toHaveAttribute('aria-expanded', 'false')
+      await expect(card.getByRole('button', { name: 'Reviewed' })).toHaveAttribute('aria-pressed', 'true')
       await expect(card.locator('.diff-add').first()).toBeHidden()
       await expect(card).toContainText('Adds the workspace to the key.')
       await expect(page.getByText('1 of 2 reviewed')).toBeVisible()
 
       await page.keyboard.press('j')
       await expect(tree.getByRole('button', { name: /^notes\.md/ })).toHaveAttribute('aria-current', 'true')
+
+      const notes = page.getByRole('region', { name: 'notes.md' })
+      await notes.getByRole('button', { name: 'Mark as reviewed' }).click()
+      await expect(page.getByText('2 of 2 reviewed')).toBeVisible()
+      await expect(notes.getByRole('button', { name: /notes\.md/ })).toHaveAttribute('aria-expanded', 'false')
     } finally {
       if (cli.child.exitCode === null) { cli.child.kill() }
     }

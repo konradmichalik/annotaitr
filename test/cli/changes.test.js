@@ -65,9 +65,13 @@ describe('prepareWalkthrough', () => {
     expect(md).toContain('**Not explained:** `explain.json`')
   })
 
-  it('compares the whole branch with --base', async () => {
+  it('compares the whole branch with --base and lists its commits', async () => {
+    execFileSync('git', ['switch', '-q', '-c', 'feature/x'], { cwd: dir, env })
+    execFileSync('git', ['commit', '-q', '--allow-empty', '-m', 'feat: on the branch'], { cwd: dir, env })
     const { path } = await prepareWalkthrough({ cwd: dir, base: 'main' })
-    expect(await readFile(path, 'utf-8')).toContain('against `main` (merge base')
+    const md = await readFile(path, 'utf-8')
+    expect(md).toContain('against `main` (merge base')
+    expect(md).toMatch(/\*\*Commits:\*\*\n\n- `[0-9a-f]{7,}` feat: on the branch/)
   })
 
   it('reports an unknown base', async () => {

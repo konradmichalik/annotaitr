@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdtemp, writeFile, rm, realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { collectChanges, compareInfo, gitPath, repoRoot, resolveBase } from '../../../server/changes/git.js'
+import { collectChanges, compareInfo, gitPath, listCommits, repoRoot, resolveBase } from '../../../server/changes/git.js'
 
 const env = { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@example.com', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@example.com' }
 
@@ -48,6 +48,13 @@ describe('changes git layer', () => {
     const base = await resolveBase(root, 'main')
     const info = await compareInfo(root, base)
     expect(info).toMatchObject({ branch: 'feature/x', base: 'main', mergeBase: base.sha, uncommitted: false })
+  })
+
+  it('lists the commits since the merge base, oldest first', async () => {
+    const base = await resolveBase(dir, 'main')
+    const commits = await listCommits(dir, base.sha)
+    expect(commits.map((c) => c.subject)).toEqual(['change'])
+    expect(commits[0].sha).toMatch(/^[0-9a-f]{7,}$/)
   })
 
   it('rejects a base that is not a commit, including one that looks like an option', async () => {

@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join, resolve as resolvePath } from 'node:path'
-import { collectChanges, compareInfo, gitPath, repoRoot, resolveBase } from '../server/changes/git.js'
+import { collectChanges, compareInfo, gitPath, listCommits, repoRoot, resolveBase } from '../server/changes/git.js'
 import { buildWalkthrough } from '../server/changes/walkthrough.js'
 import { parseArgs } from './args.js'
 import { runMarkdown } from './markdown.js'
@@ -74,7 +74,8 @@ export async function prepareWalkthrough({ base, explain, cwd = process.cwd() })
   let compared
   let files
   try {
-    compared = await compareInfo(root, base ? await resolveBase(root, base) : null)
+    const info = await compareInfo(root, base ? await resolveBase(root, base) : null)
+    compared = info.uncommitted ? info : { ...info, commits: await listCommits(root, info.mergeBase) }
     files = await collectChanges(root, compared.mergeBase)
   } catch (err) {
     return { error: err.message }

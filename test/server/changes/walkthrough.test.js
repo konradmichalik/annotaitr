@@ -34,6 +34,16 @@ describe('buildWalkthrough', () => {
     expect(md).toContain('**After approval:** `fix: it`')
   })
 
+  it('lists the commits of the branch as annotatable lines in the overview', () => {
+    const md = buildWalkthrough({
+      explanation: {},
+      compared: { ...compared, commits: [{ sha: 'a1b2c3d', subject: 'feat: add a' }, { sha: 'e4f5a6b', subject: 'fix: typo' }] },
+      files
+    })
+    expect(md).toContain('**Commits:**\n\n- `a1b2c3d` feat: add a\n- `e4f5a6b` fix: typo')
+    expect(md.indexOf('**Commits:**')).toBeLessThan(md.indexOf('## a.js'))
+  })
+
   it('names uncommitted changes against HEAD', () => {
     const md = buildWalkthrough({ explanation: {}, compared: { branch: 'feature/x', base: 'HEAD', mergeBase: '9b2d4c1aa', uncommitted: true }, files })
     expect(md).toContain('**Compared:** uncommitted changes on `feature/x` against `HEAD` (`9b2d4c1`), untracked files included. 2 files, +4 −1.')
