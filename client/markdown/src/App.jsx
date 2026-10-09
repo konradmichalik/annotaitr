@@ -20,6 +20,8 @@ import { validateAnnotationImport } from './utils/export.js'
 import { getTextStats } from './utils/textStats.js'
 import { UpdateBanner } from '../../shared/components/UpdateBanner.jsx'
 import { FilesSection, MarkReviewedButton } from './components/FilesSection.jsx'
+import { useChangesReview } from './hooks/useChangesReview.js'
+import { agentName } from '../../shared/utils/origin.js'
 import { initialAnnotationState } from './state/annotationReducer.js'
 import { useAutoClose } from '../../shared/hooks/useAutoClose.js'
 import { useResizablePanel } from '../../shared/hooks/useResizablePanel.js'
@@ -110,6 +112,7 @@ export default function App() {
   const activeFile = files[activeFileIndex] || null
   // Plain-text files (YAML, JSON, logs, ...) have no meaningful rendered view
   const isPlainTextFile = activeFile?.isPlainText || false
+  const isChanges = activeFile?.kind === 'changes'
   const effectiveViewMode = isPlainTextFile ? 'source' : viewMode
   const activeAnnState = activeFile?.annState || initialAnnotationState
   const { annotations } = activeAnnState
@@ -133,6 +136,7 @@ export default function App() {
   // Cross-file search (only active for multi-file sessions)
   const crossFileSearchState = useCrossFileSearch(files)
   const isMultiFile = files.length > 1
+  const changesReview = useChangesReview()
 
   const handleCrossFileSelectResult = useCallback((fileIndex) => {
     if (fileIndex !== activeFileIndex) {
@@ -439,7 +443,7 @@ export default function App() {
             <SidePanelIcon side="left" />
           </button>
         )}
-        source={isPlainTextFile ? 'text' : 'markdown'}
+        source={isChanges ? 'changes' : isPlainTextFile ? 'text' : 'markdown'}
         target={filePath}
         facts={isMultiFile ? `file ${activeFileIndex + 1} of ${files.length}` : null}
         origin={origin}
@@ -514,6 +518,7 @@ export default function App() {
               crossFileSearch={crossFileSearchProps}
               newIntent={settings.defaultIntent}
               toolHints={settings.toolHints}
+              changes={isChanges ? { ...changesReview, agent: agentName(origin) ?? 'the agent' } : null}
             />
           ) : (
             <SourceView

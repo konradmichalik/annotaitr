@@ -40,7 +40,7 @@ function overview({ explanation, compared, files, notExplained, unchanged }) {
 }
 
 function fileSection(file, why) {
-  const lines = [`## ${file.path}${STATUS_NOTE[file.status] ?? ''}`, why || '_Not explained._']
+  const lines = [`## ${file.path}${STATUS_NOTE[file.status] ?? ''}`, why || 'The agent did not mention this change.']
   if (file.omitted) {
     lines.push(`+${file.added} −${file.removed}, not shown: ${file.omitted}.`)
     return lines

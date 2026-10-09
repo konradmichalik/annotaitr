@@ -10,6 +10,7 @@ const SOURCE_LABELS = {
   url: 'URL',
   video: 'Video',
   markdown: 'Markdown',
+  changes: 'Changes',
   text: 'Text'
 }
 

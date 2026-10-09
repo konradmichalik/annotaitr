@@ -5,6 +5,7 @@ import { PinpointOverlay } from '../PinpointOverlay.jsx'
 import { BlockHoverHint } from '../BlockHoverHint.jsx'
 import { SearchBar } from '../SearchBar.jsx'
 import { ViewerBlocks } from './ViewerBlocks.jsx'
+import { ChangesBlocks } from './ChangesBlocks.jsx'
 import { useHighlighter } from '../../hooks/useHighlighter.js'
 import { useDocumentSearch } from '../../hooks/useDocumentSearch.js'
 import { useCrossFileSearchMarks } from '../../hooks/useCrossFileSearchMarks.js'
@@ -14,6 +15,7 @@ import { useAnnotatedBlocks } from '../../hooks/useAnnotatedBlocks.js'
 import { formatLabelText } from '../../utils/quickLabels.js'
 import { getItem, setItem } from '../../../../shared/utils/storage.js'
 import { groupHtmlWrappers } from '../../utils/htmlWrappers.js'
+import { groupChangeSections } from '../../utils/changeSections.js'
 import { isOpenableFileLink } from '../../utils/links.js'
 import { getLinkInfo, removeInsertionMarker, createPersistentInsertionMarker, createTemporaryInsertionMarker, insertionPointAfter, findAnnotationElement } from '../../utils/viewerDom.js'
 import { createInsertionAnnotation, createTokenAnnotation, createElementAnnotation, getBlockLabel } from '../../utils/viewerAnnotations.js'
@@ -37,6 +39,7 @@ export const Viewer = forwardRef(function Viewer({
   crossFileSearch,
   newIntent = 'change',
   toolHints = true,
+  changes = null,
 }, ref) {
   const [pinpointTarget, setPinpointTarget] = useState(null)
   const [hoverHintTarget, setHoverHintTarget] = useState(null)
@@ -69,7 +72,7 @@ export const Viewer = forwardRef(function Viewer({
     onEditAnnotation,
     onDeleteAnnotation,
     onSelectAnnotation,
-    exceptSelectors: ['.code-copy-btn', '.annotatable-image-wrapper', '.diagram-render-area', '.diagram-source', '.diagram-controls'],
+    exceptSelectors: ['.code-copy-btn', '.annotatable-image-wrapper', '.diagram-render-area', '.diagram-source', '.diagram-controls', '.change-file-header', '.change-overview-label'],
     onBeforeHighlight,
     enrichToolbarState,
     restoreInsertion: (ann) => {
@@ -200,6 +203,12 @@ export const Viewer = forwardRef(function Viewer({
     onQuickLabel: handleQuickLabel,
   })
 
+  // A note inside a collapsed file card is hidden; open the card before scrolling to it.
+  const expandChangeFileOf = (element) => {
+    const path = element.closest('.change-file')?.dataset.path
+    if (path && changes) { changes.expand(path) }
+  }
+
   useImperativeHandle(ref, () => ({
     ...highlightMethods,
     openSearch: crossFileSearch ? crossFileSearch.openSearch : search.openSearch,
@@ -217,7 +226,8 @@ export const Viewer = forwardRef(function Viewer({
       }
       const doms = highlighter.getDoms(ann.id)
       if (doms?.length > 0) {
-        doms[0].scrollIntoView({ behavior: 'smooth', block: 'center' })
+        expandChangeFileOf(doms[0])
+        requestAnimationFrame(() => doms[0].scrollIntoView({ behavior: 'smooth', block: 'center' }))
         setTimeout(() => {
           setToolbarState({ element: doms[0], annotation: ann, mode: 'edit' })
         }, 300)
@@ -226,7 +236,8 @@ export const Viewer = forwardRef(function Viewer({
     openElementEditToolbar(ann) {
       const targetEl = findAnnotationElement(containerRef.current, ann)
       if (targetEl) {
-        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        expandChangeFileOf(targetEl)
+        requestAnimationFrame(() => targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' }))
         setTimeout(() => {
           setToolbarState({ element: targetEl, annotation: ann, mode: 'edit', elementMode: true })
         }, 300)
@@ -418,6 +429,8 @@ export const Viewer = forwardRef(function Viewer({
   }, [])
 
   const blockNodes = useMemo(() => groupHtmlWrappers(blocks), [blocks])
+  const isChanges = changes !== null
+  const changeSections = useMemo(() => (isChanges ? groupChangeSections(blocks) : null), [isChanges, blocks])
 
   const blockHandlers = {
     onMathClick: makeElementHandler('math'),
@@ -436,18 +449,29 @@ export const Viewer = forwardRef(function Viewer({
     <div className="viewer-container">
       <article
         ref={containerRef}
-        className={`viewer-article${pinpointMode ? ' pinpoint-mode' : ''}`}
+        className={`viewer-article${pinpointMode ? ' pinpoint-mode' : ''}${changes ? ' is-changes' : ''}${changes && activeSearch.isOpen ? ' search-open' : ''}`}
         onClick={pinpointMode ? handlePinpointClick : handleLinkClick}
         onMouseMove={handleBlockHover}
         onMouseLeave={handleBlockHoverLeave}
       >
-        <ViewerBlocks
-          nodes={blockNodes}
-          annotated={annotated}
-          handlers={blockHandlers}
-          plantumlServerUrl={plantumlServerUrl}
-          krokiServerUrl={krokiServerUrl}
-        />
+        {changeSections ? (
+          <ChangesBlocks
+            sections={changeSections}
+            changes={changes}
+            annotated={annotated}
+            handlers={blockHandlers}
+            plantumlServerUrl={plantumlServerUrl}
+            krokiServerUrl={krokiServerUrl}
+          />
+        ) : (
+          <ViewerBlocks
+            nodes={blockNodes}
+            annotated={annotated}
+            handlers={blockHandlers}
+            plantumlServerUrl={plantumlServerUrl}
+            krokiServerUrl={krokiServerUrl}
+          />
+        )}
         <Toolbar
           highlightElement={toolbarState?.element ?? null}
           onAnnotate={handleAnnotate}

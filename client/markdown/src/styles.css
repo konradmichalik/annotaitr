@@ -623,6 +623,162 @@
   color: var(--ink-muted);
 }
 
+/* Changes walkthrough: the overview and one card per changed file, like a pull request */
+.viewer-article.is-changes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 1100px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+}
+
+.change-overview,
+.change-file {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--card);
+}
+
+.change-overview {
+  padding: var(--space-4) var(--space-5);
+}
+
+.change-overview-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+  user-select: none;
+}
+
+.change-overview .heading-1 {
+  margin: var(--space-2) 0 var(--space-3);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.change-overview .block-paragraph {
+  margin: var(--space-2) 0;
+  line-height: 1.55;
+}
+
+.change-file {
+  overflow: hidden;
+}
+
+.change-file.is-unexplained {
+  border-style: dashed;
+  border-color: var(--line-control);
+}
+
+.change-file-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 0 var(--space-3) 0 var(--space-2);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  font-size: var(--fs-sm);
+  user-select: none;
+}
+
+.change-file-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 var(--space-1);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.change-file-toggle:hover {
+  background: var(--canvas);
+}
+
+.change-file-toggle:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.change-file-status {
+  width: 14px;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  text-align: center;
+}
+
+.change-file-path {
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+}
+
+.change-file-counts {
+  flex: 0 0 auto;
+  margin-right: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.change-pill {
+  padding: 1px var(--space-2);
+  border: 1px dashed var(--line-control);
+  border-radius: var(--radius-full);
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.change-reviewed {
+  color: var(--status-ok);
+  font-weight: 500;
+}
+
+.change-file-body > .block-paragraph {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-sunken);
+  line-height: 1.5;
+}
+
+.change-file-body > .block-paragraph:last-child {
+  border-bottom: 0;
+}
+
+.change-file-body .block-diff-wrapper {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.change-file-body .diff-header {
+  display: none;
+}
+
+/* A reviewed file keeps its header and the agent's line, the rest folds away */
+.change-file.is-collapsed .change-file-body > :not(:first-child) {
+  display: none;
+}
+
+.viewer-article.search-open .change-file.is-collapsed .change-file-body > :not(:first-child) {
+  display: revert;
+}
+
 /* Token-level selection in code blocks */
 .block-code.token-selectable .hljs span:not(:empty):hover {
   text-decoration: underline;

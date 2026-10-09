@@ -1,0 +1,69 @@
+import { describe, it, expect } from 'vitest'
+import { parseMarkdownToBlocks } from '../../../client/markdown/src/utils/parser.js'
+import { groupChangeSections } from '../../../client/markdown/src/utils/changeSections.js'
+
+const walkthrough = [
+  '# Scope the cache',
+  '',
+  'Why it changed.',
+  '',
+  '**Compared:** uncommitted changes on `main` against `HEAD` (`9b2d4c1`), untracked files included. 3 files, +3 −1.',
+  '',
+  '## src/a.js',
+  '',
+  'Renames a.',
+  '',
+  '````diff src/a.js',
+  '@@ -1 +1,2 @@',
+  '-a',
+  '+b',
+  '+c',
+  '````',
+  '',
+  '## docs/new.md (new file)',
+  '',
+  'The agent did not mention this change.',
+  '',
+  '````diff docs/new.md',
+  '@@ -0,0 +1 @@',
+  '+# New',
+  '````',
+  '',
+  '## package-lock.json',
+  '',
+  'The agent did not mention this change.',
+  '',
+  '+120 −80, not shown: lock file.',
+  ''
+].join('\n')
+
+describe('groupChangeSections', () => {
+  const { overview, files } = groupChangeSections(parseMarkdownToBlocks(walkthrough))
+
+  it('keeps everything before the first file heading as the overview', () => {
+    expect(overview.map((b) => b.type)).toEqual(['heading', 'paragraph', 'paragraph'])
+  })
+
+  it('gives each file its path, status and counts, without the heading block', () => {
+    expect(files.map(({ path, status, added, removed }) => ({ path, status, added, removed }))).toEqual([
+      { path: 'src/a.js', status: 'M', added: 2, removed: 1 },
+      { path: 'docs/new.md', status: 'A', added: 1, removed: 0 },
+      { path: 'package-lock.json', status: 'M', added: 120, removed: 80 }
+    ])
+    expect(files[0].blocks.map((b) => b.type)).toEqual(['paragraph', 'code'])
+  })
+
+  it('tells explained files from the ones the agent did not mention', () => {
+    expect(files.map((f) => f.explained)).toEqual([true, false, false])
+  })
+
+  it('names why a file shows no hunks', () => {
+    expect(files[2].omitted).toBe('lock file')
+    expect(files[0].omitted).toBeNull()
+  })
+
+  it('reads a deleted file from its heading', () => {
+    const { files: deleted } = groupChangeSections(parseMarkdownToBlocks('# T\n\n## gone.txt (deleted)\n\nWhy.\n'))
+    expect(deleted[0]).toMatchObject({ path: 'gone.txt', status: 'D' })
+  })
+})

@@ -44,6 +44,13 @@ const SOURCE_PATHS = {
       <path d="M17 9v6M15 13l2 2 2-2" />
     </>
   ),
+  changes: (
+    <>
+      <circle cx="6" cy="6" r="2.2" />
+      <circle cx="18" cy="18" r="2.2" />
+      <path d="M6 8.2V15a3 3 0 0 0 3 3h6.8M18 15.8V9a3 3 0 0 0-3-3H8.2" />
+    </>
+  ),
   text: (
     <>
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />

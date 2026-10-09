@@ -15,7 +15,8 @@ function toReviewFile(data) {
     blocks: parseBlocks(data),
     contentHash: data.contentHash,
     hashMismatch: data.hashMismatch || false,
-    isPlainText: data.isPlainText || false
+    isPlainText: data.isPlainText || false,
+    kind: data.kind || 'document'
   }
 }
 

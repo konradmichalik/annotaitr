@@ -48,7 +48,7 @@ describe('buildWalkthrough', () => {
   it('flags files the agent did not explain, in the overview and in their section', () => {
     const md = buildWalkthrough({ explanation: { files: { 'a.js': 'Renames a.' } }, compared, files })
     expect(md).toContain('**Not explained:** `b.json`')
-    expect(md).toContain('## b.json (new file)\n\n_Not explained._')
+    expect(md).toContain('## b.json (new file)\n\nThe agent did not mention this change.')
   })
 
   it('warns about explanations for paths that did not change', () => {
@@ -63,7 +63,7 @@ describe('buildWalkthrough', () => {
       compared,
       files: [{ path: 'package-lock.json', status: 'M', added: 120, removed: 80, diff: null, omitted: 'lock file' }]
     })
-    expect(md).toContain('## package-lock.json\n\n_Not explained._\n\n+120 −80, not shown: lock file.')
+    expect(md).toContain('## package-lock.json\n\nThe agent did not mention this change.\n\n+120 −80, not shown: lock file.')
     expect(md).not.toContain('````diff package-lock.json')
   })
 
