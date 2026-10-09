@@ -12,13 +12,16 @@ const MAX_BUFFER = 64 * 1024 * 1024
 const TIMEOUT_MS = 20_000
 const MAX_FILE_LINES = 1000
 const MAX_FILE_BYTES = 256 * 1024
+const MAX_DIFF_BYTES = 512 * 1024
 const CONCURRENCY = 8
 
-// The walkthrough must stay under the markdown server's 2 MB file limit, with room for the text around the hunks.
-export const DEFAULT_LIMITS = { maxFiles: 500, budget: 1.5 * 1024 * 1024 }
+// The walkthrough must stay under the markdown server's 2 MB file limit, with
+// room for the text around the hunks. Files are picked in path order, so the
+// same changes always give the same walkthrough.
+const LIMITS = { maxFiles: 500, maxLines: 20_000, budget: 1.5 * 1024 * 1024 }
 
 // Untracked files with these names often hold credentials; templates such as `.env.example` stay visible.
-const SECRET_NAME = /^(\.env(\..+)?|\.npmrc|\.netrc|auth\.json|id_(rsa|dsa|ecdsa|ed25519)(\..+)?|.*\.(pem|key|p12|pfx|kdbx)|.*credentials.*)$/i
+const SECRET_NAME = /^(\.env(\..+)?|.*\.env|\.npmrc|\.netrc|\.pgpass|auth\.json|id_(rsa|dsa|ecdsa|ed25519)(\..+)?|.*\.(pem|key|p12|pfx|jks|keystore|kdbx)|secrets?\.(ya?ml|json)|service-account.*\.json|.*credentials.*)$/i
 const TEMPLATE_NAME = /\.(example|sample|dist|template)$/i
 
 const LOCK_FILES = new Set([
@@ -26,10 +29,13 @@ const LOCK_FILES = new Set([
   'composer.lock', 'Cargo.lock', 'poetry.lock', 'uv.lock', 'Gemfile.lock', 'go.sum'
 ])
 
-/** Run git without a shell. `okCodes` lists exit codes that are not errors (`diff --no-index` exits 1 on a difference). */
-export function git(args, { cwd, okCodes = [0] }) {
+/**
+ * Run git without a shell. `okCodes` lists exit codes that are not errors
+ * (`diff --no-index` exits 1 on a difference), `input` goes to its stdin.
+ */
+export function git(args, { cwd, okCodes = [0], input = null }) {
   return new Promise((resolvePromise, reject) => {
-    execFile('git', [...SAFE_CONFIG, ...args], { cwd, maxBuffer: MAX_BUFFER, timeout: TIMEOUT_MS }, (err, stdout, stderr) => {
+    const child = execFile('git', [...SAFE_CONFIG, ...args], { cwd, maxBuffer: MAX_BUFFER, timeout: TIMEOUT_MS }, (err, stdout, stderr) => {
       const code = err ? err.code : 0
       if (err && !okCodes.includes(code)) {
         reject(new Error((stderr || err.message).trim()))
@@ -37,6 +43,7 @@ export function git(args, { cwd, okCodes = [0] }) {
       }
       resolvePromise(stdout)
     })
+    if (input !== null) { child.stdin.end(input) }
   })
 }
 
@@ -146,84 +153,114 @@ async function trackedEntries(root, mergeBase) {
   const range = ['--end-of-options', mergeBase, '--']
   const counts = parseNumstat(await git(['diff', ...DIFF_FLAGS, '--numstat', '-z', ...range], { cwd: root }))
   const statuses = parseNameStatus(await git(['diff', ...DIFF_FLAGS, '--name-status', '-z', ...range], { cwd: root }))
-  return [...statuses].map(([path, status]) => ({ path, status, tracked: true, ...(counts.get(path) ?? { added: 0, removed: 0, binary: false }) }))
+  return [...statuses].map(([path, status]) => ({ path, status, untracked: false, ...(counts.get(path) ?? { added: 0, removed: 0, binary: false }) }))
 }
 
-async function untrackedEntries(root) {
-  const paths = splitZ(await git(['ls-files', '--others', '--exclude-standard', '-z'], { cwd: root }))
-  return paths.map((path) => ({ path, status: 'A', tracked: false, added: 0, removed: 0, binary: false }))
+async function untrackedPaths(root) {
+  return splitZ(await git(['ls-files', '--others', '--exclude-standard', '-z'], { cwd: root }))
 }
 
-async function readEntry(root, mergeBase, entry, budget) {
-  const result = (omitted, diff = null) => ({
-    path: entry.path, status: entry.status, added: entry.added, removed: entry.removed, diff, omitted, untracked: !entry.tracked
+function diffArgs(mergeBase, entry, extra = []) {
+  return entry.untracked
+    ? ['diff', ...DIFF_FLAGS, ...extra, '--no-index', '--', '/dev/null', entry.path]
+    : ['diff', ...DIFF_FLAGS, ...extra, '--end-of-options', mergeBase, '--', entry.path]
+}
+
+/** An entry with its line counts and, when its hunks will not be shown, why. Nothing is read yet. */
+async function countEntry(root, mergeBase, entry) {
+  if (entry.untracked && looksLikeSecret(entry.path)) { return { ...entry, omitted: 'possible secret' } }
+  const tooLarge = entry.status === 'D' ? null : await fileOmission(root, entry.path)
+  if (tooLarge) { return { ...entry, omitted: tooLarge } }
+  const counted = entry.untracked
+    ? { ...entry, ...[...parseNumstat(await git(diffArgs(mergeBase, entry, ['--numstat', '-z']), { cwd: root, okCodes: [0, 1] })).values()][0] }
+    : entry
+  return { ...counted, omitted: omission(entry.path, counted) }
+}
+
+/** Keep files in path order until `maxLines` changed lines are picked, before anything is read. */
+function pickByLines(entries, maxLines) {
+  let lines = 0
+  return entries.map((entry) => {
+    if (entry.omitted) { return entry }
+    if (lines >= maxLines) { return { ...entry, omitted: 'walkthrough size limit reached' } }
+    lines += entry.added + entry.removed
+    return entry
   })
-  if (!entry.tracked && looksLikeSecret(entry.path)) { return result('possible secret') }
-  if (entry.status !== 'D') {
-    const reason = await fileOmission(root, entry.path)
-    if (reason) { return result(reason) }
-  }
-  if (entry.tracked) {
-    const reason = omission(entry.path, entry)
-    if (reason || budget.used >= budget.limit) { return result(reason ?? 'walkthrough size limit reached') }
-    const diff = await git(['diff', ...DIFF_FLAGS, '--end-of-options', mergeBase, '--', entry.path], { cwd: root })
-    budget.used += diff.length
-    return result(null, diff)
-  }
-  const noIndex = ['diff', ...DIFF_FLAGS, '--no-index']
-  const target = ['--', '/dev/null', entry.path]
-  const counted = [...parseNumstat(await git([...noIndex, '--numstat', '-z', ...target], { cwd: root, okCodes: [0, 1] })).values()][0]
-  const withCounts = { ...entry, ...counted }
-  const reason = omission(entry.path, withCounts)
-  if (reason || budget.used >= budget.limit) {
-    return { ...result(reason ?? 'walkthrough size limit reached'), added: withCounts.added, removed: withCounts.removed }
-  }
-  const diff = await git([...noIndex, ...target], { cwd: root, okCodes: [0, 1] })
-  budget.used += diff.length
-  return { ...result(null, diff), added: withCounts.added, removed: withCounts.removed }
 }
 
-/** Keep hunks in path order until the budget is spent; a parallel read may have gone past it. */
+async function readEntry(root, mergeBase, entry) {
+  const { path, status, added, removed, untracked } = entry
+  if (entry.omitted) { return { path, status, added, removed, untracked, diff: null, omitted: entry.omitted } }
+  const diff = await git(diffArgs(mergeBase, entry), { cwd: root, okCodes: [0, 1] })
+  // A file under the size limit can still have a huge old version, a minified line for example.
+  if (Buffer.byteLength(diff) > MAX_DIFF_BYTES) {
+    return { path, status, added, removed, untracked, diff: null, omitted: `diff larger than ${MAX_DIFF_BYTES / 1024} KB` }
+  }
+  return { path, status, added, removed, untracked, diff, omitted: null }
+}
+
+/** Keep hunks in path order as long as they fit in `limit` bytes. */
 function trimToBudget(files, limit) {
   let used = 0
   return files.map((file) => {
     if (file.diff === null) { return file }
-    if (used >= limit) { return { ...file, diff: null, omitted: 'walkthrough size limit reached' } }
-    used += file.diff.length
+    const bytes = Buffer.byteLength(file.diff)
+    if (used + bytes > limit) { return { ...file, diff: null, omitted: 'walkthrough size limit reached' } }
+    used += bytes
     return file
   })
 }
 
 /**
  * Every change against the merge base, working tree and untracked files
- * included, sorted by path. Beyond `maxFiles` files and once the hunks reach
- * `budget` bytes, files are listed with their counts but without hunks.
+ * included, sorted by path. Beyond `maxFiles` files, `maxLines` changed lines
+ * or `budget` bytes of hunks, files are listed with their counts but without
+ * hunks. The limits are parameters for the tests; the defaults are LIMITS.
  */
-export async function collectChanges(root, mergeBase, limits = DEFAULT_LIMITS) {
-  const { maxFiles, budget } = { ...DEFAULT_LIMITS, ...limits }
-  const entries = [...await trackedEntries(root, mergeBase), ...await untrackedEntries(root)]
-    .sort((a, b) => a.path.localeCompare(b.path))
-  const shown = entries.slice(0, maxFiles)
-  const beyond = entries.slice(maxFiles).map((e) => ({
-    path: e.path, status: e.status, added: e.added, removed: e.removed, diff: null, omitted: `over the limit of ${maxFiles} files`
+export async function collectChanges(root, mergeBase, limits = {}) {
+  const { maxFiles, maxLines, budget } = { ...LIMITS, ...limits }
+  const untracked = (await untrackedPaths(root)).map((path) => ({ path, status: 'A', untracked: true, added: 0, removed: 0, binary: false }))
+  const entries = [...await trackedEntries(root, mergeBase), ...untracked].sort((a, b) => a.path.localeCompare(b.path))
+  const beyond = entries.slice(maxFiles).map(({ path, status, added, removed, untracked: u }) => ({
+    path, status, added, removed, untracked: u, diff: null, omitted: `over the limit of ${maxFiles} files`
   }))
-  const spent = { used: 0, limit: budget }
-  const read = await mapLimit(shown, CONCURRENCY, (entry) => readEntry(root, mergeBase, entry, spent))
+  const counted = await mapLimit(entries.slice(0, maxFiles), CONCURRENCY, (entry) => countEntry(root, mergeBase, entry))
+  const read = await mapLimit(pickByLines(counted, maxLines), CONCURRENCY, (entry) => readEntry(root, mergeBase, entry))
   return [...trimToBudget(read, budget), ...beyond]
 }
 
-// More context lines than any file within the size limit has, so a hunk spans the whole file.
-const WHOLE_FILE_CONTEXT = '-U100000'
+/**
+ * What the changes are, cheaply: which files changed against the merge base,
+ * the untracked ones, and the content hash of every changed file in the
+ * working tree. It differs as soon as anything that a walkthrough shows moves.
+ */
+export async function changeState(root, mergeBase) {
+  const range = ['--end-of-options', mergeBase, '--']
+  const statuses = await git(['diff', ...DIFF_FLAGS, '--name-status', '-z', ...range], { cwd: root })
+  const untracked = await untrackedPaths(root)
+  const present = [...parseNameStatus(statuses)].filter(([, status]) => status !== 'D').map(([path]) => path)
+  const paths = [...present, ...untracked]
+  const hashes = paths.length > 0
+    ? await git(['hash-object', '--stdin-paths'], { cwd: root, input: paths.join('\n') + '\n' })
+    : ''
+  return [statuses, untracked.join('\0'), hashes].join('\n')
+}
+
+// Context lines beyond any file within the size limit, so the one hunk spans the whole file.
+const WHOLE_FILE_CONTEXT = ['-U1000000']
 
 /**
  * A changed file's diff with the whole file as context, for the reviewer who
- * wants to see more than the hunks. Null for a file whose hunks are not shown.
+ * wants to see more than the hunks. Null for a file whose hunks are not shown,
+ * or one that has grown past the limits since the walkthrough was written.
  * An untracked file's diff already holds all of it.
  */
 export async function fullFileDiff(root, mergeBase, file) {
   if (file.diff === null || file.omitted) { return null }
   if (file.untracked) { return file.diff }
-  return git(['diff', ...DIFF_FLAGS, WHOLE_FILE_CONTEXT, '--end-of-options', mergeBase, '--', file.path], { cwd: root })
+  if (file.status !== 'D' && await fileOmission(root, file.path)) { return null }
+  const diff = await git(diffArgs(mergeBase, file, WHOLE_FILE_CONTEXT), { cwd: root })
+  return Buffer.byteLength(diff) > 2 * MAX_DIFF_BYTES ? null : diff
 }
 
 /** A path inside the git directory, which is never committed and never part of the diff. */

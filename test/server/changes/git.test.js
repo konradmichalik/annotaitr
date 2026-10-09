@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdtemp, writeFile, rm, realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { collectChanges, compareInfo, fullFileDiff, gitPath, listCommits, repoRoot, resolveBase } from '../../../server/changes/git.js'
+import { changeState, collectChanges, compareInfo, fullFileDiff, gitPath, listCommits, repoRoot, resolveBase } from '../../../server/changes/git.js'
 
 const env = { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@example.com', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@example.com' }
 
@@ -99,13 +99,25 @@ describe('changes git layer', () => {
     await rm(join(dir, 'big.min.js'))
   })
 
-  it('stops showing hunks past the file count and the size budget', async () => {
+  it('stops showing hunks past the file count, the line count and the size budget, in path order', async () => {
     const sha = (await resolveBase(dir, 'main')).sha
     const capped = await collectChanges(dir, sha, { maxFiles: 2 })
     expect(capped.slice(2).every((f) => f.omitted === 'over the limit of 2 files' && f.diff === null)).toBe(true)
+    const byLines = await collectChanges(dir, sha, { maxLines: 1 })
+    expect(byLines.filter((f) => f.diff !== null).map((f) => f.path)).toEqual(['a.js'])
     const budgeted = await collectChanges(dir, sha, { budget: 10 })
-    expect(budgeted.filter((f) => f.diff !== null)).toHaveLength(1)
-    expect(budgeted.find((f) => f.omitted === 'walkthrough size limit reached')).toBeDefined()
+    expect(budgeted.filter((f) => f.diff !== null)).toHaveLength(0)
+    expect(budgeted.find((f) => f.path === 'a.js').omitted).toBe('walkthrough size limit reached')
+    expect(await collectChanges(dir, sha)).toEqual(await collectChanges(dir, sha))
+  })
+
+  it('tells changed content apart in the change state, without reading diffs', async () => {
+    const sha = (await resolveBase(dir, 'main')).sha
+    const before = await changeState(dir, sha)
+    expect(await changeState(dir, sha)).toBe(before)
+    await writeFile(join(dir, 'new.md'), '# New, edited\n')
+    expect(await changeState(dir, sha)).not.toBe(before)
+    await writeFile(join(dir, 'new.md'), '# New\n')
   })
 
   it('reads a changed file with its whole content as context', async () => {
@@ -120,6 +132,7 @@ describe('changes git layer', () => {
     expect(full).toContain(' line 1\n')
     expect(full).toContain(' line 30')
     expect(await fullFileDiff(dir, head, { ...file, omitted: 'lock file', diff: null })).toBeNull()
+    expect(await fullFileDiff(dir, head, { ...file, untracked: true })).toBe(file.diff)
     run(dir, 'reset', '-q', 'HEAD~1')
     await rm(join(dir, 'long.txt'))
   })

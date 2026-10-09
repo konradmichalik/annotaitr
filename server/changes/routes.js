@@ -16,8 +16,9 @@ export function createChangesRouter(fullDiff) {
         return
       }
       res.json(success({ diff }))
-    } catch (error) {
-      res.status(500).json(failure(error.message))
+    } catch {
+      // git's message names local paths; the page only needs to know it failed.
+      res.status(500).json(failure('Could not read the whole file'))
     }
   })
   return router

@@ -107,12 +107,19 @@ function orderInGroups(files, groups = []) {
   return rest.length > 0 ? [...ordered, { title: 'Everything else', files: rest }] : ordered
 }
 
+/** Paths the explanation names, in its lines or its groups, that are not among the changed files. */
+export function unchangedPaths({ files: lines = {}, groups = [] }, files) {
+  const changed = new Set(files.map((f) => f.path))
+  const named = new Set([...Object.keys(lines), ...groups.flatMap((g) => g.files)])
+  return [...named].filter((p) => !changed.has(p))
+}
+
 export function buildWalkthrough({ explanation = {}, compared, files }) {
   const explained = explanation.files ?? {}
   const lineFor = (path) => (Object.hasOwn(explained, path) ? explained[path] : null)
   const paths = new Set(files.map((f) => f.path))
   const notExplained = files.filter((f) => !lineFor(f.path)).map((f) => f.path)
-  const unchanged = Object.keys(explained).filter((p) => !paths.has(p))
+  const unchanged = unchangedPaths(explanation, files)
   const blocks = [
     ...overview({ explanation, compared, files, notExplained, unchanged }),
     ...orderInGroups(files, explanation.groups).flatMap((group) => [

@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, resolve as resolvePath } from 'node:path'
-import { collectChanges, compareInfo, fullFileDiff, gitPath, listCommits, repoRoot, resolveBase } from '../server/changes/git.js'
+import { changeState, collectChanges, compareInfo, fullFileDiff, gitPath, listCommits, repoRoot, resolveBase } from '../server/changes/git.js'
 import { createChangesRouter } from '../server/changes/routes.js'
-import { buildWalkthrough, hunksOnly } from '../server/changes/walkthrough.js'
+import { buildWalkthrough, hunksOnly, unchangedPaths } from '../server/changes/walkthrough.js'
 import { parseArgs } from './args.js'
 import { runMarkdown } from './markdown.js'
 
@@ -72,16 +72,16 @@ async function readExplanation(path) {
 }
 
 /** What the walkthrough compares and every changed file, as git sees them right now. */
-async function snapshot(root, base) {
+async function compareWith(root, base) {
   const info = await compareInfo(root, base ? await resolveBase(root, base) : null)
-  const compared = info.uncommitted ? info : { ...info, commits: await listCommits(root, info.mergeBase) }
-  const files = await collectChanges(root, compared.mergeBase)
-  return { compared, files }
+  return info.uncommitted ? info : { ...info, commits: await listCommits(root, info.mergeBase) }
 }
 
-function fingerprint({ compared, files }) {
-  const shown = { mergeBase: compared.mergeBase, commits: compared.commits ?? [], files }
-  return createHash('sha256').update(JSON.stringify(shown)).digest('hex')
+/** A hash of what the walkthrough shows, cheap enough to take again at the decision: no diff is read. */
+async function fingerprint(root, base) {
+  const compared = await compareWith(root, base)
+  const state = await changeState(root, compared.mergeBase)
+  return createHash('sha256').update(JSON.stringify({ mergeBase: compared.mergeBase, commits: compared.commits ?? [], state })).digest('hex')
 }
 
 /**
@@ -99,13 +99,16 @@ export async function prepareWalkthrough({ base, explain, cwd = process.cwd() })
   const explained = explain ? await readExplanation(explain) : { explanation: {} }
   if (explained.error) { return { error: explained.error } }
 
-  let shown
+  let compared
+  let files
+  let seen
   try {
-    shown = await snapshot(root, base)
+    compared = await compareWith(root, base)
+    seen = await fingerprint(root, base)
+    files = await collectChanges(root, compared.mergeBase)
   } catch (err) {
     return { error: err.message }
   }
-  const { compared, files } = shown
   if (files.length === 0) {
     const against = compared.uncommitted
       ? `nothing uncommitted on ${compared.branch}`
@@ -113,17 +116,13 @@ export async function prepareWalkthrough({ base, explain, cwd = process.cwd() })
     return { output: `NO CHANGES: ${against}.\n` }
   }
 
-  const changedPaths = new Set(files.map((f) => f.path))
-  const { files: lines = {}, groups = [] } = explained.explanation
-  const namedPaths = new Set([...Object.keys(lines), ...groups.flatMap((g) => g.files)])
-  const unchangedPaths = [...namedPaths].filter((p) => !changedPaths.has(p))
   try {
     const dir = await gitPath(root, 'annotaitr')
     await mkdir(dir, { recursive: true })
     const path = join(dir, 'changes.md')
     await writeFile(path, buildWalkthrough({ explanation: explained.explanation, compared, files }))
     const label = compared.uncommitted ? `${compared.branch} · uncommitted` : `${compared.branch} → ${compared.base}`
-    return { path, root, base, label, compared, files, fingerprint: fingerprint(shown), unchangedPaths }
+    return { path, root, base, label, compared, files, fingerprint: seen, unchangedPaths: unchangedPaths(explained.explanation, files) }
   } catch (err) {
     return { error: `Could not write the walkthrough: ${err.message}` }
   }
@@ -137,7 +136,7 @@ export async function prepareWalkthrough({ base, explain, cwd = process.cwd() })
 export async function decisionNote({ root, base, fingerprint: seen, unchangedPaths }) {
   const notes = []
   try {
-    if (fingerprint(await snapshot(root, base)) !== seen) {
+    if (await fingerprint(root, base) !== seen) {
       notes.push('CHANGED DURING REVIEW: the changes differ from what the reviewer saw. Present them again before you commit.')
     }
   } catch (err) {
@@ -156,13 +155,19 @@ export async function runChanges(args) {
   const prepared = await prepareWalkthrough(parsed)
   if (prepared.error || prepared.output) { return prepared }
   // The walkthrough holds code from the working tree, so it goes as soon as the reviewer has decided.
-  const removeWalkthrough = () => rm(prepared.path, { force: true })
+  // A failed removal must not cost the reviewer's decision.
+  const removeWalkthrough = () => rm(prepared.path, { force: true }).catch(() => {})
   // Only the files of this walkthrough can be read in full, by their exact path.
   const byPath = new Map(prepared.files.map((f) => [f.path, f]))
+  const wholeFiles = new Map()
   const fullDiff = async (path) => {
     const file = byPath.get(path)
-    const diff = file ? await fullFileDiff(prepared.root, prepared.compared.mergeBase, file) : null
-    return diff === null ? null : hunksOnly(diff)
+    if (!file) { return null }
+    if (!wholeFiles.has(path)) {
+      const diff = await fullFileDiff(prepared.root, prepared.compared.mergeBase, file)
+      wholeFiles.set(path, diff === null ? null : hunksOnly(diff))
+    }
+    return wholeFiles.get(path)
   }
   const onDecision = async () => {
     await removeWalkthrough()
