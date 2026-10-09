@@ -1734,10 +1734,8 @@
 
 .changed-tree-name {
   min-width: 0;
-  overflow: hidden;
+  overflow-wrap: anywhere;
   font-family: var(--font-mono);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .changed-tree-overview .changed-tree-name {
@@ -1752,13 +1750,12 @@
   margin-left: auto;
 }
 
-.changed-tree-pill {
-  padding: 0 6px;
-  border: 1px dashed var(--line-control);
+/* Not explained: the dashed outline of the card, small enough to leave the name its room */
+.changed-tree-unexplained {
+  width: 10px;
+  height: 10px;
+  border: 1.5px dashed var(--line-control);
   border-radius: var(--radius-full);
-  color: var(--ink);
-  font-size: var(--fs-sm);
-  white-space: nowrap;
 }
 
 .changed-files-empty {

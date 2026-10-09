@@ -47,7 +47,7 @@ function TreeNodes({ nodes, depth, current, counts, reviewed, onSelect }) {
             <span className="changed-tree-status" aria-hidden="true">{node.file.status}</span>
             <span className="changed-tree-name">{node.name}</span>
             <span className="changed-tree-meta" aria-hidden="true">
-              {!node.file.explained && <span className="changed-tree-pill">not explained</span>}
+              {!node.file.explained && <span className="changed-tree-unexplained" title="Not explained" />}
               {(counts.get(node.path) ?? 0) > 0 && <span className="files-item-count">{counts.get(node.path)}</span>}
               {reviewed.has(node.path) && <span className="files-item-check"><CheckIcon /></span>}
             </span>
