@@ -81,6 +81,33 @@ describe('changes git layer', () => {
     expect(lock).toMatchObject({ omitted: 'lock file', diff: null })
   })
 
+  it('leaves out untracked files that look like secrets', async () => {
+    await writeFile(join(dir, '.env.local'), 'TOKEN=x\n')
+    await writeFile(join(dir, 'deploy.pem'), 'key\n')
+    await writeFile(join(dir, '.env.example'), 'TOKEN=\n')
+    const files = await collectChanges(dir, (await resolveBase(dir, 'main')).sha)
+    expect(files.find((f) => f.path === '.env.local')).toMatchObject({ omitted: 'possible secret', diff: null })
+    expect(files.find((f) => f.path === 'deploy.pem')).toMatchObject({ omitted: 'possible secret', diff: null })
+    expect(files.find((f) => f.path === '.env.example').diff).toContain('+TOKEN=')
+    await Promise.all(['.env.local', 'deploy.pem', '.env.example'].map((name) => rm(join(dir, name))))
+  })
+
+  it('names a file over the size limit instead of reading it', async () => {
+    await writeFile(join(dir, 'big.min.js'), 'x'.repeat(300 * 1024))
+    const files = await collectChanges(dir, (await resolveBase(dir, 'main')).sha)
+    expect(files.find((f) => f.path === 'big.min.js')).toMatchObject({ omitted: 'larger than 256 KB', diff: null })
+    await rm(join(dir, 'big.min.js'))
+  })
+
+  it('stops showing hunks past the file count and the size budget', async () => {
+    const sha = (await resolveBase(dir, 'main')).sha
+    const capped = await collectChanges(dir, sha, { maxFiles: 2 })
+    expect(capped.slice(2).every((f) => f.omitted === 'over the limit of 2 files' && f.diff === null)).toBe(true)
+    const budgeted = await collectChanges(dir, sha, { budget: 10 })
+    expect(budgeted.filter((f) => f.diff !== null)).toHaveLength(1)
+    expect(budgeted.find((f) => f.omitted === 'walkthrough size limit reached')).toBeDefined()
+  })
+
   it('places the walkthrough inside the git directory', async () => {
     expect(await gitPath(dir, 'annotaitr')).toBe(join(dir, '.git', 'annotaitr'))
   })
