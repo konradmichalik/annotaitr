@@ -17,6 +17,13 @@ describe('claude-code plugin manifest', () => {
     }
   })
 
+  it('has /annotaitr:changes open the walkthrough and gate the commit on the decision', () => {
+    const content = readFileSync('apps/claude-code/commands/changes.md', 'utf-8')
+    expect(content).toContain('annotaitr --origin claude-code <walkthrough path>')
+    expect(content).toContain('git rev-parse --git-path annotaitr')
+    expect(content).toContain('Do not commit, push or open a pull request before the user approves.')
+  })
+
   it('keeps zsh from rejecting a pasted [Image #N] chip in /annotaitr:image and /annotaitr:review', () => {
     for (const command of ['image', 'review']) {
       const content = readFileSync(`apps/claude-code/commands/${command}.md`, 'utf-8')
