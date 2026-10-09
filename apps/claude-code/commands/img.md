@@ -9,12 +9,12 @@ args: target
 !`setopt no_bad_pattern no_nomatch 2>/dev/null; annotaitr --origin claude-code $ARGUMENTS`
 
 If no target is given, this reads the current image from the macOS clipboard,
-so `/annotaitr:image` alone works after copying a screenshot without needing
+so `/annotaitr:img` alone works after copying a screenshot without needing
 to save it to a file first.
 
 `$ARGUMENTS` is passed to the shell as typed, unquoted. A path containing
 spaces (macOS screenshots are named that way by default) needs quotes typed
-around it: `/annotaitr:image "~/Desktop/Screenshot 2026-01-01 at 12.00.00.png"`.
+around it: `/annotaitr:img "~/Desktop/Screenshot 2026-01-01 at 12.00.00.png"`.
 
 ## Pasted chat images
 

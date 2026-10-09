@@ -526,7 +526,7 @@ headings:
   `--source`.
 
 No new slash command. `/annotaitr:review` auto-detects PDFs like any other
-target, and `/annotaitr:image` accepts them because they are image mode.
+target, and `/annotaitr:img` accepts them because they are image mode.
 
 ## 4. Staged delivery
 
