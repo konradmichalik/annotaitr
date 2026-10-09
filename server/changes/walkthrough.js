@@ -23,6 +23,13 @@ function codeList(paths) {
   return paths.map((p) => `\`${p}\``).join(', ')
 }
 
+// Beyond a handful the list buries the overview; the tree marks every one of them anyway.
+const MAX_LISTED = 5
+
+function notExplainedLine(paths) {
+  return paths.length > MAX_LISTED ? `${paths.length} files, marked in the file tree` : codeList(paths)
+}
+
 function overview({ explanation, compared, files, notExplained, unchanged }) {
   const added = files.reduce((sum, f) => sum + f.added, 0)
   const removed = files.reduce((sum, f) => sum + f.removed, 0)
@@ -37,7 +44,7 @@ function overview({ explanation, compared, files, notExplained, unchanged }) {
     lines.push('**Commits:**', compared.commits.map((c) => `- \`${c.sha}\` ${c.subject}`).join('\n'))
   }
   if (explanation.commit) { lines.push(`**After approval:** \`${explanation.commit}\``) }
-  if (notExplained.length > 0) { lines.push(`**Not explained:** ${codeList(notExplained)}`) }
+  if (notExplained.length > 0) { lines.push(`**Not explained:** ${notExplainedLine(notExplained)}`) }
   if (unchanged.length > 0) { lines.push(`**Explained but unchanged:** ${codeList(unchanged)}`) }
   return lines
 }

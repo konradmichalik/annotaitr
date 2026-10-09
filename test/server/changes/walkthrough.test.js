@@ -61,6 +61,11 @@ describe('buildWalkthrough', () => {
     expect(md).toContain('## b.json (new file)\n\nThe agent did not mention this change.')
   })
 
+  it('counts the files the agent did not explain once there are more than five', () => {
+    const many = Array.from({ length: 6 }, (_, i) => ({ path: `f${i}.js`, status: 'M', added: 1, removed: 0, diff: '@@ -1 +1 @@\n+x' }))
+    expect(buildWalkthrough({ explanation: {}, compared, files: many })).toContain('**Not explained:** 6 files, marked in the file tree')
+  })
+
   it('warns about explanations for paths that did not change', () => {
     const md = buildWalkthrough({ explanation: { files: { 'gone.js': 'x', 'a.js': 'y', 'b.json': 'z' } }, compared, files })
     expect(md).toContain('**Explained but unchanged:** `gone.js`')
