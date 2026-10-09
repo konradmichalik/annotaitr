@@ -146,9 +146,12 @@ export function ChangesBlocks({ sections, changes, ...blockProps }) {
         <span className="change-overview-label"><AgentIcon />Explained by {changes.agent}</span>
         <ViewerBlocks nodes={groupHtmlWrappers(sections.overview)} {...blockProps} />
       </section>
-      {sections.groups.length > 0
-        ? sections.groups.map((group) => <GroupSection key={group.heading.id} group={group} changes={changes} blockProps={blockProps} />)
-        : <FileCards files={sections.files} changes={changes} blockProps={blockProps} />}
+      {sections.groups.length > 0 ? (
+        <>
+          <FileCards files={sections.ungrouped} changes={changes} blockProps={blockProps} />
+          {sections.groups.map((group) => <GroupSection key={group.heading.id} group={group} changes={changes} blockProps={blockProps} />)}
+        </>
+      ) : <FileCards files={sections.files} changes={changes} blockProps={blockProps} />}
     </>
   )
 }

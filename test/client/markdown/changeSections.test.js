@@ -109,3 +109,12 @@ describe('changesFacts', () => {
     expect(changesFacts([{ added: 1, removed: 0 }])).toBe('1 file · +1 \u22120')
   })
 })
+
+describe('groupChangeSections with a file before the first group', () => {
+  it('keeps that file as ungrouped, so it cannot drop out of view', () => {
+    const md = ['# Title', '', '## `loose.js`', '', 'Why.', '', '# Core', '', '## `a.js`', ''].join('\n')
+    const { ungrouped, groups } = groupChangeSections(parseMarkdownToBlocks(md))
+    expect(ungrouped.map((f) => f.path)).toEqual(['loose.js'])
+    expect(groups[0].files.map((f) => f.path)).toEqual(['a.js'])
+  })
+})

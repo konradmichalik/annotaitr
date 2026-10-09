@@ -68,7 +68,9 @@ export function groupChangeSections(blocks) {
   }
   const files = rawFiles.map((f) => fileEntry(f.heading, f.blocks))
   const withFiles = groups.map((g) => ({ ...g, files: files.filter((_, i) => rawFiles[i].group === g) }))
-  return { overview, groups: withFiles, files }
+  // Files before the first group still have to be shown, or a malformed walkthrough could hide them.
+  const ungrouped = files.filter((_, i) => rawFiles[i].group === null)
+  return { overview, groups: withFiles, files, ungrouped }
 }
 
 /** How many reviewer notes sit on the overview and on each changed file. */

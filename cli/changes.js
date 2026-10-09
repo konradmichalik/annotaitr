@@ -46,7 +46,7 @@ export function validateExplanation(value) {
     return { error: '"files" must map each path to one line of text' }
   }
   const groups = value.groups ?? []
-  const validGroup = (g) => typeof g === 'object' && g !== null && typeof g.title === 'string' &&
+  const validGroup = (g) => typeof g === 'object' && g !== null && typeof g.title === 'string' && g.title.trim() !== '' &&
     (g.why === undefined || typeof g.why === 'string') && Array.isArray(g.files) && g.files.every((f) => typeof f === 'string')
   if (!Array.isArray(groups) || !groups.every(validGroup)) {
     return { error: 'every group needs a "title" and a "files" list of paths' }

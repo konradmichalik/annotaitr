@@ -34,6 +34,18 @@ export function inlineCode(text) {
 
 const oneLine = (text) => text.replace(/\s*\n\s*/g, ' ')
 
+// What makes a markdown line a heading, fence, quote, list, table, rule or HTML block.
+const BLOCK_START = /^(\s*)([#>|`~*+\-<=_]|\d+[.)])/gm
+
+/**
+ * Agent text as plain paragraph text: a zero-width space in front of anything
+ * that would start a block, so a `## path` in an explanation cannot pose as a
+ * file card and a fence cannot swallow the files after it.
+ */
+function inert(text) {
+  return text.replace(BLOCK_START, '$1\u200B$2')
+}
+
 function codeList(paths) {
   return paths.map(inlineCode).join(', ')
 }
@@ -50,7 +62,7 @@ function overview({ explanation, compared, files, notExplained, unchanged }) {
   const removed = files.reduce((sum, f) => sum + f.removed, 0)
   const count = `${files.length} ${files.length === 1 ? 'file' : 'files'}, +${added} −${removed}`
   const lines = [`# ${oneLine(explanation.title || `Changes on ${compared.branch}`)}`]
-  if (explanation.summary) { lines.push(explanation.summary) }
+  if (explanation.summary) { lines.push(inert(explanation.summary)) }
   const sha = compared.mergeBase.slice(0, 7)
   lines.push(compared.uncommitted
     ? `**Compared:** uncommitted changes on ${inlineCode(compared.branch)} against \`HEAD\` (\`${sha}\`), untracked files included. ${count}.`
@@ -65,7 +77,7 @@ function overview({ explanation, compared, files, notExplained, unchanged }) {
 }
 
 function fileSection(file, why) {
-  const lines = [`## ${inlineCode(file.path)}${STATUS_NOTE[file.status] ?? ''}`, why ? oneLine(why) : 'The agent did not mention this change.']
+  const lines = [`## ${inlineCode(file.path)}${STATUS_NOTE[file.status] ?? ''}`, why ? inert(oneLine(why)) : 'The agent did not mention this change.']
   if (file.omitted) {
     lines.push(`+${file.added} −${file.removed}, not shown: ${file.omitted}.`)
     return lines
@@ -104,7 +116,7 @@ export function buildWalkthrough({ explanation = {}, compared, files }) {
   const blocks = [
     ...overview({ explanation, compared, files, notExplained, unchanged }),
     ...orderInGroups(files, explanation.groups).flatMap((group) => [
-      ...(group.title ? [`# ${oneLine(group.title)}`, ...(group.why ? [oneLine(group.why)] : [])] : []),
+      ...(group.title ? [`# ${oneLine(group.title)}`, ...(group.why ? [inert(oneLine(group.why))] : [])] : []),
       ...group.files.flatMap((file) => fileSection(file, lineFor(file.path)))
     ])
   ]

@@ -111,6 +111,22 @@ describe('buildWalkthrough', () => {
     expect(md).not.toContain('# Again')
   })
 
+  it('keeps agent text from forming headings, fences or other blocks', () => {
+    const md = buildWalkthrough({
+      explanation: {
+        summary: 'Fine.\n## `fake.js`\n```',
+        files: { 'a.js': '## `fake.js`', 'b.json': '```js' },
+        groups: [{ title: 'Core', why: '# Fake group', files: ['a.js'] }]
+      },
+      compared,
+      files
+    })
+    const lines = md.split('\n')
+    expect(lines.filter((l) => l.startsWith('# '))).toEqual(['# Changes on feature/x', '# Core', '# Everything else'])
+    expect(lines.filter((l) => l.startsWith('## '))).toEqual(['## `a.js`', '## `b.json` (new file)'])
+    expect(lines.filter((l) => l.startsWith('```'))).toEqual(['````diff a.js', '````', '````diff b.json', '````'])
+  })
+
   it('falls back to a neutral title without an explanation', () => {
     expect(buildWalkthrough({ explanation: {}, compared, files }).startsWith('# Changes on feature/x\n')).toBe(true)
   })

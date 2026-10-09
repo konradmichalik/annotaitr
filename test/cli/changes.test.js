@@ -31,6 +31,7 @@ describe('validateExplanation', () => {
   it('keeps groups of files with a title and an optional reason', () => {
     expect(validateExplanation({ groups: [{ title: 'Core', files: ['a.js'] }] }).explanation.groups).toEqual([{ title: 'Core', why: undefined, files: ['a.js'] }])
     expect(validateExplanation({ groups: [{ files: ['a.js'] }] }).error).toBe('every group needs a "title" and a "files" list of paths')
+    expect(validateExplanation({ groups: [{ title: '  ', files: ['a.js'] }] }).error).toBe('every group needs a "title" and a "files" list of paths')
   })
 
   it('rejects wrong shapes with a message the agent can act on', () => {
