@@ -413,7 +413,7 @@ test('the default intent setting starts a new box with that intent', async ({ pa
       await expect(page.getByRole('button', { name: /^1\. Remove, Box/ })).toBeVisible()
       await page.keyboard.press('c')
       await page.mouse.click(canvas.x + 120, canvas.y + 100)
-      await expect(page.getByRole('button', { name: 'Intent: Question' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Intent: Remove' })).toBeVisible()
       await page.keyboard.press('Escape')
     } finally {
       cli.child.kill()

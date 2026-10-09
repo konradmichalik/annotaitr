@@ -10,8 +10,8 @@ describe('claude-code plugin manifest', () => {
     expect(typeof manifest.description).toBe('string')
   })
 
-  it('exposes /annotaitr:md, /annotaitr:image and /annotaitr:review, all shelling out to annotaitr', () => {
-    for (const command of ['md', 'image', 'review']) {
+  it('exposes /annotaitr:md, /annotaitr:img and /annotaitr:review, all shelling out to annotaitr', () => {
+    for (const command of ['md', 'img', 'review']) {
       const content = readFileSync(`apps/claude-code/commands/${command}.md`, 'utf-8')
       expect(content).toContain('annotaitr --origin claude-code')
     }
@@ -24,8 +24,8 @@ describe('claude-code plugin manifest', () => {
     expect(content).toContain('Do not commit, push or open a pull request before the user approves.')
   })
 
-  it('keeps zsh from rejecting a pasted [Image #N] chip in /annotaitr:image and /annotaitr:review', () => {
-    for (const command of ['image', 'review']) {
+  it('keeps zsh from rejecting a pasted [Image #N] chip in /annotaitr:img and /annotaitr:review', () => {
+    for (const command of ['img', 'review']) {
       const content = readFileSync(`apps/claude-code/commands/${command}.md`, 'utf-8')
       expect(content).toContain('!`setopt no_bad_pattern no_nomatch 2>/dev/null; annotaitr --origin claude-code $ARGUMENTS`')
     }

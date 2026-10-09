@@ -34,7 +34,7 @@ function GeneralSection({ settings, updateSetting, drafts, tips }) {
       <SettingRow id="setting-hints" label="Tool hints" description={tips ? 'First-run tips and the help line in the status bar' : 'The help line in the status bar'}>
         <Toggle id="setting-hints" checked={settings.toolHints} onChange={(v) => updateSetting('toolHints', v)} />
       </SettingRow>
-      <SettingRow id="setting-intent" label="Default intent" description="For new shapes and selections. Pins always start as Question" labelFor="setting-intent-select">
+      <SettingRow id="setting-intent" label="Default intent" description="For new pins, shapes and selections" labelFor="setting-intent-select">
         <select
           id="setting-intent-select"
           className="settings-select"

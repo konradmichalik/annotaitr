@@ -595,7 +595,7 @@ export default function ImageCanvas({
             x={box.x} y={box.y} width={box.width} height={box.height} vectorEffect="non-scaling-stroke"
           />
         ))}
-        {previousVisible && <PreviousRoundLayer threads={previousThreads} Shape={AnnotationShape} />}
+        {previousVisible && <PreviousRoundLayer threads={previousThreads} Shape={AnnotationShape} onOpen={onOpenThread} />}
         {annotations.map((annotation) => (
           <AnnotationShape
             key={annotation.id} annotation={annotation} number={annotation.number}

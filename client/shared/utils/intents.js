@@ -27,11 +27,11 @@ export function isGeneral(annotation) {
 export const isNumbered = (annotation) => annotation.type !== 'NOTES' && !isGeneral(annotation)
 
 /**
- * The intent a new note of this type starts with: Question for a pin,
- * `preferred` (the Default intent setting, Change unless set) for everything else.
+ * The intent a new note of this type starts with: `preferred` (the Default
+ * intent setting, Change unless set), except for the fixed markdown types.
  */
 export function defaultIntent(type, preferred = 'change') {
-  return FIXED_BY_TYPE[type] ?? (type === 'pin' ? 'question' : (IDS.includes(preferred) ? preferred : 'change'))
+  return FIXED_BY_TYPE[type] ?? (IDS.includes(preferred) ? preferred : 'change')
 }
 
 /** The note's intent; old data without the field gets the default of its type. Null for general comments. */
@@ -39,7 +39,9 @@ export function intentOf(annotation) {
   if (!isNumbered(annotation)) { return null }
   const fixed = FIXED_BY_TYPE[annotation.type]
   if (fixed) { return fixed }
-  return IDS.includes(annotation.intent) ? annotation.intent : defaultIntent(annotation.type)
+  if (IDS.includes(annotation.intent)) { return annotation.intent }
+  // Pins saved before the Default intent applied to them were Questions.
+  return annotation.type === 'pin' ? 'question' : defaultIntent(annotation.type)
 }
 
 export const intentWord = (intent) => INTENTS.find((i) => i.id === intent)?.word ?? 'General'
