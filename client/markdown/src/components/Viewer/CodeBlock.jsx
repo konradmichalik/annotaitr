@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import hljs from 'highlight.js'
 import { countDiffLines, parseDiffLines, splitCodeInfo } from '../../utils/diffLines.js'
+import { DiffCounts } from './DiffCounts.jsx'
 
 /**
  * Compute the character offset of a token span within the code block's text content.
@@ -31,10 +32,7 @@ function DiffHeader({ path, counts }) {
   return (
     <div className="diff-header">
       {path && <span className="diff-path">{path}</span>}
-      <span className="diff-counts">
-        <span className="diff-count-add">+{counts.added}</span>{' '}
-        <span className="diff-count-del">{'\u2212'}{counts.removed}</span>
-      </span>
+      <DiffCounts className="diff-counts" added={counts.added} removed={counts.removed} />
     </div>
   )
 }

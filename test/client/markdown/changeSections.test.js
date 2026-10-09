@@ -57,11 +57,6 @@ describe('groupChangeSections', () => {
     expect(files.map((f) => f.explained)).toEqual([true, false, false])
   })
 
-  it('names why a file shows no hunks', () => {
-    expect(files[2].omitted).toBe('lock file')
-    expect(files[0].omitted).toBeNull()
-  })
-
   it('reads a deleted file from its heading', () => {
     const { files: deleted } = groupChangeSections(parseMarkdownToBlocks('# T\n\n## `gone.txt` (deleted)\n\nWhy.\n'))
     expect(deleted[0]).toMatchObject({ path: 'gone.txt', status: 'D' })

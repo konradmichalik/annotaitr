@@ -1,19 +1,12 @@
 import { useId, useMemo, useState } from 'react'
 import { buildFileTree, filterFileTree, nameParts } from '../utils/fileTree.js'
-import { MarkReviewedButton } from './FilesSection.jsx'
-
-const STATUS_WORD = { A: 'added', M: 'modified', D: 'deleted' }
-const STATUS_TITLE = { A: 'Added', M: 'Modified', D: 'Deleted' }
+import { CheckIcon, MarkReviewedButton } from './FilesSection.jsx'
+import { DiffCounts } from './Viewer/DiffCounts.jsx'
+import { STATUS_LABEL } from '../utils/changeSections.js'
 
 const FolderIcon = () => (
   <svg className="changed-tree-folder-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" aria-hidden="true">
     <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-  </svg>
-)
-
-const CheckIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="m5 12 5 5 9-10" />
   </svg>
 )
 
@@ -25,7 +18,7 @@ const Chevron = ({ open }) => (
 
 function fileLabel(file, count, reviewed) {
   const notes = count === 1 ? '1 note' : `${count} notes`
-  const state = [STATUS_WORD[file.status], !file.explained && 'not explained', reviewed && 'reviewed'].filter(Boolean)
+  const state = [STATUS_LABEL[file.status].toLowerCase(), !file.explained && 'not explained', reviewed && 'reviewed'].filter(Boolean)
   return `${file.path}, ${notes}, +${file.added} \u2212${file.removed}, ${state.join(', ')}`
 }
 
@@ -69,13 +62,10 @@ function TreeNodes({ nodes, depth, current, counts, reviewed, closed, onToggleFo
             title={node.path}
             onClick={() => onSelect(node.path)}
           >
-            <span className="changed-tree-status" aria-hidden="true" title={STATUS_TITLE[node.file.status]}>{node.file.status}</span>
+            <span className="changed-tree-status" aria-hidden="true" title={STATUS_LABEL[node.file.status]}>{node.file.status}</span>
             <Name name={node.name} />
             <span className="changed-tree-meta" aria-hidden="true">
-              <span className="changed-tree-counts">
-                <span className="diff-count-add">+{node.file.added}</span>{' '}
-                <span className="diff-count-del">{'\u2212'}{node.file.removed}</span>
-              </span>
+              <DiffCounts className="changed-tree-counts" added={node.file.added} removed={node.file.removed} />
               {!node.file.explained && <span className="changed-tree-unexplained" title="Not explained" />}
               {(counts.get(node.path) ?? 0) > 0 && <span className="files-item-count">{counts.get(node.path)}</span>}
               {reviewed.has(node.path) && <span className="files-item-check"><CheckIcon /></span>}

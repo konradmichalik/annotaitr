@@ -7,6 +7,8 @@ import { countDiffLines, parseDiffLines, splitCodeInfo } from './diffLines.js'
  * and feedback work on them exactly as in any markdown document.
  */
 
+export const STATUS_LABEL = { A: 'Added', M: 'Modified', D: 'Deleted' }
+
 const STATUS_SUFFIX = /\s+\((new file|deleted)\)$/
 const OMITTED = /^\+(\d+) −(\d+), not shown: (.+)\.$/
 const NOT_EXPLAINED = 'The agent did not mention this change.'
@@ -32,7 +34,6 @@ function fileEntry(heading, blocks) {
     heading,
     blocks,
     explained: !blocks.some((b) => b.type === 'paragraph' && b.content.trim() === NOT_EXPLAINED),
-    omitted: omitted ? omitted[3] : null,
     ...counts
   }
 }

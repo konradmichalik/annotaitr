@@ -1,7 +1,8 @@
 import { groupHtmlWrappers } from '../../utils/htmlWrappers.js'
 import { ViewerBlocks } from './ViewerBlocks.jsx'
-
-const STATUS_WORD = { A: 'Added', M: 'Modified', D: 'Deleted' }
+import { DiffCounts } from './DiffCounts.jsx'
+import { CheckIcon } from '../FilesSection.jsx'
+import { STATUS_LABEL } from '../../utils/changeSections.js'
 
 function AgentIcon() {
   return (
@@ -20,14 +21,6 @@ function Chevron({ open }) {
   )
 }
 
-function CheckIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="m5 12 5 5 9-10" />
-    </svg>
-  )
-}
-
 /**
  * The file's blocks with every paragraph, which is always the agent's text,
  * set apart from the diffs and labelled with the agent's name.
@@ -35,7 +28,7 @@ function CheckIcon() {
 function FileBody({ blocks, agent, blockProps }) {
   return blocks.map((block) => (block.type === 'paragraph' ? (
     <div key={block.id} className="change-why">
-      <span className="change-why-label"><AgentIcon />{agent}</span>
+      <span className="change-why-label"><AgentIcon />{agent.charAt(0).toUpperCase() + agent.slice(1)}</span>
       <ViewerBlocks nodes={groupHtmlWrappers([block])} {...blockProps} />
     </div>
   ) : (
@@ -52,13 +45,11 @@ function FileCard({ file, agent, collapsed, reviewed, onToggle, onReview, blockP
       <div className="change-file-header">
         <button type="button" className="change-file-toggle" aria-expanded={!collapsed} aria-controls={bodyId} onClick={() => onToggle(file.path)}>
           <Chevron open={!collapsed} />
-          <span className="change-file-status" aria-label={STATUS_WORD[file.status]} title={STATUS_WORD[file.status]}>{file.status}</span>
+          <span className="change-file-status" aria-hidden="true" title={STATUS_LABEL[file.status]}>{file.status}</span>
+          <span className="visually-hidden">{STATUS_LABEL[file.status]}: </span>
           <span className="change-file-path">{file.path}</span>
         </button>
-        <span className="change-file-counts">
-          <span className="diff-count-add">+{file.added}</span>{' '}
-          <span className="diff-count-del">{'−'}{file.removed}</span>
-        </span>
+        <DiffCounts className="change-file-counts" added={file.added} removed={file.removed} />
         {!file.explained && <span className="change-pill">Not explained</span>}
         <button type="button" className="change-review-btn" aria-pressed={reviewed} onClick={() => onReview(file.path, !reviewed)}>
           <CheckIcon />
