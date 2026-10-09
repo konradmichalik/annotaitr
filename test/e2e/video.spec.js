@@ -267,7 +267,7 @@ test('close notes merge into a cluster whose list opens above the lanes and work
     expect(listBox.y + listBox.height).toBeLessThan(controls.y)
 
     await page.keyboard.press('ArrowDown')
-    await expect(list.getByRole('button', { name: /^2\s*Question/ })).toBeFocused()
+    await expect(list.getByRole('button', { name: /^2\s*Change/ })).toBeFocused()
     await page.keyboard.press('Escape')
     await expect(list).toHaveCount(0)
     await expect(chip).toBeFocused()
