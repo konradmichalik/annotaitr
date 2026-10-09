@@ -49,6 +49,38 @@
   overflow: hidden;
 }
 
+/* A group of the agent's: a chapter title over its file cards */
+.change-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+.change-group-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.change-group-header .heading-1 {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.change-group-meta {
+  margin-left: auto;
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.change-group > .change-why {
+  border: 1px solid color-mix(in srgb, var(--focus) 20%, var(--line));
+  border-radius: var(--radius-card);
+}
+
 .change-file.is-unexplained {
   border-style: dashed;
   border-color: var(--line-control);

@@ -63,10 +63,41 @@ function FileCard({ file, agent, collapsed, reviewed, onToggle, onReview, blockP
   )
 }
 
+function FileCards({ files, changes, blockProps }) {
+  return files.map((file) => (
+    <FileCard
+      key={file.path}
+      file={file}
+      agent={changes.agent}
+      collapsed={changes.collapsed.has(file.path)}
+      reviewed={changes.reviewed.has(file.path)}
+      onToggle={changes.toggle}
+      onReview={changes.markReviewed}
+      blockProps={blockProps}
+    />
+  ))
+}
+
+/** One of the agent's groups: its title and reason, how many of its files are reviewed, then their cards. */
+function GroupSection({ group, changes, blockProps }) {
+  const reviewedCount = group.files.filter((f) => changes.reviewed.has(f.path)).length
+  return (
+    <section className="change-group" aria-label={group.title}>
+      <div className="change-group-header">
+        <ViewerBlocks nodes={groupHtmlWrappers([group.heading])} {...blockProps} />
+        <span className="change-group-meta">{reviewedCount} of {group.files.length} reviewed</span>
+      </div>
+      {group.blocks.length > 0 && <FileBody blocks={group.blocks} agent={changes.agent} blockProps={blockProps} />}
+      <FileCards files={group.files} changes={changes} blockProps={blockProps} />
+    </section>
+  )
+}
+
 /**
  * A changes walkthrough laid out like a pull request: the agent's overview as
- * the first card, then one collapsible card per changed file. Collapsing only
- * hides the body, the blocks stay mounted for highlights, search and notes.
+ * the first card, then one collapsible card per changed file, under the
+ * agent's groups when it gave any. Collapsing only hides the body, the blocks
+ * stay mounted for highlights, search and notes.
  */
 export function ChangesBlocks({ sections, changes, ...blockProps }) {
   return (
@@ -75,18 +106,9 @@ export function ChangesBlocks({ sections, changes, ...blockProps }) {
         <span className="change-overview-label"><AgentIcon />Explained by {changes.agent}</span>
         <ViewerBlocks nodes={groupHtmlWrappers(sections.overview)} {...blockProps} />
       </section>
-      {sections.files.map((file) => (
-        <FileCard
-          key={file.path}
-          file={file}
-          agent={changes.agent}
-          collapsed={changes.collapsed.has(file.path)}
-          reviewed={changes.reviewed.has(file.path)}
-          onToggle={changes.toggle}
-          onReview={changes.markReviewed}
-          blockProps={blockProps}
-        />
-      ))}
+      {sections.groups.length > 0
+        ? sections.groups.map((group) => <GroupSection key={group.heading.id} group={group} changes={changes} blockProps={blockProps} />)
+        : <FileCards files={sections.files} changes={changes} blockProps={blockProps} />}
     </>
   )
 }

@@ -96,6 +96,21 @@ describe('buildWalkthrough', () => {
     expect(md).toContain('Line ## x')
   })
 
+  it('orders the files by group, each once, with the rest under Everything else', () => {
+    const three = [...files, { path: 'c.css', status: 'M', added: 1, removed: 0, diff: '@@ -1 +1 @@\n+x' }]
+    const md = buildWalkthrough({
+      explanation: { groups: [{ title: 'Styles first', why: 'The look.', files: ['c.css', 'a.js'] }, { title: 'Again', files: ['a.js'] }] },
+      compared,
+      files: three
+    })
+    const order = ['# Styles first', '## `c.css`', '## `a.js`', '# Everything else', '## `b.json`']
+    const positions = order.map((h) => md.indexOf(`\n${h}`))
+    expect(positions.every((p) => p > 0)).toBe(true)
+    expect([...positions].sort((x, y) => x - y)).toEqual(positions)
+    expect(md).toContain('# Styles first\n\nThe look.')
+    expect(md).not.toContain('# Again')
+  })
+
   it('falls back to a neutral title without an explanation', () => {
     expect(buildWalkthrough({ explanation: {}, compared, files }).startsWith('# Changes on feature/x\n')).toBe(true)
   })

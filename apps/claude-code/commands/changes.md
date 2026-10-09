@@ -37,6 +37,15 @@ Give every changed file one line, keyed by its path from the repository root,
 untracked files included. A file without a line is shown as `Not explained`.
 Explain intent, not syntax.
 
+For a change across several concerns, add `"groups"`: chapters in reading
+order, the core of the change first and supporting changes after it, each with
+a `title`, an optional `why` and its `files`. Files you put in no group are
+shown under `Everything else`.
+
+```json
+"groups": [{ "title": "Cache key per workspace", "why": "The actual fix.", "files": ["src/Cache.php"] }]
+```
+
 ### 3. Open it
 
 Run `annotaitr changes --origin claude-code --explain <explain.json path>`

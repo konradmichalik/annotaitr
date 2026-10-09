@@ -59,9 +59,12 @@ The explanation is a JSON object, every field optional:
   "title": "Scope the facet cache per workspace",
   "summary": "Why the change was made, in a few sentences.",
   "commit": "fix: scope the facet cache per workspace",
-  "files": { "src/Controller/FacetController.php": "Builds the key from page and workspace." }
+  "files": { "src/Controller/FacetController.php": "Builds the key from page and workspace." },
+  "groups": [{ "title": "Cache key", "why": "The actual fix.", "files": ["src/Controller/FacetController.php"] }]
 }
 ```
+
+`groups` is optional: chapters in reading order, each with a `title`, an optional `why` and its `files`. The file cards then appear under their group with a reviewed count, each file in the first group that names it and every other file under `Everything else`.
 
 The walkthrough is written to `changes.md` in the git directory, so it is never committed, and deleted once the reviewer decides. Unlike a Markdown review, no files next to it are served. It opens laid out like a pull request: the changed files as a folder tree on the left, the agent's overview with the proposed commit message, and one card per file with the agent's line and the diff with old and new line numbers. With `--base`, the overview also lists the branch's commits with short sha and subject, so a note can ask to reword, split or squash one. `Mark as reviewed` in a card's header, or `Mark file as reviewed` in the sidebar, folds the card to its explanation, `J` and `K` move to the next and previous file. Files without a line in `files` are marked as not explained, explanations for paths that did not change are listed as `Explained but unchanged`. Lock files, binary files, files over 256 KB or with more than 1000 changed lines show their counts instead of their hunks, and so does everything past 500 files or about 1.5 MB of hunks. Untracked files whose name suggests a secret (`.env.local`, `*.pem`, `id_rsa`, `*credentials*`) are listed without their content; templates such as `.env.example` are shown. git runs without a shell and with external diffs, textconv, fsmonitor and signature checks switched off; clean filters from `.gitattributes` still run, as for `git status`. With nothing to review, it prints `NO CHANGES:` and exits `0`. At the decision it reads the changes again: if they moved while the review was open, the output starts with `CHANGED DURING REVIEW:`, and explanations for paths that are not part of the changes get a `NOTE:` line.
 

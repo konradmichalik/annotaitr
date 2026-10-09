@@ -77,6 +77,24 @@ function fileSection(file, why) {
   return lines
 }
 
+/**
+ * The files in the agent's groups, each in the first group that names it, and
+ * every other file under `Everything else`, so no change goes missing. Without
+ * groups, one unnamed group in path order.
+ */
+function orderInGroups(files, groups = []) {
+  if (groups.length === 0) { return [{ title: null, files }] }
+  const byPath = new Map(files.map((f) => [f.path, f]))
+  const placed = new Set()
+  const ordered = groups.map((group) => ({
+    title: group.title,
+    why: group.why,
+    files: group.files.filter((p) => byPath.has(p) && !placed.has(p) && placed.add(p)).map((p) => byPath.get(p))
+  })).filter((g) => g.files.length > 0)
+  const rest = files.filter((f) => !placed.has(f.path))
+  return rest.length > 0 ? [...ordered, { title: 'Everything else', files: rest }] : ordered
+}
+
 export function buildWalkthrough({ explanation = {}, compared, files }) {
   const explained = explanation.files ?? {}
   const lineFor = (path) => (Object.hasOwn(explained, path) ? explained[path] : null)
@@ -85,7 +103,10 @@ export function buildWalkthrough({ explanation = {}, compared, files }) {
   const unchanged = Object.keys(explained).filter((p) => !paths.has(p))
   const blocks = [
     ...overview({ explanation, compared, files, notExplained, unchanged }),
-    ...files.flatMap((file) => fileSection(file, lineFor(file.path)))
+    ...orderInGroups(files, explanation.groups).flatMap((group) => [
+      ...(group.title ? [`# ${oneLine(group.title)}`, ...(group.why ? [oneLine(group.why)] : [])] : []),
+      ...group.files.flatMap((file) => fileSection(file, lineFor(file.path)))
+    ])
   ]
   return blocks.join('\n\n') + '\n'
 }

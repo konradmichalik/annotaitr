@@ -38,27 +38,43 @@ function fileEntry(heading, blocks) {
   }
 }
 
+/**
+ * The overview (the first heading and what follows it), the agent's groups
+ * (any later top-level heading, with its reason) and the files, one per
+ * second-level heading. Without groups, `groups` is empty.
+ */
 export function groupChangeSections(blocks) {
   const overview = []
-  const files = []
-  let current = null
+  const groups = []
+  const rawFiles = []
+  let group = null
+  let file = null
   for (const block of blocks) {
-    if (block.type === 'heading' && block.level === 2) {
-      current = { heading: block, blocks: [] }
-      files.push(current)
-    } else if (current) {
-      current.blocks.push(block)
+    if (block.type === 'heading' && block.level === 1 && overview.length > 0) {
+      group = { title: block.content, heading: block, blocks: [], files: [] }
+      groups.push(group)
+      file = null
+    } else if (block.type === 'heading' && block.level === 2) {
+      file = { heading: block, blocks: [], group }
+      rawFiles.push(file)
+    } else if (file) {
+      file.blocks.push(block)
+    } else if (group) {
+      group.blocks.push(block)
     } else {
       overview.push(block)
     }
   }
-  return { overview, files: files.map((f) => fileEntry(f.heading, f.blocks)) }
+  const files = rawFiles.map((f) => fileEntry(f.heading, f.blocks))
+  const withFiles = groups.map((g) => ({ ...g, files: files.filter((_, i) => rawFiles[i].group === g) }))
+  return { overview, groups: withFiles, files }
 }
 
 /** How many reviewer notes sit on the overview and on each changed file. */
 export function noteCounts(sections, annotations) {
   const pathOf = new Map(sections.files.flatMap((f) => [f.heading, ...f.blocks].map((b) => [b.id, f.path])))
-  const overviewIds = new Set(sections.overview.map((b) => b.id))
+  // The agent's group headings and reasons count with the overview: they are its text, not a file's.
+  const overviewIds = new Set([...sections.overview, ...sections.groups.flatMap((g) => [g.heading, ...g.blocks])].map((b) => b.id))
   const byPath = new Map()
   let overview = 0
   for (const ann of annotations) {

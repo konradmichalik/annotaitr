@@ -79,3 +79,26 @@ describe('noteCounts', () => {
     expect([...counts.byPath]).toEqual([['src/a.js', 2]])
   })
 })
+
+describe('groupChangeSections with groups', () => {
+  const grouped = [
+    '# Title', '', 'Summary.', '',
+    '# Core', '', 'The heart of it.', '',
+    '## `src/a.js`', '', 'Renames a.', '',
+    '# Everything else', '',
+    '## `docs/b.md`', '', 'Docs.', ''
+  ].join('\n')
+  const { overview, groups, files } = groupChangeSections(parseMarkdownToBlocks(grouped))
+
+  it('keeps the first heading and its text as the overview', () => {
+    expect(overview.map((b) => b.content)).toEqual(['Title', 'Summary.'])
+  })
+
+  it('collects the files under each group, with the group reason', () => {
+    expect(groups.map((g) => [g.title, g.blocks.map((b) => b.content), g.files.map((f) => f.path)])).toEqual([
+      ['Core', ['The heart of it.'], ['src/a.js']],
+      ['Everything else', [], ['docs/b.md']]
+    ])
+    expect(files.map((f) => f.path)).toEqual(['src/a.js', 'docs/b.md'])
+  })
+})

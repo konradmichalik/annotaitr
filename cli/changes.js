@@ -44,7 +44,19 @@ export function validateExplanation(value) {
       Object.values(files).some((line) => typeof line !== 'string')) {
     return { error: '"files" must map each path to one line of text' }
   }
-  return { explanation: { ...Object.fromEntries(TEXT_FIELDS.map((f) => [f, value[f]])), files } }
+  const groups = value.groups ?? []
+  const validGroup = (g) => typeof g === 'object' && g !== null && typeof g.title === 'string' &&
+    (g.why === undefined || typeof g.why === 'string') && Array.isArray(g.files) && g.files.every((f) => typeof f === 'string')
+  if (!Array.isArray(groups) || !groups.every(validGroup)) {
+    return { error: 'every group needs a "title" and a "files" list of paths' }
+  }
+  return {
+    explanation: {
+      ...Object.fromEntries(TEXT_FIELDS.map((f) => [f, value[f]])),
+      files,
+      groups: groups.map((g) => ({ title: g.title, why: g.why, files: g.files }))
+    }
+  }
 }
 
 async function readExplanation(path) {
@@ -101,7 +113,9 @@ export async function prepareWalkthrough({ base, explain, cwd = process.cwd() })
   }
 
   const changedPaths = new Set(files.map((f) => f.path))
-  const unchangedPaths = Object.keys(explained.explanation.files ?? {}).filter((p) => !changedPaths.has(p))
+  const { files: lines = {}, groups = [] } = explained.explanation
+  const namedPaths = new Set([...Object.keys(lines), ...groups.flatMap((g) => g.files)])
+  const unchangedPaths = [...namedPaths].filter((p) => !changedPaths.has(p))
   try {
     const dir = await gitPath(root, 'annotaitr')
     await mkdir(dir, { recursive: true })

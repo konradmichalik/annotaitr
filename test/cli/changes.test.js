@@ -24,8 +24,13 @@ describe('parseChangesArgs', () => {
 describe('validateExplanation', () => {
   it('keeps the known fields', () => {
     expect(validateExplanation({ title: 'T', commit: 'fix: x', files: { 'a.js': 'why' }, extra: 1 })).toEqual({
-      explanation: { title: 'T', summary: undefined, commit: 'fix: x', files: { 'a.js': 'why' } }
+      explanation: { title: 'T', summary: undefined, commit: 'fix: x', files: { 'a.js': 'why' }, groups: [] }
     })
+  })
+
+  it('keeps groups of files with a title and an optional reason', () => {
+    expect(validateExplanation({ groups: [{ title: 'Core', files: ['a.js'] }] }).explanation.groups).toEqual([{ title: 'Core', why: undefined, files: ['a.js'] }])
+    expect(validateExplanation({ groups: [{ files: ['a.js'] }] }).error).toBe('every group needs a "title" and a "files" list of paths')
   })
 
   it('rejects wrong shapes with a message the agent can act on', () => {
@@ -92,7 +97,7 @@ describe('prepareWalkthrough', () => {
   })
 
   it('tells the agent about explained paths that are not part of the changes', async () => {
-    await writeFile(join(dir, 'explain.json'), JSON.stringify({ files: { 'gone.js': 'x', 'a.js': 'y' } }))
+    await writeFile(join(dir, 'explain.json'), JSON.stringify({ files: { 'gone.js': 'x', 'a.js': 'y' }, groups: [{ title: 'G', files: ['gone.js'] }] }))
     const prepared = await prepareWalkthrough({ cwd: dir, explain: join(dir, 'explain.json') })
     expect(await decisionNote(prepared)).toContain('NOTE: the explanation names paths that are not part of these changes: gone.js.')
   })
