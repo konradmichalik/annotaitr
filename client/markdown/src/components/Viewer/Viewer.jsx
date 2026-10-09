@@ -15,7 +15,6 @@ import { useAnnotatedBlocks } from '../../hooks/useAnnotatedBlocks.js'
 import { formatLabelText } from '../../utils/quickLabels.js'
 import { getItem, setItem } from '../../../../shared/utils/storage.js'
 import { groupHtmlWrappers } from '../../utils/htmlWrappers.js'
-import { groupChangeSections } from '../../utils/changeSections.js'
 import { isOpenableFileLink } from '../../utils/links.js'
 import { getLinkInfo, removeInsertionMarker, createPersistentInsertionMarker, createTemporaryInsertionMarker, insertionPointAfter, findAnnotationElement } from '../../utils/viewerDom.js'
 import { createInsertionAnnotation, createTokenAnnotation, createElementAnnotation, getBlockLabel } from '../../utils/viewerAnnotations.js'
@@ -429,8 +428,7 @@ export const Viewer = forwardRef(function Viewer({
   }, [])
 
   const blockNodes = useMemo(() => groupHtmlWrappers(blocks), [blocks])
-  const isChanges = changes !== null
-  const changeSections = useMemo(() => (isChanges ? groupChangeSections(blocks) : null), [isChanges, blocks])
+  const changeSections = changes?.sections ?? null
 
   const blockHandlers = {
     onMathClick: makeElementHandler('math'),

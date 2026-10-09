@@ -1640,6 +1640,133 @@
   color: var(--status-ok);
 }
 
+/* === Changed files (changes walkthrough) === */
+.changed-files-panel {
+  min-width: 260px;
+  padding-top: var(--space-3);
+}
+
+.changed-files-filter {
+  padding: 0 var(--space-3) var(--space-2);
+}
+
+.changed-files-filter input {
+  width: 100%;
+  min-height: 30px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-control);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-sm);
+}
+
+.changed-files-filter input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.changed-files-nav {
+  flex: 1 1 auto;
+  padding: 0 var(--space-2) var(--space-3);
+}
+
+.changed-tree {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.changed-tree-folder,
+.changed-tree-file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 28px;
+  padding-right: var(--space-2);
+  font-size: var(--fs-sm);
+}
+
+.changed-tree-folder {
+  color: var(--ink-muted);
+}
+
+.changed-tree-file {
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.changed-tree-file:hover {
+  background: var(--card);
+}
+
+.changed-tree-file:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.changed-tree-file.is-current {
+  border-color: var(--line);
+  background: var(--card);
+}
+
+.changed-tree-overview {
+  margin-bottom: var(--space-1);
+  padding-left: var(--space-2);
+  font-weight: 500;
+}
+
+.changed-tree-status {
+  flex: 0 0 14px;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  text-align: center;
+}
+
+.changed-tree-name {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.changed-tree-overview .changed-tree-name {
+  font-family: var(--font-sans);
+}
+
+.changed-tree-meta {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.changed-tree-pill {
+  padding: 0 6px;
+  border: 1px dashed var(--line-control);
+  border-radius: var(--radius-full);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+.changed-files-empty {
+  padding: var(--space-2);
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+}
+
 /* === Table of Contents === */
 .toc-panel {
   width: var(--toc-width);

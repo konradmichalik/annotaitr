@@ -21,6 +21,9 @@ import { getTextStats } from './utils/textStats.js'
 import { UpdateBanner } from '../../shared/components/UpdateBanner.jsx'
 import { FilesSection, MarkReviewedButton } from './components/FilesSection.jsx'
 import { useChangesReview } from './hooks/useChangesReview.js'
+import { useChangesNavigation } from './hooks/useChangesNavigation.js'
+import { ChangedFilesPanel } from './components/ChangedFilesPanel.jsx'
+import { groupChangeSections, noteCounts } from './utils/changeSections.js'
 import { agentName } from '../../shared/utils/origin.js'
 import { initialAnnotationState } from './state/annotationReducer.js'
 import { useAutoClose } from '../../shared/hooks/useAutoClose.js'
@@ -137,6 +140,10 @@ export default function App() {
   const crossFileSearchState = useCrossFileSearch(files)
   const isMultiFile = files.length > 1
   const changesReview = useChangesReview()
+  const activeBlocks = activeFile?.blocks
+  const changeSections = useMemo(() => (isChanges && activeBlocks ? groupChangeSections(activeBlocks) : null), [isChanges, activeBlocks])
+  const changeNotes = useMemo(() => (changeSections ? noteCounts(changeSections, annotations) : null), [changeSections, annotations])
+  const changesNav = useChangesNavigation({ sections: changeSections, expand: changesReview.expand })
 
   const handleCrossFileSelectResult = useCallback((fileIndex) => {
     if (fileIndex !== activeFileIndex) {
@@ -463,7 +470,22 @@ export default function App() {
       />
 
       <main className="app-main">
-        {(!isPlainTextFile || isMultiFile) && (
+        {isChanges && changeSections && (
+          <>
+            <ChangedFilesPanel
+              sections={changeSections}
+              counts={changeNotes}
+              reviewed={changesReview.reviewed}
+              current={changesNav.current}
+              onSelect={changesNav.select}
+              onToggleReviewed={(path) => changesReview.markReviewed(path, !changesReview.reviewed.has(path))}
+              width={tocWidth}
+              collapsed={tocCollapsed}
+            />
+            {!tocCollapsed && <div className="panel-splitter" onMouseDown={handleTocResize} />}
+          </>
+        )}
+        {!isChanges && (!isPlainTextFile || isMultiFile) && (
           <>
             <TableOfContents
               blocks={isPlainTextFile ? [] : blocks}
@@ -518,7 +540,7 @@ export default function App() {
               crossFileSearch={crossFileSearchProps}
               newIntent={settings.defaultIntent}
               toolHints={settings.toolHints}
-              changes={isChanges ? { ...changesReview, agent: agentName(origin) ?? 'the agent' } : null}
+              changes={changeSections ? { ...changesReview, sections: changeSections, agent: agentName(origin) ?? 'the agent' } : null}
             />
           ) : (
             <SourceView

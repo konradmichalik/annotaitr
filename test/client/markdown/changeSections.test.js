@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { parseMarkdownToBlocks } from '../../../client/markdown/src/utils/parser.js'
-import { groupChangeSections } from '../../../client/markdown/src/utils/changeSections.js'
+import { groupChangeSections, noteCounts } from '../../../client/markdown/src/utils/changeSections.js'
 
 const walkthrough = [
   '# Scope the cache',
@@ -65,5 +65,22 @@ describe('groupChangeSections', () => {
   it('reads a deleted file from its heading', () => {
     const { files: deleted } = groupChangeSections(parseMarkdownToBlocks('# T\n\n## gone.txt (deleted)\n\nWhy.\n'))
     expect(deleted[0]).toMatchObject({ path: 'gone.txt', status: 'D' })
+  })
+})
+
+describe('noteCounts', () => {
+  it('counts reviewer notes on the overview and per file, not agent notes or general comments', () => {
+    const sections = groupChangeSections(parseMarkdownToBlocks(walkthrough))
+    const diffBlock = sections.files[0].blocks.find((b) => b.type === 'code')
+    const annotations = [
+      { blockId: sections.overview[1].id, type: 'COMMENT' },
+      { blockId: diffBlock.id, type: 'COMMENT' },
+      { blockId: diffBlock.id, type: 'DELETION' },
+      { blockId: diffBlock.id, type: 'NOTES' },
+      { blockId: '', type: 'COMMENT', targetType: 'global' }
+    ]
+    const counts = noteCounts(sections, annotations)
+    expect(counts.overview).toBe(1)
+    expect([...counts.byPath]).toEqual([['src/a.js', 2]])
   })
 })

@@ -52,3 +52,18 @@ export function groupChangeSections(blocks) {
   }
   return { overview, files: files.map((f) => fileEntry(f.heading, f.blocks)) }
 }
+
+/** How many reviewer notes sit on the overview and on each changed file. */
+export function noteCounts(sections, annotations) {
+  const pathOf = new Map(sections.files.flatMap((f) => [f.heading, ...f.blocks].map((b) => [b.id, f.path])))
+  const overviewIds = new Set(sections.overview.map((b) => b.id))
+  const byPath = new Map()
+  let overview = 0
+  for (const ann of annotations) {
+    if (ann.type === 'NOTES' || ann.targetType === 'global') { continue }
+    if (overviewIds.has(ann.blockId)) { overview += 1; continue }
+    const path = pathOf.get(ann.blockId)
+    if (path) { byPath.set(path, (byPath.get(path) ?? 0) + 1) }
+  }
+  return { overview, byPath }
+}
