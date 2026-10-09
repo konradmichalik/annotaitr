@@ -39,6 +39,30 @@ ANNOTAITR_FEEDBACK_NOTES='[{"text":"Rewrote intro","line":5}]' annotaitr README.
 
 ## Presenting changes before a commit
 
-`/annotaitr:changes [base]` (Claude Code) has the agent explain its own changes before it commits. It writes a walkthrough of every changed file against the merge base with `base` (default: the repository's default branch), working tree and untracked files included, with the hunks copied from `git diff` and one line of explanation per file. The walkthrough opens in Markdown mode and lives in the git directory, so it is never committed.
+`annotaitr changes` opens the changes of the current branch as a walkthrough, so an agent can explain its work before it commits. The diff always comes from git: everything that differs from the merge base with the base branch, working tree and untracked files included. The agent only supplies the text around it.
 
-Approve lets the agent commit with the proposed message, Send feedback has it revise and present again. This is a prototype of the planned Changes mode: the agent copies the hunks itself, so check the `**Compared:**` line and the file sections against what you expect.
+```bash
+annotaitr changes --explain .git/annotaitr/explain.json
+annotaitr changes --base develop --explain explain.json
+```
+
+| Flag | Meaning |
+|------|---------|
+| `--base <ref>` | Compare against the merge base with this branch, tag or commit. Default: `origin/HEAD`, then `main`, then `master` |
+| `--explain <file>` | The agent's explanation, see below. Without it every file is shown as not explained |
+| `--origin`, `--feedback-notes` | As for Markdown files |
+
+The explanation is a JSON object, every field optional:
+
+```json
+{
+  "title": "Scope the facet cache per workspace",
+  "summary": "Why the change was made, in a few sentences.",
+  "commit": "fix: scope the facet cache per workspace",
+  "files": { "src/Controller/FacetController.php": "Builds the key from page and workspace." }
+}
+```
+
+The walkthrough is written to `changes.md` in the git directory, so it is never committed, and opens in Markdown mode with one file card per changed file. Files without a line in `files` are listed as `Not explained`, explanations for paths that did not change as `Explained but unchanged`. Lock files, binary files and files with more than 1000 changed lines show their counts instead of their hunks. With nothing to review, it prints `NO CHANGES:` and exits `0`.
+
+In Claude Code, `/annotaitr:changes [base]` runs the whole loop: the agent writes the explanation, opens the walkthrough, commits with the proposed message after Approve and presents again after Send feedback.
