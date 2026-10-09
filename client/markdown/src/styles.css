@@ -812,10 +812,6 @@
   border-radius: 0;
 }
 
-.change-file-body .diff-header {
-  display: none;
-}
-
 /* A reviewed file keeps its header and the agent's line, the rest folds away */
 .change-file.is-collapsed .change-file-body > :not(.change-why) {
   display: none;

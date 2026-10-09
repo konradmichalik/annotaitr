@@ -14,20 +14,29 @@ export function removeInsertionMarker(el) {
   }
 }
 
+/**
+ * The element whose text an offset inside a block counts from: the code of a
+ * code block, since its toolbar and a diff header come first in the DOM, else
+ * the block itself. Selections in useHighlighter count the same way.
+ */
+export function textRootOf(blockEl) {
+  return blockEl.querySelector('pre > code') ?? blockEl
+}
+
 export function createPersistentInsertionMarker(id, blockEl, offset, number) {
   const marker = document.createElement('span')
   marker.className = 'insertion-marker'
   marker.dataset.highlightId = id
   marker.dataset.insertionId = id
   if (Number.isInteger(number)) { marker.dataset.noteNumber = String(number) }
-  return placeMarker(marker, blockEl, offset)
+  return placeMarker(marker, textRootOf(blockEl), offset)
 }
 
 /** The marker Add puts after a selection, which the composer anchors to until the text is saved. */
 export function createTemporaryInsertionMarker(blockEl, offset) {
   const marker = document.createElement('span')
   marker.className = 'insertion-marker-temp'
-  return placeMarker(marker, blockEl, offset)
+  return placeMarker(marker, textRootOf(blockEl), offset)
 }
 
 /** Where a selection ends inside its block, counted as insertion offsets count: markers do not count. */
@@ -35,11 +44,12 @@ export function insertionPointAfter(el) {
   let blockEl = el.parentElement
   while (blockEl && !blockEl.dataset?.blockId) { blockEl = blockEl.parentElement }
   if (!blockEl) { return null }
+  const root = textRootOf(blockEl)
   const range = document.createRange()
-  range.selectNodeContents(blockEl)
+  range.selectNodeContents(root)
   range.setEndAfter(el)
   const offset = range.toString().replaceAll('\u200B', '').length
-  const text = blockEl.textContent.replaceAll('\u200B', '')
+  const text = root.textContent.replaceAll('\u200B', '')
   return { blockEl, blockId: blockEl.dataset.blockId, offset, afterContext: text.slice(Math.max(0, offset - 50), offset) }
 }
 

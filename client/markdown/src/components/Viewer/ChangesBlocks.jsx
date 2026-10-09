@@ -66,7 +66,7 @@ function FileCard({ file, agent, collapsed, reviewed, onToggle, onReview, blockP
         </button>
       </div>
       <div id={bodyId} className="change-file-body">
-        <FileBody blocks={file.blocks} agent={agent} blockProps={blockProps} />
+        <FileBody blocks={file.blocks} agent={agent} blockProps={{ ...blockProps, inChangeCard: true }} />
       </div>
     </section>
   )

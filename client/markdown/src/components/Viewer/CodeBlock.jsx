@@ -39,7 +39,7 @@ function DiffHeader({ path, counts }) {
   )
 }
 
-export function CodeBlock({ block, onHover, onLeave, isHovered, hasNote, onNoteClick, onTokenSelect }) {
+export function CodeBlock({ block, onHover, onLeave, isHovered, hasNote, onNoteClick, onTokenSelect, showDiffHeader = true }) {
   const { language, meta } = splitCodeInfo(block.language)
   const isDiff = language === 'diff'
   const diffLines = isDiff ? parseDiffLines(block.content) : null
@@ -112,7 +112,7 @@ export function CodeBlock({ block, onHover, onLeave, isHovered, hasNote, onNoteC
           aria-label="View AI note"
         />
       )}
-      {isDiff && <DiffHeader path={meta} counts={countDiffLines(diffLines)} />}
+      {isDiff && showDiffHeader && <DiffHeader path={meta} counts={countDiffLines(diffLines)} />}
       <div className="code-toolbar">
         {language && !isDiff && <span className="code-language-label">{language}</span>}
         <button
