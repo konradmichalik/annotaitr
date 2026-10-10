@@ -73,6 +73,15 @@ Images, Mermaid, PlantUML and Kroki diagrams can be commented on or marked for d
 
 On submit, each note becomes a Markdown block headed by its number and intent and naming the lines, such as `## 3. Question · Text (Line 7)`. A multi-file session groups blocks by file and numbers across all files.
 
+### Changes walkthrough
+
+`annotaitr changes` is Markdown mode on a document it writes itself (see [the guide](usage/markdown.md#presenting-changes-before-a-commit)).
+
+- **Source**: the hunks always come from git, the agent's `--explain` file only adds text around them. git runs without a shell and with external diffs, textconv and fsmonitor switched off. File sizes and line counts are checked before a diff is read, so a huge file is listed with its counts instead of being loaded. A diff over 512 KB is only dropped after git has produced it.
+- **Document**: the walkthrough is written to `changes.md` in the git directory, never committed, and deleted after the decision. The client lays it out as an overview, a file tree and one card per file. `Whole file` asks `/api/changes/full` for the diff of that one file with all of it as context.
+- **Output**: a note on a diff line is mapped back to the file and to its `new` or `old` line, such as `## 1. Change · Text (new Lines 43-49 in src/Foo.php)`.
+- **At the decision**: the CLI takes a cheap fingerprint of the changes again, without reading a diff. If it moved while the review was open, the output starts with `CHANGED DURING REVIEW:`, so the agent knows the notes may point at code that changed since.
+
 ## Decisions
 
 The decision dialog offers two approvals. **Approve** discards the notes after one confirmation. **Approve with notes** accepts the target as-is and passes the notes along as context, not as change requests.

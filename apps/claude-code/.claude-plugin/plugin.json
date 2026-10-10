@@ -1,6 +1,6 @@
 {
   "name": "annotaitr",
-  "description": "Open images, captured web pages, videos, GIFs, or Markdown files in a browser-based annotator for AI-assisted review",
+  "description": "Open images, captured web pages, videos, GIFs, PDFs or Markdown files in a browser-based annotator for AI-assisted review, and walk through your changes before a commit",
   "version": "1.4.0",
   "commands": "./commands/"
 }
