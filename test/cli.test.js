@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, writeFile, rm, symlink, utimes } from 'node:fs/promises
 import { spawnSync } from 'node:child_process'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { parseArgs, captureFlagError } from '../cli/args.js'
-import { detectMode, isVideoTarget, isPdfTarget } from '../cli/detect.js'
+import { detectMode, isVideoTarget, isPdfTarget, rejoinSplitPath } from '../cli/detect.js'
 
 // For CLI runs that must be rejected up front: if one ever starts a server
 // instead, it opens no browser and fails on the timeout rather than hanging.
@@ -245,6 +245,88 @@ describe('detectMode', () => {
     await writeFile(video, 'x')
     const result = await detectMode([pngPath, video])
     expect(result.error).toMatch(/Could not determine a single mode/)
+  })
+
+  it('names the missing files among several targets and hints at quoting', async () => {
+    const missing = join(dir, 'Digest')
+    const result = await detectMode([missing, mdPath, '2026-10-10.md'])
+    expect(result.error).toMatch(`File not found: ${missing}, ${resolvePath('2026-10-10.md')}`)
+    expect(result.error).toMatch(/Quote a path that contains spaces/)
+  })
+
+  it('does not count a URL among several targets as a missing file', async () => {
+    const result = await detectMode([pngPath, 'http://localhost:3000'])
+    expect(result.error).not.toMatch(/File not found/)
+  })
+
+  it('names only the local path when a URL comes with a missing file', async () => {
+    const missing = join(dir, 'gone.md')
+    const result = await detectMode(['http://localhost:3000', missing])
+    expect(result.error).toMatch(`File not found: ${missing}\n`)
+  })
+})
+
+describe('rejoinSplitPath', () => {
+  let dir, spacedPath
+
+  beforeAll(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'annotaitr-split-'))
+    spacedPath = join(dir, 'Digest 2026-10-10.md')
+    await writeFile(spacedPath, '# Digest')
+  })
+
+  afterAll(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  it('rejoins a path the shell split at a space', async () => {
+    expect(await rejoinSplitPath([join(dir, 'Digest'), '2026-10-10.md'])).toEqual([spacedPath])
+  })
+
+  it('rejoins a path split at several spaces', async () => {
+    const path = join(dir, 'Notes from the call.md')
+    await writeFile(path, '# Notes')
+    expect(await rejoinSplitPath([join(dir, 'Notes'), 'from', 'the', 'call.md'])).toEqual([path])
+  })
+
+  it('leaves the targets alone when one of them exists', async () => {
+    const partPath = join(dir, 'Digest')
+    await writeFile(partPath, 'x')
+    try {
+      const targets = [partPath, '2026-10-10.md']
+      expect(await rejoinSplitPath(targets)).toEqual(targets)
+    } finally {
+      await rm(partPath)
+    }
+  })
+
+  it('leaves the targets alone when the joined path does not exist either', async () => {
+    const targets = [join(dir, 'a'), 'b.md']
+    expect(await rejoinSplitPath(targets)).toEqual(targets)
+  })
+
+  it('leaves a single target alone', async () => {
+    const targets = [join(dir, 'missing.md')]
+    expect(await rejoinSplitPath(targets)).toEqual(targets)
+  })
+})
+
+describe('target split at a space by an unquoted shell call', () => {
+  let dir
+
+  beforeAll(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'annotaitr-split-cli-'))
+    await writeFile(join(dir, 'Q3 deck.pptx'), 'x')
+  })
+
+  afterAll(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  it('treats the parts as the one file they name', () => {
+    const result = spawnSync('node', ['index.js', join(dir, 'Q3'), 'deck.pptx'])
+    expect(result.status).toBe(0)
+    expect(result.stdout.toString()).toMatch('Q3 deck')
   })
 })
 
