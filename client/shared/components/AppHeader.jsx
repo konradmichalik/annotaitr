@@ -47,6 +47,7 @@ export function AppHeader({
     <header className="app-header">
       <div className="header-start">
         {leading}
+        {leading && <span className="header-divider" aria-hidden="true" />}
         <Logo className="app-logo" />
         {source && (
           <span className="source-chip">

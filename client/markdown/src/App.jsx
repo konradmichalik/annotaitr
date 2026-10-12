@@ -540,7 +540,7 @@ export default function App() {
               crossFileSearch={crossFileSearchProps}
               newIntent={settings.defaultIntent}
               toolHints={settings.toolHints}
-              changes={changeSections ? { ...changesReview, sections: changeSections, agent: agentName(origin) ?? 'the agent' } : null}
+              changes={changeSections ? { ...changesReview, sections: changeSections, select: changesNav.select, agent: agentName(origin) ?? 'the agent' } : null}
             />
           ) : (
             <SourceView

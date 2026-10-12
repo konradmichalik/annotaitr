@@ -30,7 +30,7 @@ export function parseChangesArgs(args) {
   return { base: own.base ?? null, explain: own.explain ?? null, origin: shared.origin, feedbackNotes: shared.feedbackNotes }
 }
 
-/** The agent's explanation: optional title, summary and commit message, and one line per changed path. */
+/** The agent's explanation: optional title, summary and commit message, one line per changed path, and which files to check closely. */
 export function validateExplanation(value) {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return { error: 'the explanation must be a JSON object' }
@@ -51,11 +51,17 @@ export function validateExplanation(value) {
   if (!Array.isArray(groups) || !groups.every(validGroup)) {
     return { error: 'every group needs a "title" and a "files" list of paths' }
   }
+  const focus = value.focus ?? {}
+  if (typeof focus !== 'object' || focus === null || Array.isArray(focus) ||
+      Object.values(focus).some((why) => typeof why !== 'string' || why.trim() === '')) {
+    return { error: '"focus" must map each path to the reason to check it closely' }
+  }
   return {
     explanation: {
       ...Object.fromEntries(TEXT_FIELDS.map((f) => [f, value[f]])),
       files,
-      groups: groups.map((g) => ({ title: g.title, why: g.why, files: g.files }))
+      groups: groups.map((g) => ({ title: g.title, why: g.why, files: g.files })),
+      focus
     }
   }
 }

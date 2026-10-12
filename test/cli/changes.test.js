@@ -24,7 +24,7 @@ describe('parseChangesArgs', () => {
 describe('validateExplanation', () => {
   it('keeps the known fields', () => {
     expect(validateExplanation({ title: 'T', commit: 'fix: x', files: { 'a.js': 'why' }, extra: 1 })).toEqual({
-      explanation: { title: 'T', summary: undefined, commit: 'fix: x', files: { 'a.js': 'why' }, groups: [] }
+      explanation: { title: 'T', summary: undefined, commit: 'fix: x', files: { 'a.js': 'why' }, groups: [], focus: {} }
     })
   })
 
@@ -32,6 +32,16 @@ describe('validateExplanation', () => {
     expect(validateExplanation({ groups: [{ title: 'Core', files: ['a.js'] }] }).explanation.groups).toEqual([{ title: 'Core', why: undefined, files: ['a.js'] }])
     expect(validateExplanation({ groups: [{ files: ['a.js'] }] }).error).toBe('every group needs a "title" and a "files" list of paths')
     expect(validateExplanation({ groups: [{ title: '  ', files: ['a.js'] }] }).error).toBe('every group needs a "title" and a "files" list of paths')
+  })
+
+  it('keeps the files to check closely with a reason', () => {
+    const { explanation } = validateExplanation({ focus: { 'a.js': 'Decides who sees what.' } })
+    expect(explanation.focus).toEqual({ 'a.js': 'Decides who sees what.' })
+  })
+
+  it('rejects a focus without a reason', () => {
+    expect(validateExplanation({ focus: { 'a.js': '  ' } }).error).toBe('"focus" must map each path to the reason to check it closely')
+    expect(validateExplanation({ focus: ['a.js'] }).error).toBe('"focus" must map each path to the reason to check it closely')
   })
 
   it('rejects wrong shapes with a message the agent can act on', () => {

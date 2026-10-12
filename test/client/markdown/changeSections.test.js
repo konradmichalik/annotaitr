@@ -63,6 +63,33 @@ describe('groupChangeSections', () => {
   })
 })
 
+describe('groupChangeSections with a review focus', () => {
+  const md = [
+    '# T', '',
+    '## `a.js`', '', '**Check closely:** Decides who sees what.', '', 'Renames a.', '',
+    '## `b.js`', '', 'Plain.', ''
+  ].join('\n')
+  const { files } = groupChangeSections(parseMarkdownToBlocks(md))
+
+  it('reads the weight and the reason of each file', () => {
+    expect(files.map((f) => [f.attention, f.focusWhy])).toEqual([['high', 'Decides who sees what.'], [null, null]])
+  })
+
+  it('takes the marker out of the blocks, so only the explanation is left', () => {
+    expect(files.map((f) => f.blocks.map((b) => b.content))).toEqual([['Renames a.'], ['Plain.']])
+  })
+
+  it('keeps the marker block of a file to check closely, so the reviewer can note on it', () => {
+    expect(files[0].focusBlock.content).toBe('**Check closely:** Decides who sees what.')
+    expect(files[1].focusBlock).toBeNull()
+  })
+
+  it('counts a marker later in the file as text', () => {
+    const later = groupChangeSections(parseMarkdownToBlocks('# T\n\n## `a.js`\n\nWhy.\n\n**Check closely:** Late.\n')).files
+    expect(later[0].attention).toBeNull()
+  })
+})
+
 describe('noteCounts', () => {
   it('counts reviewer notes on the overview and per file, not agent notes or general comments', () => {
     const sections = groupChangeSections(parseMarkdownToBlocks(walkthrough))

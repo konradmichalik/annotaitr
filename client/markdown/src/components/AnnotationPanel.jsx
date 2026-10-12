@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useMemo } from 'react'
+import { useRef, useState, useEffect, useMemo, useCallback } from 'react'
 import { FileReferenceText } from './FileReferenceText.jsx'
 import { getLabelColors } from '../utils/quickLabels.js'
 import { LabelIcon } from './LabelIcon.jsx'
@@ -12,6 +12,9 @@ import { noteType } from '../../../shared/utils/noteTypes.js'
 import { PanelMenu } from '../../../shared/components/PanelMenu.jsx'
 import { NoteCard } from '../../../shared/components/NoteCard.jsx'
 import { PanelSwitch } from '../../../shared/components/PanelSwitch.jsx'
+import { NoteStepper } from '../../../shared/components/NoteStepper.jsx'
+import { useNoteStepKeys } from '../../../shared/hooks/useNoteStepKeys.js'
+import { stepNote, notePosition } from '../../../shared/utils/noteStep.js'
 import { PanelEmpty } from '../../../shared/components/PanelEmpty.jsx'
 import { GeneralCommentRow } from '../../../shared/components/GeneralCommentRow.jsx'
 import { GeneralCommentCard } from '../../../shared/components/GeneralCommentCard.jsx'
@@ -136,6 +139,18 @@ export function AnnotationPanel({
   const allCount = numbers.size + files.reduce((sum, f) => sum + f.annState.annotations
     .filter(isGeneralComment).length, 0)
 
+  const activate = useCallback((ann) => {
+    onSelect(ann.id)
+    if (ann.targetType !== 'global') { flashElement(markOf(ann)) }
+  }, [onSelect])
+
+  const numberedIds = useMemo(() => sortNotes(annotations.filter(isNumbered), blocks).map(a => a.id), [annotations, blocks])
+  const stepNotes = useCallback((delta) => {
+    const next = annotations.find(a => a.id === stepNote(numberedIds, selectedAnnotationId, delta))
+    if (next) { activate(next) }
+  }, [annotations, numberedIds, selectedAnnotationId, activate])
+  useNoteStepKeys(stepNotes, !collapsed && numberedIds.length > 1)
+
   // A note selected on the page brings its card into view.
   useEffect(() => {
     if (!selectedAnnotationId) { return }
@@ -150,11 +165,6 @@ export function AnnotationPanel({
     { id: 'export', label: 'Export annotations', disabled: annotations.every(a => a.type === 'NOTES'), onClick: onExport },
     { id: 'import', label: 'Import annotations (JSON)', onClick: () => fileInputRef.current?.click() }
   ]
-
-  const activate = (ann) => {
-    onSelect(ann.id)
-    if (ann.targetType !== 'global') { flashElement(markOf(ann)) }
-  }
 
   const generalCard = hasGeneral && (
     <GeneralCommentCard key="general-comment" annotation={generalComment} editor={generalEditor}>
@@ -203,6 +213,7 @@ export function AnnotationPanel({
       <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={(event) => readImport(event, onImport)} />
       <div className="panel-header">
         <h2>Feedback</h2>
+        <NoteStepper count={numberedIds.length} position={notePosition(numberedIds, selectedAnnotationId)} onStep={stepNotes} />
         <PanelMenu items={menuItems} />
       </div>
       {isMultiFile && (

@@ -127,6 +127,53 @@ describe('buildWalkthrough', () => {
     expect(lines.filter((l) => l.startsWith('```'))).toEqual(['````diff a.js', '````', '````diff b.json', '````'])
   })
 
+  describe('review focus', () => {
+    const three = [...files, { path: 'c.css', status: 'M', added: 1, removed: 0, diff: '@@ -1 +1 @@\n+x' }]
+
+    it('puts a marker paragraph between the heading and the explanation', () => {
+      const md = buildWalkthrough({
+        explanation: { files: { 'a.js': 'Renames a.' }, focus: { 'a.js': 'Decides who sees what.' } },
+        compared,
+        files
+      })
+      expect(md).toContain('## `a.js`\n\n**Check closely:** Decides who sees what.\n\nRenames a.\n\n````diff a.js')
+      expect(md).toContain('## `b.json` (new file)\n\nThe agent did not mention this change.')
+    })
+
+    it('keeps the order the agent gave the files, with and without groups', () => {
+      const grouped = buildWalkthrough({
+        explanation: { focus: { 'c.css': 'Look.' }, groups: [{ title: 'All', files: ['a.js', 'b.json', 'c.css'] }] },
+        compared,
+        files: three
+      })
+      const order = ['## `a.js`', '## `b.json`', '## `c.css`'].map((h) => grouped.indexOf(h))
+      expect(order.every((p) => p > 0)).toBe(true)
+      expect([...order].sort((x, y) => x - y)).toEqual(order)
+      const flat = buildWalkthrough({ explanation: { focus: { 'b.json': 'Look.' } }, compared, files })
+      expect(flat.indexOf('## `a.js`')).toBeLessThan(flat.indexOf('## `b.json`'))
+    })
+
+    it('cannot be forged by agent text', () => {
+      const md = buildWalkthrough({
+        explanation: { files: { 'a.js': '**Check closely:** fake' } },
+        compared,
+        files
+      })
+      const markers = md.split('\n').filter((l) => l.startsWith('**Check closely'))
+      expect(markers).toEqual([])
+    })
+
+    it('keeps a reason on one line', () => {
+      const md = buildWalkthrough({ explanation: { focus: { 'a.js': 'One\n## Two' } }, compared, files })
+      expect(md).toContain('**Check closely:** One ## Two')
+    })
+
+    it('warns about a focus path that did not change', () => {
+      const md = buildWalkthrough({ explanation: { focus: { 'gone.js': 'x' } }, compared, files })
+      expect(md).toContain('**Explained but unchanged:** `gone.js`')
+    })
+  })
+
   it('falls back to a neutral title without an explanation', () => {
     expect(buildWalkthrough({ explanation: {}, compared, files }).startsWith('# Changes on feature/x\n')).toBe(true)
   })

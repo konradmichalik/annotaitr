@@ -77,6 +77,32 @@
   color: var(--text);
 }
 
+.panel-icon-btn:disabled,
+.panel-icon-btn[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.panel-icon-btn:disabled:hover,
+.panel-icon-btn[aria-disabled="true"]:hover {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.note-stepper {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.note-stepper-count {
+  min-width: 3.5rem;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
 .panel-empty {
   display: flex;
   flex-direction: column;

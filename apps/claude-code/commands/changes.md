@@ -46,6 +46,18 @@ shown under `Everything else`.
 "groups": [{ "title": "Cache key per workspace", "why": "The actual fix.", "files": ["src/Cache.php"] }]
 ```
 
+To point the reviewer at what matters, add `"focus"`: it maps a path to the
+reason it needs a closer look, such as a decision about access or data, a
+changed config, a removed test, anything you are unsure about.
+
+```json
+"focus": { "src/Cache.php": "The key decides which data a user sees." }
+```
+
+Use `focus` rarely, at most a few files, and always with a real reason, or
+everything looks critical and the flag means nothing. Every file stays visible
+whatever its weight, and the reviewer judges your weighting too.
+
 ### 3. Open it
 
 Run `annotaitr changes --origin claude-code --explain <explain.json path>`

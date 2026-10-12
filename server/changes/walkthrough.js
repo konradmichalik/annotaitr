@@ -77,8 +77,17 @@ function overview({ explanation, compared, files, notExplained, unchanged }) {
   return lines
 }
 
-function fileSection(file, why) {
-  const lines = [`## ${inlineCode(file.path)}${STATUS_NOTE[file.status] ?? ''}`, why ? inert(oneLine(why)) : 'The agent did not mention this change.']
+/** A file to check closely as its own paragraph. It starts with `**`, which `inert` never lets agent text produce. */
+function focusMarker(path, { focus = {} }) {
+  return Object.hasOwn(focus, path) ? `**Check closely:** ${inert(oneLine(focus[path]))}` : null
+}
+
+function fileSection(file, why, marker) {
+  const lines = [
+    `## ${inlineCode(file.path)}${STATUS_NOTE[file.status] ?? ''}`,
+    ...(marker ? [marker] : []),
+    why ? inert(oneLine(why)) : 'The agent did not mention this change.'
+  ]
   if (file.omitted) {
     lines.push(`+${file.added} −${file.removed}, not shown: ${file.omitted}.`)
     return lines
@@ -108,10 +117,10 @@ function orderInGroups(files, groups = []) {
   return rest.length > 0 ? [...ordered, { title: 'Everything else', files: rest }] : ordered
 }
 
-/** Paths the explanation names, in its lines or its groups, that are not among the changed files. */
-export function unchangedPaths({ files: lines = {}, groups = [] }, files) {
+/** Paths the explanation names, in its lines, groups or focus, that are not among the changed files. */
+export function unchangedPaths({ files: lines = {}, groups = [], focus = {} }, files) {
   const changed = new Set(files.map((f) => f.path))
-  const named = new Set([...Object.keys(lines), ...groups.flatMap((g) => g.files)])
+  const named = new Set([...Object.keys(lines), ...groups.flatMap((g) => g.files), ...Object.keys(focus)])
   return [...named].filter((p) => !changed.has(p))
 }
 
@@ -124,7 +133,7 @@ export function buildWalkthrough({ explanation = {}, compared, files }) {
     ...overview({ explanation, compared, files, notExplained, unchanged }),
     ...orderInGroups(files, explanation.groups).flatMap((group) => [
       ...(group.title ? [`# ${oneLine(group.title)}`, ...(group.why ? [inert(oneLine(group.why))] : [])] : []),
-      ...group.files.flatMap((file) => fileSection(file, lineFor(file.path)))
+      ...group.files.flatMap((file) => fileSection(file, lineFor(file.path), focusMarker(file.path, explanation)))
     ])
   ]
   return blocks.join('\n\n') + '\n'

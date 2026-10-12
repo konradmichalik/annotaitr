@@ -29,9 +29,17 @@
   flex-shrink: 0;
 }
 
+.header-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--line);
+  flex-shrink: 0;
+}
+
 .app-logo {
-  height: 1.375rem;
+  height: 1.625rem;
   width: auto;
+  margin-inline-end: var(--space-2);
   fill: currentcolor;
   flex-shrink: 0;
   transform: translateY(-3px);

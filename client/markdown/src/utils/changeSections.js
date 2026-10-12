@@ -7,17 +7,33 @@ import { countDiffLines, parseDiffLines, splitCodeInfo } from './diffLines.js'
  * and feedback work on them exactly as in any markdown document.
  */
 
+/** How many files the agent asked to check closely. */
+export function countFocus(files) {
+  return files.filter((f) => f.attention === 'high').length
+}
+
 export const STATUS_LABEL = { A: 'Added', M: 'Modified', D: 'Deleted' }
 
 const STATUS_SUFFIX = /\s+\((new file|deleted)\)$/
 const OMITTED = /^\+(\d+) −(\d+), not shown: (.+)\.$/
 const NOT_EXPLAINED = 'The agent did not mention this change.'
+const FOCUS_MARKER = /^\*\*Check closely:\*\* (.+)$/
+
+/** The focus marker the walkthrough writes right after a file heading, never anywhere else in the file. */
+function readFocus(blocks) {
+  const first = blocks[0]
+  if (first?.type !== 'paragraph') { return { attention: null, focusWhy: null, focusBlock: null, rest: blocks } }
+  const focus = first.content.match(FOCUS_MARKER)
+  if (focus) { return { attention: 'high', focusWhy: focus[1], focusBlock: first, rest: blocks.slice(1) } }
+  return { attention: null, focusWhy: null, focusBlock: null, rest: blocks }
+}
 
 function isDiffBlock(block) {
   return block.type === 'code' && splitCodeInfo(block.language).language === 'diff'
 }
 
-function fileEntry(heading, blocks) {
+function fileEntry(heading, allBlocks) {
+  const { attention, focusWhy, focusBlock, rest: blocks } = readFocus(allBlocks)
   const suffix = heading.content.match(STATUS_SUFFIX)?.[1]
   const omittedLine = blocks.find((b) => b.type === 'paragraph' && OMITTED.test(b.content.trim()))
   const omitted = omittedLine ? omittedLine.content.trim().match(OMITTED) : null
@@ -33,6 +49,9 @@ function fileEntry(heading, blocks) {
     status: suffix === 'new file' ? 'A' : suffix === 'deleted' ? 'D' : 'M',
     heading,
     blocks,
+    attention,
+    focusWhy,
+    focusBlock,
     hasDiff: blocks.some(isDiffBlock),
     explained: !blocks.some((b) => b.type === 'paragraph' && b.content.trim() === NOT_EXPLAINED),
     ...counts
@@ -75,7 +94,7 @@ export function groupChangeSections(blocks) {
 
 /** How many reviewer notes sit on the overview and on each changed file. */
 export function noteCounts(sections, annotations) {
-  const pathOf = new Map(sections.files.flatMap((f) => [f.heading, ...f.blocks].map((b) => [b.id, f.path])))
+  const pathOf = new Map(sections.files.flatMap((f) => [f.heading, ...(f.focusBlock ? [f.focusBlock] : []), ...f.blocks].map((b) => [b.id, f.path])))
   // The agent's group headings and reasons count with the overview: they are its text, not a file's.
   const overviewIds = new Set([...sections.overview, ...sections.groups.flatMap((g) => [g.heading, ...g.blocks])].map((b) => b.id))
   const byPath = new Map()
@@ -89,9 +108,11 @@ export function noteCounts(sections, annotations) {
   return { overview, byPath }
 }
 
-/** `4 files · +26 −7`, the header facts of a walkthrough. */
+/** `4 files · +26 −7 · 1 to check closely`, the header facts of a walkthrough. */
 export function changesFacts(files) {
   const added = files.reduce((sum, f) => sum + f.added, 0)
   const removed = files.reduce((sum, f) => sum + f.removed, 0)
-  return `${files.length} ${files.length === 1 ? 'file' : 'files'} · +${added} \u2212${removed}`
+  const focus = countFocus(files)
+  const facts = `${files.length} ${files.length === 1 ? 'file' : 'files'} · +${added} \u2212${removed}`
+  return focus > 0 ? `${facts} · ${focus} to check closely` : facts
 }

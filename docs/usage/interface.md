@@ -18,6 +18,7 @@ with a modifier held:
 | `C` | Pin | Pinpoint |
 | `Esc` | Back to Select | |
 | `G` | General comment | General comment |
+| `N`, `Shift+N` | Next, previous note | Next, previous note |
 | `?` | Shortcut list | Shortcut list |
 
 The **Element** tool labels the element under the pointer with its selector
@@ -34,7 +35,7 @@ panel lists one card per note: its number on the intent's colour, the intent
 as icon and word, the location with the kind of mark (`Page 1 · Box`), then
 the quote and the comment. The number is the one the agent reads in the output
 and the one on the mark.
-Selecting a mark selects its card and the other way round. With an earlier
+Selecting a mark selects its card and the other way round. With two or more notes, the arrows in the panel header and `N` and `Shift+N` select the next and the previous note in number order (`2 of 5`), scroll to its mark and select its card. They stop at the first and the last note instead of wrapping, and with several markdown files they walk the notes of the open file. With an earlier
 round the panel switches between **This round** and **Replies**; with several
 markdown files between **This file** and **All files**. The general comment is
 written in the row at the bottom of the panel (`G`). Once it has text it also
