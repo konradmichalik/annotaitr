@@ -4,7 +4,7 @@ import { resolve as resolvePath } from 'node:path'
 import { realpathSync } from 'node:fs'
 import { isOfficeDocument } from './server/image/common/fileTypes.js'
 import { parseArgs, captureFlagError, VALID_MODES } from './cli/args.js'
-import { detectMode, fileExists, isPdfTarget } from './cli/detect.js'
+import { detectMode, fileExists, isPdfTarget, rejoinSplitPath } from './cli/detect.js'
 import { CHAT_IMAGE_HINT, fail, printHelpAndExit } from './cli/help.js'
 import { convertHint } from './cli/document.js'
 import { runImage, runBareInvocation } from './cli/image.js'
@@ -37,13 +37,14 @@ async function main() {
   }
 
   const {
-    help, targets, origin, viewportSpec, delaySpec, feedbackNotes, modeOverride, feedbackNotesFlagGiven,
+    help, targets: rawTargets, origin, viewportSpec, delaySpec, feedbackNotes, modeOverride, feedbackNotesFlagGiven,
     sourceSpec, pageRanges, sessionId, newSession, error
   } = parseArgs(process.argv)
   const session = { sessionId, newSession }
 
   if (error) { fail(error); return }
   if (help) { printHelpAndExit(0); return }
+  const targets = await rejoinSplitPath(rawTargets)
 
   // A Claude Code chat image reaches us as the chip text, not a path. Exit 0
   // so the slash command still hands its instructions to the agent.

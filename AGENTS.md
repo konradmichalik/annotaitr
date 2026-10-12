@@ -2,7 +2,7 @@
 
 ## Project overview
 
-annotaitr is a plugin and CLI for Claude Code, Codex, OpenCode and Mistral Vibe. It opens an image, a captured web page, a video, a PDF or Markdown/plain-text files in a browser UI for annotation. The user's feedback is printed to stdout for the calling agent to apply. Requires Node.js 22.13 or newer.
+annotaitr is a plugin and CLI for Claude Code, Codex, OpenCode, Mistral Vibe and Gemini CLI. It opens an image, a captured web page, a video, a PDF or Markdown/plain-text files in a browser UI for annotation. `annotaitr changes` opens an agent's git changes with its explanation as a walkthrough, before a commit or pull request. The user's feedback is printed to stdout for the calling agent to apply. Requires Node.js 22.13 or newer.
 
 The mode (`image` or `markdown`) is auto-detected from the CLI target by `detectMode()` in `cli/detect.js`, or forced with `--as`.
 
@@ -16,16 +16,18 @@ Stdout is the contract with the calling agent:
 ## Structure
 
 - `index.js`: CLI entry, dispatches to a mode runner
-- `cli/`: argument parsing (`args.js`), mode detection (`detect.js`), help text, one runner per target kind (`markdown.js`, `image.js`, `video.js`, `document.js`), the stdout output on a decision (`outcome.js`), review session handling (`session.js`) and the `reply` subcommand (`reply.js`)
+- `cli/`: argument parsing (`args.js`), mode detection (`detect.js`), help text, one runner per target kind (`markdown.js`, `image.js`, `video.js`, `document.js`), the stdout output on a decision (`outcome.js`), review session handling (`session.js`), the `reply` subcommand (`reply.js`) and the `changes` subcommand (`changes.js`)
 - `server/core/`: mode-agnostic Express bootstrap, config (`ANNOTAITR_*` environment variables), browser opening, signal handling and review sessions (`session/`: session files and agent replies)
 - `server/markdown/`: markdown mode API routes, feedback formatting and file loading
+- `server/changes/`: the `changes` walkthrough, rendered in markdown mode: reading the diff from git (`git.js`), building the walkthrough from the diff and the agent's explanation (`walkthrough.js`) and the whole-file route (`routes.js`)
 - `server/image/`: image mode, split into `common/` (rendering, feedback basics, element matching, transcription, config) and one folder per target kind: `still/` (image file, URL capture, clipboard), `video/` and `document/` (PDF)
 - `client/markdown/`, `client/image/`: the two React SPAs with separate Vite roots. The image client keeps video-only and PDF-only code in `src/video/` and `src/document/`, everything shared across target kinds stays in `components/`, `hooks/` and `utils/`
 - `client/shared/`: components, hooks and utils used by both clients
-- `apps/claude-code/`: Claude Code plugin (`.claude-plugin/plugin.json`, slash commands `md`, `image`, `review`)
+- `apps/claude-code/`: Claude Code plugin (`.claude-plugin/plugin.json`, slash commands `md`, `img`, `review`, `changes`)
 - `apps/codex/`: Codex skill (`skills/annotaitr/SKILL.md`), installed into `~/.agents/skills`
 - `apps/opencode/`: OpenCode plugin (`index.ts`, bundled with tsup)
 - `apps/vibe/skills/annotate/`: Mistral Vibe skill
+- `apps/gemini/commands/`: Gemini CLI command (`review.toml`)
 - `.claude-plugin/marketplace.json`: plugin marketplace manifest
 - `test/`: unit and integration tests (vitest) and `test/e2e/` (Playwright)
 - `scripts/`: install script and Vite helper plugin

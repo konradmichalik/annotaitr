@@ -1,6 +1,6 @@
 {
   "name": "annotaitr",
-  "description": "Browser-based image and Markdown annotator with drawing tools and text highlighting for Claude Code",
+  "description": "Browser-based annotator for images, web pages, videos, PDFs, Markdown and code changes, with drawing tools and text highlighting for Claude Code",
   "owner": {
     "name": "konradmichalik"
   },
@@ -8,7 +8,7 @@
     {
       "name": "annotaitr",
       "source": "./apps/claude-code",
-      "description": "Open images, captured web pages, videos, GIFs, PDFs, or Markdown files in a browser-based annotator for AI-assisted review"
+      "description": "Open images, captured web pages, videos, GIFs, PDFs or Markdown files in a browser-based annotator for AI-assisted review, and walk through your changes before a commit"
     }
   ]
 }
