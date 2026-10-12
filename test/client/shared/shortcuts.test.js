@@ -19,6 +19,12 @@ describe('shortcutGroups', () => {
     expect(labels('markdown')).toContain('Pinpoint')
   })
 
+  it('lists the note stepping keys in every mode', () => {
+    for (const kind of ['image', 'url', 'pdf', 'video', 'markdown']) {
+      expect(labels(kind)).toContain('Next, previous note')
+    }
+  })
+
   it('filters by label or key and drops empty groups', () => {
     expect(labels('pdf', 'page')).toEqual(['Previous, next page', 'First, last page'])
     expect(labels('pdf', 'home')).toEqual(['First, last page'])

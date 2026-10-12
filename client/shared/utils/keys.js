@@ -50,3 +50,14 @@ export function isShortcutListKey(event) {
   if (event.key !== '?' || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) { return false }
   return isOutsideFieldsAndMenus(event.target)
 }
+
+/**
+ * `N` steps to the next note, `Shift+N` to the previous one: 1, -1, or 0 when
+ * the press is something else, has Ctrl, Cmd or Alt held, is typed into a
+ * field or sits inside a menu or dialog.
+ */
+export function noteStepKey(event) {
+  if (event.key?.toLowerCase() !== 'n' || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) { return 0 }
+  if (!isOutsideFieldsAndMenus(event.target)) { return 0 }
+  return event.shiftKey ? -1 : 1
+}

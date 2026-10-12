@@ -117,7 +117,9 @@ export default function ImageCanvas({
   // A PDF page's words in reading order, for the Text tool.
   voiceNotes = false, elements = [], words = [],
   // Last round's marks (placed threads only), drawn read-only and opened with the Select tool.
-  previousThreads = [], previousRound = null, showPrevious = false, openThreadHandle = null, onOpenThread = null, onCloseThread = null, onReloadThreads = null, onSelectionChange = null
+  previousThreads = [], previousRound = null, showPrevious = false, openThreadHandle = null, onOpenThread = null, onCloseThread = null, onReloadThreads = null, onSelectionChange = null,
+  // A note stepped to from the panel: selected and scrolled into view, without opening its comment box.
+  selectRequestId = null, onRequestSelect = null
 }) {
   const wrapperRef = useRef(null)
   // A thread opened from the panel on another page mounts this canvas with its popover already due, before the wrapper exists to anchor it to.
@@ -298,6 +300,19 @@ export default function ImageCanvas({
     openEditPopover(annotation)
     onRequestEdit(null)
   }, [editingAnnotationId, annotations, onRequestEdit, zoom, openEditPopover])
+
+  // The note may sit on a page or frame that is still being shown, so a request nothing here matches stays open.
+  useEffect(() => {
+    if (!selectRequestId) { return }
+    const annotation = annotations.find((a) => a.id === selectRequestId)
+    if (!annotation) { return }
+    const appMain = wrapperRef.current?.closest('.app-main')
+    if (appMain) {
+      appMain.scrollTo({ top: Math.max(0, annotationCentroid(annotation).y * zoom - appMain.clientHeight / 2), behavior: 'auto' })
+    }
+    setSelectedId(annotation.id)
+    onRequestSelect?.(null)
+  }, [selectRequestId, annotations, zoom, onRequestSelect])
 
   // A new mark has no ink of its own and takes its intent's colour, unless
   // the reviewer fixed an ink in the dock. The composer can still change it.

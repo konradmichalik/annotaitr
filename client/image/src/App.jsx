@@ -1,6 +1,9 @@
 import { useEffect, useReducer, useState, useCallback, useRef, useMemo } from 'react'
 import { annotationReducer, initialAnnotationState, upcomingNumber } from './state/annotationReducer.js'
 import { createAnnotationId } from '../../shared/utils/annotationId.js'
+import { NoteStepper } from '../../shared/components/NoteStepper.jsx'
+import { useNoteStepKeys } from '../../shared/hooks/useNoteStepKeys.js'
+import { stepNote, notePosition } from '../../shared/utils/noteStep.js'
 import { isGeneralComment, createGeneralComment } from './utils/generalComment.js'
 import { intentOf } from '../../shared/utils/intents.js'
 import Toolbar, { offeredTools } from './components/Toolbar.jsx'
@@ -88,6 +91,7 @@ export default function App() {
   const [decisionDialog, setDecisionDialog] = useState(null)
   const primaryRef = useRef(null)
   const [editingAnnotationId, setEditingAnnotationId] = useState(null)
+  const [selectRequestId, setSelectRequestId] = useState(null)
   // The mark selected on the canvas, whose card the panel selects and scrolls to.
   const [selectedAnnotationId, setSelectedAnnotationId] = useState(null)
   const [panelTab, setPanelTab] = useState('round')
@@ -289,6 +293,20 @@ export default function App() {
     setEditingAnnotationId(id)
   }, [state.annotations, seekTo])
 
+  const generalCommentId = state.annotations.find(isGeneralComment)?.id
+  const noteIds = useMemo(
+    () => review.ordered.filter((a) => a.id !== generalCommentId).map((a) => a.id),
+    [review.ordered, generalCommentId]
+  )
+  const stepNotes = useCallback((delta) => {
+    const id = stepNote(noteIds, selectedAnnotationId, delta)
+    const annotation = state.annotations.find((a) => a.id === id)
+    if (!annotation) { return }
+    seekTo(annotation)
+    setSelectedAnnotationId(id)
+    if (annotation.geometry) { setSelectRequestId(id) }
+  }, [noteIds, selectedAnnotationId, state.annotations, seekTo])
+
   const changeMarkerTimes = useCallback((id, times, phase) => {
     const current = state.annotations.find((a) => a.id === id)
     if (!current) { return }
@@ -319,6 +337,8 @@ export default function App() {
     onMarkStart: video.markStart,
     onMarkEnd: video.markEnd
   })
+
+  useNoteStepKeys(stepNotes, noteIds.length > 1 && !sidebarCollapsed && !(settingsOpen || showExport || decision || exportProgress))
 
   // A comment popover belongs to the page it was opened on.
   const { goTo, step } = doc
@@ -628,6 +648,8 @@ export default function App() {
                 onCommitEdit={commitEditAnnotation}
                 onRemoveAnnotation={removeAnnotation}
                 onRequestEdit={setEditingAnnotationId}
+                selectRequestId={selectRequestId}
+                onRequestSelect={setSelectRequestId}
                 onSelectionChange={setSelectedAnnotationId}
                 onUndo={undo}
                 onRedo={redo}
@@ -677,6 +699,7 @@ export default function App() {
           <aside className="app-sidebar" style={{ width: panelWidth }}>
             <div className="panel-header">
               <h2>Feedback</h2>
+              <NoteStepper count={noteIds.length} position={notePosition(noteIds, selectedAnnotationId)} onStep={stepNotes} />
               {isDocument && (
                 <button
                   type="button"

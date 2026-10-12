@@ -260,3 +260,47 @@ test('keys 1 to 4 set the intent of the mark selected on the canvas, and undo re
     if (cli.child.exitCode === null) { cli.child.kill() }
   }
 })
+
+test('N and Shift+N step through the notes and select their marks without opening a comment box', async ({ page }) => {
+  const dir = await mkdtemp(join(tmpdir(), 'annotaitr-e2e-'))
+  const { path: imagePath, buffer } = makeFixturePngFile(dir)
+  await writeFile(imagePath, buffer)
+  const cli = startCli([imagePath])
+
+  const drawAndAdd = async (from, to, text) => {
+    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Box \(/ }).click()
+    const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
+    await page.mouse.move(canvas.x + from[0], canvas.y + from[1])
+    await page.mouse.down()
+    await page.mouse.move(canvas.x + to[0], canvas.y + to[1])
+    await page.mouse.up()
+    await page.getByPlaceholder('Add a comment…').fill(text)
+    await page.getByRole('button', { name: 'Add', exact: true }).click()
+  }
+
+  try {
+    await page.goto(await cli.url)
+    await drawAndAdd([10, 10], [40, 40], 'First')
+    await drawAndAdd([60, 10], [90, 40], 'Second')
+    await drawAndAdd([110, 10], [140, 40], 'Third')
+
+    const stepper = page.getByRole('group', { name: 'Go through notes' })
+    const counter = stepper.locator('[aria-live="polite"]')
+    await page.mouse.click(5, 5)
+    await page.getByRole('button', { name: 'Next note' }).click()
+    await expect(counter).toHaveText('1 of 3')
+    await expect(page.getByPlaceholder('Add a comment…')).toHaveCount(0)
+
+    await page.keyboard.press('n')
+    await expect(counter).toHaveText('2 of 3')
+    await page.keyboard.press('n')
+    await expect(counter).toHaveText('3 of 3')
+    await expect(page.getByRole('button', { name: 'Next note' })).toBeDisabled()
+    await page.keyboard.press('Shift+N')
+    await expect(counter).toHaveText('2 of 3')
+    await expect(page.locator('[data-annotation-id]').filter({ hasText: 'Second' })).toHaveClass(/selected/)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+    if (cli.child.exitCode === null) { cli.child.kill() }
+  }
+})

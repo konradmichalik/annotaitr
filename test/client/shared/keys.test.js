@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { isTypingTarget, isPlainKeyPress, isSaveKey } from '../../../client/shared/utils/keys.js'
+import { isTypingTarget, isPlainKeyPress, isSaveKey, noteStepKey } from '../../../client/shared/utils/keys.js'
 
 function keyOn(target, key, init = {}) {
   const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init })
@@ -91,5 +91,24 @@ describe('isSaveKey', () => {
     const reactEvent = { key: 'Enter', metaKey: true, nativeEvent: { isComposing: true } }
     expect(isSaveKey(reactEvent)).toBe(false)
     expect(isSaveKey({ ...reactEvent, nativeEvent: { isComposing: false } })).toBe(true)
+  })
+})
+
+describe('noteStepKey', () => {
+  it('is 1 for N and -1 for Shift+N', () => {
+    expect(noteStepKey(keyOn(document.body, 'n'))).toBe(1)
+    expect(noteStepKey(keyOn(document.body, 'N', { shiftKey: true }))).toBe(-1)
+  })
+
+  it('is 0 for other keys, a held modifier, a field or a dialog', () => {
+    expect(noteStepKey(keyOn(document.body, 'm'))).toBe(0)
+    expect(noteStepKey(keyOn(document.body, 'n', { metaKey: true }))).toBe(0)
+    expect(noteStepKey(keyOn(document.body, 'n', { ctrlKey: true }))).toBe(0)
+    expect(noteStepKey(keyOn(document.body, 'n', { altKey: true }))).toBe(0)
+    expect(noteStepKey(keyOn(element('textarea'), 'n'))).toBe(0)
+    const dialog = element('div', { role: 'dialog' })
+    const inside = document.createElement('button')
+    dialog.append(inside)
+    expect(noteStepKey(keyOn(inside, 'n'))).toBe(0)
   })
 })

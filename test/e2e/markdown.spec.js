@@ -89,3 +89,36 @@ test('a single file shows no Files overview', async ({ page }) => {
     }
   })
 })
+
+test('N and Shift+N select the next and previous note and stop at the ends', async ({ page }) => {
+  await withFiles({ 'notes.md': '# Notes\n\nFirst paragraph.\n\nSecond paragraph.\n\nThird paragraph.\n' }, async (paths) => {
+    const cli = startCli(paths)
+    try {
+      await page.goto(await cli.url)
+      for (const text of ['First paragraph.', 'Second paragraph.', 'Third paragraph.']) {
+        const rect = await page.getByText(text).boundingBox()
+        await page.mouse.move(rect.x + 2, rect.y + rect.height / 2)
+        await page.mouse.down()
+        await page.mouse.move(rect.x + 80, rect.y + rect.height / 2, { steps: 4 })
+        await page.mouse.up()
+        await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: 'Change' }).click()
+        await page.getByRole('textbox', { name: 'Comment on selection' }).fill(`Note on ${text}`)
+        await page.keyboard.press('ControlOrMeta+Enter')
+      }
+
+      const counter = page.getByRole('group', { name: 'Go through notes' }).locator('[aria-live="polite"]')
+      await expect(counter).toBeVisible()
+      await page.mouse.click(5, 300)
+      await page.keyboard.press('n')
+      await expect(counter).toHaveText('1 of 3')
+      await page.keyboard.press('n')
+      await expect(counter).toHaveText('2 of 3')
+      await page.keyboard.press('Shift+N')
+      await page.keyboard.press('Shift+N')
+      await expect(counter).toHaveText('1 of 3')
+      await expect(page.getByRole('button', { name: 'Previous note' })).toBeDisabled()
+    } finally {
+      if (cli.child.exitCode === null) { cli.child.kill() }
+    }
+  })
+})
