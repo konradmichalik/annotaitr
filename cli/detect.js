@@ -12,6 +12,19 @@ export async function fileExists(path) {
   }
 }
 
+/**
+ * A slash command substitutes its arguments unquoted, so the shell splits a
+ * path with spaces into several targets. When none of them exists but the
+ * parts joined by a space do, that file was meant.
+ */
+export async function rejoinSplitPath(targets) {
+  if (targets.length < 2) { return targets }
+  const exists = await Promise.all(targets.map((t) => fileExists(resolvePath(t))))
+  if (exists.some(Boolean)) { return targets }
+  const joined = targets.join(' ')
+  return (await fileExists(resolvePath(joined))) ? [joined] : targets
+}
+
 /** A local PDF. A URL is captured as a page, whatever its path ends in. */
 export function isPdfTarget(target) {
   return isPdfFile(target) && !isSupportedCaptureUrl(target)
@@ -67,11 +80,17 @@ export async function detectMode(targets) {
     }
   }
 
-  return { error: buildDetectionError(targets) }
+  return { error: await buildDetectionError(targets) }
 }
 
-function buildDetectionError(targets) {
+async function buildDetectionError(targets) {
   if (targets.length > 1) {
+    const files = targets.filter((t) => !isSupportedCaptureUrl(t)).map((t) => resolvePath(t))
+    const exists = await Promise.all(files.map(fileExists))
+    const missing = files.filter((_, i) => !exists[i])
+    if (missing.length > 0) {
+      return `File not found: ${missing.join(', ')}\nQuote a path that contains spaces.`
+    }
     return (
       `Could not determine a single mode for: ${targets.join(', ')}\n` +
       'Multiple targets are only supported for several markdown/plain-text files or several image files. ' +

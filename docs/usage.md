@@ -38,7 +38,10 @@ The same for every target:
 | A single existing video or GIF (`.mp4`, `.m4v`, `.webm`, `.mov`, `.gif`) | Image (video, on a timeline) |
 | A single existing PDF | Image (document, page by page) |
 | A single existing `.pptx`, `.ppt`, `.odp`, `.key`, `.docx`, `.doc`, `.odt`, `.rtf` or `.pages` | Prints a `CONVERT TO PDF FIRST:` hint and exits `0` |
+| Several targets of which some do not exist | Exits `1` naming the missing files |
 | Anything else | Exits `1` naming the supported extensions and suggesting `--as` |
+
+A slash command passes its arguments to the shell unquoted, so a path with spaces arrives as several targets. When none of them exists but the targets joined by a space name an existing file, that file is used. Several paths with spaces still have to be quoted.
 
 ```bash
 annotaitr README.md docs/guide.md    # markdown: multiple files, Files overview
