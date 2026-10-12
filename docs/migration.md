@@ -23,6 +23,11 @@ claude plugin install annotaitr@annotaitr
 The commands themselves are renamed too: `/annotate:md` is now
 `/annotaitr:md`. `/annotaitr:img` and `/annotaitr:review` are new.
 
+Since 1.5.0, `/annotaitr:image` is `/annotaitr:img`. `/annotaitr:review`
+still opens images, so a script that only needs the annotator can use that
+instead. `/annotaitr:changes` is new and exists for Claude Code only: the
+Codex, OpenCode, Gemini CLI and Vibe integrations do not have it yet.
+
 ## CLI
 
 ```bash
