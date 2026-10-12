@@ -106,7 +106,7 @@ test('N and Shift+N select the next and previous note and stop at the ends', asy
         await page.keyboard.press('ControlOrMeta+Enter')
       }
 
-      const counter = page.getByRole('group', { name: 'Go through notes' }).locator('[aria-live="polite"]')
+      const counter = page.getByRole('group', { name: 'Note navigation' }).locator('[aria-live="polite"]')
       await expect(counter).toBeVisible()
       await page.mouse.click(5, 300)
       await page.keyboard.press('n')

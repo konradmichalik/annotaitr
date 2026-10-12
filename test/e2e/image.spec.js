@@ -284,7 +284,7 @@ test('N and Shift+N step through the notes and select their marks without openin
     await drawAndAdd([60, 10], [90, 40], 'Second')
     await drawAndAdd([110, 10], [140, 40], 'Third')
 
-    const stepper = page.getByRole('group', { name: 'Go through notes' })
+    const stepper = page.getByRole('group', { name: 'Note navigation' })
     const counter = stepper.locator('[aria-live="polite"]')
     await page.mouse.click(5, 5)
     await page.getByRole('button', { name: 'Next note' }).click()

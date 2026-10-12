@@ -14,7 +14,7 @@ export function NoteStepper({ count, position, onStep }) {
   if (count < 2) { return null }
   const step = (delta, atEnd) => { if (!atEnd) { onStep(delta) } }
   return (
-    <div className="note-stepper" role="group" aria-label="Go through notes">
+    <div className="note-stepper" role="group" aria-label="Note navigation">
       <button type="button" className="panel-icon-btn" aria-label="Previous note" title="Previous note (Shift+N)" aria-disabled={position === 1 || undefined} onClick={() => step(-1, position === 1)}>
         <Arrow up />
       </button>
