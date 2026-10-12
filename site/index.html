@@ -51,7 +51,7 @@
 <main id="main">
   <section class="hero">
     <div class="hero-in">
-      <span class="kicker"><span class="pulse"></span>For Claude Code, OpenCode and Mistral Vibe</span>
+      <span class="kicker"><span class="pulse"></span>For Claude Code, Codex, OpenCode, Mistral Vibe and Gemini CLI</span>
       <h1>Point at it. Your coding agent gets the rest.</h1>
       <p class="lead">annotaitr opens an image, a web page, a video, a PDF or a Markdown file in your browser. You mark it up. The agent receives numbered, structured feedback it can act on, instead of pixel coordinates and line numbers you typed by hand.</p>
       <div class="actions">
@@ -164,7 +164,7 @@
 
   <section class="section section-modes" id="modes">
     <h2 class="reveal">One annotator for everything you review.</h2>
-    <p class="section-lead">The mode is detected from what you open. Tools, notes and the decision work the same way in all of them.</p>
+    <p class="section-lead">The mode is detected from what you open, and before a commit the agent walks you through its changes. Tools, notes and the decision work the same way in all of them.</p>
     <div class="grid grid-modes">
       <article class="reveal mode">
         <img class="shot" src="images/03-web-capture.png" width="1440" height="900" loading="lazy" data-zoom alt="Web page capture with the Element tool outlining a section and its selector">
@@ -181,6 +181,10 @@
       <article class="reveal mode">
         <img class="shot" src="images/06-image-dark.png" width="1440" height="900" loading="lazy" data-zoom alt="An image in the dark theme with a note being written in the composer">
         <div><h3>Images, screenshots and PDFs</h3><p>Boxes, arrows, freehand, highlighter and numbered pins on a screenshot, the clipboard or a PDF page. Light and dark theme, with marks that stay readable on any image.</p></div>
+      </article>
+      <article class="reveal mode mode-wide">
+        <img class="shot" src="images/07-changes.png" width="1440" height="900" loading="lazy" data-zoom alt="A changes walkthrough laid out like a pull request: changed files as a tree, the agent's overview with its commits and proposed commit message, and a file card with a question on a diff line">
+        <div><h3>Changes before a commit</h3><p>The agent presents its uncommitted changes, or a whole branch against its base, laid out like a pull request: an overview with the proposed commit message, the changed files as a tree and one card per file with the agent's explanation. A note on a diff line names the file and its line. Approve, and the agent commits.</p></div>
       </article>
     </div>
   </section>
@@ -211,8 +215,13 @@
     <div class="grid grid-install">
       <div class="reveal lift card install-card install-card-main">
         <h3>Claude Code</h3>
-        <p>Everything: images, web pages, video, PDF and Markdown. The installer script sets it up, or add the plugin by hand.</p>
+        <p>Everything: images, web pages, video, PDF, Markdown and the changes walkthrough. The installer script sets it up, or add the plugin by hand.</p>
         <a class="more" href="https://github.com/konradmichalik/annotaitr#claude-code-plugin">Setup steps <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="reveal lift card install-card">
+        <h3>Codex</h3>
+        <p>Every target kind. Drives the standalone CLI, so install that too.</p>
+        <a class="more" href="https://github.com/konradmichalik/annotaitr#codex-skill">Setup steps <span aria-hidden="true">→</span></a>
       </div>
       <div class="reveal lift card install-card">
         <h3>OpenCode</h3>
@@ -223,6 +232,11 @@
         <h3>Mistral Vibe</h3>
         <p>Markdown for now. Drives the standalone CLI, so install that too.</p>
         <a class="more" href="https://github.com/konradmichalik/annotaitr#mistral-vibe-skill">Setup steps <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="reveal lift card install-card">
+        <h3>Gemini CLI</h3>
+        <p>One target per call, no flags, untested. Drives the standalone CLI.</p>
+        <a class="more" href="https://github.com/konradmichalik/annotaitr#gemini-cli-command">Setup steps <span aria-hidden="true">→</span></a>
       </div>
       <div class="reveal lift card install-card">
         <h3>Standalone CLI</h3>
