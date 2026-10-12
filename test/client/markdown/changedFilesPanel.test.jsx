@@ -6,10 +6,14 @@ import { ChangedFilesPanel } from '../../../client/markdown/src/components/Chang
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
-const entry = (path, status, added, removed) => ({ path, status, added, removed, explained: true, heading: { id: path }, blocks: [] })
+const entry = (path, status, added, removed, attention = null) => ({ path, status, added, removed, attention, explained: true, heading: { id: path }, blocks: [] })
 const sections = {
   overview: [],
-  files: [entry('src/Controller/PageController.php', 'M', 75, 2), entry('src/Domain/Facet.php', 'A', 10, 0)]
+  files: [
+    entry('src/Controller/PageController.php', 'M', 75, 2, 'high'),
+    entry('src/Domain/Facet.php', 'A', 10, 0),
+    entry('src/Domain/Old.php', 'M', 3, 5)
+  ]
 }
 
 let host
@@ -58,5 +62,37 @@ describe('ChangedFilesPanel', () => {
 
   it('offers line breaks only between the parts of a name', () => {
     expect(button('src/Controller/PageController.php').querySelectorAll('wbr')).toHaveLength(2)
+  })
+
+  it('marks a file to check closely in the tree, in words for a screen reader', () => {
+    const high = button('src/Controller/PageController.php')
+    expect(high.querySelector('.changed-tree-flag')).not.toBeNull()
+    expect(high.getAttribute('aria-label')).toContain('check closely')
+    expect(button('src/Domain/Facet.php').getAttribute('aria-label')).not.toContain('check closely')
+  })
+
+  it('shows every file until the reviewer asks for the ones to check closely only', () => {
+    const toggle = button('Only files to check closely')
+    expect(toggle.getAttribute('aria-pressed')).toBe('false')
+    expect(toggle.textContent).toContain('1')
+    expect(button('src/Domain/Facet.php')).toBeDefined()
+    act(() => toggle.click())
+    expect(toggle.getAttribute('aria-pressed')).toBe('true')
+    expect(button('src/Domain/Facet.php')).toBeUndefined()
+    expect(button('src/Controller/PageController.php')).toBeDefined()
+  })
+
+  it('offers no such toggle when the agent set no focus', () => {
+    act(() => root.render(
+      <ChangedFilesPanel
+        sections={{ overview: [], files: [entry('a.js', 'M', 1, 0)] }}
+        counts={{ overview: 0, byPath: new Map() }}
+        reviewed={new Set()}
+        current={null}
+        onSelect={() => {}}
+        onToggleReviewed={() => {}}
+      />
+    ))
+    expect(button('Only files to check closely')).toBeUndefined()
   })
 })

@@ -377,3 +377,161 @@
   color: var(--ink-muted);
   font-size: var(--fs-sm);
 }
+
+/* Review focus: the agent asks for a closer look. Icon and words carry it, the warm tint only helps. */
+.change-file.is-focus {
+  border-color: var(--status-warn);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-warn) 12%, transparent);
+}
+
+.change-file.is-focus .change-file-header {
+  border-bottom-color: color-mix(in srgb, var(--status-warn) 30%, var(--line));
+  background: color-mix(in srgb, var(--status-warn) 8%, var(--card));
+}
+
+.change-flag,
+.changed-tree-flag {
+  display: inline-flex;
+  color: var(--status-warn);
+}
+
+.change-focus {
+  border-bottom-color: color-mix(in srgb, var(--status-warn) 30%, var(--line));
+  background: color-mix(in srgb, var(--status-warn) 8%, var(--card));
+}
+
+.change-focus-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--space-1);
+  color: var(--status-warn);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  user-select: none;
+}
+
+/* The block carries its own "Check closely:" lead for the notes and the screen reader, the label above shows it */
+.change-focus .block-paragraph strong:first-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.change-focus-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+  padding: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--status-warn) 40%, var(--line));
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--status-warn) 8%, var(--card));
+}
+
+.change-focus-box-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+}
+
+.change-focus-box-header h2 {
+  margin: 0;
+  color: var(--status-warn);
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+
+.change-focus-box-header span {
+  margin-left: auto;
+}
+
+.change-focus-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+}
+
+.change-focus-row:hover {
+  border-color: var(--status-warn);
+  background: var(--card);
+}
+
+.change-focus-jump {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.change-focus-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px var(--space-2);
+  border: 1px solid var(--status-warn);
+  border-radius: var(--radius-full);
+  color: var(--status-warn);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.change-focus-path {
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+}
+
+.change-focus-why {
+  flex: 1 1 100%;
+  color: var(--ink-muted);
+  line-height: 1.45;
+}
+
+.changed-files-focus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 30px;
+  margin-top: var(--space-2);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-control);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.changed-files-focus[aria-pressed="true"] {
+  border-color: var(--status-warn);
+  color: var(--status-warn);
+  font-weight: 600;
+}
+
+.changed-files-focus-count {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}

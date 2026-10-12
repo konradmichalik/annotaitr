@@ -10,7 +10,7 @@ import { startCli } from '../helpers/cli.js'
 
 const gitEnv = { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@example.com', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@example.com' }
 
-async function withRepo(run) {
+async function withRepo(run, extra = {}) {
   const dir = await realpath(await mkdtemp(join(tmpdir(), 'annotaitr-changes-e2e-')))
   const explain = join(await realpath(tmpdir()), `annotaitr-explain-${process.pid}.json`)
   const git = (...args) => execFileSync('git', args, { cwd: dir, env: gitEnv })
@@ -24,7 +24,8 @@ async function withRepo(run) {
     await writeFile(explain, JSON.stringify({
       title: 'Key the cache per workspace',
       commit: 'fix: key the cache per workspace',
-      files: { 'cache.js': 'Adds the workspace to the key.' }
+      files: { 'cache.js': 'Adds the workspace to the key.' },
+      ...extra
     }))
     await run({ dir, explain })
   } finally {
@@ -32,6 +33,33 @@ async function withRepo(run) {
     await rm(explain, { force: true })
   }
 }
+
+test('the agent can ask for a closer look at a file without hiding another', async ({ page }) => {
+  await withRepo(async ({ dir, explain }) => {
+    const cli = startCli(['changes', '--origin', 'claude-code', '--explain', explain], {}, { cwd: dir })
+    try {
+      await page.goto(await cli.url)
+      const overview = page.getByRole('region', { name: 'Overview' })
+      const box = overview.getByRole('group', { name: /Review focus: 1 of 2 files to check closely/ })
+      await expect(box).toContainText('The key decides which data a user sees.')
+
+      const tree = page.getByRole('navigation', { name: 'Changed files' })
+      await expect(tree.getByRole('button', { name: /^cache\.js, check closely, / })).toBeVisible()
+      await expect(page.getByRole('region', { name: 'cache.js' }).getByRole('img', { name: 'Check closely' })).toBeVisible()
+
+      const only = page.getByRole('button', { name: /Only files to check closely/ })
+      await expect(tree.getByRole('button', { name: /^notes\.md/ })).toBeVisible()
+      await only.click()
+      await expect(tree.getByRole('button', { name: /^notes\.md/ })).toHaveCount(0)
+      await expect(page.getByRole('region', { name: 'notes.md' })).toBeVisible()
+
+      await box.getByRole('button', { name: /cache\.js/ }).click()
+      await expect(page.getByRole('region', { name: 'cache.js' })).toBeInViewport()
+    } finally {
+      if (cli.child.exitCode === null) { cli.child.kill() }
+    }
+  }, { focus: { 'cache.js': 'The key decides which data a user sees.' } })
+})
 
 test('a note on a diff line names the file and its new line', async ({ page }) => {
   await withRepo(async ({ dir, explain }) => {

@@ -2,11 +2,17 @@ import { useId, useMemo, useState } from 'react'
 import { buildFileTree, filterFileTree, nameParts } from '../utils/fileTree.js'
 import { CheckIcon, MarkReviewedButton } from './FilesSection.jsx'
 import { DiffCounts } from './Viewer/DiffCounts.jsx'
-import { STATUS_LABEL } from '../utils/changeSections.js'
+import { STATUS_LABEL, countFocus } from '../utils/changeSections.js'
 
 const FolderIcon = () => (
   <svg className="changed-tree-folder-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" aria-hidden="true">
     <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+  </svg>
+)
+
+const FlagIcon = ({ className }) => (
+  <svg className={className} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M5 21V4M5 4h11l-2 4 2 4H5" />
   </svg>
 )
 
@@ -18,8 +24,9 @@ const Chevron = ({ open }) => (
 
 function fileLabel(file, count, reviewed) {
   const notes = count === 1 ? '1 note' : `${count} notes`
+  const weight = file.attention === 'high' ? 'check closely' : null
   const state = [STATUS_LABEL[file.status].toLowerCase(), !file.explained && 'not explained', reviewed && 'reviewed'].filter(Boolean)
-  return `${file.path}, ${notes}, +${file.added} \u2212${file.removed}, ${state.join(', ')}`
+  return `${file.path}, ${weight ? `${weight}, ` : ''}${notes}, +${file.added} \u2212${file.removed}, ${state.join(', ')}`
 }
 
 /** A name with line break opportunities only where a break reads well. */
@@ -65,6 +72,7 @@ function TreeNodes({ nodes, depth, current, counts, reviewed, closed, onToggleFo
             <span className="changed-tree-status" aria-hidden="true" title={STATUS_LABEL[node.file.status]}>{node.file.status}</span>
             <Name name={node.name} />
             <span className="changed-tree-meta" aria-hidden="true">
+              {node.file.attention === 'high' && <span className="changed-tree-flag" title="Check closely"><FlagIcon /></span>}
               <DiffCounts className="changed-tree-counts" added={node.file.added} removed={node.file.removed} />
               {!node.file.explained && <span className="changed-tree-unexplained" title="Not explained" />}
               {(counts.get(node.path) ?? 0) > 0 && <span className="files-item-count">{counts.get(node.path)}</span>}
@@ -86,13 +94,16 @@ export function ChangedFilesPanel({ sections, counts, reviewed, current, onSelec
   const headingId = useId()
   const filterId = useId()
   const [query, setQuery] = useState('')
+  const [onlyFocus, setOnlyFocus] = useState(false)
   const [closedFolders, setClosedFolders] = useState(() => new Set())
   const toggleFolder = (path) => setClosedFolders((prev) => {
     const next = new Set(prev)
     if (next.has(path)) { next.delete(path) } else { next.add(path) }
     return next
   })
-  const tree = useMemo(() => buildFileTree(sections.files), [sections.files])
+  const focusCount = countFocus(sections.files)
+  const shown = useMemo(() => (onlyFocus ? sections.files.filter((f) => f.attention === 'high') : sections.files), [sections.files, onlyFocus])
+  const tree = useMemo(() => buildFileTree(shown), [shown])
   const visible = useMemo(() => filterFileTree(tree, query), [tree, query])
   if (collapsed) { return null }
 
@@ -106,6 +117,13 @@ export function ChangedFilesPanel({ sections, counts, reviewed, current, onSelec
       <div className="changed-files-filter">
         <label htmlFor={filterId} className="visually-hidden">Filter changed files</label>
         <input id={filterId} type="search" placeholder="Filter files" value={query} onChange={(e) => setQuery(e.target.value)} />
+        {focusCount > 0 && (
+          <button type="button" className="changed-files-focus" aria-pressed={onlyFocus} onClick={() => setOnlyFocus((on) => !on)}>
+            <FlagIcon />
+            Only files to check closely
+            <span className="changed-files-focus-count">{focusCount}</span>
+          </button>
+        )}
       </div>
       <nav className="changed-files-nav" aria-label="Changed files">
         <button
