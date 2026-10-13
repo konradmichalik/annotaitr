@@ -5,19 +5,28 @@ const MIN_WIDTH = 160
 const MAX_WIDTH = 500
 
 export function useResizablePanel(storageKey, defaultWidth, direction) {
-  const [width, setWidth] = useState(() => {
-    const stored = getItem(storageKey)
-    const parsed = stored ? parseInt(stored, 10) : NaN
-    return Number.isFinite(parsed) ? Math.min(Math.max(parsed, MIN_WIDTH), MAX_WIDTH) : defaultWidth
+  const [stored] = useState(() => {
+    const raw = getItem(storageKey)
+    const parsed = raw ? parseInt(raw, 10) : NaN
+    return Number.isFinite(parsed) ? Math.min(Math.max(parsed, MIN_WIDTH), MAX_WIDTH) : null
   })
+  const [width, setWidth] = useState(stored ?? defaultWidth)
+  const [customized, setCustomized] = useState(stored !== null)
 
   const isDraggingRef = useRef(false)
   const startXRef = useRef(0)
   const startWidthRef = useRef(0)
   const widthRef = useRef(width)
 
-  const handleMouseDown = useCallback((e) => {
+  // `shownWidth` is what the panel displays when that differs from the stored width (a fitted one)
+  const handleMouseDown = useCallback((e, shownWidth) => {
     e.preventDefault()
+    if (shownWidth !== undefined) {
+      const from = Math.min(Math.max(shownWidth, MIN_WIDTH), MAX_WIDTH)
+      widthRef.current = from
+      setWidth(from)
+      setCustomized(true)
+    }
     isDraggingRef.current = true
     startXRef.current = e.clientX
     startWidthRef.current = widthRef.current
@@ -57,5 +66,5 @@ export function useResizablePanel(storageKey, defaultWidth, direction) {
     }
   }, [storageKey, direction])
 
-  return { width, handleMouseDown }
+  return { width, customized, handleMouseDown }
 }

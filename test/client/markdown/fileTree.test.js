@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildFileTree, filterFileTree, nameParts } from '../../../client/markdown/src/utils/fileTree.js'
+import { buildFileTree, filterFileTree, fitTreeWidth, nameParts } from '../../../client/markdown/src/utils/fileTree.js'
 
 const file = (path) => ({ path })
 const shape = (nodes) => nodes.map((n) => (n.type === 'folder' ? { [n.name]: shape(n.children) } : n.name))
@@ -42,5 +42,20 @@ describe('nameParts', () => {
     expect(nameParts('ChangedFilesPanel.jsx')).toEqual(['Changed', 'Files', 'Panel', '.jsx'])
     expect(nameParts('use-changes_review.test.js')).toEqual(['use', '-changes', '_review', '.test', '.js'])
     expect(nameParts('README.md')).toEqual(['README', '.md'])
+    expect(nameParts('Infrastructure/Projection/Thema')).toEqual(['Infrastructure/', 'Projection/', 'Thema'])
+  })
+})
+
+describe('fitTreeWidth', () => {
+  const tree = buildFileTree(['a/b/Short.php', 'a/b/c/VeryLongClassNameHandler.php'].map(file))
+  it('is the width of the widest row, including its indent', () => {
+    const shallow = fitTreeWidth(buildFileTree([file('VeryLongClassNameHandler.php')]), 10)
+    expect(fitTreeWidth(tree, 10)).toBeGreaterThan(shallow)
+  })
+  it('grows with the indent per level', () => {
+    expect(fitTreeWidth(tree, 14)).toBeGreaterThan(fitTreeWidth(tree, 10))
+  })
+  it('is 0 for an empty tree', () => {
+    expect(fitTreeWidth([], 10)).toBe(0)
   })
 })
