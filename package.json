@@ -1,6 +1,6 @@
 {
   "name": "annotaitr",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Browser-based image and Markdown annotator for AI-assisted review, with built-in web page capture",
   "type": "module",
   "engines": {
