@@ -78,6 +78,15 @@
   user-select: none;
 }
 
+/* Marking a line by its number is a pointer shortcut, text selection stays the keyboard route */
+.viewer-article:not(.pinpoint-mode) .diff-gutter {
+  cursor: pointer;
+}
+
+.viewer-article:not(.pinpoint-mode) .diff-line:hover .diff-gutter {
+  color: var(--ink);
+}
+
 .diff-gutter::before,
 .diff-gutter::after {
   flex: 1 1 0;
