@@ -27,6 +27,7 @@ import { changesFacts, groupChangeSections, noteCounts } from './utils/changeSec
 import { agentName } from '../../shared/utils/origin.js'
 import { initialAnnotationState } from './state/annotationReducer.js'
 import { useAutoClose } from '../../shared/hooks/useAutoClose.js'
+import { useChangesSidebarWidth } from './hooks/useChangesSidebarWidth.js'
 import { useResizablePanel } from '../../shared/hooks/useResizablePanel.js'
 import { useServerConnection } from '../../shared/hooks/useServerConnection.js'
 import { useAnnotationDraft } from './hooks/useAnnotationDraft.js'
@@ -42,6 +43,8 @@ import { getItem, setItem } from '../../shared/utils/storage.js'
 import { intentOf } from '../../shared/utils/intents.js'
 import 'katex/dist/katex.min.css'
 import './styles.css'
+
+const NO_FILES = []
 
 function getInitialSidebarCollapsed() {
   return getItem('md-annotator-sidebar-collapsed') === 'true'
@@ -395,7 +398,8 @@ export default function App() {
 
   const { state: autoCloseState, keepOpen } = useAutoClose(submitted, settings.autoCloseDelay)
   const { width: panelWidth, handleMouseDown: handlePanelResize } = useResizablePanel('md-annotator-panel-width', 340, 1)
-  const { width: tocWidth, handleMouseDown: handleTocResize } = useResizablePanel('md-annotator-toc-width', 220, -1)
+  const { width: tocWidth, customized: tocCustomized, handleMouseDown: handleTocResize } = useResizablePanel('md-annotator-toc-width', 220, -1)
+  const changesSidebarWidth = useChangesSidebarWidth({ files: changeSections?.files ?? NO_FILES, width: tocWidth, customized: tocCustomized, reserved: sidebarCollapsed ? 0 : panelWidth })
 
   const exportModal = (
     <ExportModal
@@ -479,10 +483,10 @@ export default function App() {
               current={changesNav.current}
               onSelect={changesNav.select}
               onToggleReviewed={(path) => changesReview.markReviewed(path, !changesReview.reviewed.has(path))}
-              width={tocWidth}
+              width={changesSidebarWidth}
               collapsed={tocCollapsed}
             />
-            {!tocCollapsed && <div className="panel-splitter" onMouseDown={handleTocResize} />}
+            {!tocCollapsed && <div className="panel-splitter" onMouseDown={(e) => handleTocResize(e, changesSidebarWidth)} />}
           </>
         )}
         {!isChanges && (!isPlainTextFile || isMultiFile) && (

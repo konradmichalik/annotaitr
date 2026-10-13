@@ -120,8 +120,9 @@ Left to right, the same in every mode:
 1. Logo and wordmark.
 2. Source chip with icon: `PDF`, `Image`, `Clipboard`, `URL`, `Video`, `Markdown`, `Changes`, `Code`, and `Text` for a plain-text file in markdown mode.
 3. Target in Geist Mono (a path, or `branch → base` for changes), then one line of facts (pages, size, duration, file position, file count) and the round chip when there is an earlier round. The round chip is neutral in every mode: outline, `--focus` dot, `Round n`. Never filled with ink, which belongs to the primary button.
-4. Shortcuts, settings and panel toggle as icon buttons.
+4. Shortcuts and settings as icon buttons.
 5. The origin indicator, then the decision split button.
+6. The feedback panel toggle at the far right behind a divider, mirroring the toggle of the left sidebar.
 
 ### Origin indicator
 

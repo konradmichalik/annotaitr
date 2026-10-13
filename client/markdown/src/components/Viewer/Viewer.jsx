@@ -16,7 +16,7 @@ import { formatLabelText } from '../../utils/quickLabels.js'
 import { getItem, setItem } from '../../../../shared/utils/storage.js'
 import { groupHtmlWrappers } from '../../utils/htmlWrappers.js'
 import { isOpenableFileLink } from '../../utils/links.js'
-import { getLinkInfo, removeInsertionMarker, createPersistentInsertionMarker, createTemporaryInsertionMarker, insertionPointAfter, findAnnotationElement } from '../../utils/viewerDom.js'
+import { getLinkInfo, removeInsertionMarker, createPersistentInsertionMarker, createTemporaryInsertionMarker, insertionPointAfter, findAnnotationElement, diffLineRange } from '../../utils/viewerDom.js'
 import { createInsertionAnnotation, createTokenAnnotation, createElementAnnotation, getBlockLabel } from '../../utils/viewerAnnotations.js'
 
 const PINPOINT_HINT_LEARNED_KEY = 'md-annotator-pinpoint-hint-learned'
@@ -291,7 +291,15 @@ export const Viewer = forwardRef(function Viewer({
     openElementToolbar(element, existing, { elementData: { targetType, blockId, originalText: content } })
   }, [openElementToolbar])
 
-  const handleLinkClick = useCallback((e) => {
+  const handleViewerClick = useCallback((e) => {
+    // A click on a line number of a diff marks that line like a text selection would
+    const gutter = e.target.closest('.diff-gutter')
+    if (gutter) {
+      const range = diffLineRange(gutter)
+      if (range) { highlighterRef.current?.fromRange(range) }
+      return
+    }
+
     const anchor = e.target.closest('a[href]')
     if (anchor) {
       const href = anchor.getAttribute('href')
@@ -319,7 +327,7 @@ export const Viewer = forwardRef(function Viewer({
         openElementToolbar(pinpointEl, existing)
       }
     }
-  }, [openElementToolbar, containerRef])
+  }, [openElementToolbar, containerRef, highlighterRef])
 
   const handlePinpointClick = useCallback((e) => {
     if (!pinpointMode) { return }
@@ -448,7 +456,7 @@ export const Viewer = forwardRef(function Viewer({
       <article
         ref={containerRef}
         className={`viewer-article${pinpointMode ? ' pinpoint-mode' : ''}${changes ? ' is-changes' : ''}${changes && activeSearch.isOpen ? ' search-open' : ''}`}
-        onClick={pinpointMode ? handlePinpointClick : handleLinkClick}
+        onClick={pinpointMode ? handlePinpointClick : handleViewerClick}
         onMouseMove={handleBlockHover}
         onMouseLeave={handleBlockHoverLeave}
       >

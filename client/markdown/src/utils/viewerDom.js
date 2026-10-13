@@ -15,6 +15,25 @@ export function removeInsertionMarker(el) {
 }
 
 /**
+ * The text of the diff line a gutter belongs to, as a range from its first to its
+ * last text node, so highlights that split the line into pieces are included.
+ * Null for a line without text.
+ */
+export function diffLineRange(gutter) {
+  const line = gutter.closest('.diff-line')
+  if (!line) { return null }
+  const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT)
+  const texts = []
+  while (walker.nextNode()) { if (walker.currentNode.length > 0) { texts.push(walker.currentNode) } }
+  if (texts.length === 0) { return null }
+  const last = texts.at(-1)
+  const range = document.createRange()
+  range.setStart(texts[0], 0)
+  range.setEnd(last, last.length)
+  return range
+}
+
+/**
  * The element whose text an offset inside a block counts from: the code of a
  * code block, since its toolbar and a diff header come first in the DOM, else
  * the block itself. Selections in useHighlighter count the same way.
