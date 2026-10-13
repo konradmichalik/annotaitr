@@ -35,9 +35,9 @@ function IconButton({ label, onClick, children }) {
 
 /**
  * The header both clients share, left to right: logo, source chip, target and
- * its facts, round chip, then shortcuts, settings and panel toggle, the origin
- * indicator and the decision split button. `leading` holds a mode's own
- * control in front of the logo (the markdown table of contents toggle).
+ * its facts, round chip, then shortcuts and settings, the origin indicator, the
+ * decision split button and the panel toggle at the far right. `leading` holds
+ * a mode's own control in front of the logo (the markdown table of contents toggle).
  */
 export function AppHeader({
   leading = null, source, target, facts, round = null, origin,
@@ -67,11 +67,12 @@ export function AppHeader({
       <div className="header-end">
         {onOpenShortcuts && <IconButton label="Keyboard shortcuts" onClick={onOpenShortcuts}><KeyboardIcon /></IconButton>}
         <IconButton label="Settings" onClick={onOpenSettings}><SettingsIcon /></IconButton>
+        {origin && <OriginIndicator origin={origin} />}
+        <DecisionButton {...decision} />
+        <span className="header-divider" aria-hidden="true" />
         <IconButton label={panelCollapsed ? 'Show feedback panel' : 'Hide feedback panel'} onClick={onTogglePanel}>
           <SidePanelIcon side="right" />
         </IconButton>
-        {origin && <OriginIndicator origin={origin} />}
-        <DecisionButton {...decision} />
       </div>
     </header>
   )
