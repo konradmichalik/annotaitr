@@ -399,7 +399,7 @@ export default function App() {
   const { state: autoCloseState, keepOpen } = useAutoClose(submitted, settings.autoCloseDelay)
   const { width: panelWidth, handleMouseDown: handlePanelResize } = useResizablePanel('md-annotator-panel-width', 340, 1)
   const { width: tocWidth, customized: tocCustomized, handleMouseDown: handleTocResize } = useResizablePanel('md-annotator-toc-width', 220, -1)
-  const changesSidebarWidth = useChangesSidebarWidth({ files: changeSections?.files ?? NO_FILES, width: tocWidth, customized: tocCustomized, reserved: panelWidth })
+  const changesSidebarWidth = useChangesSidebarWidth({ files: changeSections?.files ?? NO_FILES, width: tocWidth, customized: tocCustomized, reserved: sidebarCollapsed ? 0 : panelWidth })
 
   const exportModal = (
     <ExportModal
