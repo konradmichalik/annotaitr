@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { parseMarkdownToBlocks } from '../../../client/markdown/src/utils/parser.js'
 import { formatAnnotationsForExport, formatAnnotationsForJsonExport, validateAnnotationImport, shortFileNames } from '../../../client/markdown/src/utils/export.js'
 
 const makeBlock = (overrides = {}) => ({
@@ -280,5 +281,22 @@ describe('formatAnnotationsForExport in code blocks', () => {
     const startOffset = content.indexOf('+b')
     const output = formatAnnotationsForExport([makeAnnotation({ originalText: '+b', startOffset, endOffset: startOffset + 2 })], blocks, 'x.md')
     expect(output).toContain('Comment (new Line 1 in src/x.js)')
+  })
+})
+
+describe('formatAnnotationsForExport inside a quote', () => {
+  const blocks = parseMarkdownToBlocks('Intro\n\n> Note:\n>\n> ```js\n> const a = 1\n> const b = 2\n> ```\n>\n> - one\n> - two')
+
+  it('points a selection in quoted code at its source line', () => {
+    const code = blocks.find((b) => b.type === 'code')
+    const startOffset = code.content.indexOf('const b')
+    const ann = makeAnnotation({ blockId: code.id, originalText: 'const b', startOffset, endOffset: startOffset + 7 })
+    expect(formatAnnotationsForExport([ann], blocks, 'x.md')).toContain('Comment (Line 7)')
+  })
+
+  it('points a selection in a quoted list item at its source line', () => {
+    const item = blocks.find((b) => b.content === 'two')
+    const ann = makeAnnotation({ blockId: item.id, originalText: 'two', startOffset: 0, endOffset: 3 })
+    expect(formatAnnotationsForExport([ann], blocks, 'x.md')).toContain('Comment (Line 11)')
   })
 })

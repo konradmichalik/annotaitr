@@ -20,6 +20,68 @@ export const HTML_MIXED_CONTENT_TAGS = new Set([
   'header', 'footer', 'main', 'nav', 'center'
 ])
 
+const ALERT_MARKER = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]$/
+
+/**
+ * Gives blocks parsed from a nested chunk of lines their ids, order and source
+ * lines in the whole file. Links to quotes inside the chunk follow the new ids,
+ * top-level blocks of the chunk get `parentId` when one is given.
+ */
+function rebaseBlocks(inner, firstId, lineOffset, parentId) {
+  const ids = new Map(inner.map((block, index) => [block.id, `block-${firstId + index}`]))
+  return inner.map((block, index) => {
+    const parent = block.parentId ? ids.get(block.parentId) : parentId
+    return {
+      ...block,
+      id: ids.get(block.id),
+      order: firstId + index + 1,
+      startLine: lineOffset + block.startLine,
+      ...(parent ? { parentId: parent } : {})
+    }
+  })
+}
+
+const NESTING_TYPES = new Set(['code', 'blockquote', 'alert', 'math'])
+
+/**
+ * Whether the parsed quote content holds real blocks. The block parser is
+ * lenient (one `|` makes a table, `#123` a heading, `2024.` an ordered item),
+ * so only unambiguous blocks count, and ordered items only as a list of two.
+ */
+function hasNestedBlocks(children, innerLines) {
+  const items = children.filter((child) => child.type === 'list-item')
+  const isOrdered = (item) => /^\d+\./.test(innerLines[item.startLine - 1].trim())
+  return children.some((child) => NESTING_TYPES.has(child.type)) ||
+    items.some((item) => !isOrdered(item)) ||
+    items.length > 1
+}
+
+/**
+ * A quote or GitHub alert. Text alone stays one block with inline text, as
+ * always. Code, lists, quotes or formulas make it a `nested` container block
+ * followed by its parsed child blocks, each pointing back to it with `parentId`.
+ */
+function parseQuote(quoteLines, startLine, firstId) {
+  const stripped = quoteLines.map((quoteLine) => quoteLine.trim().replace(/^>\s*/, ''))
+  const alertMatch = stripped[0].match(ALERT_MARKER)
+  const kind = alertMatch ? { type: 'alert', alertType: alertMatch[1].toLowerCase() } : { type: 'blockquote' }
+  const skip = alertMatch ? 1 : 0
+  // Only one space or tab after `>` belongs to the quote, more is indentation of quoted code or lists.
+  const innerLines = quoteLines.slice(skip).map((quoteLine) => quoteLine.trimStart().replace(/^>[ \t]?/, ''))
+  const children = parseMarkdownToBlocks(innerLines.join('\n'), { allowFrontmatter: false })
+  const id = `block-${firstId}`
+
+  if (!hasNestedBlocks(children, innerLines)) {
+    // An alert's text starts below its marker line, so its notes count lines from there.
+    const textLine = quoteLines.length > skip ? startLine + skip : startLine
+    return [{ id, ...kind, content: stripped.slice(skip).join('\n'), order: firstId + 1, startLine: textLine }]
+  }
+  return [
+    { id, ...kind, content: '', nested: true, order: firstId + 1, startLine },
+    ...rebaseBlocks(children, firstId + 1, startLine + skip - 1, id)
+  ]
+}
+
 /**
  * Simplified markdown parser that splits content into linear blocks.
  * Designed for predictable text-anchoring (not AST-based).
@@ -188,35 +250,14 @@ export function parseMarkdownToBlocks(markdown, { allowFrontmatter = true } = {}
     // Blockquotes & GitHub alerts
     if (trimmed.startsWith('>')) {
       flush()
-      const blockquoteStartLine = currentLineNum
-      const bqLines = [trimmed.replace(/^>\s*/, '')]
-
-      // Collect consecutive blockquote lines
+      const quoteLines = [line]
       while (i + 1 < lines.length && lines[i + 1].trim().startsWith('>')) {
         i++
-        bqLines.push(lines[i].trim().replace(/^>\s*/, ''))
+        quoteLines.push(lines[i])
       }
-
-      // Check for GitHub alert syntax: [!NOTE], [!TIP], etc.
-      const alertMatch = bqLines[0].match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]$/)
-      if (alertMatch) {
-        blocks.push({
-          id: `block-${currentId++}`,
-          type: 'alert',
-          alertType: alertMatch[1].toLowerCase(),
-          content: bqLines.slice(1).join('\n'),
-          order: currentId,
-          startLine: blockquoteStartLine
-        })
-      } else {
-        blocks.push({
-          id: `block-${currentId++}`,
-          type: 'blockquote',
-          content: bqLines.join('\n'),
-          order: currentId,
-          startLine: blockquoteStartLine
-        })
-      }
+      const quoteBlocks = parseQuote(quoteLines, currentLineNum, currentId)
+      blocks.push(...quoteBlocks)
+      currentId += quoteBlocks.length
       continue
     }
 
@@ -351,9 +392,9 @@ export function parseMarkdownToBlocks(markdown, { allowFrontmatter = true } = {}
             ...(closingLine ? { htmlTag: tagName, htmlRole: 'open' } : {})
           })
           // Recursively parse inner content as markdown
-          for (const inner of parseMarkdownToBlocks(innerLines.join('\n'), { allowFrontmatter: false })) {
-            blocks.push({ ...inner, id: `block-${currentId++}`, order: currentId, startLine: innerLineOffset + inner.startLine })
-          }
+          const innerBlocks = rebaseBlocks(parseMarkdownToBlocks(innerLines.join('\n'), { allowFrontmatter: false }), currentId, innerLineOffset)
+          blocks.push(...innerBlocks)
+          currentId += innerBlocks.length
           // Emit closing tag
           if (closingLine) {
             blocks.push({
@@ -367,9 +408,9 @@ export function parseMarkdownToBlocks(markdown, { allowFrontmatter = true } = {}
             })
             // Content trailing the closing tag belongs after the wrapper, on that same line
             if (afterClose.trim()) {
-              for (const after of parseMarkdownToBlocks(afterClose, { allowFrontmatter: false })) {
-                blocks.push({ ...after, id: `block-${currentId++}`, order: currentId, startLine: closingLineNum })
-              }
+              const afterBlocks = rebaseBlocks(parseMarkdownToBlocks(afterClose, { allowFrontmatter: false }), currentId, closingLineNum - 1)
+              blocks.push(...afterBlocks)
+              currentId += afterBlocks.length
             }
           }
           continue
