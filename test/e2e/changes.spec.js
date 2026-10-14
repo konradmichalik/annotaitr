@@ -335,48 +335,75 @@ test('a Read view opened above another card keeps the highlights of both in plac
   })
 })
 
-test('a draft with a note in a Read view loads that view before its notes are placed', async ({ page }) => {
-  const files = {
-    before: { 'a.md': GUIDE_BEFORE, 'b.md': '# Beta\n\nBeta old.\n' },
-    after: { 'a.md': GUIDE_AFTER, 'b.md': '# Beta\n\nBeta new.\n' },
-    explanation: { files: { 'a.md': 'Splits the line.', 'b.md': 'Rewrites beta with care.' } }
-  }
-  await withDocs(files, async ({ dir, explain }) => {
-    const first = startCli(['changes', '--explain', explain], {}, { cwd: dir })
-    const url = await first.url
-    try {
-      await page.goto(url)
-      await page.getByRole('region', { name: 'a.md' }).getByRole('button', { name: 'Read' }).click()
-      await comment(page, '.change-file[data-path="a.md"] .change-read .block-paragraph >> nth=1', 'line\nsecond', 'Keep it on one line')
-      await comment(page, '.change-file[data-path="b.md"] .change-why .block-paragraph', 'with care', 'Which care?')
-      // A walkthrough has no file id, so its draft lives under the content hash only.
-      await expect.poll(() => page.evaluate(() => {
-        const key = Object.keys(localStorage).find((name) => name.startsWith('md-annotator-draft-'))
-        return key ? JSON.parse(localStorage.getItem(key)).annotations.length : 0
-      })).toBe(2)
-    } finally {
-      first.child.kill()
-      await first.exited
-    }
+const TWO_DOCS = {
+  before: { 'a.md': GUIDE_BEFORE, 'b.md': '# Beta\n\nBeta old.\n' },
+  after: { 'a.md': GUIDE_AFTER, 'b.md': '# Beta\n\nBeta new.\n' },
+  explanation: { files: { 'a.md': 'Splits the line.', 'b.md': 'Rewrites beta with care.' } }
+}
 
+/** One walkthrough with a note in a.md's Read view and one on b.md's explanation; returns the drafted notes and the port. */
+async function noteInReadAndDiff(page, { dir, explain }) {
+  const first = startCli(['changes', '--explain', explain], {}, { cwd: dir })
+  const url = await first.url
+  try {
+    await page.goto(url)
+    await page.getByRole('region', { name: 'a.md' }).getByRole('button', { name: 'Read' }).click()
+    await comment(page, '.change-file[data-path="a.md"] .change-read .block-paragraph >> nth=1', 'line\nsecond', 'Keep it on one line')
+    await comment(page, '.change-file[data-path="b.md"] .change-why .block-paragraph', 'with care', 'Which care?')
+    // A walkthrough has no file id, so its draft lives under the content hash only.
+    const draft = () => page.evaluate(() => {
+      const key = Object.keys(localStorage).find((name) => name.startsWith('md-annotator-draft-'))
+      return key ? JSON.parse(localStorage.getItem(key)).annotations : []
+    })
+    await expect.poll(async () => (await draft()).length).toBe(2)
+    return { annotations: await draft(), port: new URL(url).port }
+  } finally {
+    first.child.kill()
+    await first.exited
     // Without the stored pick the file opens on Diff, so nothing has loaded its Read view yet.
     await page.context().clearCookies()
-    const second = startCli(['changes', '--explain', explain], { ANNOTAITR_PORT: new URL(url).port }, { cwd: dir })
+  }
+}
+
+/** The notes of noteInReadAndDiff are placed: a.md's in its Read view once its card opens it, b.md's on its text. */
+async function expectPlaced(page) {
+  await expect(page.locator('.note-card', { hasText: 'Keep it on one line' })).toContainText('a.md · new L5-6')
+  await expect(page.locator('.note-tag')).toHaveCount(0)
+  await expect(page.locator('.change-file[data-path="b.md"] mark.annotation-highlight')).toHaveText('with care')
+  await page.locator('.note-card', { hasText: 'Keep it on one line' }).click()
+  await expect(page.getByRole('region', { name: 'a.md' }).getByRole('button', { name: 'Read' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('.change-file[data-path="a.md"] mark.annotation-highlight')).toHaveText('line\nsecond')
+}
+
+test('a draft with a note in a Read view loads that view before its notes are placed', async ({ page }) => {
+  await withDocs(TWO_DOCS, async (repo) => {
+    const { port } = await noteInReadAndDiff(page, repo)
+    const second = startCli(['changes', '--explain', repo.explain], { ANNOTAITR_PORT: port }, { cwd: repo.dir })
     try {
       await page.goto(await second.url)
       await expect(page.getByRole('region', { name: 'a.md' }).getByRole('button', { name: 'Diff' })).toHaveAttribute('aria-pressed', 'true')
       await page.getByRole('button', { name: 'Restore' }).click()
-      await expect(page.locator('.note-card', { hasText: 'Keep it on one line' })).toContainText('a.md · new L5-6')
-      await expect(page.locator('.note-tag')).toHaveCount(0)
-      await expect(page.locator('.change-file[data-path="b.md"] mark.annotation-highlight')).toHaveText('with care')
-
-      await page.locator('.note-card', { hasText: 'Keep it on one line' }).click()
-      await expect(page.getByRole('region', { name: 'a.md' }).getByRole('button', { name: 'Read' })).toHaveAttribute('aria-pressed', 'true')
-      await expect(page.locator('.change-file[data-path="a.md"] mark.annotation-highlight')).toHaveText('line\nsecond')
-
+      await expectPlaced(page)
       await page.getByRole('button', { name: /^Send feedback/ }).click()
       expect(await second.exited).toBe(0)
       expect(second.stdout()).toMatch(/Text \(new Lines 5-6 in a\.md\)/)
+    } finally {
+      if (second.child.exitCode === null) { second.child.kill() }
+    }
+  })
+})
+
+test('imported notes in a Read view wait for that view before they are placed', async ({ page }) => {
+  await withDocs(TWO_DOCS, async (repo) => {
+    const { annotations } = await noteInReadAndDiff(page, repo)
+    const second = startCli(['changes', '--explain', repo.explain], {}, { cwd: repo.dir })
+    try {
+      await page.goto(await second.url)
+      await expect(page.getByRole('region', { name: 'a.md' }).getByRole('button', { name: 'Diff' })).toHaveAttribute('aria-pressed', 'true')
+      await page.locator('input[type="file"][accept=".json"]').setInputFiles({
+        name: 'notes.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ version: 1, annotations }))
+      })
+      await expectPlaced(page)
     } finally {
       if (second.child.exitCode === null) { second.child.kill() }
     }

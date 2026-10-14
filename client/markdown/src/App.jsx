@@ -308,6 +308,19 @@ export default function App() {
     setSidebarCollapsed(false)
   }, [annotations, effectiveViewMode, isChanges, readViews])
 
+  const applyDraft = useCallback((restored, verb = 'Restored') => {
+    viewerRef.current?.clearAllHighlights()
+    annDispatch({ type: 'RESTORE', annotations: restored })
+    setTimeout(() => {
+      viewerRef.current?.restoreHighlights(restored)
+    }, 100)
+    showToast(`${verb} ${restored.length} annotation${restored.length !== 1 ? 's' : ''}`)
+  }, [annDispatch, showToast])
+
+  // Notes restored or imported into a walkthrough wait for the Read views they sit in. Highlights there are stored by
+  // element index, which other Read views shift, so they always re-anchor against the page as it is now.
+  const [awaitingRead, setAwaitingRead] = useState(null)
+
   const handleImportAnnotations = useCallback((jsonData) => {
     const result = validateAnnotationImport(jsonData)
     if (!result.valid) {
@@ -341,22 +354,13 @@ export default function App() {
       )
       if (!proceed) {return}
     }
-    viewerRef.current?.clearAllHighlights()
-    annDispatch({ type: 'RESTORE', annotations: result.annotations })
-    setTimeout(() => {
-      viewerRef.current?.restoreHighlights(result.annotations)
-    }, 100)
-    showToast(`Imported ${result.annotations.length} annotation${result.annotations.length !== 1 ? 's' : ''}`)
-  }, [activeFile, filePath, annotations, annDispatch, showToast])
-
-  const applyDraft = useCallback((restored) => {
-    viewerRef.current?.clearAllHighlights()
-    annDispatch({ type: 'RESTORE', annotations: restored })
-    setTimeout(() => {
-      viewerRef.current?.restoreHighlights(restored)
-    }, 100)
-    showToast(`Restored ${restored.length} annotation${restored.length !== 1 ? 's' : ''}`)
-  }, [annDispatch, showToast])
+    if (isChanges) {
+      setAwaitingRead({ annotations: result.annotations, verb: 'Imported' })
+      setViewMode('preview')
+      return
+    }
+    applyDraft(result.annotations, 'Imported')
+  }, [activeFile, filePath, annotations, isChanges, applyDraft])
 
   // Source view notes re-anchor against the file's lines, all others against the rendered preview.
   const reanchorDraft = useCallback((draftAnnotations) => {
@@ -372,21 +376,18 @@ export default function App() {
     applyDraft(reanchorDraft(draftAwaitingPreview))
   }, [draftAwaitingPreview, effectiveViewMode, applyDraft, reanchorDraft])
 
-  // A walkthrough's draft waits for the Read views its notes sit in. Highlights there are stored by element index,
-  // which other Read views shift, so its notes always re-anchor against the page as it is now.
-  const [draftAwaitingRead, setDraftAwaitingRead] = useState(null)
   const { settle: settleReadViews } = readViews
   useEffect(() => {
-    if (!draftAwaitingRead || effectiveViewMode !== 'preview' || !settleReadViews(draftAwaitingRead)) {return}
-    setDraftAwaitingRead(null)
-    applyDraft(reanchorDraft(draftAwaitingRead))
-  }, [draftAwaitingRead, effectiveViewMode, settleReadViews, applyDraft, reanchorDraft])
+    if (!awaitingRead || effectiveViewMode !== 'preview' || !settleReadViews(awaitingRead.annotations)) {return}
+    setAwaitingRead(null)
+    applyDraft(reanchorDraft(awaitingRead.annotations), awaitingRead.verb)
+  }, [awaitingRead, effectiveViewMode, settleReadViews, applyDraft, reanchorDraft])
 
   const handleRestoreDraft = useCallback(() => {
     const draft = restoreDraft()
     if (draft.annotations.length === 0) {return}
     if (isChanges) {
-      setDraftAwaitingRead(draft.annotations)
+      setAwaitingRead({ annotations: draft.annotations, verb: 'Restored' })
       setViewMode('preview')
     } else if (!draft.fileChanged) {
       applyDraft(draft.annotations)
