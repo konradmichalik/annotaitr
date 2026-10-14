@@ -33,7 +33,7 @@ The mode is auto-detected from what you open, see [Usage](docs/usage.md). The me
 ![Web page capture with the Element tool outlining a section and its selector](site/images/03-web-capture.png)
 
 - [**Page capture**](docs/usage/web-pages.md): full-page screenshot of any `http(s)` URL via Playwright, at a chosen viewport and optional delay; switch viewport, section or delay from the open tab to capture again in place
-- [**Page element names**](docs/usage/web-pages.md): the Element tool picks a page element straight from the screenshot, and feedback names it (tag, alt or text, media file, short selector), so the agent can find it in the source
+- [**Page element names**](docs/usage/web-pages.md): the Element tool picks a page element straight from the screenshot, and feedback names it (tag, alt or text, media file, short selector, and on a dev build the component and source file), so the agent can find it in the source
 
 ### Videos and GIFs
 

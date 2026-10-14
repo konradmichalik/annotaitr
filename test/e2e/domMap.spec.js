@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test'
 import { startCli } from '../helpers/cli.js'
 import { createCanvas, loadImage } from '@napi-rs/canvas'
 import { captureUrl } from '../../server/image/still/loader.js'
-import { matchAnnotation } from '../../server/image/common/elementMatch.js'
+import { matchAnnotation, formatElementLine } from '../../server/image/common/elementMatch.js'
 
 const PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
 
@@ -32,11 +32,51 @@ const PAGE = `<!doctype html>
   <footer class="bar bottom"><button type="button">Help</button></footer>
 </body></html>`
 
+// The debug fields dev builds of React 18, React 19 and Svelte put on DOM
+// nodes, faked so no dev server is needed. They name real files of this repo,
+// since only files that exist are printed. Generated line 7, column 26 of
+// cli/detect.js maps to its line 6.
+const BUTTON_MAP = { version: 3, sources: ['detect.js'], names: [], mappings: ';;;;;;yBAKI' }
+const DEV_PAGE = () => `<!doctype html>
+<html><body>
+  <button type="button" id="r18">React 18</button>
+  <button type="button" id="r19">React 19</button>
+  <button type="button" id="svelte">Svelte</button>
+  <button type="button" id="elsewhere">Elsewhere</button>
+  <button type="button" id="foreign">Foreign</button>
+  <button type="button" id="prod">Production</button>
+  <script>
+    const $ = (id) => document.getElementById(id)
+    function SaveButton() {}
+    function SubmitButton() {}
+    function ud() {}
+    $('r18').__reactFiber$a1 = { type: 'button', _debugOwner: { type: SaveButton },
+      _debugSource: { fileName: ${JSON.stringify(`${process.cwd()}/cli/args.js`)}, lineNumber: 12 } }
+    $('r19').__reactFiber$a1 = { type: 'button', _debugOwner: { type: SubmitButton },
+      _debugStack: { stack: 'Error: react-stack-top-frame\\n    at SubmitButton (' + location.origin + '/cli/detect.js?t=1:7:26)' } }
+    $('svelte').__svelte_meta = { loc: { file: 'index.js', line: 3, column: 2 } }
+    $('elsewhere').__reactFiber$a1 = { type: 'button', _debugOwner: { type: SaveButton },
+      _debugSource: { fileName: '/Users/someone/other/src/SaveButton.jsx', lineNumber: 12 } }
+    $('foreign').__reactFiber$a1 = { type: 'button', _debugOwner: { type: SubmitButton },
+      _debugStack: { stack: 'Error\\n    at SubmitButton (http://198.51.100.7/src/Button.jsx:7:26)' } }
+    $('prod').__reactFiber$a1 = { type: 'button', return: { type: ud } }
+  </script>
+</body></html>`
+const DEV_ROUTES = {
+  '/dev': DEV_PAGE,
+  '/cli/detect.js?t=1': () => `export function SubmitButton() {}\n//# sourceMappingURL=data:application/json;base64,${Buffer.from(JSON.stringify(BUTTON_MAP)).toString('base64')}\n`
+}
+
 let server
 let baseUrl
 
 test.beforeAll(async () => {
   server = createServer((req, res) => {
+    if (DEV_ROUTES[req.url]) {
+      res.writeHead(200, { 'Content-Type': req.url.endsWith('.jsx') ? 'text/javascript' : 'text/html' })
+      res.end(DEV_ROUTES[req.url]())
+      return
+    }
     if (req.url.startsWith('/team.png')) {
       res.writeHead(200, { 'Content-Type': 'image/png' })
       res.end(Buffer.from(PIXEL.split(',')[1], 'base64'))
@@ -95,6 +135,17 @@ test('a section capture shows only the viewport at the anchor, and the map uses 
   // In a section the fixed bars are on screen where they measure, so they belong in the map.
   expect(capture.domMap.find((el) => el.name === 'Home').box.y).toBe(0)
   expect(capture.domMap.find((el) => el.name === 'Team photo')).toBeUndefined()
+})
+
+test('a dev build names the source component and file of an element, and a production build nothing', async () => {
+  const capture = await captureUrl(`${baseUrl}dev`, { width: 800, height: 600 })
+  const line = (name) => formatElementLine([capture.domMap.find((el) => el.name === name)])
+  expect(line('React 18')).toBe('Element: button "React 18" · <SaveButton> cli/args.js:12 · #r18')
+  expect(line('React 19')).toBe('Element: button "React 19" · <SubmitButton> cli/detect.js:6 · #r19')
+  expect(line('Svelte')).toBe('Element: button "Svelte" · <index> index.js:3 · #svelte')
+  expect(line('Elsewhere')).toBe('Element: button "Elsewhere" · <SaveButton> · #elsewhere')
+  expect(line('Foreign')).toBe('Element: button "Foreign" · <SubmitButton> · #foreign')
+  expect(line('Production')).toBe('Element: button "Production" · #prod')
 })
 
 async function canvasPoint(page, box) {

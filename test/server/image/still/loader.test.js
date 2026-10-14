@@ -153,6 +153,7 @@ describe('loadImageFromFile with an SVG', () => {
 vi.mock('playwright', () => {
   const page = {
     goto: vi.fn().mockResolvedValue(undefined),
+    url: vi.fn().mockReturnValue('http://localhost:3000/'),
     screenshot: vi.fn().mockResolvedValue(Buffer.from('fake-png-bytes')),
     evaluate: vi.fn().mockResolvedValue({ width: 1920, height: 3000 }),
     waitForTimeout: vi.fn().mockResolvedValue(undefined)
@@ -191,7 +192,7 @@ describe('captureUrl', () => {
     const { captureUrl } = await import('../../../../server/image/still/loader.js')
     const result = await captureUrl('http://localhost:3000', { width: 1920, height: 1080 })
     expect(result.domMap).toEqual([
-      { tag: 'img', role: '', name: 'Team photo', media: 'team.jpg', selector: 'main img', heading: '', box: { x: 10, y: 20, width: 100, height: 50 } }
+      { tag: 'img', role: '', name: 'Team photo', media: 'team.jpg', selector: 'main img', heading: '', source: null, box: { x: 10, y: 20, width: 100, height: 50 } }
     ])
   })
 

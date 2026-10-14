@@ -134,6 +134,22 @@ describe('formatElementLine', () => {
     )
   })
 
+  it('names the source component and file:line from a dev build between the name and the selector', () => {
+    const save = el('section.card button.submit', 0, 0, 1, 1, {
+      tag: 'button', name: 'Save 0', source: { component: 'SubmitButton', file: 'src/Button.jsx', line: 6 }
+    })
+    expect(formatElementLine([save])).toBe('Element: button "Save 0" · <SubmitButton> src/Button.jsx:6 · section.card button.submit')
+  })
+
+  it('prints whatever part of the source is known, and nothing for a null source', () => {
+    const vue = el('button', 0, 0, 1, 1, { tag: 'button', source: { component: 'Card', file: 'src/Card.vue', line: null } })
+    const angular = el('button', 0, 0, 1, 1, { tag: 'button', source: { component: 'SaveBar', file: '', line: null } })
+    const plain = el('button', 0, 0, 1, 1, { tag: 'button', source: null })
+    expect(describeMatch([vue])).toBe('button · <Card> src/Card.vue · button')
+    expect(describeMatch([angular])).toBe('button · <SaveBar> · button')
+    expect(describeMatch([plain])).toBe('button · button')
+  })
+
   it('escapes quotes and removes backticks so page text cannot break out of the line', () => {
     const tricky = el('p', 0, 0, 1, 1, { tag: 'p', name: 'Say "hi" `now`' })
     expect(formatElementLine([tricky])).toBe('Element: p "Say \\"hi\\" now" · p')

@@ -26,10 +26,11 @@ On submit:
 
 ### Captured pages
 
-The capture also records a map of the page's visible elements (box, tag, role, accessible name, media file, short selector), measured in the same pixel space as the screenshot. Fixed-position elements are left out because a full-page screenshot moves them.
+The capture also records a map of the page's visible elements (box, tag, role, accessible name, media file, short selector, dev-build source), measured in the same pixel space as the screenshot. Fixed-position elements are left out because a full-page screenshot moves them.
 
 - **Matching**: a pin or arrow tip matches the smallest element under it, a box or freehand mark the element it overlaps most. Landmarks and plain panels only count when nothing more specific is near, and an unnamed panel is named after its first heading, such as `div (heading "Pricing")`.
 - **Output**: each note gets an `Element:` line, for example `Element: img "Team photo" ("team.jpg") · #hero img`. Page text is capped, quoted and labelled as page content.
+- **Source component**: in a dev build, the same evaluate reads the debug fields React, Vue, Svelte and Angular put on DOM nodes, and the line names the component and file, such as `<SubmitButton> src/Button.jsx:6`. A React 19 stack frame is mapped through the script's source map, fetched only from the page's origin within a cap on scripts, bytes and time. The page can fake these fields, so the name must look like an identifier, and a path is printed only when it matches a space-free pattern and names an existing file inside the working directory, relative to it.
 - **While annotating**: the **Element** tool outlines the element under the pointer like a DevTools inspector, and a click selects it as its own annotation (`Selected element`). For other tools, the comment box and sidebar name the matched element. The client fetches the map from `/api/elements` and runs a copy of the matching that a test keeps identical to the server's.
 - **Fallback**: if collecting the map fails, the capture still works and the feedback has no element lines. Local images, clipboard images and recordings have no DOM, so their output is unchanged.
 

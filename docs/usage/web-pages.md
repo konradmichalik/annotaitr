@@ -62,3 +62,19 @@ Markdown target rejects it.
 ```bash
 annotaitr --delay 1500 http://localhost:3000
 ```
+
+## Element lines
+
+Each note on a captured page names the element under the mark, for example `Element: img "Team photo" ("team.jpg") · #hero img`. When the page runs a dev build of React, Vue, Svelte or Angular, the line also names the component that rendered the element and, where the framework records it, its source file and line:
+
+```text
+Element: button "Save" · <SubmitButton> src/Button.jsx:6 · section.card button.submit
+```
+
+- React 18 and Svelte 5 record the file and line, Vue 3 the file, Angular only the component name.
+- React 19 records only a stack. Its line comes from the dev server's source map, fetched from the page's own origin and capped at 20 scripts, 20 MB and 3 seconds.
+- A path is shown only when it names a file that exists relative to the directory annotaitr runs in, otherwise the line names only the component. A path outside that directory is never printed, so the line never shows a home directory.
+- In a monorepo, a dev server rooted in an app folder such as `apps/web` reports paths relative to that folder. Run from the repository root, `src/App.tsx` does not exist there and only the component is shown. Run from `apps/web`, the path is shown.
+- Production builds carry none of this, and the line looks as it does for any other page.
+
+The component and file are a hint from the dev build, not a guarantee. The feedback says so above the notes.

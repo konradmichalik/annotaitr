@@ -5,6 +5,10 @@
  * collectRawElements runs in the page, everything else is plain Node.
  */
 
+import { statSync } from 'node:fs'
+import { basename, dirname, extname, isAbsolute, join, relative } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 export const MAX_ELEMENTS = 2000
 const MAX_NAME_LENGTH = 80
 const MAX_ANCESTORS = 3
@@ -30,7 +34,9 @@ export const CANDIDATES = ':is(a, button, input, select, textarea, label, img, p
 /**
  * Runs inside the captured page via page.evaluate, so it must stay
  * self-contained. It only reads raw values; the page is untrusted, so all
- * cleaning and capping happens again in normalizeDomMap.
+ * cleaning and capping happens again in normalizeDomMap. page.evaluate
+ * serializes only this function's source, which is why every helper,
+ * the dev-build source readers included, is defined inside it.
  */
 export function collectRawElements({ candidates: selector, fallbacks, minPanelSide, limit, containers, viewportOnly = false }) {
   const containerTags = new Set(containers)
@@ -47,6 +53,54 @@ export function collectRawElements({ candidates: selector, fallbacks, minPanelSi
     for (let up = el.parentElement; up && up !== document.body && chain.length < 3; up = up.parentElement) { chain.push(node(up)) }
     return chain
   }
+  // Dev builds of React, Vue, Svelte and Angular tag DOM nodes with the component that rendered them.
+  // Production builds do not, so a page without these debug fields reports nothing.
+  const componentName = (type) => {
+    if (typeof type === 'function') { return type.displayName || type.name || '' }
+    // forwardRef and memo wrap the component as render or type.
+    return type?.displayName || type?.render?.displayName || type?.render?.name || type?.type?.name || type?.name || ''
+  }
+  const ownerOf = (fiber) => {
+    if (fiber._debugOwner) { return fiber._debugOwner }
+    let up = fiber.return
+    while (up && typeof up.type !== 'function') { up = up.return }
+    return up
+  }
+  const firstAppFrame = (stack) => String(stack).split('\n').slice(1)
+    .map((line) => line.match(/\(?(https?:\/\/[^\s)]+):(\d+):(\d+)\)?\s*$/))
+    .find((frame) => frame && !/\/node_modules\/|\/@vite\/|\/@react-refresh/.test(frame[1]))
+  const reactSource = (el) => {
+    const key = Object.keys(el).find((k) => k.startsWith('__reactFiber$'))
+    const fiber = key ? el[key] : null
+    if (!fiber || !(fiber._debugSource || fiber._debugStack)) { return null }
+    const owner = ownerOf(fiber)
+    const name = componentName(owner?.type ?? owner)
+    if (fiber._debugSource) { return { name, file: fiber._debugSource.fileName, line: fiber._debugSource.lineNumber } }
+    const frame = firstAppFrame(fiber._debugStack.stack)
+    return frame ? { name, url: frame[1], line: Number(frame[2]), column: Number(frame[3]) } : { name }
+  }
+  const vueSource = (el) => {
+    let up = el
+    while (up && !up.__vueParentComponent) { up = up.parentElement }
+    const type = up?.__vueParentComponent?.type
+    return type?.__file ? { name: type.__name || type.name || '', file: type.__file } : null
+  }
+  const svelteSource = (el) => {
+    const loc = el.__svelte_meta?.loc
+    return loc?.file ? { name: '', file: loc.file, line: loc.line } : null
+  }
+  const angularSource = (el) => {
+    const owner = window.ng?.getOwningComponent?.(el)
+    return owner ? { name: owner.constructor?.name || '', file: '' } : null
+  }
+  // Page getters may throw; a broken source must not cost the whole map.
+  const devSource = (el) => {
+    try {
+      return reactSource(el) || vueSource(el) || svelteSource(el) || angularSource(el)
+    } catch {
+      return null
+    }
+  }
   const sourceOf = (el) => el.currentSrc || ['src', 'data-src', 'srcset', 'poster'].map((a) => el.getAttribute(a)).find(Boolean)
     || (el.tagName === 'PICTURE' ? el.querySelector('img')?.currentSrc : '') || ''
   // A section capture is the viewport as seen: its own coordinates, fixed elements included.
@@ -61,7 +115,7 @@ export function collectRawElements({ candidates: selector, fallbacks, minPanelSi
     alt: el.getAttribute('alt') || '', ariaLabel: el.getAttribute('aria-label') || '', title: el.getAttribute('title') || '',
     // The first visible heading inside a container is what a person would call it.
     heading: containerTags.has(node(el).tag) ? ([...el.querySelectorAll('h1, h2, h3, h4, h5, h6')].find((h) => h.checkVisibility())?.innerText ?? '').slice(0, 200) : '',
-    src: sourceOf(el), self: node(el), ancestors: ancestorsOf(el)
+    src: sourceOf(el), self: node(el), ancestors: ancestorsOf(el), source: devSource(el)
   })
 
   // Bounding the scan, not just the result, keeps huge hidden menus cheap.
@@ -137,12 +191,73 @@ function buildSelector(raw) {
   return chain.toReversed().map(selectorToken).filter(Boolean).join(' ')
 }
 
+const COMPONENT_NAME = /^[A-Za-z_$][\w$.-]{0,59}$/
+// Plain project paths only, Next.js route folders such as [slug] and (group) included. No spaces, so no sentences.
+const SOURCE_PATH = /^[\w@+$()[\].-]+(?:\/[\w@+$()[\].-]+){0,19}$/
+const MAX_SOURCE_PATH = 160
+const MAX_SOURCE_LINE = 1_000_000
+const WEBPACK_PREFIX = /^webpack:\/\/[^/]*\//
+
+/**
+ * The paths a reported file may stand for, most specific first. A dev server
+ * URL path is tried as an absolute path (a source map can list absolute
+ * sources) before it is read as project-relative.
+ */
+function candidatePaths(value) {
+  const unprefixed = value.replace(WEBPACK_PREFIX, '')
+  if (unprefixed !== value || !/^(?:https?|file):\/\//.test(value)) { return [unprefixed] }
+  try {
+    if (value.startsWith('file:')) { return [fileURLToPath(value)] }
+    const path = decodeURIComponent(new URL(value).pathname)
+    return path.startsWith('/@fs/') ? [path.slice('/@fs'.length)] : [path, path.slice(1)]
+  } catch {
+    return []
+  }
+}
+
+/** The candidate as a plain path relative to the root, or '' when it points outside the root. */
+function projectPath(path, root) {
+  const inside = (isAbsolute(path) ? relative(root, path) : path).replaceAll('\\', '/').replace(/^(?:\.\/)+/, '')
+  const plain = inside.length <= MAX_SOURCE_PATH && SOURCE_PATH.test(inside) && !inside.split('/').includes('..')
+  return plain && !isAbsolute(inside) ? inside : ''
+}
+
+/**
+ * A project-relative source path that exists as a file under the root, or ''.
+ * The page can fake any path, and a path relative to a nested dev server root
+ * would name the wrong file; existing on disk rules out both.
+ */
+function sourceFile(value, root, isFile) {
+  // Under the file system root every path would print the user's home directory.
+  if (dirname(root) === root) { return '' }
+  return candidatePaths(asString(value).trim())
+    .map((path) => projectPath(path, root))
+    .find((file) => file && isFile(join(root, file))) ?? ''
+}
+
+function componentOf(name, file) {
+  const own = cleanText(name)
+  if (COMPONENT_NAME.test(own)) { return own }
+  const fromFile = basename(file, extname(file))
+  return COMPONENT_NAME.test(fromFile) ? fromFile : ''
+}
+
+/** The component and file a dev build reported for an element, or null. Only name, file and line are read: a stack frame URL never reaches the output. */
+function normalizeSource(raw, { root, isFile }) {
+  if (!raw || typeof raw !== 'object') { return null }
+  const file = sourceFile(raw.file, root, isFile)
+  const component = componentOf(raw.name, file)
+  if (!component && !file) { return null }
+  const line = file && Number.isInteger(raw.line) && raw.line >= 1 && raw.line <= MAX_SOURCE_LINE ? raw.line : null
+  return { component, file, line }
+}
+
 function validBox(raw) {
   const values = [raw.x, raw.y, raw.width, raw.height]
   return values.every((v) => typeof v === 'number' && Number.isFinite(v)) && raw.width > 0 && raw.height > 0
 }
 
-function normalizeElement(raw) {
+function normalizeElement(raw, project) {
   if (!raw || typeof raw !== 'object' || !validBox(raw)) { return null }
   const tag = identifier(raw.tag).toLowerCase()
   if (!tag) { return null }
@@ -156,12 +271,23 @@ function normalizeElement(raw) {
     media: mediaName(raw.src),
     selector: buildSelector(raw),
     heading: !name && (CONTAINERS.has(tag) || tag === 'div') ? cleanText(raw.heading) : '',
+    source: normalizeSource(raw.source, project),
     box: { x: raw.x, y: raw.y, width: raw.width, height: raw.height }
   }
 }
 
 /** Validate and clean what the page returned; the page may have tampered with any of it. */
-export function normalizeDomMap(raw) {
+export function normalizeDomMap(raw, { root = process.cwd() } = {}) {
   if (!Array.isArray(raw)) { return [] }
-  return raw.slice(0, MAX_ELEMENTS * 2).map(normalizeElement).filter(Boolean).slice(0, MAX_ELEMENTS)
+  const project = { root, isFile: cachedIsFile() }
+  return raw.slice(0, MAX_ELEMENTS * 2).map((el) => normalizeElement(el, project)).filter(Boolean).slice(0, MAX_ELEMENTS)
+}
+
+// Many elements share a component file, so each path is looked up once per map.
+function cachedIsFile() {
+  const known = new Map()
+  return (path) => {
+    if (!known.has(path)) { known.set(path, statSync(path, { throwIfNoEntry: false })?.isFile() ?? false) }
+    return known.get(path)
+  }
 }
