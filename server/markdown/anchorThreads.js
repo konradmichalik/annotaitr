@@ -142,9 +142,12 @@ export function locateThread(thread, file) {
   return { anchor: unchanged ? 'exact' : 'moved', reason: null, place }
 }
 
-/** Last round's threads, each with where it is in `files` (`{ absolutePath, path, content, contentHash }`). */
+/**
+ * Last round's threads, each with where it is in `files` (`{ absolutePath, path, content, contentHash }`).
+ * `anchor` becomes the outcome as in image mode; `quote` keeps the original text, which an orphan still shows.
+ */
 export function anchorThreads(previous, files) {
   if (!previous) { return [] }
   const byPath = new Map(files.map((f) => [f.absolutePath, f]))
-  return previous.threads.map((thread) => ({ ...thread, ...locateThread(thread, byPath.get(thread.file)) }))
+  return previous.threads.map((thread) => ({ ...thread, ...locateThread(thread, byPath.get(thread.file)), quote: thread.anchor?.quote ?? null }))
 }

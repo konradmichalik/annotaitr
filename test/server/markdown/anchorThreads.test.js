@@ -83,5 +83,7 @@ describe('anchorThreads', () => {
     expect(anchorThreads(null, [])).toEqual([])
     const [placed] = anchorThreads({ round: 1, threads: [thread] }, [file(DOC)])
     expect(placed).toMatchObject({ handle: 'a3f19c2e', anchor: 'exact', place: { line: 3 }, file: '/abs/a.md' })
+    const [gone] = anchorThreads({ round: 1, threads: [thread] }, [file('# Other\n')])
+    expect(gone).toMatchObject({ anchor: 'orphan', place: null, quote: 'intro says' })
   })
 })
