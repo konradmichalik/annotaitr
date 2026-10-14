@@ -16,7 +16,7 @@ import { formatLabelText } from '../../utils/quickLabels.js'
 import { getItem, setItem } from '../../../../shared/utils/storage.js'
 import { groupHtmlWrappers } from '../../utils/htmlWrappers.js'
 import { isOpenableFileLink } from '../../utils/links.js'
-import { getLinkInfo, removeInsertionMarker, createPersistentInsertionMarker, createTemporaryInsertionMarker, insertionPointAfter, findAnnotationElement, diffLineRange } from '../../utils/viewerDom.js'
+import { getLinkInfo, removeInsertionMarker, createPersistentInsertionMarker, createTemporaryInsertionMarker, insertionPointAfter, findAnnotationElement, diffLineRange, reanchorToDom } from '../../utils/viewerDom.js'
 import { createInsertionAnnotation, createTokenAnnotation, createElementAnnotation, getBlockLabel } from '../../utils/viewerAnnotations.js'
 
 const PINPOINT_HINT_LEARNED_KEY = 'md-annotator-pinpoint-hint-learned'
@@ -231,6 +231,9 @@ export const Viewer = forwardRef(function Viewer({
           setToolbarState({ element: doms[0], annotation: ann, mode: 'edit' })
         }, 300)
       }
+    },
+    reanchorAnnotations(anns) {
+      return reanchorToDom(containerRef.current, blocks, anns)
     },
     openElementEditToolbar(ann) {
       const targetEl = findAnnotationElement(containerRef.current, ann)

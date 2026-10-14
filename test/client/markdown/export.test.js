@@ -282,3 +282,15 @@ describe('formatAnnotationsForExport in code blocks', () => {
     expect(output).toContain('Comment (new Line 1 in src/x.js)')
   })
 })
+
+describe('formatAnnotationsForExport with unanchored notes', () => {
+  it('leaves out the line reference of a note whose text is gone', () => {
+    const output = formatAnnotationsForExport(
+      [makeAnnotation({ unanchored: true, originalText: 'gone', number: 1 })],
+      [makeBlock({ startLine: 7 })],
+      '/test.md'
+    )
+    expect(output).toContain('## 1. Change · Comment\n\n```\ngone\n```\n\n> Fix this\n')
+    expect(output).not.toContain('Line 7')
+  })
+})

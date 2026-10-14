@@ -17,8 +17,8 @@ function blockOrder(blockId, blocks) {
 
 export function sortNotes(annotations, blocks) {
   return [...annotations].sort((a, b) => {
-    const blockA = blockOrder(a.blockId, blocks)
-    const blockB = blockOrder(b.blockId, blocks)
+    const blockA = a.unanchored ? Infinity : blockOrder(a.blockId, blocks)
+    const blockB = b.unanchored ? Infinity : blockOrder(b.blockId, blocks)
     if (blockA !== blockB) { return blockA - blockB }
     return a.startOffset - b.startOffset
   })

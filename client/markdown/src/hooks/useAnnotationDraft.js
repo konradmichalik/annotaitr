@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { readDraft, writeDraft, clearDraft } from '../utils/draftStorage.js'
 
-const STORAGE_PREFIX = 'md-annotator-draft-'
 const DEBOUNCE_MS = 500
 
 function formatTimeAgo(ts) {
@@ -14,11 +14,19 @@ function formatTimeAgo(ts) {
   return `${days} day${days !== 1 ? 's' : ''} ago`
 }
 
-function getDraftKey(contentHash) {
-  return contentHash ? `${STORAGE_PREFIX}${contentHash}` : null
+// Reaching localStorage itself throws when site data is blocked.
+function withStorage(action) {
+  try { return action(localStorage) } catch { return null }
 }
 
-export function useAnnotationDraft({ annotations, contentHash, submitted, enabled = true }) {
+// A draft from before an edit sits under the old hash too, which nothing reads once the file id copy is handled.
+function forgetEarlierVersion(data) {
+  if (data?.fileChanged && data.contentHash) {
+    withStorage((storage) => clearDraft(storage, { contentHash: data.contentHash }))
+  }
+}
+
+export function useAnnotationDraft({ annotations, contentHash, fileId, submitted, enabled = true }) {
   const [draftBanner, setDraftBanner] = useState(null)
   const draftDataRef = useRef(null)
   const timerRef = useRef(null)
@@ -26,82 +34,67 @@ export function useAnnotationDraft({ annotations, contentHash, submitted, enable
   const annotationsRef = useRef(annotations)
   annotationsRef.current = annotations
 
-  const key = getDraftKey(contentHash)
+  const file = useMemo(() => ({ contentHash, fileId }), [contentHash, fileId])
+  const hasFile = Boolean(contentHash || fileId)
 
   // Load draft on mount / tab switch
   useEffect(() => {
-    if (!key) {return}
+    if (!hasFile) {return}
 
     // If annotations are already in memory (tab switch), the draft is redundant
     const hasAnnotationsInState = annotationsRef.current.filter(a => a.type !== 'NOTES').length > 0
-
-    try {
-      const raw = localStorage.getItem(key)
-      if (raw && !hasAnnotationsInState) {
-        const data = JSON.parse(raw)
-        if (Array.isArray(data.annotations) && data.annotations.length > 0) {
-          draftDataRef.current = data
-          setDraftBanner({
-            count: data.annotations.length,
-            timeAgo: formatTimeAgo(data.ts || 0),
-          })
-        }
-      }
-    } catch {
-      // Corrupted draft — ignore
-    }
+    const data = hasAnnotationsInState ? null : withStorage((storage) => readDraft(storage, file))
+    draftDataRef.current = data
+    setDraftBanner(data ? { count: data.annotations.length, timeAgo: formatTimeAgo(data.ts) } : null)
     hasMountedRef.current = true
-  }, [key])
+  }, [file, hasFile])
 
   // Debounced auto-save on annotation changes (exclude AI Notes)
   useEffect(() => {
-    if (!key || submitted || !hasMountedRef.current || !enabled) {return}
+    if (!hasFile || submitted || !hasMountedRef.current || !enabled) {return}
     const userAnnotations = annotations.filter(a => a.type !== 'NOTES')
     if (userAnnotations.length === 0) {
-      // Clear draft when all user annotations removed
-      try { localStorage.removeItem(key) } catch { /* noop */ }
+      // Clear draft when all user annotations removed, but not one still waiting in the banner
+      if (!draftDataRef.current) { withStorage((storage) => clearDraft(storage, file)) }
       return
     }
 
     if (timerRef.current) {clearTimeout(timerRef.current)}
 
     timerRef.current = setTimeout(() => {
-      try {
-        localStorage.setItem(key, JSON.stringify({
-          annotations: userAnnotations,
-          ts: Date.now(),
-        }))
-      } catch {
-        // Storage full or unavailable — silent failure
-      }
+      withStorage((storage) => writeDraft(storage, file, userAnnotations, Date.now()))
     }, DEBOUNCE_MS)
 
     return () => {
       if (timerRef.current) {clearTimeout(timerRef.current)}
     }
-  }, [annotations, key, submitted, enabled])
+  }, [annotations, file, hasFile, submitted, enabled])
 
   // Clear draft on submit
   useEffect(() => {
-    if (submitted && key) {
-      try { localStorage.removeItem(key) } catch { /* noop */ }
+    if (submitted && hasFile) {
+      forgetEarlierVersion(draftDataRef.current)
+      withStorage((storage) => clearDraft(storage, file))
     }
-  }, [submitted, key])
+  }, [submitted, file, hasFile])
 
+  /** The draft's notes and whether the file changed since they were saved. */
   const restoreDraft = useCallback(() => {
     const data = draftDataRef.current
     setDraftBanner(null)
     draftDataRef.current = null
-    return data?.annotations || []
+    forgetEarlierVersion(data)
+    return { annotations: data?.annotations || [], fileChanged: Boolean(data?.fileChanged) }
   }, [])
 
   const dismissDraft = useCallback(() => {
+    forgetEarlierVersion(draftDataRef.current)
     setDraftBanner(null)
     draftDataRef.current = null
-    if (key) {
-      try { localStorage.removeItem(key) } catch { /* noop */ }
+    if (hasFile) {
+      withStorage((storage) => clearDraft(storage, file))
     }
-  }, [key])
+  }, [file, hasFile])
 
   return { draftBanner, restoreDraft, dismissDraft }
 }

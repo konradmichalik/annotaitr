@@ -100,7 +100,9 @@ function formatAnnotation(ann, block, level) {
   const { what, where, tag = '', body } = describeAnnotation(ann, block)
   const handle = annotationHandle(ann.id)
   const handleTag = handle ? ` [#${handle}]` : ''
-  return `${level} ${ann.number}. ${intentWord(ann.intent)} · ${what} (${where})${tag}${handleTag}\n${body}\n`
+  // A restored draft note whose text is gone from the file has no line left to point at.
+  const place = ann.unanchored ? '' : ` (${where})`
+  return `${level} ${ann.number}. ${intentWord(ann.intent)} · ${what}${place}${tag}${handleTag}\n${body}\n`
 }
 
 /**
@@ -124,8 +126,8 @@ function getBlockOrder(blockId, blocks) {
 
 function sortAnnotations(annotations, blocks) {
   return [...annotations].sort((a, b) => {
-    const blockA = getBlockOrder(a.blockId, blocks)
-    const blockB = getBlockOrder(b.blockId, blocks)
+    const blockA = a.unanchored ? Infinity : getBlockOrder(a.blockId, blocks)
+    const blockB = b.unanchored ? Infinity : getBlockOrder(b.blockId, blocks)
     if (blockA !== blockB) {return blockA - blockB}
     return a.startOffset - b.startOffset
   })

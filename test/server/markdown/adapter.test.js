@@ -1,6 +1,7 @@
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { writeFile, rm } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
 import { describe, it, expect, afterEach } from 'vitest'
 import { buildMarkdownServer } from '../../../server/markdown/adapter.js'
 import { createChangesRouter } from '../../../server/changes/routes.js'
@@ -35,6 +36,24 @@ describe('buildMarkdownServer', () => {
     server = await buildMarkdownServer({ filePaths: [readablePath], kind: 'changes' })
     const body = await (await fetch(`${server.url}/api/files`)).json()
     expect(body.data.files[0].kind).toBe('changes')
+  })
+
+  it('gives each file a stable id from its absolute path, without sending the path', async () => {
+    await writeFile(readablePath, '# Hello')
+    server = await buildMarkdownServer({ filePaths: [readablePath] })
+    const expected = createHash('sha256').update(readablePath).digest('hex')
+    const files = await (await fetch(`${server.url}/api/files`)).json()
+    expect(files.data.files[0].fileId).toBe(expected)
+    expect(JSON.stringify(files.data)).not.toContain(`"${readablePath}"`)
+    const single = await (await fetch(`${server.url}/api/file`)).json()
+    expect(single.data.fileId).toBe(expected)
+  })
+
+  it('gives a changes walkthrough no file id, since it is regenerated each run', async () => {
+    await writeFile(readablePath, '# Changes')
+    server = await buildMarkdownServer({ filePaths: [readablePath], kind: 'changes' })
+    const body = await (await fetch(`${server.url}/api/files`)).json()
+    expect(body.data.files[0].fileId).toBeNull()
   })
 
   it('serves no files next to a changes walkthrough', async () => {

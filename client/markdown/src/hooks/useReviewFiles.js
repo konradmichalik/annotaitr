@@ -17,7 +17,8 @@ function toReviewFile(data) {
     hashMismatch: data.hashMismatch || false,
     isPlainText: data.isPlainText || false,
     kind: data.kind || 'document',
-    label: data.label || null
+    label: data.label || null,
+    fileId: data.fileId || null
   }
 }
 

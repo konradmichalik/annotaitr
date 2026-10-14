@@ -41,8 +41,8 @@ export function formatAnnotationsForExport(annotations, blocks, filePath) {
   }
 
   const sorted = [...annotations].sort((a, b) => {
-    const blockA = blocks.findIndex(blk => blk.id === a.blockId)
-    const blockB = blocks.findIndex(blk => blk.id === b.blockId)
+    const blockA = a.unanchored ? Infinity : blocks.findIndex(blk => blk.id === a.blockId)
+    const blockB = b.unanchored ? Infinity : blocks.findIndex(blk => blk.id === b.blockId)
     if (blockA !== blockB) {return blockA - blockB}
     return a.startOffset - b.startOffset
   })
@@ -108,18 +108,20 @@ export function formatAnnotationsForExport(annotations, blocks, filePath) {
     const lineRef = diffLineRef(block, linesBeforeSelection, linesBeforeSelection + newlinesInSelection) ??
       (startLine === endLine ? `Line ${startLine}` : `Lines ${startLine}-${endLine}`)
 
+    // A restored draft note whose text is gone from the file has no line left to point at.
+    const place = ann.unanchored ? '' : ` (${lineRef})`
     output += `## ${heading}`
 
     if (ann.type === 'DELETION') {
-      output += `Remove (${lineRef})${tag}\n\n`
+      output += `Remove${place}${tag}\n\n`
       output += `\`\`\`\n${ann.originalText}\n\`\`\`\n\n`
     } else if (ann.type === 'COMMENT') {
       const labelTag = ann.label ? ` [${ann.label.emoji} ${ann.label.text}]` : ''
-      output += `Comment (${lineRef})${labelTag}${tag}\n\n`
+      output += `Comment${place}${labelTag}${tag}\n\n`
       output += `\`\`\`\n${ann.originalText}\n\`\`\`\n\n`
       output += `> ${ann.text}\n\n`
     } else if (ann.type === 'INSERTION') {
-      output += `Insert text (${lineRef})${tag}\n\n`
+      output += `Insert text${place}${tag}\n\n`
       if (ann.afterContext) {
         output += `After: \`${ann.afterContext}\`\n\n`
       }
