@@ -34,9 +34,7 @@ If the feedback ends with a `Session:` line, answer each mark that carries a han
 
 ## Re-review loop
 
-After applying all changes, re-open the annotator on the same target and repeat until `APPROVED:` or `APPROVED WITH NOTES:`. For Markdown, add `--feedback-notes` with a JSON array of `{"text": "...", "line": <line in the updated file>}` entries (omit `line` for general notes). Start each note with the handle it answers and a few words naming the passage:
+After applying all changes and replying to the handles as described above, re-open the annotator on the same target and repeat until `APPROVED:` or `APPROVED WITH NOTES:`. Every mode keeps the session, Markdown included. For Markdown, `--feedback-notes` is only for notes tied to no handle, such as a summary of what changed: a JSON array of `{"text": "...", "line": <line in the updated file>}` entries (omit `line` for general notes):
 
-annotaitr --origin gemini --feedback-notes '[{"text":"#a3f19c2e (intro): rewrote for clarity","line":5}]' <file.md>
-
-For an image, video, PDF or URL, just re-run the command, after replying to the handles as described above.
+annotaitr --origin gemini --feedback-notes '[{"text":"Split the install section into two steps","line":12}]' <file.md>
 """

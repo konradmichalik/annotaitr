@@ -99,15 +99,14 @@ A tab that stops answering its heartbeat resolves the decision as disconnected i
 
 ### Sessions and replies
 
-Image mode keeps a session across rounds. Each decision with marks is written to a session file, and the feedback ends with a `Session:` line. The agent answers each handle with `annotaitr reply --status ...` (see [review sessions](usage/sessions.md)).
+Every mode keeps a session across rounds: image mode per image, URL, video or PDF, markdown mode per set of files, `annotaitr changes` per repository, branch and comparison. Each decision with marks is written to a session file, and the feedback ends with a `Session:` line. The agent answers each handle with `annotaitr reply --status ...` (see [review sessions](usage/sessions.md)).
 
-- Reopening the same image, URL, video or PDF within 24 hours starts the next round. A clipboard image has no identity to find and continues only with `--session <id>`.
-- The next round shows the previous marks and the agent's replies in a layer that a "Previous round" toggle hides. The reviewer can answer a thread there, and the reply travels with the next decision.
+- Reopening the same target within 24 hours starts the next round. A clipboard image has no identity to find and continues only with `--session <id>`.
+- In image mode the next round shows the previous marks and the agent's replies in a layer that a "Previous round" toggle hides. In markdown mode they are listed in the panel's **Replies** tab and underlined dashed in the preview. The reviewer can answer a thread there, and the reply travels with the next decision.
 - The feedback lists new marks first, then a "Replies to round N" section. Answered threads continue on the same handle.
 - Approving while the agent's questions are unanswered asks for confirmation first.
 - Marks whose position no longer matches, for example after a re-capture, are drawn as ghosts.
-
-Markdown mode has no sessions yet. The design is in [the inline replies concept](concepts/inline-agent-replies.md).
+- A Markdown note is found again by its quoted text, never by its block id: unchanged file (exact), the quote in exactly one place (moved), or else listed as no longer in the document (orphan). No fuzzy matching, a confident wrong place is worse than none.
 
 ## See also
 

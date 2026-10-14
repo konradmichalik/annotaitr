@@ -88,23 +88,20 @@ fixed for as long as the annotation exists.
 Use it whenever you refer to a specific annotation when reporting back to the
 user. The reviewer never sees handles in the annotator, so pair each one with a
 few words naming the passage: "fixed `#a3f19c2e` (intro wording), left
-`#7b210e44` (install steps) alone because the intro already covers it". In
-markdown reviews, also start each feedback note with the handle of the
-annotation it answers; image mode has no feedback notes. If a heading carries
+`#7b210e44` (install steps) alone because the intro already covers it". If a heading carries
 no handle, refer to that annotation by its number and quoted text instead, and
 never invent one.
 
-If the image, video or PDF feedback ends with a `Session:` line, answer each
-mark that carries a handle after applying the changes: run one `annotaitr reply --session <id> --to
+If the feedback ends with a `Session:` line (every mode, `annotaitr changes`
+included), answer each mark that carries a handle after applying the changes: run one `annotaitr reply --session <id> --to
 <handle> --status <status> --text "..."` per handle, with the handle quoted
 from the feedback and `<status>` one of `applied`, `partial`, `declined`,
 `deferred` or `question`. The text says what changed, what is left, why you
 declined, when you will do it, or the question. Replies can run in parallel. A
 `question` reply only records the question, so ask a blocking one in chat too.
-Re-open the target afterwards so the reviewer sees the replies. Markdown
-feedback has no session yet.
+Re-open the target afterwards so the reviewer sees the replies.
 
-Image feedback can also contain a `## Replies to round N` section: those
+The feedback can also contain a `## Replies to round N` section: those
 threads continue an earlier discussion, so act on the reviewer's reply and
 answer it with `annotaitr reply` on the same handle. A `Feedback: N replies to
 round N, no new marks.` decision is a valid decision with work in it.
@@ -116,7 +113,7 @@ notes as context, and stop.
 
 ## Re-review loop
 
-After applying all changes, re-open the annotator on the same target (for
-markdown, add `--feedback-notes` describing what changed, as in
-`/annotaitr:md`; for an image or URL, just re-run) and repeat until
-`APPROVED:` or `APPROVED WITH NOTES:`.
+After applying all changes and replying per handle, re-open the annotator on
+the same target and repeat until `APPROVED:` or `APPROVED WITH NOTES:`. For
+markdown, `--feedback-notes` is only for notes tied to no handle, such as a
+summary of what changed, as in `/annotaitr:md`.
