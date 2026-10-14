@@ -212,7 +212,7 @@ A status dot plus the words, never the dot alone. The tooltip names the caller (
 - A thread from an earlier round shows the reviewer's note, the agent's reply and the reviewer's pending reply in order.
 - Agent status is a chip with icon and word: Applied, Partial, Declined, Deferred, Question, No reply. Never colour alone.
 - A pending reply is dashed and says `Pending, sent with your decision`.
-- In changes a thread opens inline below its line, headed `Round n · note m` with intent and status chip, and offers `Reply` and `Mark resolved`. There is no separate resolved list: the thread stays under `Replies`.
+- In Markdown and changes a thread opens in place below its card in the `Replies` tab, with its number, status chip and `Reply`; its earlier text is underlined dashed in the document. Opening it inline below its diff line, with `Mark resolved`, belongs to the deferred later rounds of changes (see Diff, later rounds).
 
 ## Decision
 
