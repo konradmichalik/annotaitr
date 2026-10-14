@@ -173,3 +173,38 @@ test('marking a file as reviewed folds its card to the explanation', async ({ pa
     }
   })
 })
+
+test('a second round of the same changes shows the agent\'s reply and sends the answer', async ({ page }) => {
+  const sessions = await mkdtemp(join(tmpdir(), 'annotaitr-changes-sessions-'))
+  const env = { ANNOTAITR_SESSION_DIR: join(sessions, 'store') }
+  try {
+    await withRepo(async ({ dir }) => {
+      const first = startCli(['changes'], env, { cwd: dir })
+      const url = await first.url
+      const { data: { files: [walkthrough] } } = await (await fetch(`${url}/api/files`)).json()
+      const general = { id: 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d', type: 'COMMENT', targetType: 'global', blockId: '', startOffset: 0, endOffset: 0, originalText: '', text: 'Why per workspace?' }
+      await fetch(`${url}/api/feedback`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ files: [{ path: walkthrough.path, blocks: [], annotations: [general] }] }) })
+      await first.exited
+      const sessionId = first.stdout().match(/Session: ([0-9a-f]{12}) \(round 1\)/)[1]
+      execFileSync('node', [join(process.cwd(), 'index.js'), 'reply', '--session', sessionId, '--to', 'a3f19c2e', '--status', 'question', '--text', 'Per user too?'], { env: { ...process.env, ...env } })
+
+      const second = startCli(['changes'], env, { cwd: dir })
+      try {
+        await page.goto(await second.url)
+        const panel = page.getByRole('region', { name: /Round 1 replies/ })
+        await panel.getByRole('button', { name: /general comment.*question/ }).click()
+        await page.getByLabel('Reply to the agent').fill('Per workspace is enough')
+        await panel.locator('.reply-form-send').click()
+        await page.getByRole('button', { name: /^Send feedback/ }).click()
+        await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible()
+        await second.exited
+        expect(second.stdout()).toContain('### [#a3f19c2e] General comment\n> Round 1, general comment: Why per workspace?\nAgent (question): Per user too?\nReviewer: Per workspace is enough\n')
+        expect(second.stdout()).toContain(`Session: ${sessionId} (round 2)`)
+      } finally {
+        if (second.child.exitCode === null) { second.child.kill() }
+      }
+    })
+  } finally {
+    await rm(sessions, { recursive: true, force: true })
+  }
+})
