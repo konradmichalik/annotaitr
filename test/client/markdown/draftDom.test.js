@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach } from 'vitest'
 import Highlighter from 'web-highlighter'
-import { blockTexts, textAnchorMetas, reanchorToDom } from '../../../client/markdown/src/utils/viewerDom.js'
+import { blockTexts, textAnchorMetas, reanchorToDom, blockSelector, findAnnotationElement } from '../../../client/markdown/src/utils/viewerDom.js'
 
 function render(html) {
   const host = document.createElement('article')
@@ -127,5 +127,25 @@ describe('reanchorToDom', () => {
       ['token', 'block-3', false],
       ['token', 'block-3', true]
     ])
+  })
+})
+
+describe('blockSelector', () => {
+  // A Read view block id carries its file's path, which may hold quotes. jsdom's selector engine
+  // cannot match an escaped backslash, so that case is checked in the browser (changes.spec.js).
+  const ids = ['read:docs/say "hi".md:block-0', 'block-2']
+
+  it('finds a block whatever its path holds', () => {
+    const host = render(ids.map((id) => `<p data-block-id="${id.replace(/"/g, '&quot;')}">Text</p>`).join(''))
+    for (const id of ids) {
+      expect(host.querySelector(blockSelector(id))?.dataset.blockId).toBe(id)
+    }
+  })
+
+  it('lets a note in such a block be anchored and found', () => {
+    const id = ids[0]
+    const host = render(`<p data-block-id="${id.replace(/"/g, '&quot;')}">Quoted text</p>`)
+    expect(textAnchorMetas(host, id, 0, 'Quoted')).not.toBeNull()
+    expect(findAnnotationElement(host, { blockId: id, targetType: 'pinpoint' })).toBe(host.firstChild)
   })
 })

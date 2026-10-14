@@ -5,6 +5,7 @@ import { LabelIcon } from './LabelIcon.jsx'
 import { AgentNotes } from './AgentNotes.jsx'
 import { GeneralCommentField } from './GeneralCommentField.jsx'
 import { flashElement } from '../utils/flashElement.js'
+import { blockSelector } from '../utils/viewerDom.js'
 import { noteNumbers, noteLocation, sortNotes } from '../utils/noteNumbers.js'
 import { isGeneralComment } from '../hooks/useReviewDecision.js'
 import { isNumbered } from '../../../shared/utils/intents.js'
@@ -31,7 +32,7 @@ const EMPTY_KEYS = [
 ]
 
 function markOf(ann) {
-  const block = `[data-block-id="${ann.blockId}"]`
+  const block = blockSelector(ann.blockId)
   if (ann.type === 'INSERTION' || ann.targetType === 'pinpoint') { return document.querySelector(block) }
   if (ann.targetType === 'image') { return document.querySelector(`${block} .annotatable-image-wrapper[data-image-src="${CSS.escape(ann.imageSrc)}"]`) }
   if (ann.targetType === 'diagram') { return document.querySelector(`${block} .mermaid-diagram`) || document.querySelector(block) }

@@ -16,7 +16,7 @@ import { formatLabelText } from '../../utils/quickLabels.js'
 import { getItem, setItem } from '../../../../shared/utils/storage.js'
 import { groupHtmlWrappers } from '../../utils/htmlWrappers.js'
 import { isOpenableFileLink } from '../../utils/links.js'
-import { getLinkInfo, removeInsertionMarker, createPersistentInsertionMarker, createTemporaryInsertionMarker, insertionPointAfter, findAnnotationElement, diffLineRange, reanchorToDom, textAnchorMetas } from '../../utils/viewerDom.js'
+import { getLinkInfo, removeInsertionMarker, createPersistentInsertionMarker, createTemporaryInsertionMarker, insertionPointAfter, findAnnotationElement, diffLineRange, reanchorToDom, textAnchorMetas, blockSelector } from '../../utils/viewerDom.js'
 import { createInsertionAnnotation, createTokenAnnotation, createElementAnnotation, getBlockLabel } from '../../utils/viewerAnnotations.js'
 
 const PINPOINT_HINT_LEARNED_KEY = 'md-annotator-pinpoint-hint-learned'
@@ -83,7 +83,7 @@ export const Viewer = forwardRef(function Viewer({
     enrichToolbarState,
     refreshAnchor: changes ? refreshAnchor : undefined,
     restoreInsertion: (ann) => {
-      const blockEl = containerRef.current?.querySelector(`[data-block-id="${ann.blockId}"]`)
+      const blockEl = containerRef.current?.querySelector(blockSelector(ann.blockId))
       if (!blockEl) { return false }
       if (!blockEl.querySelector(`[data-insertion-id="${ann.id}"]`)) {
         createPersistentInsertionMarker(ann.id, blockEl, ann.startOffset, ann.number)
@@ -137,7 +137,7 @@ export const Viewer = forwardRef(function Viewer({
       removeInsertionMarker(toolbarState.element)
       if (insertionText) {
         const newAnnotation = createInsertionAnnotation(toolbarState.insertionData, insertionText)
-        const blockEl = containerRef.current?.querySelector(`[data-block-id="${newAnnotation.blockId}"]`)
+        const blockEl = containerRef.current?.querySelector(blockSelector(newAnnotation.blockId))
         if (blockEl) {
           createPersistentInsertionMarker(newAnnotation.id, blockEl, newAnnotation.startOffset)
         }

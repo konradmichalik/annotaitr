@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { flashElement } from '../utils/flashElement.js'
+import { blockSelector } from '../utils/viewerDom.js'
 
 /** Read-only notes the agent left on applied changes, as context for this round. */
 export function AgentNotes({ notes, selectedAnnotationId, onSelect }) {
@@ -26,7 +27,7 @@ export function AgentNotes({ notes, selectedAnnotationId, onSelect }) {
               onSelect(ann.id)
               if (ann.targetType === 'global') {return}
               const el = document.querySelector(`[data-highlight-id="${ann.id}"]`)
-                || document.querySelector(`[data-block-id="${ann.blockId}"]`)
+                || document.querySelector(blockSelector(ann.blockId))
               if (el) {
                 flashElement(el)
               }
