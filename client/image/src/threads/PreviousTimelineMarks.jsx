@@ -1,4 +1,4 @@
-import { statusDisplay, threadNumber, threadRound } from './threadView.js'
+import { statusDisplay, threadNumber, threadRound } from '../../../shared/threads/threadView.js'
 
 /** What an earlier-round mark is called: its round, number and the agent's status. */
 export function previousMarkName(thread, round) {

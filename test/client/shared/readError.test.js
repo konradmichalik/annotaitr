@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { readError } from '../../../client/image/src/utils/readError.js'
+import { readError } from '../../../client/shared/utils/readError.js'
 
 describe('readError', () => {
   it('returns the error the server sent', async () => {

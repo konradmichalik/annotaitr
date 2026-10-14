@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { readError } from '../utils/readError.js'
+import { readError } from '../../../shared/utils/readError.js'
 
 // Long enough for any single remark, short enough that a forgotten
 // recording does not run on and turn into a huge upload.

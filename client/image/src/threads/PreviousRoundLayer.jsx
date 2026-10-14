@@ -1,5 +1,6 @@
 import { annotationTopAnchor } from '../utils/drawing.js'
-import { statusDisplay, threadStatus, badgeShowsNumber, threadNumber, pendingReplies } from './threadView.js'
+import { badgeShowsNumber } from './threadView.js'
+import { statusDisplay, threadStatus, threadNumber, pendingReplies } from '../../../shared/threads/threadView.js'
 
 const BADGE_HEIGHT = 20
 const MARKER_SIZE = 16

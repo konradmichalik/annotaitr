@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { orderDocumentAnnotations, pageAnnotationCounts, stepPage, isPaged } from './documentPages.js'
 import { readLastPage, rememberLastPage } from './lastPage.js'
-import { readError } from '../utils/readError.js'
+import { readError } from '../../../shared/utils/readError.js'
 
 const NO_PAGES = []
 const NO_TEXT = { elements: [], words: [] }

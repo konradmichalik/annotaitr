@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { readPreviousRound, threadsQuery } from './threadView.js'
+import { threadsQuery } from './threadView.js'
+import { readPreviousRound } from '../../../shared/threads/threadView.js'
 
 const NONE = { round: null, threads: [] }
 

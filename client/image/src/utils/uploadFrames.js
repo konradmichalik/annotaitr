@@ -1,4 +1,4 @@
-import { readError } from './readError.js'
+import { readError } from '../../../shared/utils/readError.js'
 
 /**
  * Hand the server every frame its output needs: ask which times it wants,
