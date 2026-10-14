@@ -43,6 +43,10 @@ describe('RepliesPanel', () => {
     expect(render([thread('a1')], { multiFile: true })).toContain('<h3 class="note-file-title">a.md</h3>')
   })
 
+  it('keeps the path of a single file out, a changes walkthrough lives at an internal path', () => {
+    expect(render([thread('a1', { place: { path: '.git/annotaitr/changes.md', where: 'Line 1', line: 1 } })])).not.toContain('changes.md')
+  })
+
   it('lists text that is gone under its own heading with the original quote', () => {
     const html = render([thread('o1', { anchor: 'orphan', reason: 'The text is no longer in the document', place: null, quote: 'old intro' })])
     expect(html).toContain('No longer in the document')

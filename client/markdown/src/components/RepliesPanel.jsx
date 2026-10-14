@@ -95,7 +95,7 @@ export function RepliesPanel({ round, threads, multiFile, onLocate, onReload, fo
         {toSend > 0 && <span className="previous-round-to-send">· {toSend} to send</span>}
       </h3>
       {files.map((group) => (
-        <section key={group.path ?? 'general'} className="note-file" aria-label={group.path ?? 'General comments'}>
+        <section key={group.path ?? 'general'} className="note-file" aria-label={multiFile ? (group.path ?? 'General comments') : undefined}>
           {multiFile && group.path && <h3 className="note-file-title">{group.path}</h3>}
           <ul className="previous-round-list"><ThreadItems threads={group.threads} {...items} /></ul>
         </section>
