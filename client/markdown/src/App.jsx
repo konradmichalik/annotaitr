@@ -377,29 +377,39 @@ export default function App() {
   useEffect(() => {
     if (!draftAwaitingPreview || effectiveViewMode !== 'preview') {return}
     setDraftAwaitingPreview(null)
-    applyDraft(reanchorDraft(draftAwaitingPreview))
+    applyDraft(draftAwaitingPreview.reanchor ? reanchorDraft(draftAwaitingPreview.annotations) : draftAwaitingPreview.annotations)
   }, [draftAwaitingPreview, effectiveViewMode, applyDraft, reanchorDraft])
 
   const handleRestoreDraft = useCallback(() => {
     const draft = restoreDraft()
     if (draft.annotations.length === 0) {return}
-    if (!draft.fileChanged) {
-      applyDraft(draft.annotations)
-    } else if (effectiveViewMode !== 'preview' && !isPlainTextFile) {
-      setDraftAwaitingPreview(draft.annotations)
+    // The changes view draws no notes, so a restore there waits for the preview like one from the source view.
+    if (effectiveViewMode === 'changes' || (draft.fileChanged && effectiveViewMode === 'source' && !isPlainTextFile)) {
+      setDraftAwaitingPreview({ annotations: draft.annotations, reanchor: draft.fileChanged })
       setViewMode('preview')
+    } else if (!draft.fileChanged) {
+      applyDraft(draft.annotations)
     } else {
       applyDraft(reanchorDraft(draft.annotations))
     }
   }, [restoreDraft, applyDraft, reanchorDraft, effectiveViewMode, isPlainTextFile, setViewMode])
 
+  // Undo, redo and search act on the notes on the page, which the read-only changes view does not draw.
+  const inChangesView = effectiveViewMode === 'changes'
+  const leaveChangesView = useCallback(() => {
+    if (inChangesView) { setViewMode('preview') }
+    return inChangesView
+  }, [inChangesView, setViewMode])
+
   const handleUndo = useCallback(() => {
+    leaveChangesView()
     annDispatch({ type: 'UNDO' })
-  }, [annDispatch])
+  }, [annDispatch, leaveChangesView])
 
   const handleRedo = useCallback(() => {
+    leaveChangesView()
     annDispatch({ type: 'REDO' })
-  }, [annDispatch])
+  }, [annDispatch, leaveChangesView])
 
   const handleSelectAnnotation = useCallback((id) => {
     setSelectedAnnotationId(id)
@@ -428,12 +438,15 @@ export default function App() {
   })
 
   const handleOpenSearch = useCallback(() => {
+    const left = leaveChangesView()
     if (crossFileSearchProps) {
       crossFileSearchState.openSearch()
+    } else if (left) {
+      setTimeout(() => viewerRef.current?.openSearch(), 200)
     } else {
       viewerRef.current?.openSearch()
     }
-  }, [crossFileSearchProps, crossFileSearchState])
+  }, [crossFileSearchProps, crossFileSearchState, leaveChangesView])
 
   useReviewShortcuts({ onSearch: handleOpenSearch, onUndo: handleUndo, onRedo: handleRedo })
   const pickMode = useCallback((mode) => setPinpointMode(mode === 'pinpoint'), [])
