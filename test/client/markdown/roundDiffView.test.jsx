@@ -10,7 +10,7 @@ import { parseMarkdownToBlocks } from '../../../client/markdown/src/utils/parser
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
 const BEFORE = '# Plan\n\nKeep this.\n\nOld step.\n\nDrop this.\n'
-const AFTER = '# Plan\n\nKeep this.\n\nNew step.\n\nA new ending.\n'
+const AFTER = '# Plan\n\nKeep this.\n\nNew step.\n\nDrop this now.\n'
 const diffed = roundDiffOf({ content: AFTER, blocks: parseMarkdownToBlocks(AFTER), previousRound: { round: 1, content: BEFORE }, kind: 'document' })
 
 let host
@@ -27,7 +27,7 @@ afterEach(() => {
 })
 
 describe('RoundDiffBar', () => {
-  const mixed = roundDiffOf({ content: 'A2.\n\nC.\n\nD.\n', blocks: parseMarkdownToBlocks('A2.\n\nC.\n\nD.\n'), previousRound: { round: 1, content: 'A.\n\nB.\n\nC.\n' }, kind: 'document' })
+  const mixed = roundDiffOf({ content: 'Alpha one again.\n\nC.\n\nD.\n', blocks: parseMarkdownToBlocks('Alpha one again.\n\nC.\n\nD.\n'), previousRound: { round: 1, content: 'Alpha one.\n\nB.\n\nC.\n' }, kind: 'document' })
   const toggle = () => host.querySelector('button')
 
   it('offers the changes view as a toggle naming the round, with what changed', () => {
