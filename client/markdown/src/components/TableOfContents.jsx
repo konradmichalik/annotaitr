@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 
+// A heading inside a quote is quoted text, not a section of the document.
+const isOutlineHeading = (block) => block.type === 'heading' && !block.parentId
+
 /**
  * Build a map: headingBlockId → Set of blockIds that belong to that section.
  * A section spans from a heading to the next heading of equal or higher level.
@@ -9,7 +12,7 @@ function buildSectionMap(blocks) {
   const sectionMap = new Map()
 
   for (let i = 0; i < blocks.length; i++) {
-    if (blocks[i].type === 'heading') {
+    if (isOutlineHeading(blocks[i])) {
       headings.push({ index: i, id: blocks[i].id, level: blocks[i].level })
       sectionMap.set(blocks[i].id, new Set())
     }
@@ -20,7 +23,7 @@ function buildSectionMap(blocks) {
     const sectionBlocks = sectionMap.get(headings[hi].id)
 
     for (let i = start; i < blocks.length; i++) {
-      if (blocks[i].type === 'heading') {
+      if (isOutlineHeading(blocks[i])) {
         break
       }
       sectionBlocks.add(blocks[i].id)
@@ -76,10 +79,10 @@ export function TableOfContents({ blocks, annotations = [], collapsed, width, fi
   const observerRef = useRef(null)
   const tocRef = useRef(null)
 
-  const hasIntro = useMemo(() => blocks.length > 0 && blocks[0].type !== 'heading', [blocks])
+  const hasIntro = useMemo(() => blocks.length > 0 && !isOutlineHeading(blocks[0]), [blocks])
 
   const headings = useMemo(() => {
-    const h = blocks.filter(b => b.type === 'heading')
+    const h = blocks.filter(isOutlineHeading)
     if (hasIntro && h.length > 0) {
       return [{ id: '__intro__', level: h[0].level, content: 'Introduction' }, ...h]
     }
@@ -91,7 +94,7 @@ export function TableOfContents({ blocks, annotations = [], collapsed, width, fi
     if (hasIntro) {
       const introBlocks = new Set()
       for (const block of blocks) {
-        if (block.type === 'heading') { break }
+        if (isOutlineHeading(block)) { break }
         introBlocks.add(block.id)
       }
       map.set('__intro__', introBlocks)

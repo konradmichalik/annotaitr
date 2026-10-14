@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { parseMarkdownToBlocks } from '../../../client/markdown/src/utils/parser.js'
 import { exportFeedback, exportMultiFileFeedback, formatApprovalOutput, intentSummary } from '../../../server/markdown/feedback.js'
 
 const makeBlock = (overrides = {}) => ({
@@ -466,5 +467,29 @@ describe('unanchored notes', () => {
 
     expect(output.indexOf('## 2. Change · Text (Line 9)')).toBeGreaterThan(-1)
     expect(output.indexOf('## 2. Change · Text (Line 9)')).toBeLessThan(output.indexOf('## 1. Change · Text\n'))
+  })
+})
+
+describe('exportFeedback inside a quote', () => {
+  const blocks = parseMarkdownToBlocks('Intro\n\n> [!NOTE]\n> ```js\n> const a = 1\n> ```\n> - one\n> - two')
+
+  it('points a selection in quoted code at its source line', () => {
+    const code = blocks.find((b) => b.type === 'code')
+    const ann = makeAnnotation({ blockId: code.id, originalText: 'const a', startOffset: 0, endOffset: 7 })
+    expect(exportFeedback([ann], blocks)).toContain('## 1. Change · Text (Line 5)')
+  })
+
+  it('points a selection in a quoted list item at its source line', () => {
+    const item = blocks.find((b) => b.content === 'two')
+    const ann = makeAnnotation({ blockId: item.id, originalText: 'two', startOffset: 0, endOffset: 3 })
+    expect(exportFeedback([ann], blocks)).toContain('## 1. Change · Text (Line 8)')
+  })
+})
+
+describe('exportFeedback in a plain alert', () => {
+  it('points a selection at the alert text line, not the marker line', () => {
+    const blocks = parseMarkdownToBlocks('Intro\n\n> [!NOTE]\n> Text')
+    const ann = makeAnnotation({ blockId: blocks[1].id, originalText: 'Text', startOffset: 0, endOffset: 4 })
+    expect(exportFeedback([ann], blocks)).toContain('## 1. Change · Text (Line 4)')
   })
 })

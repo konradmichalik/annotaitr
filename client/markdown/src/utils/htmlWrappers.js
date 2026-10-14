@@ -2,10 +2,12 @@
  * Grouping and attribute helpers for balanced HTML wrappers (<details>, <div>, …).
  *
  * The parser emits a wrapper as three flat blocks (open marker, inner blocks,
- * close marker) so every inner block stays individually annotatable. Rendering
- * them flat would break elements whose semantics depend on real nesting: an
- * `innerHTML = '<details>'` is auto-closed by the browser, so the accordion
- * never contains its content. Grouping rebuilds that nesting for the renderer.
+ * close marker) and a quote with nested blocks as a container block followed by
+ * children that carry its id in `parentId`, so every inner block stays
+ * individually annotatable. Rendering them flat would break elements whose
+ * semantics depend on real nesting: an `innerHTML = '<details>'` is auto-closed
+ * by the browser, so the accordion never contains its content, and quoted code
+ * would fall outside its quote. Grouping rebuilds that nesting for the renderer.
  */
 
 import { HTML_MIXED_CONTENT_TAGS } from './parser.js'
@@ -43,17 +45,39 @@ export function parseHtmlAttributes(openTag) {
   return props
 }
 
+/** Whether `block` sits somewhere inside the quote with `quoteId`, following `parentId` links. */
+function isInQuote(block, quoteId, parentOf) {
+  let parentId = block.parentId
+  while (parentId) {
+    if (parentId === quoteId) { return true }
+    parentId = parentOf.get(parentId)
+  }
+  return false
+}
+
 /**
- * Turns the flat block list into a shallow tree of
- * `{ kind: 'block', block }` and `{ kind: 'wrapper', block, children }` nodes.
+ * Turns the flat block list into a shallow tree of `{ kind: 'block', block }`,
+ * `{ kind: 'wrapper', block, children }` and `{ kind: 'quote', block, children }`
+ * nodes. A quote's children are the blocks whose `parentId` leads to it.
  * Unmatched markers stay plain blocks so a malformed document still renders.
  */
 export function groupHtmlWrappers(blocks) {
   const root = []
   const stack = []
+  const parentOf = new Map(blocks.map((block) => [block.id, block.parentId]))
+  const top = () => stack[stack.length - 1]
 
   for (const block of blocks) {
-    const target = stack.length > 0 ? stack[stack.length - 1].children : root
+    // A quote has no close marker: it ends at the first block outside it.
+    while (top()?.kind === 'quote' && !isInQuote(block, top().block.id, parentOf)) { stack.pop() }
+    const target = top()?.children ?? root
+
+    if ((block.type === 'blockquote' || block.type === 'alert') && block.nested) {
+      const node = { kind: 'quote', block, children: [] }
+      target.push(node)
+      stack.push(node)
+      continue
+    }
 
     if (block.type === 'html' && block.htmlRole === 'open' && isWrapperTag(block.htmlTag)) {
       const node = { kind: 'wrapper', block, children: [] }
@@ -63,7 +87,7 @@ export function groupHtmlWrappers(blocks) {
     }
 
     if (block.type === 'html' && block.htmlRole === 'close') {
-      const openNode = stack[stack.length - 1]
+      const openNode = top()
       if (openNode && openNode.block.htmlTag === block.htmlTag) {
         stack.pop()
         continue
