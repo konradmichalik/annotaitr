@@ -18,7 +18,7 @@ describe('markdownSessionTarget', () => {
     expect(markdownSessionTarget({ kind: 'markdown', label: 'a.md' }, files)).toEqual({
       kind: 'markdown', label: 'a.md', files: [{ path: '/p/a.md', contentHash: 'h1', content: '# A\n' }]
     })
-    const changes = { kind: 'changes', label: 'x → main', head: 'abc', mergeBase: 'def', stateHash: '123' }
+    const changes = { kind: 'changes', label: 'x → main' }
     expect(markdownSessionTarget(changes, files)).toEqual({ ...changes, files: [{ path: '/p/a.md', contentHash: 'h1' }] })
   })
 })

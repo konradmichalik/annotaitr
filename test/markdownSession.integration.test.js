@@ -8,6 +8,8 @@ import { startCli } from './helpers/cli.js'
 const A = 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d'
 const B = 'b7210e44-1b4d-4f7a-9c3e-2d5f8a1b6c4d'
 const DOC = '# Guide\n\nThe intro says hello to everyone.\n\nThis goodbye paragraph will go.\n'
+// Keeps the second change in a hunk of its own, far from the marked line.
+const FILLER = Array.from({ length: 8 }, (_, i) => `// line ${i + 3}\n`).join('')
 const gitEnv = { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@example.com', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@example.com' }
 
 const note = (id, blockId, originalText, text) => ({ id, type: 'COMMENT', blockId, startOffset: 0, endOffset: originalText.length, originalText, text, intent: 'change' })
@@ -103,11 +105,11 @@ describe('a changes review session across a new commit', () => {
     repo = await realpath(await mkdtemp(join(tmpdir(), 'annotaitr-changes-session-it-')))
     env = { ANNOTAITR_SESSION_DIR: join(repo, '..', `${repo.split('/').pop()}-sessions`) }
     git('init', '-q', '-b', 'main')
-    await writeFile(join(repo, 'a.js'), 'const a = 1\nconst b = 2\n')
+    await writeFile(join(repo, 'a.js'), `const a = 1\nconst b = 2\n${FILLER}const far = 1\n`)
     git('add', '.')
     git('commit', '-q', '-m', 'init')
     git('switch', '-q', '-c', 'feature/x')
-    await writeFile(join(repo, 'a.js'), 'const a = 1\nconst b = 3\n')
+    await writeFile(join(repo, 'a.js'), `const a = 1\nconst b = 3\n${FILLER}const far = 2\n`)
     git('commit', '-q', '-am', 'feat: b is three')
   })
   afterEach(async () => {
@@ -124,8 +126,14 @@ describe('a changes review session across a new commit', () => {
     expect(await first.exited).toBe(0)
     const sessionId = first.stdout().match(/Session: ([0-9a-f]{12}) \(round 1\)/)[1]
     const stored = JSON.parse(await readFile(join(env.ANNOTAITR_SESSION_DIR, `${sessionId}.json`), 'utf-8'))
-    expect(stored.target).toMatchObject({ kind: 'changes', mergeBase: expect.any(String), head: expect.any(String), stateHash: expect.any(String) })
-    expect(stored.target.files[0]).not.toHaveProperty('content')
+    // The session keeps the selected code with a little context to find it again, never the walkthrough.
+    expect(stored.target).toEqual({ kind: 'changes', label: expect.any(String), files: [{ path: expect.any(String), contentHash: expect.any(String) }] })
+    expect(stored.threads[0].anchor).toMatchObject({ quote: 'const b = 3' })
+    expect(stored.threads[0].anchor.prefix.length).toBeLessThanOrEqual(32)
+    expect(stored.threads[0].anchor.suffix.length).toBeLessThanOrEqual(32)
+    const raw = await readFile(join(env.ANNOTAITR_SESSION_DIR, `${sessionId}.json`), 'utf-8')
+    expect(raw).not.toContain(JSON.stringify(walkthrough.content).slice(1, -1))
+    expect(raw).not.toContain('far')
     expect(reply(env, sessionId, 'a3f19c2e', 'question', 'Three or four?').status).toBe(0)
 
     await writeFile(join(repo, 'b.js'), 'export {}\n')

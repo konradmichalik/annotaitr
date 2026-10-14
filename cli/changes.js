@@ -193,7 +193,7 @@ export async function runChanges(args) {
   }
   const opened = await openSession({
     identity: changesSessionIdentity(prepared.root, prepared.compared),
-    target: { kind: 'changes', label: prepared.label, head: prepared.compared.head, mergeBase: prepared.compared.mergeBase, stateHash: prepared.fingerprint },
+    target: { kind: 'changes', label: prepared.label },
     sessionId: parsed.sessionId,
     newSession: parsed.newSession
   })

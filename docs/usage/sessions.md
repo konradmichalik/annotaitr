@@ -60,8 +60,10 @@ Markdown and changes call a numbered item a note, so their output says
 
 A Markdown session stores each round's notes with the quoted text and, for a
 document, the file's content, so the next round can find the text again. A
-`changes` session stores only the commit, the merge base and a hash of the
-working tree, never the code. The next round places each earlier note:
+`changes` session keeps each note's selected lines with up to 32 characters
+around them, so the next round can find them, and never the walkthrough or
+whole files. Like every session it sits in a folder only you can read and is
+deleted after 7 days. The next round places each earlier note:
 
 - **exact**: the file is unchanged, the note stays where it was
 - **moved**: the quoted text, checked against the text around it, is found in
