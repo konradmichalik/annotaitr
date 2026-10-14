@@ -18,7 +18,8 @@ function toReviewFile(data) {
     isPlainText: data.isPlainText || false,
     kind: data.kind || 'document',
     label: data.label || null,
-    fileId: data.fileId || null
+    fileId: data.fileId || null,
+    previousRound: data.previousRound ?? null
   }
 }
 
@@ -154,6 +155,7 @@ export function useReviewFiles({ viewerRef, setStatus, setErrorStatus }) {
               content: updated.content,
               blocks: parseBlocks(updated),
               contentHash: updated.contentHash,
+              previousRound: updated.previousRound ?? null,
               hashMismatch: false,
               annState: { ...initialAnnotationState }
             }

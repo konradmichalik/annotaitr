@@ -46,6 +46,10 @@ import { plural } from '../../shared/utils/decision.js'
 import UnansweredQuestions from '../../shared/threads/UnansweredQuestions.jsx'
 import { useMarkdownPreviousRound } from './hooks/useMarkdownPreviousRound.js'
 import { usePreviousHighlights } from './hooks/usePreviousHighlights.js'
+import { useRoundDiff } from './hooks/useRoundDiff.js'
+import { shownView } from './utils/roundDiff.js'
+import { RoundDiffBar } from './components/RoundDiffBar.jsx'
+import { RoundDiffView } from './components/Viewer/RoundDiffView.jsx'
 import 'katex/dist/katex.min.css'
 import './styles.css'
 
@@ -86,7 +90,7 @@ export default function App() {
   const [focusThread, setFocusThread] = useState(null)
   const [toast, setToast] = useState(null)
   const [pinpointMode, setPinpointMode] = useState(() => settings.defaultMode === 'pinpoint')
-  const [viewMode, setViewMode] = useState('preview') // 'preview' | 'source'
+  const [viewMode, setViewMode] = useState('preview') // 'preview' | 'source' | 'changes' (since the last round)
   const shiftHeld = useShiftHeld()
   const viewerRef = useRef(null)
   const toastTimerRef = useRef(null)
@@ -130,7 +134,8 @@ export default function App() {
   // Plain-text files (YAML, JSON, logs, ...) have no meaningful rendered view
   const isPlainTextFile = activeFile?.isPlainText || false
   const isChanges = activeFile?.kind === 'changes'
-  const effectiveViewMode = isPlainTextFile ? 'source' : viewMode
+  const roundDiff = useRoundDiff(activeFile)
+  const effectiveViewMode = shownView(viewMode, { plainText: isPlainTextFile, roundDiff })
   const activeAnnState = activeFile?.annState || initialAnnotationState
   const { annotations } = activeAnnState
   const blocks = activeFile?.blocks || []
@@ -379,7 +384,7 @@ export default function App() {
     if (draft.annotations.length === 0) {return}
     if (!draft.fileChanged) {
       applyDraft(draft.annotations)
-    } else if (effectiveViewMode === 'source' && !isPlainTextFile) {
+    } else if (effectiveViewMode !== 'preview' && !isPlainTextFile) {
       setDraftAwaitingPreview(draft.annotations)
       setViewMode('preview')
     } else {
@@ -576,12 +581,18 @@ export default function App() {
             pinpointMode={effectivePinpointMode}
             onPinpointModeChange={setPinpointMode}
             showViewToggle={!isPlainTextFile}
-            viewMode={viewMode}
+            viewMode={effectiveViewMode}
             onViewModeChange={setViewMode}
             onUndo={handleUndo}
             canUndo={activeAnnState.history.length > 0}
           />
-          {effectiveViewMode === 'preview' ? (
+          {roundDiff && (
+            <RoundDiffBar diff={roundDiff} active={effectiveViewMode === 'changes'} onToggle={(on) => setViewMode(on ? 'changes' : 'preview')} />
+          )}
+          {effectiveViewMode === 'changes' && (
+            <RoundDiffView diff={roundDiff} plantumlServerUrl={serverConfig.plantumlServerUrl} krokiServerUrl={serverConfig.krokiServerUrl} />
+          )}
+          {effectiveViewMode === 'preview' && (
             <Viewer
               key={activeFile?.path || 'empty'}
               ref={viewerRef}
@@ -601,7 +612,8 @@ export default function App() {
               toolHints={settings.toolHints}
               changes={changeSections ? { ...changesReview, sections: changeSections, select: changesNav.select, agent: agentName(origin) ?? 'the agent' } : null}
             />
-          ) : (
+          )}
+          {effectiveViewMode === 'source' && (
             <SourceView
               key={`source-${activeFile?.path || 'empty'}`}
               ref={viewerRef}

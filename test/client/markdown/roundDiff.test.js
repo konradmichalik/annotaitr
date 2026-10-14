@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { diffRounds, roundDiffCounts } from '../../../client/markdown/src/utils/roundDiff.js'
+import { diffRounds, roundDiffCounts, roundDiffOf, shownView } from '../../../client/markdown/src/utils/roundDiff.js'
 import { parseMarkdownToBlocks } from '../../../client/markdown/src/utils/parser.js'
 
 const diff = (before, after) => diffRounds(parseMarkdownToBlocks(before), parseMarkdownToBlocks(after))
@@ -56,5 +56,38 @@ describe('diffRounds', () => {
 describe('roundDiffCounts', () => {
   it('counts added, changed and removed blocks', () => {
     expect(roundDiffCounts(diff('A.\n\nB.\n\nC.\n', 'A2.\n\nC.\n\nD.\n\nE.\n'))).toEqual({ added: 2, changed: 1, removed: 1 })
+  })
+})
+
+describe('roundDiffOf', () => {
+  const file = (content, previousRound, extra = {}) => ({ content, blocks: parseMarkdownToBlocks(content), previousRound, kind: 'document', isPlainText: false, ...extra })
+
+  it('diffs the file against the content of its last round', () => {
+    const diffed = roundDiffOf(file('# Plan\n\nTwo.\n', { round: 2, content: '# Plan\n\nOne.\n' }))
+    expect(diffed.round).toBe(2)
+    expect(diffed.counts).toEqual({ added: 0, changed: 1, removed: 0 })
+    expect(diffed.entries.map((e) => e.change)).toEqual(['same', 'changed'])
+  })
+
+  it('has nothing to show without a last round, for plain text, for changes or when no block differs', () => {
+    expect(roundDiffOf(null)).toBeNull()
+    expect(roundDiffOf(file('One.\n', null))).toBeNull()
+    expect(roundDiffOf(file('One.\n', { round: 1, content: 'Two.\n' }, { isPlainText: true }))).toBeNull()
+    expect(roundDiffOf(file('One.\n', { round: 1, content: 'Two.\n' }, { kind: 'changes' }))).toBeNull()
+    expect(roundDiffOf(file('One.\n', { round: 1, content: 'One.\n\n\n' }))).toBeNull()
+  })
+})
+
+describe('shownView', () => {
+  const diffed = { round: 1 }
+  it('shows the changes view only while the file has a last round to compare with', () => {
+    expect(shownView('changes', { plainText: false, roundDiff: diffed })).toBe('changes')
+    expect(shownView('changes', { plainText: false, roundDiff: null })).toBe('preview')
+  })
+
+  it('keeps preview and source as chosen, and plain text always in source', () => {
+    expect(shownView('preview', { plainText: false, roundDiff: diffed })).toBe('preview')
+    expect(shownView('source', { plainText: false, roundDiff: diffed })).toBe('source')
+    expect(shownView('changes', { plainText: true, roundDiff: null })).toBe('source')
   })
 })

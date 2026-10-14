@@ -7,6 +7,7 @@
  */
 
 import { groupHtmlWrappers } from './htmlWrappers.js'
+import { parseMarkdownToBlocks } from './parser.js'
 
 // Where a block sits says nothing about what it says, and shifts with every edit above it.
 const POSITION = new Set(['id', 'order', 'startLine', 'parentId'])
@@ -95,4 +96,23 @@ export function diffRounds(previousBlocks, currentBlocks) {
 export function roundDiffCounts(entries) {
   const count = (change) => entries.filter((e) => e.change === change).length
   return { added: count('added'), changed: count('changed'), removed: count('removed') }
+}
+
+/**
+ * A reviewed file against its last round: `{ round, entries, counts }`, or
+ * null when there is nothing to show. Plain text has no blocks worth
+ * comparing and a changes walkthrough already is a diff.
+ */
+export function roundDiffOf(file) {
+  const previous = file?.previousRound
+  if (!previous || file.isPlainText || file.kind === 'changes') { return null }
+  const entries = diffRounds(parseMarkdownToBlocks(previous.content), file.blocks)
+  const counts = roundDiffCounts(entries)
+  return counts.added + counts.changed + counts.removed === 0 ? null : { round: previous.round, entries, counts }
+}
+
+/** The view on screen: the changes view falls back to the preview in a file without a last round. */
+export function shownView(viewMode, { plainText, roundDiff }) {
+  if (plainText) { return 'source' }
+  return viewMode === 'changes' && !roundDiff ? 'preview' : viewMode
 }

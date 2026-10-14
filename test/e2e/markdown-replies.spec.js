@@ -98,4 +98,41 @@ test.describe('replies from the last round of a Markdown review', () => {
     expect(out).toContain('> Round 1, note 1 (Line 3): Make this friendlier\nAgent (question): Warmer or shorter?\nReviewer: Warmer\n')
     expect(out).toContain(`Session: ${sessionId} (round 2)`)
   })
+
+  test('round 2 marks what the agent added, changed and removed, and the normal view comes back with its notes', async ({ page }) => {
+    await writeFile(doc, '# Plan\n\nKeep this step.\n\nRun the old installer.\n\nDrop this paragraph.\n\nThe end.\n')
+    const first = startCli([doc], env)
+    await page.goto(await first.url)
+    await comment(page, '[data-block-id="block-1"]', 'Keep this', 'Why keep it?')
+    await page.getByRole('button', { name: /^Send feedback/ }).click()
+    await first.exited
+    await writeFile(doc, '# Plan\n\nA brand new opening.\n\nKeep this step.\n\nRun the new installer.\n\nThe end.\n')
+
+    const second = startCli([doc], env)
+    await page.goto(await second.url)
+    const toggle = page.getByRole('button', { name: 'Changes since round 1' })
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(page.locator('.round-diff-counts')).toHaveText('+1 added · ±1 changed · −1 removed')
+    await comment(page, '[data-block-id="block-3"]', 'new installer', 'Which version?')
+
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('button', { name: 'Preview' })).toHaveAttribute('aria-pressed', 'false')
+    const view = page.getByRole('article', { name: 'Changes since round 1' })
+    await expect(view.locator('.round-change--added')).toHaveText('+Added since round 1A brand new opening.')
+    await expect(view.locator('.round-change--changed .round-change-before')).toHaveText('Before:Run the old installer.')
+    await expect(view.locator('.round-change--changed .round-change-after')).toHaveText('Run the new installer.')
+    await expect(view.locator('.round-change--removed')).toHaveText('−Removed since round 1Drop this paragraph.')
+    await expect(page.locator('.round-diff-hint')).toHaveText('Read only. Turn it off to add notes.')
+    await expect(view.locator('mark.annotation-highlight')).toHaveCount(0)
+
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(page.locator('.round-change')).toHaveCount(0)
+    await expect(page.locator('mark.annotation-highlight')).toHaveText('new installer')
+    await expect.poll(() => page.evaluate(() => [...(CSS.highlights.get('annotaitr-previous') ?? [])].map((r) => r.toString()))).toEqual(['Keep this'])
+    await page.getByRole('button', { name: /^Send feedback/ }).click()
+    await second.exited
+    expect(second.stdout()).toMatch(/## 1\. Change · Text \(Line 7\) \[#[0-9a-f]{8}\]\n```\nnew installer\n```\n> Which version\?\n/)
+  })
 })
