@@ -23,6 +23,7 @@ export default function ThreadEntry({ thread, round, onActivate, place = null, e
           {number !== null && (
             <span className="note-number note-number--earlier"><span className="visually-hidden">{threadTitle(thread, round)}.</span><span aria-hidden="true">{threadLabel(thread, round)}</span></span>
           )}
+          {number === null && <span className="visually-hidden">{threadTitle(thread, round)}.</span>}
           <StatusChip status={threadStatus(thread)} display={STATUS_DISPLAY} />
           {place && <span className="previous-round-entry-place">{place}</span>}
         </span>

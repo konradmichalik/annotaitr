@@ -47,6 +47,11 @@ describe('RepliesPanel', () => {
     expect(render([thread('a1', { place: { path: '.git/annotaitr/changes.md', where: 'Line 1', line: 1 } })])).not.toContain('changes.md')
   })
 
+  it('names a general comment for screen readers, it has no number badge', () => {
+    const html = render([thread('g1', { number: null, place: null, annotation: { type: 'COMMENT', targetType: 'global', text: 'Overall' } })])
+    expect(html).toContain('<span class="visually-hidden">Round 1 · general comment.</span>')
+  })
+
   it('lists text that is gone under its own heading with the original quote', () => {
     const html = render([thread('o1', { anchor: 'orphan', reason: 'The text is no longer in the document', place: null, quote: 'old intro' })])
     expect(html).toContain('No longer in the document')
