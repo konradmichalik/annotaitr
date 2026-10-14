@@ -29,12 +29,12 @@ export function sortNotes(annotations, blocks) {
   })
 }
 
-/** `new Lines 14-15 in docs/usage.md` for a note in a changes card's Read view, null for any other note. */
-export function readLineRef(annotation, block) {
+/** `usage.md · new L14-15` for a note in a changes card's Read view, null for any other note. */
+function readLocation(annotation, block) {
   if (!block?.path) { return null }
   const first = (block.startLine || 1) + (block.type === 'code' ? 1 : 0) + countNewlines((block.content ?? '').slice(0, annotation.startOffset))
   const last = first + countNewlines(annotation.originalText)
-  return `new ${first === last ? `Line ${first}` : `Lines ${first}-${last}`} in ${block.path}`
+  return `${block.path.split('/').pop()} · new L${first === last ? first : `${first}-${last}`}`
 }
 
 /** Card number per note id: the stable number each note got when it was added. */
@@ -64,8 +64,8 @@ export function noteLocation(annotation, blocks) {
   const line = lineOf(annotation.blockId, blocks)
   if (!line) { return null }
   const block = blocks.find((b) => b.id === annotation.blockId)
-  const inRead = readLineRef(annotation, block)
-  if (inRead) { return `${block.path.split('/').pop()} · ${inRead.replace(` in ${block.path}`, '').replace(/Lines? /g, 'L')}` }
+  const inRead = readLocation(annotation, block)
+  if (inRead) { return inRead }
   const inDiff = diffLocation(annotation, blocks)
   if (inDiff) { return inDiff }
   const heading = blocks.filter((block) => block.type === 'heading' && block.startLine <= line).at(-1)

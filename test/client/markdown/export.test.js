@@ -322,6 +322,15 @@ describe('formatAnnotationsForExport on a Read view block', () => {
     expect(formatAnnotationsForExport([ann], blocks, 'changes.md')).toContain('## 2. Change · Comment (new Lines 14-15 in docs/usage.md)')
   })
 
+  it('names the new file line for an image or a diagram, as the agent\'s feedback does', () => {
+    const blocks = [read({ content: '![Logo](logo.png)', startLine: 7 }), read({ id: 'read:docs/usage.md:block-5', type: 'code', language: 'mermaid', content: 'graph TD', startLine: 9 })]
+    const image = makeAnnotation({ blockId: 'read:docs/usage.md:block-4', targetType: 'image', originalText: 'logo.png', imageSrc: 'logo.png' })
+    const diagram = makeAnnotation({ id: 'ann-2', blockId: 'read:docs/usage.md:block-5', targetType: 'diagram', originalText: 'graph TD' })
+    const output = formatAnnotationsForExport([image, diagram], blocks, 'changes.md')
+    expect(output).toContain('Comment on image (new Line 7 in docs/usage.md)')
+    expect(output).toContain('Comment on Mermaid diagram (new Line 9 in docs/usage.md)')
+  })
+
   it('sorts Read notes at their card, by their line in the file', () => {
     const blocks = [
       makeBlock({ id: 'block-1', startLine: 10, content: 'Before' }),
