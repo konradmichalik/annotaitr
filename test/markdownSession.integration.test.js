@@ -105,6 +105,31 @@ describe('a markdown review session across rounds', () => {
     await third.exited
   }, 60_000)
 
+  it('prints an approval with a new note first, then the replies, then the session line', async () => {
+    const first = startCli([doc], env)
+    const api1 = await connect(first)
+    const { files: [file] } = await api1.get('/api/files')
+    const blocks = [{ id: 'block-1', type: 'paragraph', startLine: 3, content: 'The intro says hello to everyone.' }]
+    await api1.post('/api/feedback', { files: [{ path: file.path, blocks, annotations: [note(A, 'block-1', 'intro says hello', 'Friendlier')] }] })
+    await first.exited
+    const sessionId = first.stdout().match(/Session: ([0-9a-f]{12})/)[1]
+    reply(env, sessionId, 'a3f19c2e', 'applied', 'Warmer now')
+
+    const second = startCli([doc], env)
+    const api2 = await connect(second)
+    await api2.post('/api/threads/a3f19c2e/replies', { text: 'Thanks' })
+    const goodbye = [{ id: 'block-2', type: 'paragraph', startLine: 5, content: 'This goodbye paragraph will go.' }]
+    await api2.post('/api/approve', { files: [{ path: file.path, blocks: goodbye, annotations: [{ ...note(B, 'block-2', 'goodbye paragraph', 'Fine to keep'), number: 1 }] }] })
+    await second.exited
+    const out = second.stdout()
+    expect(out).toMatch(/^APPROVED WITH NOTES: 1 note/)
+    const [notes, replies, session] = ['[#b7210e44]', '## Replies to round 1', `Session: ${sessionId} (round 2)`].map((part) => out.indexOf(part))
+    expect(notes).toBeGreaterThan(0)
+    expect(replies).toBeGreaterThan(notes)
+    expect(session).toBeGreaterThan(replies)
+    expect(out).toContain('Agent (applied): Warmer now\nReviewer: Thanks\n')
+  }, 45_000)
+
   it('approves the unchanged file with replies alone and keeps the exact place', async () => {
     const first = startCli([doc], env)
     const api1 = await connect(first)
