@@ -304,3 +304,46 @@ test('N and Shift+N step through the notes and select their marks without openin
     if (cli.child.exitCode === null) { cli.child.kill() }
   }
 })
+
+test('two distant boxes on a large image each get a crop next to the annotated screenshot', async ({ page }) => {
+  const dir = await mkdtemp(join(tmpdir(), 'annotaitr-e2e-'))
+  const imagePath = join(dir, 'large.png')
+  const canvas = createCanvas(2000, 1500)
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = '#336699'
+  ctx.fillRect(0, 0, 2000, 1500)
+  await writeFile(imagePath, canvas.toBuffer('image/png'))
+  const cli = startCli([imagePath])
+
+  // The image opens at 100%, so offsets are image pixels and must stay inside the viewport.
+  async function drawBox(box, x, y, text) {
+    await page.mouse.move(box.x + x, box.y + y)
+    await page.mouse.down()
+    await page.mouse.move(box.x + x + 60, box.y + y + 40)
+    await page.mouse.up()
+    await page.getByPlaceholder('Add a comment…').fill(text)
+    await page.getByRole('button', { name: 'Add', exact: true }).click()
+  }
+
+  try {
+    await page.goto(await cli.url)
+    await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Box \(/ }).click()
+    const box = await page.locator('.image-canvas-wrapper').boundingBox()
+    await drawBox(box, 60, 60, 'Top left')
+    await drawBox(box, 700, 420, 'Bottom right')
+    await expect(page.getByRole('button', { name: /^2\. Change, Box/ })).toBeVisible()
+
+    await page.getByRole('button', { name: /^Send feedback/ }).click()
+    await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible()
+    expect(await cli.exited).toBe(0)
+
+    const stdout = cli.stdout()
+    const crops = [...stdout.matchAll(/^Crop: (\S+)$/gm)].map((m) => m[1])
+    expect(crops.map((path) => path.split('/').at(-1))).toEqual(['crop-01.png', 'crop-02.png'])
+    for (const path of crops) { expect((await readFile(path)).length).toBeGreaterThan(0) }
+    expect(stdout).toMatch(/Boxed area: [^\n]+\nCrop: \S+crop-01\.png\n> Top left/)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+    if (cli.child.exitCode === null) { cli.child.kill() }
+  }
+})

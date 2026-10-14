@@ -225,13 +225,14 @@ describe('document annotator server', () => {
     expect(annotationCount).toBe(4)
     expect(annotations.map((a) => a.id)).toEqual(['a', 'b', 'c', 'g'])
     expect(output).toMatch(/^4 annotations \(3 Change, 1 General\) on 2 of 3 pages\.\n\nSource: deck\.pptx \(rendered as deck\.pdf\)\n/)
-    expect(output).toMatch(/## Page 1\nAnnotated page: .*page-01\.png\n\n### 1\. Change · Boxed area/)
-    expect(output).toMatch(/## Page 3\nAnnotated page: .*page-03\.png\n\n### 2\. Change · Boxed area[^\n]*\nText: text "Three"\n> note b\n\n### 3\. Change · Page comment\n> Too dense/)
+    expect(output).toMatch(/## Page 1\nAnnotated page: .*page-01\.png\n\n### 1\. Change · Boxed area[^\n]*\nCrop: .*page-01-crop-01\.png\n/)
+    expect(output).toMatch(/## Page 3\nAnnotated page: .*page-03\.png\n\n### 2\. Change · Boxed area[^\n]*\nCrop: .*page-03-crop-02\.png\nText: text "Three"\n> note b\n\n### 3\. Change · Page comment\n> Too dense/)
+    expect(output).toContain("A `Crop:` line shows that note's area at full resolution, the page image is the overview.\n")
     expect(output).toContain('Text and Quote lines are read from the PDF')
     expect(output).toMatch(/## General\n### General comment about the whole document/)
 
     const overview = output.match(/Overview: (.*)\n/)[1]
-    expect((await readdir(dirname(overview))).sort()).toEqual(['overview.png', 'page-01.png', 'page-03.png'])
+    expect((await readdir(dirname(overview))).sort()).toEqual(['overview.png', 'page-01-crop-01.png', 'page-01.png', 'page-03-crop-02.png', 'page-03.png'])
     // The legend under the page makes the annotated image taller than the page.
     const annotated = await loadImage(join(dirname(overview), 'page-03.png'))
     expect(annotated.width).toBe(2000)

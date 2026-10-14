@@ -2,12 +2,15 @@ import { describe, it, expect, afterEach, vi } from 'vitest'
 import { buildImageServer } from '../../../../server/image/still/adapter.js'
 import { makeFixturePng } from '../../../helpers/fixtureImage.js'
 import { createReplyStore } from '../../../../server/core/session/replyStore.js'
-import { flattenAnnotations } from '../../../../server/image/common/render.js'
+import { existsSync } from 'node:fs'
+import { readdir } from 'node:fs/promises'
+import { dirname, basename } from 'node:path'
+import { renderAnnotatedWithCrops } from '../../../../server/image/common/render.js'
 import { writeAnnotatedImage } from '../../../../server/image/still/output.js'
 
 vi.mock('../../../../server/image/common/render.js', async () => {
   const actual = await vi.importActual('../../../../server/image/common/render.js')
-  return { ...actual, flattenAnnotations: vi.fn(actual.flattenAnnotations) }
+  return { ...actual, renderAnnotatedWithCrops: vi.fn(actual.renderAnnotatedWithCrops) }
 })
 
 vi.mock('../../../../server/image/still/output.js', async () => {
@@ -142,6 +145,77 @@ describe('image annotator server', () => {
     expect(decision.approved).toBe(true)
     expect(decision.output).toContain('APPROVED WITH NOTES: 1 note (1 Question).')
     expect(decision.annotationCount).toBe(1)
+  })
+
+  describe('crops per note on a large image', () => {
+    const near = { id: 'a1', type: 'box', geometry: { x: 100, y: 100, width: 50, height: 40 }, text: 'Top left' }
+    const far = { id: 'a2', type: 'box', geometry: { x: 1300, y: 900, width: 50, height: 40 }, text: 'Bottom right' }
+    const cropPaths = (output) => [...output.matchAll(/^Crop: (.+)$/gm)].map((m) => m[1])
+
+    it('writes one crop per distant note next to the annotated screenshot and names it under the note', async () => {
+      await start({ imageBuffer: makeFixturePng(1600, 1200), imageWidth: 1600, imageHeight: 1200 })
+      await fetch(`${server.url}/api/annotations`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ annotations: [near, far] })
+      })
+      await fetch(`${server.url}/api/feedback`, { method: 'POST' })
+      const { output } = await server.waitForDecision()
+      const annotated = output.match(/^Annotated screenshot: (.+)$/m)[1]
+      const crops = cropPaths(output)
+      expect(crops.map((path) => basename(path))).toEqual(['crop-01.png', 'crop-02.png'])
+      expect(crops.every((path) => dirname(path) === dirname(annotated) && existsSync(path))).toBe(true)
+      expect(output).toMatch(/### 1\. [^\n]*Change · Boxed area: [^\n]+\nCrop: .+crop-01\.png\n> Top left/)
+    })
+
+    it('decides without crops when writing them fails, leaving only the annotated screenshot', async () => {
+      const actual = await vi.importActual('../../../../server/image/common/render.js')
+      renderAnnotatedWithCrops.mockImplementationOnce(async (...args) => {
+        const rendered = await actual.renderAnnotatedWithCrops(...args)
+        return { ...rendered, crops: rendered.crops.map((crop) => ({ ...crop, buffer: 42 })) }
+      })
+      const warn = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+      try {
+        await start({ imageBuffer: makeFixturePng(1600, 1200), imageWidth: 1600, imageHeight: 1200 })
+        await fetch(`${server.url}/api/annotations`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ annotations: [near, far] })
+        })
+        expect((await fetch(`${server.url}/api/feedback`, { method: 'POST' })).status).toBe(200)
+        const { output } = await server.waitForDecision()
+        expect(output).not.toContain('Crop')
+        const annotated = output.match(/^Annotated screenshot: (.+)$/m)[1]
+        expect(await readdir(dirname(annotated))).toEqual(['annotated.png'])
+        expect(warn).toHaveBeenCalledWith(expect.stringMatching(/^annotaitr: could not write the crops per note/))
+      } finally {
+        warn.mockRestore()
+      }
+    })
+
+    it('writes no crop for a small image, where a crop would show nothing new', async () => {
+      await start()
+      await fetch(`${server.url}/api/annotations`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ annotations: [{ ...near, geometry: { x: 5, y: 5, width: 10, height: 10 } }] })
+      })
+      await fetch(`${server.url}/api/feedback`, { method: 'POST' })
+      expect((await server.waitForDecision()).output).not.toContain('Crop:')
+    })
+
+    it('writes crops for each image of a set', async () => {
+      await start({
+        images: [
+          { buffer: makeFixturePng(1600, 1200), width: 1600, height: 1200, label: 'a.png' },
+          { buffer: makeFixturePng(1600, 1200), width: 1600, height: 1200, label: 'b.png' }
+        ],
+        imageBuffer: undefined
+      })
+      for (const index of [0, 1]) {
+        await fetch(`${server.url}/api/annotations?index=${index}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ annotations: [index === 0 ? near : far] })
+        })
+      }
+      await fetch(`${server.url}/api/feedback`, { method: 'POST' })
+      const crops = cropPaths((await server.waitForDecision()).output)
+      expect(crops.map((path) => basename(path))).toEqual(['crop-01.png', 'crop-01.png'])
+      expect(dirname(crops[0])).not.toBe(dirname(crops[1]))
+    })
   })
 
   it('rejects a submit with zero annotations', async () => {
@@ -316,7 +390,7 @@ describe('image annotator server', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ annotations: [{ id: 'a1', type: 'pin', geometry: { x: 5, y: 5 }, text: 'hi', color: '#e11d48' }] })
     })
-    flattenAnnotations.mockRejectedValueOnce(new Error('canvas decode boom'))
+    renderAnnotatedWithCrops.mockRejectedValueOnce(new Error('canvas decode boom'))
 
     const res = await fetch(`${server.url}/api/approve`, { method: 'POST' })
     expect(res.status).toBe(500)

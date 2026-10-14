@@ -96,3 +96,30 @@ describe('stable numbers in a recording', () => {
     expect(plan.overview.numbersByTile.flat().sort()).toEqual([1, 3])
   })
 })
+
+describe('crops per note', () => {
+  function withCrops(annotations, crops) {
+    const ordered = orderVideoAnnotations(annotations)
+    const plan = planFrames(ordered, media.duration)
+    const files = {
+      dir: '/tmp/out',
+      overview: '/tmp/out/overview.png',
+      frames: new Map(plan.frames.map((f, i) => [f.time, `/tmp/out/frame-${i + 1}.png`])),
+      strips: new Map(plan.strips.map((s) => [s.number, `/tmp/out/strip-${s.number}.png`])),
+      crops
+    }
+    return exportVideoFeedback({ ordered, plan, media, files })
+  }
+
+  it('names the crop after the frame of its note and explains it once', () => {
+    const output = withCrops([box, spanComment, general], new Map([[1, '/tmp/out/frame-01-00m03.240s-crop-01.png']]))
+    expect(output).toContain("A `Crop:` line shows that note's area at full resolution, the frame is the overview.\n")
+    expect(output).toMatch(/Boxed area: [^\n]+\nFrame: \/tmp\/out\/frame-1\.png\nCrop: \/tmp\/out\/frame-01-00m03\.240s-crop-01\.png\n> Button flickers/)
+    expect(output.match(/^Crop: /gm)).toHaveLength(1)
+  })
+
+  it('has no crop notice without crops', () => {
+    expect(withCrops([box], new Map())).not.toContain('Crop')
+    expect(render([box])).not.toContain('Crop')
+  })
+})

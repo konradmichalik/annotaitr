@@ -26,8 +26,10 @@ review to 200 pages, `--pages` picks a part of a longer one.
 
 The feedback is grouped by page, numbered across the whole document, and
 points at one image per annotated page (markup and legend baked in) plus
-`overview.png` with the annotated pages side by side. Untouched pages are
-not written.
+`overview.png` with the annotated pages side by side, all in a temp
+directory. Each note also gets a full-resolution crop of its area
+(`page-07-crop-04.png`, named in a `Crop:` line under the note). Untouched
+pages are not written.
 
 The PDF's text layer works like the element map of a captured web page:
 hovering with the **Element** tool outlines a text block, heading or link,

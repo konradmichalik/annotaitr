@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { loadImage, createCanvas } from '@napi-rs/canvas'
-import { flattenAnnotations, composeContactSheet, CONTACT_SHEET_GAP, CONTACT_SHEET_LABEL_HEIGHT } from '../../../../server/image/common/render.js'
+import { flattenAnnotations, renderAnnotatedWithCrops, composeContactSheet, CONTACT_SHEET_GAP, CONTACT_SHEET_LABEL_HEIGHT } from '../../../../server/image/common/render.js'
 import { makeFixturePng } from '../../../helpers/fixtureImage.js'
 
 describe('flattenAnnotations', () => {
@@ -256,5 +256,68 @@ describe('composeContactSheet', () => {
     const result = await composeContactSheet([{ buffer: makeFixturePng(80, 40), label: 'x' }], { columns: 1, tileWidth: 400 })
     const decoded = await loadImage(result)
     expect(decoded.width).toBe(80 + 2 * CONTACT_SHEET_GAP)
+  })
+})
+
+async function pixels(buffer, rect) {
+  const image = await loadImage(buffer)
+  const ctx = createCanvas(image.width, image.height).getContext('2d')
+  ctx.drawImage(image, 0, 0)
+  const { x, y, width, height } = rect ?? { x: 0, y: 0, width: image.width, height: image.height }
+  return Buffer.from(ctx.getImageData(x, y, width, height).data)
+}
+
+async function expectCrop(crop, full, rect) {
+  const decoded = await loadImage(crop.buffer)
+  expect([decoded.width, decoded.height]).toEqual([rect.width, rect.height])
+  expect(Buffer.compare(await pixels(crop.buffer), await pixels(full, rect))).toBe(0)
+}
+
+describe('renderAnnotatedWithCrops', () => {
+  const near = { type: 'box', color: '#ff0000', text: 'top left', geometry: { x: 100, y: 100, width: 50, height: 40 } }
+  const far = { type: 'box', color: '#00ff00', text: 'bottom right', geometry: { x: 1300, y: 900, width: 50, height: 40 } }
+
+  it('cuts one crop per distant note at the clamped area, at full resolution', async () => {
+    const { full, crops } = await renderAnnotatedWithCrops(makeFixturePng(1600, 1200, '#000000'), [near, far], [1, 2])
+    expect(crops.map(({ numbers }) => numbers)).toEqual([[1], [2]])
+    await expectCrop(crops[0], full, { x: 0, y: 0, width: 400, height: 300 })
+    await expectCrop(crops[1], full, { x: 1125, y: 770, width: 400, height: 300 })
+  })
+
+  it('renders the full image exactly as flattenAnnotations does', async () => {
+    const source = makeFixturePng(1600, 1200, '#000000')
+    const { full } = await renderAnnotatedWithCrops(source, [near, far], [1, 2])
+    expect(Buffer.compare(await pixels(full), await pixels(await flattenAnnotations(source, [near, far], [1, 2])))).toBe(0)
+  })
+
+  it('keeps the legend below the image out of every crop', async () => {
+    const low = { type: 'box', color: '#ff0000', text: 'low', geometry: { x: 100, y: 350, width: 50, height: 40 } }
+    const { full, crops } = await renderAnnotatedWithCrops(makeFixturePng(800, 400, '#000000'), [low], [1])
+    expect((await loadImage(full)).height).toBeGreaterThan(400)
+    await expectCrop(crops[0], full, { x: 0, y: 100, width: 400, height: 300 })
+  })
+
+  it('keeps a mark with a fractional size at the bottom edge inside the image', async () => {
+    const low = { type: 'box', color: '#ff0000', text: 'low', geometry: { x: 100, y: 440, width: 150.5, height: 150 } }
+    const { full, crops } = await renderAnnotatedWithCrops(makeFixturePng(1600, 600, '#000000'), [low], [1])
+    await expectCrop(crops[0], full, { x: 0, y: 247, width: 400, height: 353 })
+  })
+
+  it('crops only the notes the filter accepts', async () => {
+    const { crops } = await renderAnnotatedWithCrops(makeFixturePng(1600, 1200), [near, far], [1, 2], (note) => note === far)
+    expect(crops.map((crop) => crop.numbers)).toEqual([[2]])
+  })
+
+  it('still renders the full image without crops when cutting them fails, and says so on stderr', async () => {
+    const warn = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+    try {
+      const source = makeFixturePng(1600, 1200, '#000000')
+      const { full, crops } = await renderAnnotatedWithCrops(source, [near, far], [1, 2], () => { throw new Error('boom') })
+      expect(crops).toEqual([])
+      expect(Buffer.compare(await pixels(full), await pixels(await flattenAnnotations(source, [near, far], [1, 2])))).toBe(0)
+      expect(warn).toHaveBeenCalledWith('annotaitr: could not write the crops per note, the feedback goes without them (boom)\n')
+    } finally {
+      warn.mockRestore()
+    }
   })
 })
