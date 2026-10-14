@@ -463,3 +463,29 @@ test('a note on the hunks of a card on Read or Whole file is shown from the pane
     }
   })
 })
+
+test('P, J and K leave the walkthrough alone while a dialog or menu is open', async ({ page }) => {
+  await withDocs({ before: { 'guide.md': GUIDE_BEFORE }, after: { 'guide.md': GUIDE_AFTER }, explanation: {} }, async ({ dir, explain }) => {
+    const cli = startCli(['changes', '--explain', explain], {}, { cwd: dir })
+    try {
+      await page.goto(await cli.url)
+      const read = page.getByRole('region', { name: 'guide.md' }).getByRole('button', { name: 'Read' })
+      const tree = page.getByRole('navigation', { name: 'Changed files' })
+      await tree.getByRole('button', { name: /^guide\.md/ }).click()
+      for (const [opener, open] of [['Settings', page.getByRole('dialog', { name: 'Settings' })], ['More actions', page.getByRole('menu')]]) {
+        await page.getByRole('button', { name: opener, exact: true }).click()
+        await expect(open).toBeVisible()
+        await page.keyboard.press('p')
+        await page.keyboard.press('k')
+        await expect(read).toHaveAttribute('aria-pressed', 'false')
+        await page.keyboard.press('Escape')
+        await expect(open).toBeHidden()
+      }
+      // K was ignored too: guide.md is still the current file.
+      await page.keyboard.press('p')
+      await expect(read).toHaveAttribute('aria-pressed', 'true')
+    } finally {
+      cli.child.kill()
+    }
+  })
+})

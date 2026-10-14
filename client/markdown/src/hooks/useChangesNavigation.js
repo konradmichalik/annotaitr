@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-
-function isTyping(target) {
-  return target instanceof HTMLElement &&
-    (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
-}
+import { isPlainKeyPress } from '../../../shared/utils/keys.js'
 
 function scrollToCard(path) {
   const selector = path === null ? '.change-overview' : `.change-file[data-path="${CSS.escape(path)}"]`
@@ -31,10 +27,10 @@ export function useChangesNavigation({ sections, expand, onCycleView }) {
     if (!sections) { return undefined }
     const order = [null, ...sections.files.map((f) => f.path)]
     const onKeyDown = (e) => {
-      if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) { return }
+      if (!isPlainKeyPress(e)) { return }
       const key = e.key.toLowerCase()
       if (key === 'p') {
-        if (e.shiftKey || current === null || isComposing()) { return }
+        if (current === null || isComposing()) { return }
         if (onCycleView?.(current)) { e.preventDefault() }
         return
       }
