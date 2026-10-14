@@ -6,11 +6,14 @@ import { readAnnotatableFile, isAnnotatableFile, isPathInside, isPlainTextFile, 
 import { exportFeedback, exportMultiFileFeedback, intentSummary } from './feedback.js'
 import { listWorkspaceFiles } from './workspace.js'
 import { config } from './config.js'
+import { freezeReplies } from '../core/session/replyStore.js'
+import { sessionFields } from './sessionDecision.js'
 
 /** A per-file id for client-side drafts that stays the same across runs and projects without revealing the path. */
 const fileIdOf = (absolutePath) => createHash('sha256').update(absolutePath).digest('hex')
 
-export function createApiRouter(filePaths, resolveDecision, origin = 'cli', stores = []) {
+/** `session` is the opened review session, or null when the review keeps none (the OpenCode plugin). */
+export function createApiRouter(filePaths, resolveDecision, origin = 'cli', stores = [], session = null) {
   const router = Router()
 
   // Workspace file listing for @-reference autocomplete
@@ -148,25 +151,35 @@ export function createApiRouter(filePaths, resolveDecision, origin = 'cli', stor
     res.json(success({ saved: true, count: annotations.length }))
   })
 
+  /**
+   * Freeze the replies, answer the browser and hand the decision to the
+   * waiting CLI a moment later. `build(frozen)` returns the `message` and the
+   * `decision`; with a session, the decision also carries what it records.
+   */
+  async function decide(res, files, build) {
+    const frozen = freezeReplies(session?.replies)
+    const { message, decision } = build(frozen)
+    try {
+      const fields = session ? await sessionFields(stores, files, frozen.carried) : {}
+      res.json(success({ message }))
+      setTimeout(() => resolveDecision({ ...decision, ...frozen, ...fields }), 100)
+    } catch (error) {
+      res.status(500).json(failure(error.message))
+    }
+  }
+
   // Approving carries any annotations along as notes instead of discarding them
   router.post('/api/approve', (req, res) => {
-    const { files } = req.body || {}
-
-    if (Array.isArray(files)) {
-      const noteCount = files.reduce(
-        (sum, f) => sum + (f.annotations || []).filter(a => a.type !== 'NOTES').length,
-        0
-      )
+    const files = Array.isArray(req.body?.files) ? req.body.files : []
+    const noteCount = files.reduce((sum, f) => sum + (f.annotations || []).filter(a => a.type !== 'NOTES').length, 0)
+    decide(res, noteCount > 0 ? files : [], (frozen) => {
       if (noteCount > 0) {
-        const notes = exportMultiFileFeedback(files)
-        res.json(success({ message: 'Approved with notes' }))
-        setTimeout(() => resolveDecision({ approved: true, feedback: notes, annotationCount: noteCount, intents: intentSummary(files) }), 100)
-        return
+        return { message: 'Approved with notes', decision: { approved: true, feedback: exportMultiFileFeedback(files), annotationCount: noteCount, intents: intentSummary(files) } }
       }
-    }
-
-    res.json(success({ message: 'Approved' }))
-    setTimeout(() => resolveDecision({ approved: true }), 100)
+      return frozen.replyCount > 0
+        ? { message: 'Approved with notes', decision: { approved: true, feedback: '', annotationCount: frozen.replyCount, repliesOnly: true } }
+        : { message: 'Approved', decision: { approved: true } }
+    })
   })
 
   router.post('/api/feedback', (req, res) => {
@@ -174,10 +187,16 @@ export function createApiRouter(filePaths, resolveDecision, origin = 'cli', stor
 
     // Multi-file format
     if (Array.isArray(files)) {
-      const feedback = exportMultiFileFeedback(files)
       const totalCount = files.reduce((sum, f) => sum + (f.annotations?.length || 0), 0)
-      res.json(success({ message: 'Feedback submitted' }))
-      setTimeout(() => resolveDecision({ approved: false, feedback, annotationCount: totalCount }), 100)
+      decide(res, files, (frozen) => {
+        const repliesOnly = totalCount === 0 && frozen.replyCount > 0
+        return {
+          message: 'Feedback submitted',
+          decision: repliesOnly
+            ? { approved: false, feedback: '', annotationCount: frozen.replyCount, repliesOnly }
+            : { approved: false, feedback: exportMultiFileFeedback(files), annotationCount: totalCount }
+        }
+      })
       return
     }
 

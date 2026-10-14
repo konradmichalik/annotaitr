@@ -12,6 +12,9 @@ import { startAnnotatorServer } from '../core/server.js'
 import { createApiRouter } from './routes.js'
 import { readAnnotatableFile } from './file.js'
 import { convertNotesToAnnotations } from './notes.js'
+import { createSessionThreadsRouter } from '../core/session/threadsRoute.js'
+import { anchorThreads } from './anchorThreads.js'
+import { currentFiles } from './sessionDecision.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DIST_DIR = join(__dirname, '..', '..', 'client', 'dist', 'markdown')
@@ -39,12 +42,13 @@ function resolveNotesForFile(feedbackNotes, fileIndex, content) {
  * @param {string} [options.kind] - 'changes' for a walkthrough from `annotaitr changes`, which the client lays out like a pull request
  * @param {string} [options.label] - what the header names instead of the file path, such as `feature/x → main`
  * @param {import('express').Router} [options.routes] - extra API routes of the mode
+ * @param {Object} [options.session] - the opened review session: last round's threads and the reviewer's pending replies
  * @param {string} [options.htmlContent] - pre-loaded HTML to serve instead of the
  *   built client/dist bundle (used by apps/opencode, which bundles its own copy)
  * @param {Function} [options.onReady] - (url, port) => void
  */
 export async function buildMarkdownServer(options) {
-  const { filePaths, origin = 'cli', feedbackNotes = null, kind = 'document', label = null, routes = null, htmlContent = null, onReady = null } = options
+  const { filePaths, origin = 'cli', feedbackNotes = null, kind = 'document', label = null, routes = null, session = null, htmlContent = null, onReady = null } = options
 
   // Compute content hash per file for annotation persistence. A read failure
   // here (e.g. a file over the size limit) must reject startup — swallowing
@@ -71,7 +75,11 @@ export async function buildMarkdownServer(options) {
     onReady,
     mountRoutes(app, { safeResolve }) {
       if (routes) { app.use(routes) }
-      app.use(createApiRouter(filePaths, safeResolve, origin, stores))
+      app.use(createSessionThreadsRouter({
+        session,
+        anchor: async (previous) => (previous ? anchorThreads(previous, await currentFiles(stores)) : [])
+      }))
+      app.use(createApiRouter(filePaths, safeResolve, origin, stores, session))
     }
   })
 }

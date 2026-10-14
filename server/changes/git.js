@@ -76,10 +76,10 @@ export async function compareInfo(root, base) {
   const branch = (await git(['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: root })).trim()
   const branchName = branch === 'HEAD' ? head.slice(0, 7) : branch
   if (!base) {
-    return { branch: branchName, base: 'HEAD', mergeBase: head, uncommitted: true }
+    return { branch: branchName, base: 'HEAD', head, mergeBase: head, uncommitted: true }
   }
   const mergeBase = (await git(['merge-base', 'HEAD', base.sha], { cwd: root })).trim()
-  return { branch: branchName, base: base.name, mergeBase, uncommitted: false }
+  return { branch: branchName, base: base.name, head, mergeBase, uncommitted: false }
 }
 
 /** The commits between the merge base and HEAD, oldest first, as short sha and subject. */

@@ -6,8 +6,9 @@ import { createChangesRouter } from '../server/changes/routes.js'
 import { buildWalkthrough, hunksOnly, unchangedPaths } from '../server/changes/walkthrough.js'
 import { parseArgs } from './args.js'
 import { runMarkdown } from './markdown.js'
+import { openSession } from './session.js'
 
-const CHANGES_USAGE = 'Usage: annotaitr changes [--base <ref>] [--explain <file>] [--origin <name>] [--feedback-notes <json|path>]'
+const CHANGES_USAGE = 'Usage: annotaitr changes [--base <ref>] [--explain <file>] [--origin <name>] [--feedback-notes <json|path>] [--session <id> | --new-session]'
 
 const OWN_OPTIONS = { '--base': 'base', '--explain': 'explain' }
 const TEXT_FIELDS = ['title', 'summary', 'commit']
@@ -27,7 +28,18 @@ export function parseChangesArgs(args) {
   if (shared.error) { return { error: shared.error } }
   if (shared.help) { return { help: true } }
   if (shared.targets.length > 0) { return { error: `Unexpected argument: ${shared.targets[0]}` } }
-  return { base: own.base ?? null, explain: own.explain ?? null, origin: shared.origin, feedbackNotes: shared.feedbackNotes }
+  return {
+    base: own.base ?? null, explain: own.explain ?? null, origin: shared.origin, feedbackNotes: shared.feedbackNotes,
+    sessionId: shared.sessionId, newSession: shared.newSession
+  }
+}
+
+/**
+ * One session per repository, branch and comparison. The merge base is left
+ * out on purpose: it moves when the base branch moves, the review does not.
+ */
+export function changesSessionIdentity(root, compared) {
+  return ['changes', root, compared.branch, compared.uncommitted ? 'uncommitted' : compared.base].join('\n')
 }
 
 /** The agent's explanation: optional title, summary and commit message, one line per changed path, and which files to check closely. */
@@ -179,8 +191,18 @@ export async function runChanges(args) {
     await removeWalkthrough()
     return decisionNote(prepared)
   }
+  const opened = await openSession({
+    identity: changesSessionIdentity(prepared.root, prepared.compared),
+    target: { kind: 'changes', label: prepared.label, head: prepared.compared.head, mergeBase: prepared.compared.mergeBase, stateHash: prepared.fingerprint },
+    sessionId: parsed.sessionId,
+    newSession: parsed.newSession
+  })
+  if (opened.error) {
+    await removeWalkthrough()
+    return { error: opened.error }
+  }
   try {
-    await runMarkdown({ targets: [prepared.path], origin: parsed.origin, feedbackNotes: parsed.feedbackNotes, kind: 'changes', label: prepared.label, routes: createChangesRouter(fullDiff), onDecision })
+    await runMarkdown({ targets: [prepared.path], origin: parsed.origin, feedbackNotes: parsed.feedbackNotes, kind: 'changes', label: prepared.label, routes: createChangesRouter(fullDiff), onDecision, opened })
   } catch (err) {
     await removeWalkthrough()
     return { error: err.message }
