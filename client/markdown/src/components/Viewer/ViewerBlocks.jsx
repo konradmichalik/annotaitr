@@ -5,7 +5,7 @@ import { BlockRenderer, HtmlWrapper } from './BlockRenderer.jsx'
 import { MathBlock } from './MathBlock.jsx'
 import { CodeBlock } from './CodeBlock.jsx'
 
-function ViewerBlock({ block, annotated, handlers, plantumlServerUrl, krokiServerUrl, inChangeCard = false }) {
+function ViewerBlock({ block, annotated, handlers, plantumlServerUrl, krokiServerUrl, inChangeCard = false, children }) {
   const { annotatedImages, annotatedDiagramBlocks, annotatedMathBlocks, noteBlockIds } = annotated
   const hasNote = noteBlockIds.has(block.id)
   const diagramProps = {
@@ -55,19 +55,29 @@ function ViewerBlock({ block, annotated, handlers, plantumlServerUrl, krokiServe
       annotatedImages={annotatedImages}
       hasNote={hasNote}
       onNoteClick={handlers.onNoteClick}
-    />
+    >
+      {children}
+    </BlockRenderer>
   )
 }
 
-/** Renders the grouped block tree, nesting blocks inside their raw HTML wrappers. */
+/** Renders the grouped block tree, nesting blocks inside their raw HTML wrappers and quotes. */
 export function ViewerBlocks({ nodes, ...blockProps }) {
-  return nodes.map(node =>
-    node.kind === 'wrapper' ? (
-      <HtmlWrapper key={node.block.id} block={node.block}>
-        <ViewerBlocks nodes={node.children} {...blockProps} />
-      </HtmlWrapper>
-    ) : (
-      <ViewerBlock key={node.block.id} block={node.block} {...blockProps} />
-    )
-  )
+  return nodes.map(node => {
+    if (node.kind === 'wrapper') {
+      return (
+        <HtmlWrapper key={node.block.id} block={node.block}>
+          <ViewerBlocks nodes={node.children} {...blockProps} />
+        </HtmlWrapper>
+      )
+    }
+    if (node.kind === 'quote') {
+      return (
+        <ViewerBlock key={node.block.id} block={node.block} {...blockProps}>
+          <ViewerBlocks nodes={node.children} {...blockProps} />
+        </ViewerBlock>
+      )
+    }
+    return <ViewerBlock key={node.block.id} block={node.block} {...blockProps} />
+  })
 }

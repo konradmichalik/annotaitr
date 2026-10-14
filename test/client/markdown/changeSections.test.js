@@ -63,6 +63,27 @@ describe('groupChangeSections', () => {
   })
 })
 
+describe('groupChangeSections with a quote', () => {
+  it('does not read a heading inside a quote as a file', () => {
+    const md = '# T\n\n## `a.js`\n\n> ## Quoted\n> - point\n\nWhy.\n'
+    const { files } = groupChangeSections(parseMarkdownToBlocks(md))
+    expect(files.map((f) => f.path)).toEqual(['a.js'])
+    expect(files[0].blocks.map((b) => b.type)).toEqual(['blockquote', 'heading', 'list-item', 'paragraph'])
+  })
+
+  it('ignores a diff and the walkthrough markers when they are quoted', () => {
+    const md = [
+      '# T', '',
+      '## `a.js`', '',
+      '> ```diff', '> +x', '> -y', '> ```', '>',
+      '> The agent did not mention this change.', '>',
+      '> +5 −2, not shown: lock file.', '> - note', ''
+    ].join('\n')
+    const { files } = groupChangeSections(parseMarkdownToBlocks(md))
+    expect(files[0]).toMatchObject({ hasDiff: false, added: 0, removed: 0, explained: true })
+  })
+})
+
 describe('groupChangeSections with a review focus', () => {
   const md = [
     '# T', '',

@@ -38,13 +38,14 @@ function Chevron({ open }) {
  * set apart from the diffs and labelled with the agent's name.
  */
 function FileBody({ blocks, agent, blockProps }) {
-  return blocks.map((block) => (block.type === 'paragraph' ? (
-    <div key={block.id} className="change-why">
+  // Grouped first, so a quote keeps its child blocks and a paragraph inside it gets no label of its own.
+  return groupHtmlWrappers(blocks).map((node) => (node.kind === 'block' && node.block.type === 'paragraph' ? (
+    <div key={node.block.id} className="change-why">
       <span className="change-why-label"><AgentIcon />{agent.charAt(0).toUpperCase() + agent.slice(1)}</span>
-      <ViewerBlocks nodes={groupHtmlWrappers([block])} {...blockProps} />
+      <ViewerBlocks nodes={[node]} {...blockProps} />
     </div>
   ) : (
-    <ViewerBlocks key={block.id} nodes={groupHtmlWrappers([block])} {...blockProps} />
+    <ViewerBlocks key={node.block.id} nodes={[node]} {...blockProps} />
   )))
 }
 

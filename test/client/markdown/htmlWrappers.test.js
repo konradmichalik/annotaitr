@@ -62,6 +62,40 @@ describe('groupHtmlWrappers', () => {
   })
 })
 
+describe('groupHtmlWrappers with quotes', () => {
+  it('nests the children of a quote under it by parentId', () => {
+    const quote = { id: 'q', type: 'blockquote', nested: true }
+    const child = { id: 'c', type: 'code', parentId: 'q' }
+    const after = { id: 'a', type: 'paragraph' }
+    expect(groupHtmlWrappers([quote, child, after])).toEqual([
+      { kind: 'quote', block: quote, children: [{ kind: 'block', block: child }] },
+      { kind: 'block', block: after }
+    ])
+  })
+
+  it('keeps a child whose quote is not in the list at the top level', () => {
+    const child = { id: 'c', type: 'list-item', parentId: 'q' }
+    expect(groupHtmlWrappers([child])).toEqual([{ kind: 'block', block: child }])
+  })
+
+  it('nests a quote in a quote and a wrapper in a quote', () => {
+    const nodes = groupHtmlWrappers(parseMarkdownToBlocks('> Outer\n>\n> > Inner\n> > - x\n>\n> <details>\n>\n> Hidden\n>\n> </details>'))
+    expect(nodes).toHaveLength(1)
+    expect(nodes[0].kind).toBe('quote')
+    expect(nodes[0].children.map((n) => n.kind)).toEqual(['block', 'quote', 'wrapper'])
+    expect(nodes[0].children[1].children.map((n) => n.block.content)).toEqual(['Inner', 'x'])
+    expect(nodes[0].children[2].children.map((n) => n.block.content)).toEqual(['Hidden'])
+  })
+
+  it('nests a quote inside an HTML wrapper', () => {
+    const nodes = groupHtmlWrappers(parseMarkdownToBlocks('<div>\n\n> - a\n\nAfter\n\n</div>'))
+    expect(nodes).toHaveLength(1)
+    expect(nodes[0].children.map((n) => n.kind)).toEqual(['quote', 'block'])
+    expect(nodes[0].children[0].children.map((n) => n.block.content)).toEqual(['a'])
+    expect(nodes[0].children[1].block.content).toBe('After')
+  })
+})
+
 describe('parseHtmlAttributes', () => {
   it('reads double-quoted attributes', () => {
     expect(parseHtmlAttributes('<div align="center">')).toEqual({ align: 'center' })

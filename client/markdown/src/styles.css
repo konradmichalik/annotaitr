@@ -164,6 +164,22 @@
 }
 .block-alert--caution .block-alert-title { color: var(--status-danger); }
 
+/* Quotes and alerts that hold their own blocks: code stays upright, the edges sit flush */
+.block-blockquote--nested .block-code-wrapper {
+  font-style: normal;
+}
+
+.block-blockquote--nested > :first-child,
+.block-blockquote--nested > .block-note-border + *,
+.block-alert--nested > .block-alert-title + * {
+  margin-top: 0;
+}
+
+.block-blockquote--nested > :last-child,
+.block-alert--nested > :last-child {
+  margin-bottom: 0;
+}
+
 .block-list-item {
   display: flex;
   gap: 0.5em;
@@ -1096,6 +1112,11 @@
   outline: 2px dashed color-mix(in srgb, var(--focus) 40%, transparent);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
+}
+
+/* Only the innermost hovered block shows the outline, not the quote around it */
+.viewer-article.pinpoint-mode [data-block-id]:hover:has([data-block-id]:hover) {
+  outline: none;
 }
 
 .block-hover-hint {
