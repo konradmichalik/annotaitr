@@ -40,7 +40,18 @@ describe('RepliesPanel', () => {
   })
 
   it('names the file of each group when several files are open', () => {
-    expect(render([thread('a1')], { multiFile: true })).toContain('<h3 class="note-file-title">a.md</h3>')
+    expect(render([thread('a1')], { multiFile: true })).toContain('<h4 class="note-file-title">a.md</h4>')
+  })
+
+  it('says the text is no longer in the changes in a changes review', () => {
+    const html = render([thread('o1', { anchor: 'orphan', reason: 'x', place: null, quote: 'old' })], { kind: 'changes' })
+    expect(html).toContain('No longer in the changes')
+    expect(html).not.toContain('No longer in the document')
+  })
+
+  it('groups without changing the threads it was given', () => {
+    const threads = Object.freeze([Object.freeze(thread('a1')), Object.freeze(thread('a2'))])
+    expect(groupThreads(threads).files).toEqual([{ path: 'a.md', threads: [threads[0], threads[1]] }])
   })
 
   it('keeps the path of a single file out, a changes walkthrough lives at an internal path', () => {
@@ -54,7 +65,7 @@ describe('RepliesPanel', () => {
 
   it('lists text that is gone under its own heading with the original quote', () => {
     const html = render([thread('o1', { anchor: 'orphan', reason: 'The text is no longer in the document', place: null, quote: 'old intro' })])
-    expect(html).toContain('No longer in the document')
+    expect(html).toContain('<h4 class="previous-round-heading">No longer in the document</h4>')
     expect(html).toContain('The text is no longer in the document')
     expect(html).toContain('“old intro”')
   })

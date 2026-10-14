@@ -252,7 +252,8 @@ export function AnnotationPanel({
       return (
         <RepliesPanel
           round={previous.round} threads={previous.threads} multiFile={isMultiFile}
-          onLocate={onLocateThread} onReload={previous.reload} focusHandle={focusThread?.handle ?? null}
+          kind={files[0]?.kind === 'changes' ? 'changes' : 'markdown'}
+          onLocate={onLocateThread} onReload={previous.reload} focusRequest={focusThread}
         />
       )
     }

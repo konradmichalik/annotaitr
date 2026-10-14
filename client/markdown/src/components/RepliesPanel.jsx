@@ -11,14 +11,16 @@ const excerpt = (text) => (text && text.length > 80 ? `${text.slice(0, 80)}…` 
 
 /** Placed threads by file, in the order the files first appear, and the orphans apart. General comments have no file. */
 export function groupThreads(threads) {
-  const files = []
-  for (const thread of threads.filter((t) => t.anchor !== 'orphan')) {
-    const path = thread.place?.path ?? null
-    const group = files.find((f) => f.path === path)
-    if (group) { group.threads.push(thread) } else { files.push({ path, threads: [thread] }) }
-  }
-  return { files, orphans: orphanThreads(threads) }
+  const byPath = threads
+    .filter((t) => t.anchor !== 'orphan')
+    .reduce((groups, thread) => {
+      const path = thread.place?.path ?? null
+      return new Map(groups).set(path, [...(groups.get(path) ?? []), thread])
+    }, new Map())
+  return { files: [...byPath].map(([path, grouped]) => ({ path, threads: grouped })), orphans: orphanThreads(threads) }
 }
+
+const ORPHAN_HEADINGS = { changes: 'No longer in the changes', markdown: 'No longer in the document' }
 
 // Where the note is now, or for one whose text is gone, the text it was on.
 function placeLine(thread) {
@@ -27,11 +29,12 @@ function placeLine(thread) {
   return thread.anchor === 'moved' ? `${thread.place.where} · moved` : thread.place.where
 }
 
-function ThreadDetail({ thread, round, id, onReload }) {
+// `focusTick` changes whenever the reviewer asks to reply, which also moves the focus into an open thread's field.
+function ThreadDetail({ thread, round, id, onReload, focusTick }) {
   const [error, setError] = useState(null)
   const fieldRef = useRef(null)
   const removingRef = useRef(false)
-  useEffect(() => { fieldRef.current?.focus() }, [])
+  useEffect(() => { fieldRef.current?.focus() }, [focusTick])
 
   const handleRemove = async (reply) => {
     if (removingRef.current) { return }
@@ -55,38 +58,47 @@ function ThreadDetail({ thread, round, id, onReload }) {
   )
 }
 
-function ThreadItems({ threads, round, open, onToggle, onReload, idPrefix }) {
+function ThreadItems({ threads, idPrefix, open, ...actions }) {
   return threads.map((thread) => (
-    <ThreadItem key={thread.handle} thread={thread} round={round} isOpen={open === thread.handle} onToggle={onToggle} onReload={onReload} id={`${idPrefix}-${thread.handle}`} />
+    <ThreadItem key={thread.handle} thread={thread} isOpen={open === thread.handle} id={`${idPrefix}-${thread.handle}`} {...actions} />
   ))
 }
 
-function ThreadItem({ thread, round, isOpen, onToggle, onReload, id }) {
+function ThreadItem({ thread, round, isOpen, onToggle, onReply, onReload, focusTick, id }) {
   return (
     <>
-      <ThreadEntry thread={thread} round={round} place={placeLine(thread)} expanded={isOpen} onActivate={() => onToggle(thread)} />
-      {isOpen && <ThreadDetail thread={thread} round={round} id={id} onReload={onReload} />}
+      <ThreadEntry
+        thread={thread} round={round} place={placeLine(thread)} expanded={isOpen} controls={id}
+        onActivate={() => onToggle(thread)} onReply={() => onReply(thread)}
+      />
+      {isOpen && <ThreadDetail thread={thread} round={round} id={id} onReload={onReload} focusTick={focusTick} />}
     </>
   )
 }
 
 /**
  * Last round's notes the agent answered, by file, with the reviewer's reply
- * field. A card opens its thread and shows its text in the document;
- * `focusHandle` opens a thread from outside, such as the open questions in
- * the decision dialog.
+ * field. A card opens or closes its thread and shows its text in the
+ * document, Reply opens it with the focus in the field. `focusRequest`
+ * (`{ handle }`) does the same from outside, such as the open questions in
+ * the decision dialog. `kind` is `markdown` or `changes`.
  */
-export function RepliesPanel({ round, threads, multiFile, onLocate, onReload, focusHandle = null }) {
-  const [open, setOpen] = useState(focusHandle)
+export function RepliesPanel({ round, threads, multiFile, kind = 'markdown', onLocate, onReload, focusRequest = null }) {
+  const [open, setOpen] = useState(focusRequest?.handle ?? null)
+  const [focusTick, setFocusTick] = useState(0)
   const idPrefix = useId()
-  useEffect(() => { if (focusHandle) { setOpen(focusHandle) } }, [focusHandle])
+  const reply = (handle) => {
+    setOpen(handle)
+    setFocusTick((n) => n + 1)
+  }
+  useEffect(() => { if (focusRequest) { reply(focusRequest.handle) } }, [focusRequest])
   const { files, orphans } = groupThreads(threads)
   const toSend = pendingReplyCount(threads)
   const toggle = (thread) => {
     setOpen((current) => (current === thread.handle ? null : thread.handle))
     onLocate(thread)
   }
-  const items = { round, open, onToggle: toggle, onReload, idPrefix }
+  const items = { round, open, onToggle: toggle, onReply: (thread) => reply(thread.handle), onReload, focusTick, idPrefix }
 
   return (
     <section className="previous-round-panel replies-panel" aria-labelledby={`${idPrefix}-title`}>
@@ -96,13 +108,13 @@ export function RepliesPanel({ round, threads, multiFile, onLocate, onReload, fo
       </h3>
       {files.map((group) => (
         <section key={group.path ?? 'general'} className="note-file" aria-label={multiFile ? (group.path ?? 'General comments') : undefined}>
-          {multiFile && group.path && <h3 className="note-file-title">{group.path}</h3>}
+          {multiFile && group.path && <h4 className="note-file-title">{group.path}</h4>}
           <ul className="previous-round-list"><ThreadItems threads={group.threads} {...items} /></ul>
         </section>
       ))}
       {orphans.length > 0 && (
         <>
-          <h3 className="previous-round-heading">No longer in the document</h3>
+          <h4 className="previous-round-heading">{ORPHAN_HEADINGS[kind] ?? ORPHAN_HEADINGS.markdown}</h4>
           <ul className="previous-round-list"><ThreadItems threads={orphans} {...items} /></ul>
         </>
       )}

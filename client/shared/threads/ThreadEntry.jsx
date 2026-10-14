@@ -8,17 +8,18 @@ const excerpt = (text) => (text && text.length > 120 ? `${text.slice(0, 120)}…
  * a dashed grey badge, the agent's status as icon and word, then the
  * reviewer's note, the agent's last reply and a reply of the reviewer's own
  * (pending until the decision sends it). The card opens the thread; so does
- * Reply, which is where an answer is written. `place` is an optional line
- * naming where the note is now.
+ * Reply, which is where an answer is written, unless `onReply` does that
+ * apart. `place` is an optional line naming where the note is now,
+ * `controls` the id of the thread it opens in place.
  */
-export default function ThreadEntry({ thread, round, onActivate, place = null, expanded }) {
+export default function ThreadEntry({ thread, round, onActivate, onReply = onActivate, place = null, expanded, controls }) {
   const lastAgent = thread.replies.findLast((r) => (r.author ?? 'agent') === 'agent')
   const last = thread.replies.at(-1)
   const ownReply = last && last.author === 'human' ? last : null
   const number = threadNumber(thread)
   return (
     <li className="note-card reply-card">
-      <button type="button" className="previous-round-entry" aria-expanded={expanded} onClick={(event) => onActivate(thread, event.currentTarget)}>
+      <button type="button" className="previous-round-entry" aria-expanded={expanded} aria-controls={expanded ? controls : undefined} onClick={(event) => onActivate(thread, event.currentTarget)}>
         <span className="note-card-head">
           {number !== null && (
             <span className="note-number note-number--earlier"><span className="visually-hidden">{threadTitle(thread, round)}.</span><span aria-hidden="true">{threadLabel(thread, round)}</span></span>
@@ -38,7 +39,7 @@ export default function ThreadEntry({ thread, round, onActivate, place = null, e
         )}
         {thread.anchor === 'orphan' && thread.reason && <span className="previous-round-entry-reason">{thread.reason}</span>}
       </button>
-      <button type="button" className="reply-card-reply" onClick={(event) => onActivate(thread, event.currentTarget)}>
+      <button type="button" className="reply-card-reply" onClick={(event) => onReply(thread, event.currentTarget)}>
         Reply
       </button>
     </li>
