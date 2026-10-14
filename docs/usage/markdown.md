@@ -29,10 +29,14 @@ document reads **Changes since round N** with what changed (`+1 added · ±2
 changed · −1 removed`). The button switches to a read-only view of the
 document compared block by block with the version reviewed last round: added
 blocks carry `+`, changed blocks `±` with the earlier version struck through
-above them, and removed blocks `−` struck through where they were. A moved
-block shows as removed and added. Notes are added in the normal view, so
-pressing the button again, or **Preview**, returns to it with every note in
-place. Plain-text files and `annotaitr changes` have no such view.
+above them, and removed blocks `−` struck through where they were. A block
+counts as changed when the new one has the same type and shares at least half
+of its words; anything else, a moved block included, shows as removed and
+added. A very long document whose middle differs throughout shows that middle
+as removed and added. Notes are added in the normal view, so pressing the
+button again, or **Preview**, returns to it with every note in place; undo,
+redo, search, restoring a draft and opening another file return to it as
+well. Plain-text files and `annotaitr changes` have no such view.
 
 ## `--feedback-notes`
 
