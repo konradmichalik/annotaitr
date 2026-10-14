@@ -20,6 +20,12 @@ describe('buildThreads', () => {
   it('records the element a mark points at when a describer is given', () => {
     expect(buildThreads([pin], () => 'button "Buy" · #buy')[0].element).toBe('button "Buy" · #buy')
   })
+
+  it('adds the fields a mode keeps per thread, such as the file and the anchor of a text note', () => {
+    const anchor = { quote: 'intro', prefix: '', suffix: '', where: 'Line 3' }
+    const [thread] = buildThreads([pin], () => null, () => ({ file: '/abs/a.md', anchor }))
+    expect(thread).toEqual({ handle: 'a3f19c2e', number: 1, annotation: pin, element: null, replies: [], file: '/abs/a.md', anchor })
+  })
 })
 
 describe('nextSession', () => {

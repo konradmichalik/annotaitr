@@ -6,14 +6,16 @@ import { isNumbered } from '../notes.js'
 /**
  * `annotations` are the decided notes in feedback order. A thread keeps the
  * number printed and baked into the output image; a general comment has none.
+ * `extra(annotation)` adds what a mode keeps per thread, such as a note's file and anchor.
  */
-export function buildThreads(annotations, describeElement = () => null) {
+export function buildThreads(annotations, describeElement = () => null, extra = () => ({})) {
   return annotations.map((annotation, index) => ({
     handle: annotationHandle(annotation.id),
     number: isNumbered(annotation) ? (annotation.number ?? index + 1) : null,
     annotation,
     element: describeElement(annotation),
-    replies: []
+    replies: [],
+    ...extra(annotation)
   }))
 }
 

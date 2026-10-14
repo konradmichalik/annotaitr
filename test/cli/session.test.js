@@ -101,11 +101,18 @@ describe('review sessions in the CLI', () => {
     expect(await open({ sessionId: 'bbbbbbbbbbbb' })).toEqual({ error: `No review session bbbbbbbbbbbb in ${dir}` })
   })
 
-  it('records the element a mark points at on a captured page', async () => {
+  it('records the element the mode names for a mark', async () => {
     const opened = await open({ target: { kind: 'url', label: 'http://x/' } })
-    const domMap = [{ tag: 'button', name: 'Buy', selector: '#buy', box: { x: 0, y: 0, width: 20, height: 20 } }]
-    await recordSession(opened, { annotations: [pin], domMap }, { now: 2000, dir, log })
+    const describeElement = (annotation) => (annotation.id === UUID ? 'button "Buy" · #buy' : null)
+    await recordSession(opened, { annotations: [pin] }, { now: 2000, dir, log, describeElement })
     expect((await readSession(opened.sessionId, dir)).session.threads[0].element).toBe('button "Buy" · #buy')
+  })
+
+  it('stores the fields a mode keeps per thread', async () => {
+    const opened = await open({ target: { kind: 'markdown', label: 'a.md' } })
+    const anchor = { quote: 'intro', prefix: '', suffix: '', where: 'Line 3', contentHash: 'abc' }
+    await recordSession(opened, { annotations: [pin] }, { now: 2000, dir, log, extra: () => ({ file: '/abs/a.md', anchor }) })
+    expect((await readSession(opened.sessionId, dir)).session.threads[0]).toMatchObject({ file: '/abs/a.md', anchor })
   })
 
   it('warns instead of failing when the session cannot be written', async () => {

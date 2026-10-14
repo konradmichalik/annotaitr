@@ -3,7 +3,6 @@ import { sessionIdFor, newSessionId } from '../server/core/session/identity.js'
 import { readSession, writeSession, pruneSessions, sessionDir, RESUME_WINDOW_MS } from '../server/core/session/store.js'
 import { createReplyStore } from '../server/core/session/replyStore.js'
 import { buildThreads, nextSession, sessionLine } from '../server/core/session/threads.js'
-import { matchAnnotation, describeMatch } from '../server/image/common/elementMatch.js'
 
 const stderrLine = (line) => process.stderr.write(`${line}\n`)
 
@@ -42,10 +41,16 @@ export async function openSession({
   return { sessionId: id, target, previous: read.session, replies: createReplyStore(read.session) }
 }
 
-/** Save the decided round. Returns the line telling the agent how to reply, or '' when there is nothing to reply to or saving failed. */
-export async function recordSession(opened, decision, { now = Date.now(), dir = sessionDir(), log = stderrLine } = {}) {
-  const describeElement = (annotation) => describeMatch(matchAnnotation(decision.domMap, annotation))
-  const threads = [...buildThreads(decision.annotations ?? [], describeElement), ...(decision.carried ?? [])]
+/**
+ * Save the decided round. Returns the line telling the agent how to reply, or
+ * '' when there is nothing to reply to or saving failed. `describeElement` and
+ * `extra` come from the mode: the element a mark points at, and what else it
+ * keeps per thread.
+ */
+export async function recordSession(opened, decision, {
+  now = Date.now(), dir = sessionDir(), log = stderrLine, describeElement = () => null, extra = () => ({})
+} = {}) {
+  const threads = [...buildThreads(decision.annotations ?? [], describeElement, extra), ...(decision.carried ?? [])]
   const session = nextSession(opened.previous, {
     sessionId: opened.sessionId, target: opened.target, fingerprint: await opened.fingerprint, threads, now
   })
