@@ -174,6 +174,12 @@ export function InlineMarkdown({ text, onImageClick, annotatedImages, blockId })
         remaining = remaining.slice(match[0].length)
         continue
       }
+      // Without a handler the image is only shown, as in the read-only changes view.
+      if (!onImageClick) {
+        parts.push(<img key={key++} src={imgSrc} alt={imgAlt} className="inline-image" />)
+        remaining = remaining.slice(match[0].length)
+        continue
+      }
       const annotationType = annotatedImages?.get(`${blockId}::${imgSrc}`)
       const annClass = annotationType === 'DELETION' ? ' annotated-deletion' : annotationType ? ' annotated-comment' : ''
       parts.push(
@@ -186,13 +192,13 @@ export function InlineMarkdown({ text, onImageClick, annotatedImages, blockId })
           aria-label={imgAlt ? `Annotate image: ${imgAlt}` : 'Annotate image'}
           onClick={(e) => {
             e.stopPropagation()
-            onImageClick?.({ alt: imgAlt, src: imgSrc, blockId, element: e.currentTarget })
+            onImageClick({ alt: imgAlt, src: imgSrc, blockId, element: e.currentTarget })
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
               e.stopPropagation()
-              onImageClick?.({ alt: imgAlt, src: imgSrc, blockId, element: e.currentTarget })
+              onImageClick({ alt: imgAlt, src: imgSrc, blockId, element: e.currentTarget })
             }
           }}
         >

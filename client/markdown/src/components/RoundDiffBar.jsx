@@ -13,7 +13,7 @@ export function RoundDiffBar({ diff, active, onToggle }) {
   const parts = COUNTS.filter(([key]) => diff.counts[key] > 0)
   return (
     <div className="round-diff-bar">
-      <button type="button" className="btn btn-secondary round-diff-toggle" aria-pressed={active} onClick={() => onToggle(!active)}>
+      <button type="button" className="btn round-diff-toggle" aria-pressed={active} onClick={() => onToggle(!active)}>
         Changes since round {diff.round}
       </button>
       <span className="round-diff-counts">

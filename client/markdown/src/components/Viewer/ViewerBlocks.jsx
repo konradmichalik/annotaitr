@@ -5,7 +5,7 @@ import { BlockRenderer, HtmlWrapper } from './BlockRenderer.jsx'
 import { MathBlock } from './MathBlock.jsx'
 import { CodeBlock } from './CodeBlock.jsx'
 
-function ViewerBlock({ block, annotated, handlers, plantumlServerUrl, krokiServerUrl, inChangeCard = false, children }) {
+function ViewerBlock({ block, annotated, handlers, plantumlServerUrl, krokiServerUrl, inChangeCard = false, earlier = false, children }) {
   const { annotatedImages, annotatedDiagramBlocks, annotatedMathBlocks, noteBlockIds } = annotated
   const hasNote = noteBlockIds.has(block.id)
   const diagramProps = {
@@ -55,6 +55,7 @@ function ViewerBlock({ block, annotated, handlers, plantumlServerUrl, krokiServe
       annotatedImages={annotatedImages}
       hasNote={hasNote}
       onNoteClick={handlers.onNoteClick}
+      earlier={earlier}
     >
       {children}
     </BlockRenderer>

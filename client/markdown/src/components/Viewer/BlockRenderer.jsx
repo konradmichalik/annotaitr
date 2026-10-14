@@ -92,7 +92,8 @@ export function HtmlWrapper({ block, noteClass = '', children }) {
   )
 }
 
-export function BlockRenderer({ block, onImageClick, onTableAnnotate, annotatedImages, hasNote, onNoteClick, children }) {
+/** `earlier` renders a block of a past round: a heading keeps its look but neither its role nor its anchor id. */
+export function BlockRenderer({ block, onImageClick, onTableAnnotate, annotatedImages, hasNote, onNoteClick, earlier = false, children }) {
   const noteClass = hasNote ? ' block-has-note' : ''
   // A quote with nested blocks renders its child blocks, a plain quote its own text.
   const quoteBody = block.nested
@@ -101,9 +102,9 @@ export function BlockRenderer({ block, onImageClick, onTableAnnotate, annotatedI
 
   switch (block.type) {
     case 'heading': {
-      const Tag = `h${block.level || 1}`
+      const Tag = earlier ? 'p' : `h${block.level || 1}`
       return (
-        <Tag id={slugify(block.content)} className={`heading heading-${block.level || 1}${noteClass}`} data-block-id={block.id}>
+        <Tag id={earlier ? undefined : slugify(block.content)} className={`heading heading-${block.level || 1}${noteClass}`} data-block-id={block.id}>
           {hasNote && <NoteBorder blockId={block.id} onClick={onNoteClick} />}
           <InlineMarkdown text={block.content} onImageClick={onImageClick} annotatedImages={annotatedImages} blockId={block.id} />
         </Tag>

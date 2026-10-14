@@ -52,29 +52,49 @@ describe('RoundDiffBar', () => {
   })
 })
 
+const diffOf = (before, after, round = 1) => roundDiffOf({ content: after, blocks: parseMarkdownToBlocks(after), previousRound: { round, content: before }, kind: 'document' })
+
 describe('RoundDiffView', () => {
-  it('marks added and changed blocks and strikes the removed and earlier ones, named for screen readers', () => {
+  it('marks a changed block with its earlier version deleted and its new one inserted, named for screen readers', () => {
     render(<RoundDiffView diff={diffed} />)
     const entries = [...host.querySelectorAll('.round-change')]
     expect(entries.map((e) => e.className)).toEqual(['round-change round-change--changed', 'round-change round-change--changed'])
     expect(entries.map((e) => e.querySelector('.round-change-sign').textContent)).toEqual(['±', '±'])
-    expect(entries.map((e) => e.querySelector('.visually-hidden').textContent)).toEqual(['Changed since round 1', 'Changed since round 1'])
-    expect(entries[0].querySelector('.round-change-before').textContent).toBe('Before:Old step.')
-    expect(entries[0].querySelector('.round-change-after').textContent).toBe('New step.')
+    const before = entries[0].querySelector('.round-change-before')
+    const after = entries[0].querySelector('.round-change-after')
+    expect([before.tagName, after.tagName]).toEqual(['DEL', 'INS'])
+    expect(before.firstElementChild.className).toBe('visually-hidden')
+    expect(before.textContent).toBe('Changed since round 1, before: Old step.')
+    expect(after.textContent).toBe('Now: New step.')
     expect(host.querySelector('.viewer-article').getAttribute('aria-label')).toBe('Changes since round 1')
   })
 
-  it('renders added and removed blocks with their own sign and label, unchanged ones plain', () => {
-    const before = '# Plan\n\nGone.\n\nStays.\n'
-    const after = '# Plan\n\nStays.\n\nFresh.\n'
-    render(<RoundDiffView diff={roundDiffOf({ content: after, blocks: parseMarkdownToBlocks(after), previousRound: { round: 2, content: before }, kind: 'document' })} />)
+  it('inserts added blocks and deletes removed ones with their own sign and label, unchanged ones plain', () => {
+    render(<RoundDiffView diff={diffOf('# Plan\n\nGone.\n\nStays.\n', '# Plan\n\nStays.\n\nFresh.\n', 2)} />)
     const entries = [...host.querySelectorAll('.round-change')]
-    expect(entries.map((e) => [e.className, e.querySelector('.round-change-sign').textContent, e.querySelector('.visually-hidden').textContent, e.querySelector('.round-change-body').textContent]))
+    expect(entries.map((e) => [e.className, e.querySelector('.round-change-sign').textContent, e.querySelector('.round-change-body').tagName, e.querySelector('.round-change-body').textContent]))
       .toEqual([
-        ['round-change round-change--removed', '−', 'Removed since round 2', 'Removed since round 2Gone.'],
-        ['round-change round-change--added', '+', 'Added since round 2', 'Added since round 2Fresh.']
+        ['round-change round-change--removed', '−', 'DEL', 'Removed since round 2: Gone.'],
+        ['round-change round-change--added', '+', 'INS', 'Added since round 2: Fresh.']
       ])
     expect(host.querySelector('[data-block-id="block-0"]').closest('.round-change')).toBeNull()
     expect(host.querySelector('[data-block-id="earlier-block-1"]').closest('.round-change--removed')).not.toBeNull()
+  })
+
+  it('renders earlier headings without heading semantics or ids, so navigation lands on the current ones', () => {
+    render(<RoundDiffView diff={diffOf('# Old title\n\n## Gone section\n\nText.\n', '# New title\n\nText.\n')} />)
+    expect([...host.querySelectorAll('h1, h2, h3, h4, h5, h6')].map((h) => [h.tagName, h.id, h.textContent])).toEqual([['H1', 'new-title', 'New title']])
+    const earlier = [...host.querySelectorAll('del .heading')]
+    expect(earlier.map((h) => [h.tagName, h.hasAttribute('id'), h.textContent])).toEqual([['P', false, 'Old title'], ['P', false, 'Gone section']])
+  })
+
+  it('offers no annotate control on tables, formulas or images', () => {
+    const after = '| a | b |\n|---|---|\n| 1 | 2 |\n\n$$\nx^2\n$$\n\n![Logo](logo.png)\n'
+    render(<RoundDiffView diff={diffOf('Intro.\n', after)} />)
+    expect(host.querySelector('.block-table')).not.toBeNull()
+    expect(host.querySelector('.block-math')).not.toBeNull()
+    expect(host.querySelector('img').getAttribute('alt')).toBe('Logo')
+    expect(host.querySelector('.table-toolbar-btn--annotate')).toBeNull()
+    expect(host.querySelectorAll('[role="button"], [tabindex]')).toHaveLength(0)
   })
 })
