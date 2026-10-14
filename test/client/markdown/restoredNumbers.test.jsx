@@ -19,9 +19,9 @@ let host
 let root
 let methods
 
-function Harness({ annotations }) {
+function Harness({ annotations, refreshAnchor }) {
   const { containerRef, highlightMethods } = useHighlighter({
-    annotations, onAddAnnotation: () => {}, onEditAnnotation: () => {}, onDeleteAnnotation: () => {}, onSelectAnnotation: () => {}
+    annotations, refreshAnchor, onAddAnnotation: () => {}, onEditAnnotation: () => {}, onDeleteAnnotation: () => {}, onSelectAnnotation: () => {}
   })
   methods = highlightMethods
   return <div ref={containerRef}><p data-block-id="block-0">Alpha beta gamma delta</p></div>
@@ -57,5 +57,22 @@ describe('restored highlight numbers', () => {
     act(() => methods.restoreHighlights(stored))
 
     expect(badges()).toEqual({ a1: cards.a1, a2: cards.a2 })
+  })
+})
+
+describe('restored highlights with refreshAnchor', () => {
+  it('leaves a note out when its block is not on the page, instead of using stale metas', () => {
+    const stored = [note('a1', 0, 5, 'Alpha', { number: 1 })]
+    act(() => root.render(<Harness annotations={stored} refreshAnchor={() => null} />))
+    act(() => methods.restoreHighlights(stored))
+    expect(host.querySelectorAll('[data-highlight-id]')).toHaveLength(0)
+  })
+
+  it('places a note at the metas refreshAnchor finds', () => {
+    const stored = [note('a1', 0, 5, 'Alpha', { number: 1 })]
+    const refreshAnchor = () => ({ startMeta: meta(11), endMeta: meta(16) })
+    act(() => root.render(<Harness annotations={stored} refreshAnchor={refreshAnchor} />))
+    act(() => methods.restoreHighlights(stored))
+    expect([...host.querySelectorAll('[data-highlight-id="a1"]')].map((el) => el.textContent).join('')).toBe('gamma')
   })
 })
