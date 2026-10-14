@@ -50,7 +50,7 @@ function feedback(files, replyCount) {
  * so the client can mark what is new. Only what the session stored for this
  * very path; a changes walkthrough keeps no content and already is a diff.
  */
-export function previousRoundOf(session, store, content) {
+function previousRoundOf(session, store, content) {
   if (store.kind === 'changes') { return null }
   const file = session?.previous?.target?.files?.find((f) => f.path === store.absolutePath)
   if (typeof file?.content !== 'string' || file.content === content) { return null }
