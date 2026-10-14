@@ -48,7 +48,7 @@ export async function openSession({
  * keeps per thread.
  */
 export async function recordSession(opened, decision, {
-  now = Date.now(), dir = sessionDir(), log = stderrLine, describeElement = () => null, extra = () => ({})
+  now = Date.now(), dir = sessionDir(), log = stderrLine, describeElement = () => null, extra = () => ({}), noun = 'mark'
 } = {}) {
   const threads = [...buildThreads(decision.annotations ?? [], describeElement, extra), ...(decision.carried ?? [])]
   const session = nextSession(opened.previous, {
@@ -61,5 +61,5 @@ export async function recordSession(opened, decision, {
     log(`Warning: could not save review session ${opened.sessionId}: ${error.message}`)
     return ''
   }
-  return sessionLine(session)
+  return sessionLine(session, noun)
 }

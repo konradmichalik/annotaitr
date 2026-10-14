@@ -61,16 +61,16 @@ const imageReplies = (opened) => (carried, round) =>
 /**
  * What goes to stdout: the verdict first, then last round's exchanges, then
  * the session line. `formatReplies(carried, round)` is the mode's section, the
- * image one unless a mode passes its own.
+ * image one unless a mode passes its own. `noun` is what the mode calls a numbered item.
  */
-export function composeOutput(decision, opened, line, formatReplies = opened && imageReplies(opened)) {
+export function composeOutput(decision, opened, line, formatReplies = opened && imageReplies(opened), noun = 'mark') {
   const carried = decision.carried ?? []
   if (!opened || carried.length === 0) { return decision.output + line }
   const round = opened.previous.round
   // The replies were frozen when the reviewer decided, so a request landing afterwards cannot change what is printed.
   // Only this round's replies count: a thread carried twice also holds earlier rounds' reviewer replies.
   const head = decision.repliesOnly
-    ? formatRepliesOnlyHeader({ approved: decision.approved, count: decision.replyCount, round })
+    ? formatRepliesOnlyHeader({ approved: decision.approved, count: decision.replyCount, round, noun })
     : decision.output
   return head + formatReplies(carried, round) + line
 }

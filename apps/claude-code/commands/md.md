@@ -38,7 +38,7 @@ If the output shows `APPROVED WITH NOTES:`, the user approved the file as-is but
 
 After applying all changes:
 
-1. **Reply per handle.** The feedback ends with a `Session:` line. Run one `annotaitr reply --session <id> --to <handle> --status <status> --text "..."` per handle, with `<status>` one of `applied`, `partial`, `declined`, `deferred` or `question`. The text says what changed, what is left, why you declined, when you will do it, or the question; ask a blocking question in chat too. A `## Replies to round N` section continues an earlier thread: act on the reviewer's reply and answer it on the same handle. A `Feedback: N replies to round N, no new marks.` decision is a valid decision with work in it.
+1. **Reply per handle.** The feedback ends with a `Session:` line. Run one `annotaitr reply --session <id> --to <handle> --status <status> --text "..."` per handle, with `<status>` one of `applied`, `partial`, `declined`, `deferred` or `question`. The text says what changed, what is left, why you declined, when you will do it, or the question; ask a blocking question in chat too. A `## Replies to round N` section continues an earlier thread: act on the reviewer's reply and answer it on the same handle. A `Feedback: N replies to round N, no new notes.` decision is a valid decision with work in it.
 
 2. **Re-open the annotator** on the same files. The next round shows your replies next to the reviewer's notes. Add `--feedback-notes` only for notes tied to no handle, such as a summary of the changes; each has a `text` field and an optional `line` field (line number in the **updated** file):
    ```bash

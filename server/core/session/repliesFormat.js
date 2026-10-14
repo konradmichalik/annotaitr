@@ -8,9 +8,10 @@ const lines = (text) => String(text ?? '').replace(/\r\n/g, '\n').split('\n')
 const plural = (count) => (count === 1 ? 'reply' : 'replies')
 
 // The reviewer's original words are quoted line by line so a multi-line comment stays one block.
-export function quote(origin, text) {
+// `noun` is what the mode calls a numbered item: an image has marks, a document has notes.
+export function quote(origin, text, noun = 'mark') {
   const [first, ...rest] = lines(text)
-  const mark = origin.number === null || origin.number === undefined ? 'general comment' : `mark ${origin.number}`
+  const mark = origin.number === null || origin.number === undefined ? 'general comment' : `${noun} ${origin.number}`
   const where = origin.where ? ` (${origin.where})` : ''
   return [`> Round ${origin.round}, ${mark}${where}: ${first}`, ...rest.map((line) => `> ${line}`)].join('\n')
 }
@@ -24,15 +25,16 @@ export function replyLine(reply) {
 
 const elementLine = (thread) => (thread.element ? [`Element: ${thread.element}`] : [])
 
-function threadBlock(thread, { heading, details = elementLine }) {
-  const block = [heading(thread), ...details(thread), quote(thread.origin, thread.annotation.text), ...thread.replies.map(replyLine)]
+function threadBlock(thread, { heading, details = elementLine, noun }) {
+  const block = [heading(thread), ...details(thread), quote(thread.origin, thread.annotation.text, noun), ...thread.replies.map(replyLine)]
   return `${block.join('\n')}\n`
 }
 
 /**
  * Last round's threads the reviewer answered, as the whole exchange, so the
  * agent sees a reply to its reply. `heading(thread)` is the mode's heading
- * line, `details(thread)` the lines under it (the matched element by default).
+ * line, `details(thread)` the lines under it (the matched element by default),
+ * `noun` what it calls a numbered item (`mark` by default).
  */
 export function formatReplies(carried, round, format) {
   if (carried.length === 0) { return '' }
@@ -40,8 +42,8 @@ export function formatReplies(carried, round, format) {
 }
 
 /** The verdict line of a decision that carries replies but no new marks. */
-export function formatRepliesOnlyHeader({ approved, count, round }) {
+export function formatRepliesOnlyHeader({ approved, count, round, noun = 'mark' }) {
   return approved
     ? `APPROVED WITH NOTES: ${count} ${plural(count)} to round ${round}. The target is approved as-is. Treat the replies below as context, not as change requests.\n`
-    : `Feedback: ${count} ${plural(count)} to round ${round}, no new marks.\n`
+    : `Feedback: ${count} ${plural(count)} to round ${round}, no new ${noun}s.\n`
 }

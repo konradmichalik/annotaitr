@@ -67,10 +67,10 @@ describe('a markdown review session across rounds', () => {
     await api2.post('/api/feedback', { files: [{ path: file.path, blocks: [], annotations: [] }] })
     expect(await second.exited).toBe(0)
     const out = second.stdout()
-    expect(out).toMatch(/^Feedback: 2 replies to round 1, no new marks\.\n/)
-    expect(out).toContain(`### [#a3f19c2e] Change · Text (Line 5, ${file.path})\nSelected: \`intro says hello\`\n> Round 1, mark 1 (Line 3): Friendlier\nAgent (question): Warmer or shorter?\nReviewer: Warmer\n`)
-    expect(out).toContain('### [#b7210e44] Change · Text (no longer in the document)\nSelected: `goodbye paragraph`\n> Round 1, mark 2 (Line 5): Drop it\n')
-    expect(out).toContain(`Session: ${sessionId} (round 2)`)
+    expect(out).toMatch(/^Feedback: 2 replies to round 1, no new notes\.\n/)
+    expect(out).toContain(`### [#a3f19c2e] Change · Text (Line 5, ${file.path})\nSelected: \`intro says hello\`\n> Round 1, note 1 (Line 3): Friendlier\nAgent (question): Warmer or shorter?\nReviewer: Warmer\n`)
+    expect(out).toContain('### [#b7210e44] Change · Text (no longer in the document)\nSelected: `goodbye paragraph`\n> Round 1, note 2 (Line 5): Drop it\n')
+    expect(out).toContain(`Session: ${sessionId} (round 2). Reply per note with:`)
   }, 45_000)
 
   it('approves the unchanged file with replies alone and keeps the exact place', async () => {

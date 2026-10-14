@@ -27,6 +27,13 @@ describe('composeOutput with a mode formatter', () => {
   })
 })
 
+describe('composeOutput with a noun', () => {
+  it('says notes in the replies-only header of a mode that has notes', () => {
+    const decision = { approved: false, repliesOnly: true, output: '', carried, replyCount: 1 }
+    expect(composeOutput(decision, opened, line, () => '', 'note')).toBe(`Feedback: 1 reply to round 1, no new notes.\n${line}`)
+  })
+})
+
 describe('composeOutput', () => {
   it('prints the verdict untouched when nothing was carried', () => {
     const decision = { approved: true, output: 'APPROVED: No changes requested.\n', carried: [], replyCount: 0 }

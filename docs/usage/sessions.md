@@ -55,6 +55,9 @@ saved, a warning goes to stderr and the decision is printed as usual. Several
 
 ## Markdown and changes
 
+Markdown and changes call a numbered item a note, so their output says
+`note 1`, `no new notes` and `Reply per note`.
+
 A Markdown session stores each round's notes with the quoted text and, for a
 document, the file's content, so the next round can find the text again. A
 `changes` session stores only the commit, the merge base and a hash of the
@@ -79,7 +82,7 @@ in the document"; the quote line keeps where it was in round N:
 ```text
 ### [#a3f19c2e] Change · Text (Line 5, docs/guide.md)
 Selected: `intro says hello`
-> Round 1, mark 1 (Line 3): Make this friendlier
+> Round 1, note 1 (Line 3): Make this friendlier
 Agent (question): Warmer or shorter?
 Reviewer: Warmer
 ```
@@ -103,7 +106,7 @@ While the agent's questions are unanswered, the main button (Approve or Send
 feedback) opens the decision dialog first, with that option selected and the
 open questions listed ("The agent asked N questions you have not answered"),
 with an Answer button. It never blocks the decision. A round with only replies sent as feedback starts with
-`Feedback: 1 reply to round 1, no new marks.`, or
+`Feedback: 1 reply to round 1, no new marks.` (`no new notes` for Markdown and changes), or
 `APPROVED WITH NOTES: 1 reply to round 1. ...` when the target is approved.
 
 The agent sees the exchange under "Replies to round N", after the feedback for

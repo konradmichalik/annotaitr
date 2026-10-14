@@ -60,6 +60,10 @@ describe('sessionLine', () => {
     )
   })
 
+  it('says note instead of mark where the mode says so', () => {
+    expect(sessionLine(at(buildThreads([pin])), 'note')).toContain('Reply per note with: annotaitr reply')
+  })
+
   it('stays silent when there is nothing to reply to', () => {
     expect(sessionLine(at([]))).toBe('')
     expect(sessionLine(at(buildThreads([legacy])))).toBe('')

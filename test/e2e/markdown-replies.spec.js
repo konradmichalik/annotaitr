@@ -93,9 +93,9 @@ test.describe('replies from the last round of a Markdown review', () => {
     await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible()
     await second.exited
     const out = second.stdout()
-    expect(out).toMatch(/^Feedback: 1 reply to round 1, no new marks\./)
+    expect(out).toMatch(/^Feedback: 1 reply to round 1, no new notes\./)
     expect(out).toContain(`### [#${friendlier}] Change · Text (Line 5, `)
-    expect(out).toContain('> Round 1, mark 1 (Line 3): Make this friendlier\nAgent (question): Warmer or shorter?\nReviewer: Warmer\n')
+    expect(out).toContain('> Round 1, note 1 (Line 3): Make this friendlier\nAgent (question): Warmer or shorter?\nReviewer: Warmer\n')
     expect(out).toContain(`Session: ${sessionId} (round 2)`)
   })
 })

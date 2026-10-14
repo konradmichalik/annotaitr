@@ -17,7 +17,7 @@ describe('formatMarkdownReplies', () => {
       '\n## Replies to round 1\n\n' +
       '### [#b7210e44] Change · Text (Line 9, docs/a.md)\n' +
       'Selected: `The intro says hello.`\n' +
-      '> Round 1, mark 2 (Line 3): Make it shorter\n' +
+      '> Round 1, note 2 (Line 3): Make it shorter\n' +
       'Agent (question): Shorter or gone?\n' +
       'Reviewer: Shorter\n'
     )
@@ -42,6 +42,14 @@ describe('formatMarkdownReplies', () => {
     const general = { type: 'COMMENT', targetType: 'global', text: 'Overall fine' }
     const text = formatMarkdownReplies([thread('d1', general, { anchor: null, origin: { round: 1, number: null } })], 1, { places: {}, kind: 'markdown' })
     expect(text).toContain('### [#d1] General comment\n> Round 1, general comment: Overall fine\n')
+  })
+
+  it('fences a selection holding backticks in a longer run of them', () => {
+    const ticks = { ...anchor, quote: 'call `run` or ``x``' }
+    const text = formatMarkdownReplies([thread('f1', comment, { anchor: ticks })], 1, { places: {}, kind: 'markdown' })
+    expect(text).toContain('Selected: ``` call `run` or ``x`` ```\n')
+    const edge = formatMarkdownReplies([thread('f2', comment, { anchor: { ...anchor, quote: '`a`' } })], 1, { places: {}, kind: 'markdown' })
+    expect(edge).toContain('Selected: `` `a` ``\n')
   })
 
   it('shortens a long selection to one line', () => {

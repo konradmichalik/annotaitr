@@ -25,10 +25,18 @@ function heading(thread, located, kind) {
   return `### [#${thread.handle}] ${intentWord(intentOf(annotation))} · ${noteWhat(annotation, null)}${where ? ` (${where})` : ''}`
 }
 
+// A code span needs a backtick run longer than any inside it, and a space where the text touches the fence.
+function codeSpan(text) {
+  const longest = Math.max(0, ...(text.match(/`+/g) ?? []).map((run) => run.length))
+  const fence = '`'.repeat(longest + 1)
+  const pad = longest > 0 ? ' ' : ''
+  return `${fence}${pad}${text}${pad}${fence}`
+}
+
 function details(thread) {
   const quote = thread.anchor?.quote
   if (!quote) { return [] }
-  return [`${thread.annotation.type === 'INSERTION' ? 'After' : 'Selected'}: \`${oneLine(quote)}\``]
+  return [`${thread.annotation.type === 'INSERTION' ? 'After' : 'Selected'}: ${codeSpan(oneLine(quote))}`]
 }
 
 /**
@@ -37,5 +45,5 @@ function details(thread) {
  * `markdown` or `changes`.
  */
 export function formatMarkdownReplies(carried, round, { places, kind }) {
-  return formatReplies(carried, round, { heading: (thread) => heading(thread, places[thread.handle], kind), details })
+  return formatReplies(carried, round, { heading: (thread) => heading(thread, places[thread.handle], kind), details, noun: 'note' })
 }

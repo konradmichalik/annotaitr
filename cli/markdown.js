@@ -49,10 +49,11 @@ function verdict(decision) {
 
 async function sessionOutput(opened, decision) {
   const line = await recordSession({ ...opened, target: markdownSessionTarget(opened.target, decision.files ?? []) }, decision, {
-    extra: (annotation) => decision.threadFields?.[annotation.id] ?? {}
+    extra: (annotation) => decision.threadFields?.[annotation.id] ?? {},
+    noun: 'note'
   })
   const format = (carried, round) => formatMarkdownReplies(carried, round, { places: decision.places ?? {}, kind: opened.target.kind })
-  return composeOutput({ ...decision, output: verdict(decision) }, opened, line, format)
+  return composeOutput({ ...decision, output: verdict(decision) }, opened, line, format, 'note')
 }
 
 /**

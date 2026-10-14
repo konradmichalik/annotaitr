@@ -57,6 +57,10 @@ describe('quote', () => {
     expect(quote({ round: 3, number: null }, 'Overall')).toBe('> Round 3, general comment: Overall')
   })
 
+  it('calls it a note where the mode says so', () => {
+    expect(quote({ round: 1, number: 2, where: 'Line 7' }, 'Fix', 'note')).toBe('> Round 1, note 2 (Line 7): Fix')
+  })
+
   it('keeps the place the mark had in its round', () => {
     expect(quote({ round: 1, number: 2, where: 'Line 7' }, 'Fix')).toBe('> Round 1, mark 2 (Line 7): Fix')
   })
@@ -72,6 +76,10 @@ describe('replyLine', () => {
 describe('formatRepliesOnlyHeader', () => {
   it('states a feedback decision without new marks', () => {
     expect(formatRepliesOnlyHeader({ approved: false, count: 1, round: 1 })).toBe('Feedback: 1 reply to round 1, no new marks.\n')
+  })
+
+  it('says notes instead of marks where the mode says so', () => {
+    expect(formatRepliesOnlyHeader({ approved: false, count: 2, round: 1, noun: 'note' })).toBe('Feedback: 2 replies to round 1, no new notes.\n')
   })
 
   it('states an approval that carries replies as notes', () => {
