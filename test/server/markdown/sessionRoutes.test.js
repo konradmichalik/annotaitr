@@ -82,6 +82,46 @@ describe('markdown routes with a review session', () => {
     expect(decision.files).toEqual([{ absolutePath: path, path: expect.stringMatching(/a\.md$/), content: DOC, contentHash: sha(DOC) }])
   })
 
+  it('answers a malformed body with 400 and keeps waiting for a decision', async () => {
+    const url = await start()
+    expect((await post(url, '/api/feedback', { files: [{ annotations: 'x' }] })).status).toBe(400)
+    expect((await post(url, '/api/approve', { files: [{ annotations: 'x' }] })).status).toBe(400)
+    // The old single-file body is gone, no client sends it.
+    expect((await post(url, '/api/feedback', { annotations: [], blocks: [] })).status).toBe(400)
+    expect((await post(url, '/api/threads/a3f19c2e/replies', { text: 'Still open' })).status).toBe(200)
+    await post(url, '/api/feedback', { files: [{ path: 'a.md', annotations: [], blocks: [] }] })
+    expect(await server.waitForDecision()).toMatchObject({ repliesOnly: true, replyCount: 1 })
+  })
+
+  it('answers 500 with an empty round when last round cannot be placed', async () => {
+    const broken = { ...previousRound(), threads: [{ ...previousRound().threads[0], anchor: { quote: 7 } }] }
+    const url = await start(broken)
+    const response = await fetch(`${url}/api/threads`)
+    expect(response.status).toBe(500)
+    expect((await response.json()).success).toBe(false)
+  })
+
+  it('prints notes and replies together when an approval keeps its notes', async () => {
+    const url = await start()
+    await post(url, '/api/threads/a3f19c2e/replies', { text: 'Two lines' })
+    const fresh = { ...note, id: OTHER, number: 1 }
+    await post(url, '/api/approve', { files: [{ path: 'a.md', annotations: [fresh], blocks: [block] }] })
+    const decision = await server.waitForDecision()
+    expect(decision).toMatchObject({ approved: true, annotationCount: 1, replyCount: 1 })
+    expect(decision.repliesOnly).toBeUndefined()
+    expect(decision.feedback).toContain('[#b7210e44]')
+    expect(decision.carried.map((t) => t.handle)).toEqual(['a3f19c2e'])
+  })
+
+  it('never turns the agent\'s read-only notes into threads', async () => {
+    const url = await start(null)
+    const agentNote = { id: 'c0ffee12-1b4d-4f7a-9c3e-2d5f8a1b6c4d', type: 'NOTES', blockId: 'block-1', startOffset: 0, endOffset: 5, originalText: 'intro', text: 'Rewrote this' }
+    const fresh = { ...note, id: OTHER, number: 1 }
+    await post(url, '/api/feedback', { files: [{ path: 'a.md', annotations: [agentNote, fresh], blocks: [block] }] })
+    const decision = await server.waitForDecision()
+    expect(decision.annotations.map((a) => a.id)).toEqual([OTHER])
+  })
+
   it('keeps printing "No annotations." for feedback without notes or replies', async () => {
     const url = await start(null)
     await post(url, '/api/feedback', { files: [{ path: 'a.md', annotations: [], blocks: [] }] })

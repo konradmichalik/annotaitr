@@ -3,7 +3,7 @@ import { success, failure } from '../core/http.js'
 import { relative, resolve, dirname, isAbsolute } from 'node:path'
 import { createHash } from 'node:crypto'
 import { readAnnotatableFile, isAnnotatableFile, isPathInside, isPlainTextFile, resolveAnnotatablePath } from './file.js'
-import { exportFeedback, exportMultiFileFeedback, intentSummary } from './feedback.js'
+import { exportMultiFileFeedback, intentSummary } from './feedback.js'
 import { listWorkspaceFiles } from './workspace.js'
 import { config } from './config.js'
 import { freezeReplies } from '../core/session/replyStore.js'
@@ -11,6 +11,39 @@ import { sessionFields } from './sessionDecision.js'
 
 /** A per-file id for client-side drafts that stays the same across runs and projects without revealing the path. */
 const fileIdOf = (absolutePath) => createHash('sha256').update(absolutePath).digest('hex')
+
+const BODY_ERROR = 'Request body must contain a "files" array, each file with an "annotations" array'
+
+const isObjectList = (value) => Array.isArray(value) && value.every((item) => item !== null && typeof item === 'object')
+
+/** The submitted files, or null when the body has no usable shape. An approval may leave them out. */
+export function submittedFiles(body, { required }) {
+  const files = body?.files
+  if (files === undefined && !required) { return [] }
+  const usable = isObjectList(files) && files.every((f) => isObjectList(f.annotations ?? []) && isObjectList(f.blocks ?? []))
+  return usable ? files : null
+}
+
+const ownNoteCount = (files) => files.reduce((sum, f) => sum + (f.annotations ?? []).filter((a) => a.type !== 'NOTES').length, 0)
+
+/** What an approval decides: with notes, with replies alone, or nothing to pass along. */
+function approval(files, replyCount) {
+  const noteCount = ownNoteCount(files)
+  if (noteCount > 0) {
+    return { message: 'Approved with notes', decision: { approved: true, feedback: exportMultiFileFeedback(files), annotationCount: noteCount, intents: intentSummary(files) } }
+  }
+  return replyCount > 0
+    ? { message: 'Approved with notes', decision: { approved: true, feedback: '', annotationCount: replyCount, repliesOnly: true } }
+    : { message: 'Approved', decision: { approved: true } }
+}
+
+function feedback(files, replyCount) {
+  const noteCount = files.reduce((sum, f) => sum + (f.annotations?.length ?? 0), 0)
+  const decision = noteCount === 0 && replyCount > 0
+    ? { approved: false, feedback: '', annotationCount: replyCount, repliesOnly: true }
+    : { approved: false, feedback: exportMultiFileFeedback(files), annotationCount: noteCount }
+  return { message: 'Feedback submitted', decision }
+}
 
 /** `session` is the opened review session, or null when the review keeps none (the OpenCode plugin). */
 export function createApiRouter(filePaths, resolveDecision, origin = 'cli', stores = [], session = null) {
@@ -153,61 +186,33 @@ export function createApiRouter(filePaths, resolveDecision, origin = 'cli', stor
 
   /**
    * Freeze the replies, answer the browser and hand the decision to the
-   * waiting CLI a moment later. `build(frozen)` returns the `message` and the
-   * `decision`; with a session, the decision also carries what it records.
+   * waiting CLI a moment later. With a session, the decision also carries
+   * what the session records. The caller catches a failure.
    */
-  async function decide(res, files, build) {
+  async function decide(res, files, { message, decision }) {
     const frozen = freezeReplies(session?.replies)
-    const { message, decision } = build(frozen)
-    try {
-      const fields = session ? await sessionFields(stores, files, frozen.carried) : {}
-      res.json(success({ message }))
-      setTimeout(() => resolveDecision({ ...decision, ...frozen, ...fields }), 100)
-    } catch (error) {
-      res.status(500).json(failure(error.message))
-    }
+    const fields = session ? await sessionFields(stores, files, frozen.carried) : {}
+    res.json(success({ message }))
+    setTimeout(() => resolveDecision({ ...decision, ...frozen, ...fields }), 100)
   }
+
+  // Express 4 does not catch a rejected handler, so each decision route answers its own failure.
+  const decideOrFail = (res, files, outcome) => decide(res, files, outcome)
+    .catch((error) => res.status(500).json(failure(error.message)))
+  const pendingReplies = () => session?.replies?.count() ?? 0
 
   // Approving carries any annotations along as notes instead of discarding them
   router.post('/api/approve', (req, res) => {
-    const files = Array.isArray(req.body?.files) ? req.body.files : []
-    const noteCount = files.reduce((sum, f) => sum + (f.annotations || []).filter(a => a.type !== 'NOTES').length, 0)
-    decide(res, noteCount > 0 ? files : [], (frozen) => {
-      if (noteCount > 0) {
-        return { message: 'Approved with notes', decision: { approved: true, feedback: exportMultiFileFeedback(files), annotationCount: noteCount, intents: intentSummary(files) } }
-      }
-      return frozen.replyCount > 0
-        ? { message: 'Approved with notes', decision: { approved: true, feedback: '', annotationCount: frozen.replyCount, repliesOnly: true } }
-        : { message: 'Approved', decision: { approved: true } }
-    })
+    const files = submittedFiles(req.body, { required: false })
+    if (!files) { return res.status(400).json(failure(BODY_ERROR)) }
+    const outcome = approval(files, pendingReplies())
+    decideOrFail(res, ownNoteCount(files) > 0 ? files : [], outcome)
   })
 
   router.post('/api/feedback', (req, res) => {
-    const { files, annotations, blocks } = req.body
-
-    // Multi-file format
-    if (Array.isArray(files)) {
-      const totalCount = files.reduce((sum, f) => sum + (f.annotations?.length || 0), 0)
-      decide(res, files, (frozen) => {
-        const repliesOnly = totalCount === 0 && frozen.replyCount > 0
-        return {
-          message: 'Feedback submitted',
-          decision: repliesOnly
-            ? { approved: false, feedback: '', annotationCount: frozen.replyCount, repliesOnly }
-            : { approved: false, feedback: exportMultiFileFeedback(files), annotationCount: totalCount }
-        }
-      })
-      return
-    }
-
-    // Single-file backward compat
-    if (!Array.isArray(annotations) || !Array.isArray(blocks)) {
-      return res.status(400).json(failure('Request body must contain "files" array or "annotations" and "blocks" arrays'))
-    }
-
-    const feedback = exportFeedback(annotations, blocks)
-    res.json(success({ message: 'Feedback submitted' }))
-    setTimeout(() => resolveDecision({ approved: false, feedback, annotationCount: annotations.length }), 100)
+    const files = submittedFiles(req.body, { required: true })
+    if (!files) { return res.status(400).json(failure(BODY_ERROR)) }
+    decideOrFail(res, files, feedback(files, pendingReplies()))
   })
 
   return router
