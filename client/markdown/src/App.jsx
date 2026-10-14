@@ -47,6 +47,7 @@ import UnansweredQuestions from '../../shared/threads/UnansweredQuestions.jsx'
 import { useMarkdownPreviousRound } from './hooks/useMarkdownPreviousRound.js'
 import { usePreviousHighlights } from './hooks/usePreviousHighlights.js'
 import { useRoundDiff } from './hooks/useRoundDiff.js'
+import { useViewMode } from './hooks/useViewMode.js'
 import { shownView } from './utils/roundDiff.js'
 import { RoundDiffBar } from './components/RoundDiffBar.jsx'
 import { RoundDiffView } from './components/Viewer/RoundDiffView.jsx'
@@ -90,7 +91,6 @@ export default function App() {
   const [focusThread, setFocusThread] = useState(null)
   const [toast, setToast] = useState(null)
   const [pinpointMode, setPinpointMode] = useState(() => settings.defaultMode === 'pinpoint')
-  const [viewMode, setViewMode] = useState('preview') // 'preview' | 'source' | 'changes' (since the last round)
   const shiftHeld = useShiftHeld()
   const viewerRef = useRef(null)
   const toastTimerRef = useRef(null)
@@ -128,6 +128,7 @@ export default function App() {
     openFile,
     reloadActiveFile,
   } = useReviewFiles({ viewerRef, setStatus, setErrorStatus })
+  const [viewMode, setViewMode] = useViewMode(activeFileIndex)
 
   // Derived state from active file
   const activeFile = files[activeFileIndex] || null
@@ -313,7 +314,7 @@ export default function App() {
     }
     setSelectedAnnotationId(id)
     setSidebarCollapsed(false)
-  }, [annotations, effectiveViewMode])
+  }, [annotations, effectiveViewMode, setViewMode])
 
   const handleImportAnnotations = useCallback((jsonData) => {
     const result = validateAnnotationImport(jsonData)
@@ -390,7 +391,7 @@ export default function App() {
     } else {
       applyDraft(reanchorDraft(draft.annotations))
     }
-  }, [restoreDraft, applyDraft, reanchorDraft, effectiveViewMode, isPlainTextFile])
+  }, [restoreDraft, applyDraft, reanchorDraft, effectiveViewMode, isPlainTextFile, setViewMode])
 
   const handleUndo = useCallback(() => {
     annDispatch({ type: 'UNDO' })
@@ -421,7 +422,7 @@ export default function App() {
     const index = files.findIndex(f => f.path === path)
     if (index !== -1) { handleSelectFile(index) }
     setViewMode('preview')
-  }, [files, handleSelectFile])
+  }, [files, handleSelectFile, setViewMode])
   const locateThread = usePreviousHighlights({
     threads: previous.threads, path: filePath, blocks, enabled: effectiveViewMode === 'preview' && !submitted, showFile: showThreadFile,
   })
