@@ -87,3 +87,28 @@ describe('anchorThreads', () => {
     expect(gone).toMatchObject({ anchor: 'orphan', place: null, quote: 'intro says' })
   })
 })
+
+describe('anchoring a large file', () => {
+  // 40 000 lines that all hold the quote: a scan of the file per occurrence or per thread takes minutes.
+  const big = Array.from({ length: 40_000 }, (_, i) => `Row ${i} says repeat here.`).join('\n')
+
+  it('picks the occurrence nearest the note without rescanning the file for each one', () => {
+    const started = performance.now()
+    const anchor = createAnchor(note({ blockId: 'source-line-29999', originalText: 'repeat' }), null, file(big))
+    expect(anchor.prefix).toContain('29999says')
+    expect(performance.now() - started).toBeLessThan(1000)
+  })
+
+  it('reads each file once for all of last round\'s threads', () => {
+    const current = file(`${big}\nmoved`)
+    const threads = Array.from({ length: 300 }, (_, i) => ({
+      handle: `h${i}`, number: i + 1, annotation: note({ originalText: `Row ${i} says` }), element: null, file: '/abs/a.md', replies: [],
+      anchor: { quote: i === 3 ? 'Absent words' : `Row ${i * 100} says`, prefix: '', suffix: '', where: 'Line 1', contentHash: 'old' }
+    }))
+    const started = performance.now()
+    const placed = anchorThreads({ round: 1, threads }, [current])
+    expect(placed[3]).toMatchObject({ anchor: 'orphan' })
+    expect(placed[0]).toMatchObject({ anchor: 'moved', place: { line: 1 } })
+    expect(performance.now() - started).toBeLessThan(3000)
+  })
+})

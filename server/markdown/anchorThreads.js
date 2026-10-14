@@ -60,16 +60,60 @@ function hintLine(annotation, block) {
   return (block?.startLine ?? 1) + countNewlines((block?.content || '').slice(0, annotation.startOffset ?? 0))
 }
 
-const lineOf = (content, index) => countNewlines(content.slice(0, index)) + 1
+const FENCE = /^(`{3,}|~{3,})\s*(.*)$/
+
+/** Every fenced block of the source: its info string, its first content line and its closing line (all 0-based). */
+function fencesOf(lines) {
+  const fences = []
+  let open = null
+  lines.forEach((line, i) => {
+    const fence = FENCE.exec(line)
+    if (!fence) { return }
+    if (!open) {
+      open = { marker: fence[1], info: fence[2], start: i + 1 }
+    } else if (line.trim().startsWith(open.marker) && fence[2] === '') {
+      fences.push({ info: open.info, start: open.start, close: i })
+      open = null
+    }
+  })
+  return open ? [...fences, { info: open.info, start: open.start, close: Infinity }] : fences
+}
+
+function lineStartsOf(content) {
+  const starts = [0]
+  for (let i = content.indexOf('\n'); i !== -1; i = content.indexOf('\n', i + 1)) { starts.push(i + 1) }
+  return starts
+}
+
+// Projection, line starts and fences depend only on the content, and a file object lives for one request.
+const analysed = new WeakMap()
+function analyse(file) {
+  if (!analysed.has(file)) {
+    const lines = file.content.split('\n')
+    analysed.set(file, { projected: project(file.content), lineStarts: lineStartsOf(file.content), lines, fences: fencesOf(lines) })
+  }
+  return analysed.get(file)
+}
+
+/** The 1-based line of a source index, by binary search over the line starts. */
+function lineAt(lineStarts, index) {
+  let low = 0
+  let high = lineStarts.length - 1
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2)
+    if (lineStarts[middle] <= index) { low = middle } else { high = middle - 1 }
+  }
+  return low + 1
+}
 
 /** The note's quote with the text around it, from the occurrence closest to where the note was made. */
 export function createAnchor(annotation, block, file) {
   const quote = quoteOf(annotation)
   if (annotation.targetType === 'global' || !quote) { return null }
-  const projected = project(file.content)
+  const { projected, lineStarts } = analyse(file)
   const wanted = project(quote).text
   const line = hintLine(annotation, block)
-  const distance = (index) => Math.abs(lineOf(file.content, projected.map[index]) - line)
+  const distance = (index) => Math.abs(lineAt(lineStarts, projected.map[index]) - line)
   const at = occurrences(projected.text, wanted).reduce((best, index) => (best === null || distance(index) < distance(best) ? index : best), null)
   const context = at === null
     ? { prefix: '', suffix: '' }
@@ -88,29 +132,11 @@ function uniqueMatch(projected, anchor) {
   return fits.length === 1 ? { at: fits[0], length: wanted.length } : { error: 'The text now appears in several places' }
 }
 
-const FENCE = /^(`{3,}|~{3,})\s*(.*)$/
-
-/** The fenced block a line sits in, with its info string and first content line, or null. */
-function fenceAround(lines, lineIndex) {
-  let open = null
-  for (let i = 0; i < lineIndex; i++) {
-    const fence = FENCE.exec(lines[i])
-    if (!fence) { continue }
-    if (!open) {
-      open = { marker: fence[1], info: fence[2], start: i + 1 }
-    } else if (lines[i].trim().startsWith(open.marker) && fence[2] === '') {
-      open = null
-    }
-  }
-  return open
-}
-
 /** Where a stretch of the source is: its lines, or the changed file and lines when it sits in a `diff <path>` block. */
-export function whereAt(content, start, end) {
-  const first = lineOf(content, start)
-  const last = lineOf(content, end)
-  const lines = content.split('\n')
-  const fence = fenceAround(lines, first - 1)
+function whereAt({ lines, lineStarts, fences }, start, end) {
+  const first = lineAt(lineStarts, start)
+  const last = lineAt(lineStarts, end)
+  const fence = fences.find((f) => f.start <= first - 1 && first - 1 <= f.close)
   if (fence) {
     const body = lines.slice(fence.start, last).join('\n')
     const inDiff = diffLineRef({ type: 'code', language: fence.info, content: body }, first - 1 - fence.start, last - 1 - fence.start)
@@ -125,7 +151,8 @@ const orphan = (reason) => ({ anchor: 'orphan', reason, place: null })
 export function locateThread(thread, file) {
   if (thread.annotation.targetType === 'global' || !thread.anchor) { return { anchor: 'exact', reason: null, place: null } }
   if (!file) { return orphan('The file is no longer part of this review') }
-  const projected = project(file.content)
+  const analysis = analyse(file)
+  const { projected } = analysis
   const found = uniqueMatch(projected, thread.anchor)
   const unchanged = file.contentHash === thread.anchor.contentHash
   if (found.error && !unchanged) { return orphan(found.error) }
@@ -133,8 +160,8 @@ export function locateThread(thread, file) {
   const end = found.error ? null : projected.map[found.at + found.length - 1]
   const place = {
     path: file.path,
-    where: unchanged ? thread.anchor.where : whereAt(file.content, start, end),
-    line: start === null ? null : lineOf(file.content, start),
+    where: unchanged ? thread.anchor.where : whereAt(analysis, start, end),
+    line: start === null ? null : lineAt(analysis.lineStarts, start),
     quote: thread.anchor.quote
   }
   return { anchor: unchanged ? 'exact' : 'moved', reason: null, place }
