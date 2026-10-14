@@ -117,7 +117,7 @@ function readImport(event, onImport) {
  * comment of the active file. Numbers follow the feedback output.
  */
 export function AnnotationPanel({
-  files, activeFileIndex, annotations, blocks, selectedAnnotationId, onSelect, onOpenNote, onEdit, onDelete,
+  files, activeFileIndex, annotations, blocks, selectedAnnotationId, onSelect, onOpenNote, onEdit, onDelete, onReveal,
   onExport, onImport, generalComment, onSaveGeneralComment, generalDisabled, approves, collapsed, width
 }) {
   const fileInputRef = useRef(null)
@@ -145,8 +145,14 @@ export function AnnotationPanel({
 
   const activate = useCallback((ann) => {
     onSelect(ann.id)
-    if (ann.targetType !== 'global') { flashElement(markOf(ann)) }
-  }, [onSelect])
+    if (ann.targetType === 'global') { return }
+    // A note in a hidden Read view or a folded card can only be found once it is shown.
+    if (onReveal?.(ann)) {
+      setTimeout(() => flashElement(markOf(ann)), 100)
+    } else {
+      flashElement(markOf(ann))
+    }
+  }, [onSelect, onReveal])
 
   const numberedIds = useMemo(() => sortNotes(annotations.filter(isNumbered), blocks).map(a => a.id), [annotations, blocks])
   const stepNotes = useCallback((delta) => {

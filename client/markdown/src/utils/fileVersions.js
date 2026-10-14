@@ -61,6 +61,17 @@ export function readBlocks(path, diff, sortLine) {
   }))
 }
 
+// Read views render below the card's own blocks, so their notes sort after the card's last line.
+const lastLineOf = (file) => Math.max(file.heading.startLine, file.focusBlock?.startLine ?? 0, ...file.blocks.map((b) => b.startLine))
+
+/** The Read view blocks of every markdown file whose whole diff has loaded, by path. */
+export function readViewsOf(files, entries) {
+  return new Map(files.filter(canRead).flatMap((file) => {
+    const diff = entries.get(file.path)?.diff
+    return typeof diff === 'string' ? [[file.path, readBlocks(file.path, diff, lastLineOf(file))]] : []
+  }))
+}
+
 /** The file a Read view block belongs to, or null for any other block id. */
 export function readPathOf(blockId) {
   return blockId?.match(READ_ID)?.[1] ?? null

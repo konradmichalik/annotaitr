@@ -22,6 +22,7 @@ import { UpdateBanner } from '../../shared/components/UpdateBanner.jsx'
 import { FilesSection, MarkReviewedButton } from './components/FilesSection.jsx'
 import { useChangesReview } from './hooks/useChangesReview.js'
 import { useChangesNavigation } from './hooks/useChangesNavigation.js'
+import { useReadViews } from './hooks/useReadViews.js'
 import { ChangedFilesPanel } from './components/ChangedFilesPanel.jsx'
 import { changesFacts, groupChangeSections, noteCounts } from './utils/changeSections.js'
 import { agentName } from '../../shared/utils/origin.js'
@@ -143,11 +144,17 @@ export default function App() {
   // Cross-file search (only active for multi-file sessions)
   const crossFileSearchState = useCrossFileSearch(files)
   const isMultiFile = files.length > 1
-  const changesReview = useChangesReview()
+  const pickChangesView = useCallback((view) => updateSetting('changesView', view), [updateSetting])
+  const changesReview = useChangesReview({ defaultView: settings.changesView, onPickView: pickChangesView })
   const activeBlocks = activeFile?.blocks
   const changeSections = useMemo(() => (isChanges && activeBlocks ? groupChangeSections(activeBlocks) : null), [isChanges, activeBlocks])
   const changeNotes = useMemo(() => (changeSections ? noteCounts(changeSections, annotations) : null), [changeSections, annotations])
-  const changesNav = useChangesNavigation({ sections: changeSections, expand: changesReview.expand })
+  const readViews = useReadViews({ sections: changeSections, review: changesReview })
+  const changesNav = useChangesNavigation({ sections: changeSections, expand: changesReview.expand, onCycleView: readViews.cycle })
+  // The Read views' blocks join the walkthrough's wherever notes are placed, listed or sent.
+  const readBlocks = isChanges ? readViews.blocks : NO_FILES
+  const withReadBlocks = useMemo(() => (readBlocks.length > 0 ? [...(activeBlocks ?? []), ...readBlocks] : null), [activeBlocks, readBlocks])
+  const reviewBlocks = withReadBlocks ?? blocks
 
   const handleCrossFileSelectResult = useCallback((fileIndex) => {
     if (fileIndex !== activeFileIndex) {
@@ -176,7 +183,7 @@ export default function App() {
   }, [activeFileIndex, filesDispatch])
 
   const { decision, submitted, approvedNoteCount, finish } = useReviewDecision({
-    files, activeFileIndex, annDispatch, setErrorStatus,
+    files, activeFileIndex, annDispatch, setErrorStatus, extraBlocks: readBlocks,
   })
 
   // Draft auto-save and restore
@@ -281,6 +288,11 @@ export default function App() {
       setSidebarCollapsed(false)
       return
     }
+    if (isChanges && readViews.reveal(ann)) {
+      setTimeout(() => viewerRef.current?.openEditToolbar(ann), 200)
+      setSelectedAnnotationId(id)
+      return
+    }
     // Switch to the matching view mode before opening the toolbar
     const needsSource = ann.targetType === 'source'
     const targetMode = needsSource ? 'source' : 'preview'
@@ -294,7 +306,7 @@ export default function App() {
     }
     setSelectedAnnotationId(id)
     setSidebarCollapsed(false)
-  }, [annotations, effectiveViewMode])
+  }, [annotations, effectiveViewMode, isChanges, readViews])
 
   const handleImportAnnotations = useCallback((jsonData) => {
     const result = validateAnnotationImport(jsonData)
@@ -360,10 +372,23 @@ export default function App() {
     applyDraft(reanchorDraft(draftAwaitingPreview))
   }, [draftAwaitingPreview, effectiveViewMode, applyDraft, reanchorDraft])
 
+  // A walkthrough's draft waits for the Read views its notes sit in. Highlights there are stored by element index,
+  // which other Read views shift, so its notes always re-anchor against the page as it is now.
+  const [draftAwaitingRead, setDraftAwaitingRead] = useState(null)
+  const { settle: settleReadViews } = readViews
+  useEffect(() => {
+    if (!draftAwaitingRead || effectiveViewMode !== 'preview' || !settleReadViews(draftAwaitingRead)) {return}
+    setDraftAwaitingRead(null)
+    applyDraft(reanchorDraft(draftAwaitingRead))
+  }, [draftAwaitingRead, effectiveViewMode, settleReadViews, applyDraft, reanchorDraft])
+
   const handleRestoreDraft = useCallback(() => {
     const draft = restoreDraft()
     if (draft.annotations.length === 0) {return}
-    if (!draft.fileChanged) {
+    if (isChanges) {
+      setDraftAwaitingRead(draft.annotations)
+      setViewMode('preview')
+    } else if (!draft.fileChanged) {
       applyDraft(draft.annotations)
     } else if (effectiveViewMode === 'source' && !isPlainTextFile) {
       setDraftAwaitingPreview(draft.annotations)
@@ -371,7 +396,7 @@ export default function App() {
     } else {
       applyDraft(reanchorDraft(draft.annotations))
     }
-  }, [restoreDraft, applyDraft, reanchorDraft, effectiveViewMode, isPlainTextFile])
+  }, [restoreDraft, applyDraft, reanchorDraft, effectiveViewMode, isPlainTextFile, isChanges])
 
   const handleUndo = useCallback(() => {
     annDispatch({ type: 'UNDO' })
@@ -432,7 +457,7 @@ export default function App() {
       isOpen={exportModalOpen}
       onClose={() => setExportModalOpen(false)}
       annotations={annotations}
-      blocks={blocks}
+      blocks={reviewBlocks}
       filePath={filePath}
       contentHash={activeFile?.contentHash}
       onToast={showToast}
@@ -556,7 +581,7 @@ export default function App() {
             <Viewer
               key={activeFile?.path || 'empty'}
               ref={viewerRef}
-              blocks={blocks}
+              blocks={reviewBlocks}
               annotations={annotations}
               onAddAnnotation={handleAddAnnotation}
               onEditAnnotation={handleEditAnnotation}
@@ -570,7 +595,7 @@ export default function App() {
               crossFileSearch={crossFileSearchProps}
               newIntent={settings.defaultIntent}
               toolHints={settings.toolHints}
-              changes={changeSections ? { ...changesReview, sections: changeSections, select: changesNav.select, agent: agentName(origin) ?? 'the agent' } : null}
+              changes={changeSections ? { ...changesReview, sections: changeSections, select: changesNav.select, read: readViews, agent: agentName(origin) ?? 'the agent' } : null}
             />
           ) : (
             <SourceView
@@ -596,9 +621,10 @@ export default function App() {
           files={files}
           activeFileIndex={activeFileIndex}
           annotations={annotations}
-          blocks={blocks}
+          blocks={reviewBlocks}
           selectedAnnotationId={selectedAnnotationId}
           onSelect={handleSelectAnnotation}
+          onReveal={isChanges ? readViews.reveal : undefined}
           onOpenNote={handleOpenNote}
           onEdit={handlePanelEdit}
           onDelete={handleDeleteAnnotation}

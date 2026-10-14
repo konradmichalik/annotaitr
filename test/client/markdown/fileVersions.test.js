@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { newFileText, isMarkdownPath, canRead, fileView, readBlocks, readPathOf } from '../../../client/markdown/src/utils/fileVersions.js'
+import { newFileText, isMarkdownPath, canRead, fileView, readBlocks, readPathOf, readViewsOf } from '../../../client/markdown/src/utils/fileVersions.js'
 
 describe('newFileText', () => {
   it('keeps context and added lines without their sign and drops removed lines', () => {
@@ -93,6 +93,24 @@ describe('readBlocks', () => {
     const blocks = readBlocks('a.md', nested, 1)
     const child = blocks.find((b) => b.parentId)
     expect(child.parentId).toBe('read:a.md:block-0')
+  })
+})
+
+describe('readViewsOf', () => {
+  const diff = ['@@ -0,0 +1 @@', '+# New'].join('\n')
+  const file = (path, lines, extra = {}) => ({ path, status: 'A', hasDiff: true, heading: { startLine: lines[0] }, blocks: lines.slice(1).map((startLine) => ({ startLine })), ...extra })
+
+  it('builds the blocks of every loaded markdown file, sorted after the last line of its card', () => {
+    const files = [file('a.md', [7, 9, 11]), file('b.md', [20]), file('c.js', [30, 32]), file('d.md', [40, 42])]
+    const entries = new Map([['a.md', { diff }], ['b.md', { loading: true, diff: null }], ['c.js', { diff }], ['d.md', { diff: null, error: 'gone' }]])
+    const views = readViewsOf(files, entries)
+    expect([...views.keys()]).toEqual(['a.md'])
+    expect(views.get('a.md').map((b) => [b.id, b.sortLine])).toEqual([['read:a.md:block-0', 11]])
+  })
+
+  it('sorts after the focus line too when that is the card\'s last', () => {
+    const views = readViewsOf([file('a.md', [7], { focusBlock: { startLine: 9 } })], new Map([['a.md', { diff }]]))
+    expect(views.get('a.md')[0].sortLine).toBe(9)
   })
 })
 

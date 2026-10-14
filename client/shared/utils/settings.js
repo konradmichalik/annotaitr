@@ -11,7 +11,8 @@ export const SHARED_DEFAULTS = {
 const ALLOWED = {
   theme: ['light', 'dark', 'auto'],
   autoCloseDelay: ['off', '0', '3', '5'],
-  defaultIntent: INTENTS.map((intent) => intent.id)
+  defaultIntent: INTENTS.map((intent) => intent.id),
+  changesView: ['diff', 'read']
 }
 
 function parse(raw) {

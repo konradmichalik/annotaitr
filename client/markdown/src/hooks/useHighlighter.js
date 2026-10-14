@@ -27,6 +27,7 @@ function showNoteNumber(doms, ann) {
  * - extraAnnotationFields — static fields merged into new annotations
  * - restoreFilter(ann) — only restore annotations matching this predicate
  * - restoreInsertion(ann) — place the marker of an INSERTION note, returns whether it was placed
+ * - refreshAnchor(ann) — the note with metas that fit the DOM as it is now, used on restore
  *
  * Keyboard shortcuts are NOT included — each consumer registers its own.
  */
@@ -42,6 +43,7 @@ export function useHighlighter({
   extraAnnotationFields,
   restoreFilter,
   restoreInsertion,
+  refreshAnchor,
 }) {
   const containerRef = useRef(null)
   const highlighterRef = useRef(null)
@@ -55,7 +57,7 @@ export function useHighlighter({
   r.current = {
     onAddAnnotation, onEditAnnotation, annotations, toolbarState,
     onBeforeHighlight, enrichToolbarState, extraAnnotationFields,
-    restoreFilter, restoreInsertion,
+    restoreFilter, restoreInsertion, refreshAnchor,
   }
 
   // --- Highlighter setup ---
@@ -274,7 +276,8 @@ export function useHighlighter({
     const wasRestoring = isRestoringRef.current
     isRestoringRef.current = true
     try {
-      highlighter.fromStore(ann.startMeta, ann.endMeta, ann.originalText, ann.id)
+      const { startMeta, endMeta } = r.current.refreshAnchor?.(ann) ?? ann
+      highlighter.fromStore(startMeta, endMeta, ann.originalText, ann.id)
       highlighter.addClass(ann.type.toLowerCase(), ann.id)
       const intent = intentOf(ann)
       if (intent) { highlighter.addClass(`intent-${intent}`, ann.id) }
