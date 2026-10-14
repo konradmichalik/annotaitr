@@ -346,7 +346,8 @@ export const Viewer = forwardRef(function Viewer({
     const anchor = e.target.closest('a[href]')
     if (anchor) {
       const href = anchor.getAttribute('href')
-      if (isOpenableFileLink(href)) {
+      // A walkthrough serves no files next to it, so a link to a file opens nothing there.
+      if (isOpenableFileLink(href) && !changes) {
         e.preventDefault()
         onOpenFile?.(href)
       }
@@ -392,7 +393,7 @@ export const Viewer = forwardRef(function Viewer({
     }
     setRequestedToolbarStep(null)
     setPinpointTarget({ element: blockEl, label: getBlockLabel(blocks.find(b => b.id === blockId)) })
-  }, [pinpointMode, onSelectAnnotation, onOpenFile, blocks, clearPendingSource, containerRef, setToolbarState, setRequestedToolbarStep])
+  }, [pinpointMode, onSelectAnnotation, onOpenFile, changes, blocks, clearPendingSource, containerRef, setToolbarState, setRequestedToolbarStep])
 
   // --- Token-level selection in code blocks ---
   const handleTokenSelect = useCallback(({ blockId, element, tokenText, charStart, charEnd }) => {
@@ -500,7 +501,7 @@ export const Viewer = forwardRef(function Viewer({
           editAnnotation={toolbarState?.mode === 'edit' ? toolbarState.annotation : null}
           elementMode={toolbarState?.elementMode || false}
           insertionMode={toolbarState?.insertionMode || false}
-          linkUrl={toolbarState?.linkUrl || null}
+          linkUrl={toolbarState?.linkIsOpenable && changes ? null : toolbarState?.linkUrl || null}
           onOpenLink={toolbarState?.linkIsOpenable ? onOpenFile : null}
           newIntent={newIntent}
         />

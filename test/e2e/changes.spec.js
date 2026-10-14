@@ -2,9 +2,9 @@
 // `annotaitr changes`: the walkthrough of a repository's uncommitted changes, laid out like a pull request.
 import { execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { test, expect } from '@playwright/test'
 import { startCli } from '../helpers/cli.js'
 
@@ -181,7 +181,10 @@ async function withDocs({ before, after, explanation }, run) {
   const git = (...args) => execFileSync('git', args, { cwd: dir, env: gitEnv })
   try {
     git('init', '-q', '-b', 'main')
-    for (const [path, text] of Object.entries(before)) { await writeFile(join(dir, path), text) }
+    for (const [path, text] of Object.entries(before)) {
+      await mkdir(dirname(join(dir, path)), { recursive: true })
+      await writeFile(join(dir, path), text)
+    }
     git('add', '.')
     git('commit', '-q', '-m', 'init')
     for (const [path, text] of Object.entries(after)) {
@@ -484,6 +487,26 @@ test('P, J and K leave the walkthrough alone while a dialog or menu is open', as
       // K was ignored too: guide.md is still the current file.
       await page.keyboard.press('p')
       await expect(read).toHaveAttribute('aria-pressed', 'true')
+    } finally {
+      cli.child.kill()
+    }
+  })
+})
+
+test('a link to a file in a Read view offers no Open, a web link still does', async ({ page }) => {
+  const after = { 'docs/guide.md': '# Guide\n\nSee [the setup](setup.md) or [the site](https://example.com).\n' }
+  await withDocs({ before: { 'docs/guide.md': '# Guide\n' }, after, explanation: {} }, async ({ dir, explain }) => {
+    const cli = startCli(['changes', '--explain', explain], {}, { cwd: dir })
+    try {
+      await page.goto(await cli.url)
+      await page.getByRole('region', { name: 'docs/guide.md' }).getByRole('button', { name: 'Read' }).click()
+      const bar = page.getByRole('toolbar', { name: 'Selection' })
+      await page.locator('.change-read a', { hasText: 'the setup' }).click()
+      await expect(bar).toBeVisible()
+      await expect(bar.getByRole('button', { name: /^Open/ })).toHaveCount(0)
+      await page.keyboard.press('Escape')
+      await page.locator('.change-read a', { hasText: 'the site' }).click()
+      await expect(bar.getByRole('button', { name: /^Open/ })).toHaveCount(1)
     } finally {
       cli.child.kill()
     }
