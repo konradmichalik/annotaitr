@@ -173,3 +173,212 @@ test('marking a file as reviewed folds its card to the explanation', async ({ pa
     }
   })
 })
+
+/** A repository whose committed `before` files turn into `after` (null deletes one), with an explanation. */
+async function withDocs({ before, after, explanation }, run) {
+  const dir = await realpath(await mkdtemp(join(tmpdir(), 'annotaitr-read-e2e-')))
+  const explain = join(dir, '.git', 'explain.json')
+  const git = (...args) => execFileSync('git', args, { cwd: dir, env: gitEnv })
+  try {
+    git('init', '-q', '-b', 'main')
+    for (const [path, text] of Object.entries(before)) { await writeFile(join(dir, path), text) }
+    git('add', '.')
+    git('commit', '-q', '-m', 'init')
+    for (const [path, text] of Object.entries(after)) {
+      if (text === null) { await rm(join(dir, path)) } else { await writeFile(join(dir, path), text) }
+    }
+    await writeFile(explain, JSON.stringify({ title: 'Rework the guide', commit: 'docs: rework the guide', ...explanation }))
+    await run({ dir, explain })
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+}
+
+/** Selects `text` inside the element matching `selector` the way a drag would, and releases the mouse there. */
+async function selectText(page, selector, text) {
+  await page.locator(selector).first().evaluate((el, wanted) => {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+    while (walker.nextNode()) {
+      const index = walker.currentNode.textContent.indexOf(wanted)
+      if (index === -1) { continue }
+      const range = document.createRange()
+      range.setStart(walker.currentNode, index)
+      range.setEnd(walker.currentNode, index + wanted.length)
+      window.getSelection().removeAllRanges()
+      window.getSelection().addRange(range)
+      el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
+      return
+    }
+    throw new Error(`"${wanted}" not found`)
+  }, text)
+}
+
+async function comment(page, selector, text, note) {
+  await selectText(page, selector, text)
+  await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: /^Change/ }).click()
+  const composer = page.getByRole('dialog', { name: 'Comment on selection' })
+  await composer.getByRole('textbox').fill(note)
+  await composer.getByRole('button', { name: 'Add', exact: true }).click()
+  await expect(page.locator('.note-card', { hasText: note })).toBeVisible()
+}
+
+const GUIDE_BEFORE = '# Guide\n\nIntro text.\n\nOld line.\n'
+const GUIDE_AFTER = '# Guide\n\nIntro text.\n\nFirst line\nsecond line.\n\n```mermaid\ngraph TD; A-->B\n```\n'
+
+test('a markdown card reads as rendered markdown and a note there names the new line', async ({ page }) => {
+  await withDocs({ before: { 'guide.md': GUIDE_BEFORE }, after: { 'guide.md': GUIDE_AFTER }, explanation: { files: { 'guide.md': 'Splits the line.' } } }, async ({ dir, explain }) => {
+    const cli = startCli(['changes', '--origin', 'claude-code', '--explain', explain], {}, { cwd: dir })
+    try {
+      await page.goto(await cli.url)
+      const card = page.getByRole('region', { name: 'guide.md' })
+      const view = card.getByRole('group', { name: 'View' })
+      await expect(view.getByRole('button', { name: 'Diff' })).toHaveAttribute('aria-pressed', 'true')
+      await view.getByRole('button', { name: 'Read' }).click()
+      await expect(view.getByRole('button', { name: 'Read' })).toHaveAttribute('aria-pressed', 'true')
+      await expect(card.locator('.change-read h1')).toHaveText('Guide')
+      await expect(card.locator('.block-diff-wrapper').first()).toBeHidden()
+      await expect(card.getByRole('button', { name: 'Whole file' })).toHaveCount(0)
+      // A diagram stays code, so nothing of the file goes to a render server.
+      await expect(card.locator('.change-read code')).toContainText('graph TD; A-->B')
+      await expect(card.locator('.change-read .mermaid-diagram')).toHaveCount(0)
+
+      await comment(page, '.change-read .block-paragraph >> nth=1', 'line\nsecond', 'Keep it on one line')
+      const tree = page.getByRole('navigation', { name: 'Changed files' })
+      await expect(tree.getByRole('button', { name: /^guide\.md, 1 note/ })).toBeVisible()
+      await expect(page.locator('.note-card', { hasText: 'Keep it on one line' })).toContainText('guide.md · new L5-6')
+
+      await page.getByRole('button', { name: /^Send feedback/ }).click()
+      expect(await cli.exited).toBe(0)
+      expect(cli.stdout()).toMatch(/## 1\. Change · Text \(new Lines 5-6 in guide\.md\) \[#[0-9a-f]{8}\]\n```\nline\nsecond\n```\n> Keep it on one line/)
+    } finally {
+      if (cli.child.exitCode === null) { cli.child.kill() }
+    }
+  })
+})
+
+test('P switches the current markdown file between Diff and Read, not while a comment is open', async ({ page }) => {
+  await withDocs({ before: { 'guide.md': GUIDE_BEFORE }, after: { 'guide.md': GUIDE_AFTER }, explanation: {} }, async ({ dir, explain }) => {
+    const cli = startCli(['changes', '--explain', explain], {}, { cwd: dir })
+    try {
+      await page.goto(await cli.url)
+      const card = page.getByRole('region', { name: 'guide.md' })
+      const read = card.getByRole('group', { name: 'View' }).getByRole('button', { name: 'Read' })
+      await page.getByRole('navigation', { name: 'Changed files' }).getByRole('button', { name: /^guide\.md/ }).click()
+      await page.keyboard.press('p')
+      await expect(read).toHaveAttribute('aria-pressed', 'true')
+
+      await selectText(page, '.change-read .block-paragraph >> nth=0', 'Intro')
+      await expect(page.getByRole('toolbar', { name: 'Selection' })).toBeVisible()
+      await page.keyboard.press('p')
+      await expect(read).toHaveAttribute('aria-pressed', 'true')
+      await page.keyboard.press('Escape')
+      await expect(page.locator('.annotation-toolbar, .comment-popover')).toHaveCount(0)
+
+      await page.keyboard.press('p')
+      await expect(read).toHaveAttribute('aria-pressed', 'false')
+    } finally {
+      if (cli.child.exitCode === null) { cli.child.kill() }
+    }
+  })
+})
+
+test('the picked view opens the next walkthrough, a deleted or non-markdown file has no switch', async ({ page }) => {
+  const files = { before: { 'guide.md': GUIDE_BEFORE, 'old.md': '# Old\n', 'a.js': 'a\n' }, after: { 'guide.md': GUIDE_AFTER, 'old.md': null, 'a.js': 'b\n' }, explanation: {} }
+  await withDocs(files, async ({ dir, explain }) => {
+    const first = startCli(['changes', '--explain', explain], {}, { cwd: dir })
+    try {
+      await page.goto(await first.url)
+      await expect(page.getByRole('region', { name: 'old.md' }).getByRole('group', { name: 'View' })).toHaveCount(0)
+      await expect(page.getByRole('region', { name: 'a.js' }).getByRole('group', { name: 'View' })).toHaveCount(0)
+      await page.getByRole('region', { name: 'guide.md' }).getByRole('button', { name: 'Read' }).click()
+      await expect(page.locator('.change-read h1')).toHaveText('Guide')
+      await page.getByRole('button', { name: /^Approve/ }).first().click()
+      expect(await first.exited).toBe(0)
+    } finally {
+      if (first.child.exitCode === null) { first.child.kill() }
+    }
+
+    const second = startCli(['changes', '--explain', explain], {}, { cwd: dir })
+    try {
+      await page.goto(await second.url)
+      const card = page.getByRole('region', { name: 'guide.md' })
+      await expect(card.getByRole('button', { name: 'Read' })).toHaveAttribute('aria-pressed', 'true')
+      await expect(card.locator('.change-read h1')).toHaveText('Guide')
+    } finally {
+      if (second.child.exitCode === null) { second.child.kill() }
+    }
+  })
+})
+
+test('a Read view opened above another card keeps the highlights of both in place', async ({ page }) => {
+  const files = {
+    before: { 'a.md': '# Alpha\n\nAlpha old.\n', 'b.md': '# Beta\n\nBeta old.\n' },
+    after: { 'a.md': '# Alpha\n\nAlpha paragraph one.\n\nAlpha paragraph two.\n', 'b.md': '# Beta\n\nBeta new.\n' },
+    explanation: { files: { 'a.md': 'Rewrites alpha.', 'b.md': 'Rewrites beta with care.' } }
+  }
+  await withDocs(files, async ({ dir, explain }) => {
+    const cli = startCli(['changes', '--explain', explain], {}, { cwd: dir })
+    try {
+      await page.goto(await cli.url)
+      await comment(page, '.change-file[data-path="b.md"] .change-why .block-paragraph', 'with care', 'Which care?')
+      await page.getByRole('region', { name: 'a.md' }).getByRole('button', { name: 'Read' }).click()
+      await comment(page, '.change-file[data-path="a.md"] .change-read .block-paragraph >> nth=1', 'paragraph two', 'Merge them')
+
+      // Source and back remounts the page, and every highlight is restored from what its note stored.
+      await page.getByRole('button', { name: 'Source', exact: true }).click()
+      await page.getByRole('button', { name: 'Preview', exact: true }).click()
+      await expect(page.locator('.change-file[data-path="b.md"] mark.annotation-highlight')).toHaveText('with care')
+      await expect(page.locator('.change-file[data-path="a.md"] mark.annotation-highlight')).toHaveText('paragraph two')
+    } finally {
+      if (cli.child.exitCode === null) { cli.child.kill() }
+    }
+  })
+})
+
+test('a draft with a note in a Read view loads that view before its notes are placed', async ({ page }) => {
+  const files = {
+    before: { 'a.md': GUIDE_BEFORE, 'b.md': '# Beta\n\nBeta old.\n' },
+    after: { 'a.md': GUIDE_AFTER, 'b.md': '# Beta\n\nBeta new.\n' },
+    explanation: { files: { 'a.md': 'Splits the line.', 'b.md': 'Rewrites beta with care.' } }
+  }
+  await withDocs(files, async ({ dir, explain }) => {
+    const first = startCli(['changes', '--explain', explain], {}, { cwd: dir })
+    const url = await first.url
+    try {
+      await page.goto(url)
+      await page.getByRole('region', { name: 'a.md' }).getByRole('button', { name: 'Read' }).click()
+      await comment(page, '.change-file[data-path="a.md"] .change-read .block-paragraph >> nth=1', 'line\nsecond', 'Keep it on one line')
+      await comment(page, '.change-file[data-path="b.md"] .change-why .block-paragraph', 'with care', 'Which care?')
+      // A walkthrough has no file id, so its draft lives under the content hash only.
+      await expect.poll(() => page.evaluate(() => {
+        const key = Object.keys(localStorage).find((name) => name.startsWith('md-annotator-draft-'))
+        return key ? JSON.parse(localStorage.getItem(key)).annotations.length : 0
+      })).toBe(2)
+    } finally {
+      first.child.kill()
+      await first.exited
+    }
+
+    // Without the stored pick the file opens on Diff, so nothing has loaded its Read view yet.
+    await page.context().clearCookies()
+    const second = startCli(['changes', '--explain', explain], { ANNOTAITR_PORT: new URL(url).port }, { cwd: dir })
+    try {
+      await page.goto(await second.url)
+      await expect(page.getByRole('region', { name: 'a.md' }).getByRole('button', { name: 'Diff' })).toHaveAttribute('aria-pressed', 'true')
+      await page.getByRole('button', { name: 'Restore' }).click()
+      await expect(page.locator('.note-card', { hasText: 'Keep it on one line' })).toContainText('a.md · new L5-6')
+      await expect(page.locator('.note-tag')).toHaveCount(0)
+      await expect(page.locator('.change-file[data-path="b.md"] mark.annotation-highlight')).toHaveText('with care')
+
+      await page.locator('.note-card', { hasText: 'Keep it on one line' }).click()
+      await expect(page.getByRole('region', { name: 'a.md' }).getByRole('button', { name: 'Read' })).toHaveAttribute('aria-pressed', 'true')
+      await expect(page.locator('.change-file[data-path="a.md"] mark.annotation-highlight')).toHaveText('line\nsecond')
+
+      await page.getByRole('button', { name: /^Send feedback/ }).click()
+      expect(await second.exited).toBe(0)
+      expect(second.stdout()).toMatch(/Text \(new Lines 5-6 in a\.md\)/)
+    } finally {
+      if (second.child.exitCode === null) { second.child.kill() }
+    }
+  })
+})
