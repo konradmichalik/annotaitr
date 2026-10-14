@@ -42,6 +42,10 @@ import { useModeShortcuts } from './hooks/useModeShortcuts.js'
 import { SettingsModal } from './components/SettingsModal.jsx'
 import { getItem, setItem } from '../../shared/utils/storage.js'
 import { intentOf } from '../../shared/utils/intents.js'
+import { plural } from '../../shared/utils/decision.js'
+import UnansweredQuestions from '../../shared/threads/UnansweredQuestions.jsx'
+import { useMarkdownPreviousRound } from './hooks/useMarkdownPreviousRound.js'
+import { usePreviousHighlights } from './hooks/usePreviousHighlights.js'
 import 'katex/dist/katex.min.css'
 import './styles.css'
 
@@ -54,6 +58,9 @@ function getInitialSidebarCollapsed() {
 function getInitialTocCollapsed() {
   return getItem('md-annotator-toc-collapsed') === 'true'
 }
+
+// "2 annotations and 1 reply", leaving out what is zero.
+const decisionTitle = (notes, replies) => [notes > 0 && plural(notes, 'annotation'), replies > 0 && plural(replies, 'reply', 'replies')].filter(Boolean).join(' and ')
 
 function FileStats({ content }) {
   const { lines, words, readingTime } = getTextStats(content)
@@ -73,7 +80,10 @@ export default function App() {
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [notesModalOpen, setNotesModalOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState(null)
-  const [decisionOpen, setDecisionOpen] = useState(false)
+  // The decision dialog, with the choice it opens on, or null while closed.
+  const [decisionDialog, setDecisionDialog] = useState(null)
+  const decisionOpen = decisionDialog !== null
+  const [focusThread, setFocusThread] = useState(null)
   const [toast, setToast] = useState(null)
   const [pinpointMode, setPinpointMode] = useState(() => settings.defaultMode === 'pinpoint')
   const [viewMode, setViewMode] = useState('preview') // 'preview' | 'source'
@@ -175,9 +185,13 @@ export default function App() {
     filesDispatch({ type: 'ANN', fileIndex: activeFileIndex, annAction })
   }, [activeFileIndex, filesDispatch])
 
-  const { decision, submitted, approvedNoteCount, finish } = useReviewDecision({
+  const previous = useMarkdownPreviousRound(files.length > 0)
+  const openDecisionOn = useCallback((choice) => setDecisionDialog({ choice }), [])
+  const { decision, submitted, approvedNoteCount, sentReplyCount, finish, decidePrimary } = useReviewDecision({
     files, activeFileIndex, annDispatch, setErrorStatus,
+    replyCount: previous.replyCount, unanswered: previous.unanswered, openDialog: openDecisionOn,
   })
+  const decisionItemCount = totalAnnotationCount + previous.replyCount
 
   // Draft auto-save and restore
   const { draftBanner, restoreDraft, dismissDraft } = useAnnotationDraft({
@@ -397,6 +411,16 @@ export default function App() {
     setTimeout(() => setSelectedAnnotationId(id), 150)
   }, [handleSelectFile])
 
+  // A thread's text sits in the preview of its file, so locating it may switch both.
+  const showThreadFile = useCallback((path) => {
+    const index = files.findIndex(f => f.path === path)
+    if (index !== -1) { handleSelectFile(index) }
+    setViewMode('preview')
+  }, [files, handleSelectFile])
+  const locateThread = usePreviousHighlights({
+    threads: previous.threads, path: filePath, blocks, enabled: effectiveViewMode === 'preview' && !submitted, showFile: showThreadFile,
+  })
+
   const handleOpenSearch = useCallback(() => {
     if (crossFileSearchProps) {
       crossFileSearchState.openSearch()
@@ -409,15 +433,20 @@ export default function App() {
   const pickMode = useCallback((mode) => setPinpointMode(mode === 'pinpoint'), [])
   useModeShortcuts({ disabled: submitted || settingsTab !== null || decisionOpen || exportModalOpen, onChange: pickMode })
 
-  const openDecision = useCallback(() => setDecisionOpen(true), [])
-  const closeDecision = useCallback(() => setDecisionOpen(false), [])
+  const openDecision = useCallback(() => setDecisionDialog({ choice: null }), [])
+  const closeDecision = useCallback(() => setDecisionDialog(null), [])
   useDecisionShortcut(openDecision, !submitted && settingsTab === null)
   const openShortcuts = useCallback(() => setSettingsTab('shortcuts'), [])
   useShortcutListKey(openShortcuts, !submitted && settingsTab === null && !decisionOpen)
 
   const finishFromDialog = (result) => {
-    setDecisionOpen(false)
+    setDecisionDialog(null)
     finish(result)
+  }
+  const answerQuestions = () => {
+    setDecisionDialog(null)
+    setSidebarCollapsed(false)
+    setFocusThread({ handle: previous.unanswered[0].handle })
   }
 
   const { serverGone, reconnectState } = useServerConnection({ submitted })
@@ -442,7 +471,8 @@ export default function App() {
   const outcome = doneOutcome({
     decision,
     serverGone,
-    notes: decision === 'approved' ? approvedNoteCount : totalAnnotationCount
+    notes: decision === 'approved' ? approvedNoteCount : totalAnnotationCount,
+    replies: sentReplyCount
   })
   if (outcome) {
     return (
@@ -450,6 +480,7 @@ export default function App() {
         <MarkdownDoneScreen
           outcome={outcome}
           files={files}
+          replies={sentReplyCount}
           origin={origin}
           target={isMultiFile ? `${files.length} files` : filePath}
           countdown={autoCloseState}
@@ -489,12 +520,10 @@ export default function App() {
         panelCollapsed={sidebarCollapsed}
         onTogglePanel={toggleSidebar}
         decision={{
-          itemCount: totalAnnotationCount,
-          title: totalAnnotationCount > 0
-            ? `Send ${totalAnnotationCount} annotation${totalAnnotationCount === 1 ? '' : 's'}`
-            : 'Approve as-is',
+          itemCount: decisionItemCount,
+          title: decisionItemCount > 0 ? `Send ${decisionTitle(totalAnnotationCount, previous.replyCount)}` : 'Approve as-is',
           dialogOpen: decisionOpen,
-          onPrimary: (choice) => finish({ choice }),
+          onPrimary: decidePrimary,
           onOpenDialog: openDecision,
         }}
       />
@@ -610,6 +639,9 @@ export default function App() {
           approves={totalAnnotationCount === 0}
           collapsed={sidebarCollapsed}
           width={panelWidth}
+          previous={previous}
+          onLocateThread={locateThread}
+          focusThread={focusThread}
         />
       </main>
 
@@ -634,6 +666,10 @@ export default function App() {
           origin={origin}
           noteIntents={decisionNoteIntents}
           generalText={generalComment ? generalComment.text : null}
+          replies={previous.replyCount}
+          info={previous.replyCount > 0 ? `${plural(previous.replyCount, 'pending reply', 'pending replies')} to round ${previous.round} ${previous.replyCount === 1 ? 'goes' : 'go'} out with this.` : null}
+          initialChoice={decisionDialog.choice}
+          warning={previous.unanswered.length > 0 && <UnansweredQuestions threads={previous.unanswered} round={previous.round} onAnswer={answerQuestions} />}
           onSubmit={finishFromDialog}
           onClose={closeDecision}
         />

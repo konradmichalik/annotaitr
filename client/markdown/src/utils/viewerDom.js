@@ -106,6 +106,41 @@ export function textAnchorMetas(container, blockId, startOffset, text) {
   return { startMeta: domMeta(container, start), endMeta: domMeta(container, read.end) }
 }
 
+/** The range `text` covers from an offset in a block, or null when the rendered text from there is not `text`. */
+function textRangeAt(container, blockId, startOffset, text) {
+  const blockEl = container?.querySelector(`[data-block-id="${blockId}"]`)
+  const start = blockEl && textPointAt(textRootOf(blockEl), startOffset)
+  if (!start) { return null }
+  const read = readFrom(container, start, text.length)
+  if (read.text !== text) { return null }
+  const range = document.createRange()
+  range.setStart(start.node, start.offset)
+  range.setEnd(read.end.node, read.end.offset)
+  return range
+}
+
+// The block the server's line falls in: the last one starting at or before it.
+function blockAtLine(blocks, line) {
+  return blocks.filter((block) => Number.isFinite(block.startLine) && block.startLine <= line).at(-1) ?? null
+}
+
+/**
+ * Where last round's text note shows in the rendered file. The stored offsets
+ * count only while they still read the quote; else the quote is searched from
+ * the block at the line the server found it on. Null for anything without a
+ * text place: orphans, general comments, insertions and element notes.
+ */
+export function previousQuoteRange(container, blocks, thread) {
+  const { annotation, place } = thread
+  if (thread.anchor === 'orphan' || !place?.quote || annotation.type === 'INSERTION' || annotation.targetType) { return null }
+  const exact = thread.anchor === 'exact' && textRangeAt(container, annotation.blockId, annotation.startOffset, place.quote)
+  if (exact) { return exact }
+  const hint = Number.isFinite(place.line) ? blockAtLine(blocks, place.line) : null
+  const seed = { ...annotation, originalText: place.quote, blockId: hint?.id ?? annotation.blockId, startOffset: 0, endOffset: place.quote.length }
+  const [found] = reanchorAnnotations([seed], blockTexts(container))
+  return found.unanchored ? null : textRangeAt(container, found.blockId, found.startOffset, place.quote)
+}
+
 const PINPOINT_TEXT_LIMIT = 200
 
 const pinpointText = (blockEl) => {

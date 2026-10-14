@@ -35,7 +35,7 @@ function rescueActions(files) {
 }
 
 /** The markdown review's done page, for each outcome of doneOutcome(). */
-export function MarkdownDoneScreen({ outcome, files, origin, target, countdown, onKeepOpen, reconnecting }) {
+export function MarkdownDoneScreen({ outcome, files, replies = 0, origin, target, countdown, onKeepOpen, reconnecting }) {
   const notes = files.flatMap((file) => ownNotes(file).map(noteRow))
   return (
     <DoneScreen
@@ -43,6 +43,7 @@ export function MarkdownDoneScreen({ outcome, files, origin, target, countdown, 
       origin={origin}
       target={target}
       notes={outcome === 'approved' ? [] : notes}
+      replies={replies}
       countdown={countdown}
       onKeepOpen={onKeepOpen}
       actions={outcome === 'gone' ? rescueActions(files) : []}

@@ -21,6 +21,7 @@ import { GeneralCommentCard } from '../../../shared/components/GeneralCommentCar
 import { useGeneralComment } from '../../../shared/hooks/useGeneralComment.js'
 import { IntentIcon } from '../../../shared/components/IntentIcon.jsx'
 import { intentBadgeStyle } from '../../../shared/utils/intents.js'
+import { RepliesPanel } from './RepliesPanel.jsx'
 
 const MAX_IMPORT_SIZE = 5 * 1024 * 1024 // 5 MB
 const ALT = navigator.platform?.includes('Mac') ? '⌥' : 'Alt'
@@ -112,19 +113,51 @@ function readImport(event, onImport) {
 }
 
 /**
+ * The panel tab. A round that opens with last round's replies and no notes
+ * shows them first, a new note brings its card into view, and a thread opened
+ * from outside (the open questions) brings the replies back.
+ */
+function useRepliesTab({ hasReplies, noteCount, focusThread }) {
+  const [tab, setTab] = useState('file')
+  const noteCountRef = useRef(noteCount)
+  useEffect(() => {
+    if (hasReplies && noteCountRef.current === 0) { setTab('replies') }
+  }, [hasReplies])
+  useEffect(() => {
+    if (noteCount > noteCountRef.current) { setTab('file') }
+    noteCountRef.current = noteCount
+  }, [noteCount])
+  useEffect(() => {
+    if (focusThread) { setTab('replies') }
+  }, [focusThread])
+  return [tab, setTab]
+}
+
+function panelTabs({ isMultiFile, hasReplies, fileCount, allCount, replyCount }) {
+  return [
+    { id: 'file', label: isMultiFile || !hasReplies ? `This file · ${fileCount}` : `This round · ${fileCount}` },
+    isMultiFile && { id: 'all', label: `All files · ${allCount}` },
+    hasReplies && { id: 'replies', label: `Replies · ${replyCount}` }
+  ].filter(Boolean)
+}
+
+/**
  * The feedback panel: this file's notes (or, with several files open, all
  * of them, by file), the agent's notes from the last round and the general
  * comment of the active file. Numbers follow the feedback output.
  */
 export function AnnotationPanel({
   files, activeFileIndex, annotations, blocks, selectedAnnotationId, onSelect, onOpenNote, onEdit, onDelete,
-  onExport, onImport, generalComment, onSaveGeneralComment, generalDisabled, approves, collapsed, width
+  onExport, onImport, generalComment, onSaveGeneralComment, generalDisabled, approves, collapsed, width,
+  previous = null, onLocateThread, focusThread = null
 }) {
   const fileInputRef = useRef(null)
   const panelRef = useRef(null)
-  const [tab, setTab] = useState('file')
   const isMultiFile = files.length > 1
+  const hasReplies = (previous?.threads.length ?? 0) > 0
+  const [tab, setTab] = useRepliesTab({ hasReplies, noteCount: annotations.filter(a => a.type !== 'NOTES').length, focusThread })
   const showAll = isMultiFile && tab === 'all'
+  const showReplies = hasReplies && tab === 'replies'
   // Scoped to the active file: an open draft is discarded on a file switch, so a save can never reach another file.
   const generalEditor = useGeneralComment({
     text: generalComment?.text || null,
@@ -211,6 +244,28 @@ export function AnnotationPanel({
   })
 
   const empty = fileNotes.length === 0 && !hasGeneral && (!showAll || allCount === 0)
+  const tabbed = isMultiFile || hasReplies
+  const tabs = panelTabs({ isMultiFile, hasReplies, fileCount: fileNotes.length + (hasGeneral ? 1 : 0), allCount, replyCount: previous?.threads.length ?? 0 })
+
+  function body() {
+    if (showReplies) {
+      return (
+        <RepliesPanel
+          round={previous.round} threads={previous.threads} multiFile={isMultiFile}
+          onLocate={onLocateThread} onReload={previous.reload} focusHandle={focusThread?.handle ?? null}
+        />
+      )
+    }
+    return (
+      <>
+        {empty && (
+          <PanelEmpty lead="Every selection becomes a numbered note the agent applies to the file." keys={EMPTY_KEYS} approves={approves} />
+        )}
+        {!empty && (showAll ? allFiles : <ul className="note-list">{activeList}</ul>)}
+        {!showAll && <AgentNotes notes={agentNotes} selectedAnnotationId={selectedAnnotationId} onSelect={onSelect} />}
+      </>
+    )
+  }
 
   return (
     <aside ref={panelRef} className="annotation-panel" style={width ? { width: `${width}px` } : undefined}>
@@ -220,21 +275,9 @@ export function AnnotationPanel({
         <NoteStepper count={numberedIds.length} position={notePosition(numberedIds, selectedAnnotationId)} onStep={stepNotes} />
         <PanelMenu items={menuItems} />
       </div>
-      {isMultiFile && (
-        <PanelSwitch
-          label="Feedback"
-          panelId="feedback-tabpanel"
-          value={tab}
-          onChange={setTab}
-          options={[{ id: 'file', label: `This file · ${fileNotes.length + (hasGeneral ? 1 : 0)}` }, { id: 'all', label: `All files · ${allCount}` }]}
-        />
-      )}
-      <div className="panel-body" id="feedback-tabpanel" {...(isMultiFile ? { role: 'tabpanel', 'aria-labelledby': `panel-tab-${tab}` } : {})}>
-        {empty && (
-          <PanelEmpty lead="Every selection becomes a numbered note the agent applies to the file." keys={EMPTY_KEYS} approves={approves} />
-        )}
-        {!empty && (showAll ? allFiles : <ul className="note-list">{activeList}</ul>)}
-        {!showAll && <AgentNotes notes={agentNotes} selectedAnnotationId={selectedAnnotationId} onSelect={onSelect} />}
+      {tabbed && <PanelSwitch label="Feedback" panelId="feedback-tabpanel" value={tab} onChange={setTab} options={tabs} />}
+      <div className="panel-body" id="feedback-tabpanel" {...(tabbed ? { role: 'tabpanel', 'aria-labelledby': `panel-tab-${tab}` } : {})}>
+        {body()}
       </div>
       <GeneralCommentRow editor={generalEditor} Field={GeneralCommentField} />
     </aside>
