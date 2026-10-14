@@ -567,6 +567,7 @@ export default function App() {
           <>
             <TableOfContents
               blocks={isPlainTextFile ? [] : blocks}
+              viewKey={effectiveViewMode}
               annotations={annotations}
               collapsed={tocCollapsed}
               width={tocWidth}
