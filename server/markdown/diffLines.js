@@ -57,7 +57,8 @@ export function splitCodeInfo(info) {
   return { language, meta: rest.join(' ') }
 }
 
-const lineRef = (first, last) => (first === last ? `Line ${first}` : `Lines ${first}-${last}`)
+/** `Line 7` or `Lines 3-4`. */
+export const lineRefOf = (first, last) => (first === last ? `Line ${first}` : `Lines ${first}-${last}`)
 
 /**
  * Where lines `firstLine` to `lastLine` (0-based, inside the block) of a
@@ -72,8 +73,8 @@ export function diffLineRef(block, firstLine, lastLine) {
   const newNos = lines.filter((l) => l.kind !== 'del' && l.newNo !== null).map((l) => l.newNo)
   const oldNos = lines.filter((l) => l.kind === 'del' && l.oldNo !== null).map((l) => l.oldNo)
   const sides = [
-    newNos.length > 0 && `new ${lineRef(Math.min(...newNos), Math.max(...newNos))}`,
-    oldNos.length > 0 && `old ${lineRef(Math.min(...oldNos), Math.max(...oldNos))}`
+    newNos.length > 0 && `new ${lineRefOf(Math.min(...newNos), Math.max(...newNos))}`,
+    oldNos.length > 0 && `old ${lineRefOf(Math.min(...oldNos), Math.max(...oldNos))}`
   ].filter(Boolean)
   if (sides.length === 0) { return null }
   return `${sides.join(', ')}${meta ? ` in ${meta}` : ''}`

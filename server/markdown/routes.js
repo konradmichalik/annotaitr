@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { success, failure } from '../core/http.js'
 import { relative, resolve, dirname, isAbsolute } from 'node:path'
-import { createHash } from 'node:crypto'
+import { hashOf, displayPath } from './fileNames.js'
 import { readAnnotatableFile, isAnnotatableFile, isPathInside, isPlainTextFile, resolveAnnotatablePath } from './file.js'
 import { exportMultiFileFeedback, intentSummary } from './feedback.js'
 import { listWorkspaceFiles } from './workspace.js'
@@ -10,7 +10,7 @@ import { freezeReplies } from '../core/session/replyStore.js'
 import { sessionFields } from './sessionDecision.js'
 
 /** A per-file id for client-side drafts that stays the same across runs and projects without revealing the path. */
-const fileIdOf = (absolutePath) => createHash('sha256').update(absolutePath).digest('hex')
+const fileIdOf = hashOf
 
 const BODY_ERROR = 'Request body must contain a "files" array, each file with an "annotations" array'
 
@@ -65,8 +65,8 @@ export function createApiRouter(filePaths, resolveDecision, origin = 'cli', stor
       const files = await Promise.all(
         stores.map(async (store, index) => {
           const content = await readAnnotatableFile(store.absolutePath)
-          const relativePath = relative(process.cwd(), store.absolutePath) || store.absolutePath
-          const currentHash = createHash('sha256').update(content).digest('hex')
+          const relativePath = displayPath(store.absolutePath)
+          const currentHash = hashOf(content)
           return {
             index,
             path: relativePath,
@@ -91,7 +91,7 @@ export function createApiRouter(filePaths, resolveDecision, origin = 'cli', stor
   router.get('/api/file', async (_req, res) => {
     try {
       const content = await readAnnotatableFile(filePaths[0])
-      const relativePath = relative(process.cwd(), filePaths[0]) || filePaths[0]
+      const relativePath = displayPath(filePaths[0])
       res.json(success({
         content,
         path: relativePath,
@@ -136,8 +136,8 @@ export function createApiRouter(filePaths, resolveDecision, origin = 'cli', stor
 
     try {
       const content = await readAnnotatableFile(absolutePath)
-      const contentHash = createHash('sha256').update(content).digest('hex')
-      const relativePath = relative(baseDir, absolutePath) || absolutePath
+      const contentHash = hashOf(content)
+      const relativePath = displayPath(absolutePath, baseDir)
 
       let fileIndex = stores.findIndex(s => s.absolutePath === absolutePath)
       if (fileIndex === -1) {

@@ -6,7 +6,7 @@
  * orphan. No fuzzy matching, a confident wrong place is worse than none.
  */
 
-import { countNewlines, diffLineRef } from './diffLines.js'
+import { countNewlines, diffLineRef, lineRefOf } from './diffLines.js'
 import { noteWhere } from './feedback.js'
 
 const CONTEXT = 32
@@ -105,8 +105,6 @@ function fenceAround(lines, lineIndex) {
   return open
 }
 
-const lineRef = (first, last) => (first === last ? `Line ${first}` : `Lines ${first}-${last}`)
-
 /** Where a stretch of the source is: its lines, or the changed file and lines when it sits in a `diff <path>` block. */
 export function whereAt(content, start, end) {
   const first = lineOf(content, start)
@@ -118,7 +116,7 @@ export function whereAt(content, start, end) {
     const inDiff = diffLineRef({ type: 'code', language: fence.info, content: body }, first - 1 - fence.start, last - 1 - fence.start)
     if (inDiff) { return inDiff }
   }
-  return lineRef(first, last)
+  return lineRefOf(first, last)
 }
 
 const orphan = (reason) => ({ anchor: 'orphan', reason, place: null })

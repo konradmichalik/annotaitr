@@ -5,7 +5,7 @@
  */
 
 import { existsSync } from 'node:fs'
-import { createHash } from 'node:crypto'
+import { hashOf } from './fileNames.js'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { startAnnotatorServer } from '../core/server.js'
@@ -56,7 +56,7 @@ export async function buildMarkdownServer(options) {
   const stores = await Promise.all(
     filePaths.map(async (fp, index) => {
       const content = await readAnnotatableFile(fp)
-      const contentHash = createHash('sha256').update(content).digest('hex')
+      const contentHash = hashOf(content)
       const notes = resolveNotesForFile(feedbackNotes, index, content)
       return { absolutePath: fp, contentHash, annotations: notes, kind, label }
     })

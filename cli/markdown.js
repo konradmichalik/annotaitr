@@ -1,8 +1,9 @@
-import { relative, resolve as resolvePath } from 'node:path'
+import { resolve as resolvePath } from 'node:path'
 import { openBrowser } from '../server/core/browser.js'
 import { withLifecycle } from '../server/core/lifecycle.js'
 import { isAnnotatableFile, supportedExtensions as markdownExtensions } from '../server/markdown/file.js'
 import { buildMarkdownServer } from '../server/markdown/adapter.js'
+import { displayPath } from '../server/markdown/fileNames.js'
 import { formatApprovalOutput as formatMarkdownApproval } from '../server/markdown/feedback.js'
 import { formatMarkdownReplies } from '../server/markdown/repliesSection.js'
 import { fileExists } from './detect.js'
@@ -74,7 +75,7 @@ export async function runMarkdown({
 
   const opened = given ?? await openSession({
     identity: markdownSessionIdentity(absolutePaths),
-    target: { kind: 'markdown', label: absolutePaths.map((p) => relative(process.cwd(), p) || p).join(', ') },
+    target: { kind: 'markdown', label: absolutePaths.map((p) => displayPath(p)).join(', ') },
     ...session
   })
   if (opened.error) { fail(opened.error); return }

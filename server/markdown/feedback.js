@@ -1,6 +1,6 @@
 import { annotationHandle } from '../core/annotationHandle.js'
 import { normalizeNotes, intentWord, intentCounts } from '../core/notes.js'
-import { countNewlines, diffLineRef } from './diffLines.js'
+import { countNewlines, diffLineRef, lineRefOf } from './diffLines.js'
 
 /**
  * Format an approval decision for stdout.
@@ -21,8 +21,6 @@ export function formatApprovalOutput(decision) {
 }
 
 const quoted = (text) => `> ${(text ?? '').replace(/\n/g, '\n> ')}\n`
-
-const lineRefOf = (startLine, endLine) => (startLine === endLine ? `Line ${startLine}` : `Lines ${startLine}-${endLine}`)
 
 const DIAGRAM_NAMES = { plantuml: 'PlantUML diagram' }
 

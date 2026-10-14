@@ -42,9 +42,6 @@ describe('formatRepliesSection', () => {
     expect(text).toContain('Element: button "Buy" · #buy\n')
   })
 
-
-
-
   it('labels a general comment without a location', () => {
     const text = formatRepliesSection([thread({ type: 'comment', geometry: null, text: 'Overall' }, [human('ok')])], { round: 1, kind: 'file', width: 1, height: 1 })
     expect(text).toContain('### [#b7210e44] General comment\n')

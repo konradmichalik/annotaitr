@@ -4,20 +4,17 @@
  * carried thread is in this round.
  */
 
-import { createHash } from 'node:crypto'
-import { relative } from 'node:path'
 import { readAnnotatableFile } from './file.js'
+import { hashOf, displayPath } from './fileNames.js'
 import { decidedNotes } from './feedback.js'
 import { createAnchor, locateThread } from './anchorThreads.js'
-
-const hashOf = (content) => createHash('sha256').update(content).digest('hex')
 
 /** Every file of the review as it is on disk now. One that cannot be read any more is left out, its threads become orphans. */
 export async function currentFiles(stores) {
   const files = await Promise.all(stores.map(async ({ absolutePath }) => {
     const content = await readAnnotatableFile(absolutePath).catch(() => null)
     if (content === null) { return null }
-    return { absolutePath, path: relative(process.cwd(), absolutePath) || absolutePath, content, contentHash: hashOf(content) }
+    return { absolutePath, path: displayPath(absolutePath), content, contentHash: hashOf(content) }
   }))
   return files.filter(Boolean)
 }
