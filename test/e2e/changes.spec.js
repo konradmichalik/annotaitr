@@ -512,3 +512,37 @@ test('a link to a file in a Read view offers no Open, a web link still does', as
     }
   })
 })
+
+test('a note in the Read view of a file whose name holds a quote or a backslash keeps its highlight', async ({ page }) => {
+  const names = ['say "hi".md', 'back\\slash.md']
+  const before = Object.fromEntries(names.map((name) => [name, '# Doc\n']))
+  const after = Object.fromEntries(names.map((name) => [name, '# Doc\n\nFresh words here.\n']))
+  await withDocs({ before, after, explanation: {} }, async ({ dir, explain }) => {
+    const cli = startCli(['changes', '--explain', explain], {}, { cwd: dir })
+    try {
+      await page.goto(await cli.url)
+      for (const name of names) {
+        const card = page.getByRole('region', { name, exact: true })
+        await card.getByRole('button', { name: 'Read' }).click()
+        await expect(card.locator('.change-read h1')).toHaveText('Doc')
+        // The selection bar closes itself over text that is out of view.
+        await card.locator('.change-read .block-paragraph').scrollIntoViewIfNeeded()
+        await selectText(page, `.change-file[data-path="${name.replace(/["\\]/g, '\\$&')}"] .change-read .block-paragraph`, 'Fresh')
+        await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: /^Change/ }).click()
+        const composer = page.getByRole('dialog', { name: 'Comment on selection' })
+        await composer.getByRole('textbox').fill(`Note on ${name}`)
+        await composer.getByRole('button', { name: 'Add', exact: true }).click()
+        await expect(card.locator('.change-read mark.annotation-highlight')).toHaveText('Fresh')
+      }
+      await page.getByRole('button', { name: 'Source', exact: true }).click()
+      await page.getByRole('button', { name: 'Preview', exact: true }).click()
+      await expect(page.locator('.change-read mark.annotation-highlight')).toHaveCount(2)
+      await page.locator('.note-card', { hasText: 'Note on say "hi".md' }).click()
+      await page.getByRole('button', { name: /^Send feedback/ }).click()
+      expect(await cli.exited).toBe(0)
+      expect(cli.stdout()).toContain('(new Line 3 in say "hi".md)')
+    } finally {
+      if (cli.child.exitCode === null) { cli.child.kill() }
+    }
+  })
+})
