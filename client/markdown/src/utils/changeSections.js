@@ -29,7 +29,7 @@ function readFocus(blocks) {
   return { attention: null, focusWhy: null, focusBlock: null, rest: blocks }
 }
 
-function isDiffBlock(block) {
+export function isDiffBlock(block) {
   return block.type === 'code' && splitCodeInfo(block.language).language === 'diff'
 }
 

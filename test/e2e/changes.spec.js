@@ -409,3 +409,57 @@ test('imported notes in a Read view wait for that view before they are placed', 
     }
   })
 })
+
+test('a file that cannot be loaded stays on Diff, says so and does not become the default', async ({ page }) => {
+  await withDocs({ before: { 'guide.md': GUIDE_BEFORE }, after: { 'guide.md': GUIDE_AFTER }, explanation: {} }, async ({ dir, explain }) => {
+    const first = startCli(['changes', '--explain', explain], {}, { cwd: dir })
+    try {
+      await page.route('**/api/changes/full?*', (route) => route.fulfill({ status: 404, json: { success: false, error: 'Not found' } }))
+      await page.goto(await first.url)
+      const card = page.getByRole('region', { name: 'guide.md' })
+      await card.getByRole('button', { name: 'Read' }).click()
+      await expect(card.getByRole('status')).toHaveText('The whole file is not available. The diff stays.')
+      await expect(card.getByRole('button', { name: 'Diff' })).toHaveAttribute('aria-pressed', 'true')
+      await expect(card.locator('.block-diff-wrapper').first()).toBeVisible()
+      await page.getByRole('button', { name: /^Approve/ }).first().click()
+      expect(await first.exited).toBe(0)
+    } finally {
+      if (first.child.exitCode === null) { first.child.kill() }
+      await page.unroute('**/api/changes/full?*')
+    }
+
+    const second = startCli(['changes', '--explain', explain], {}, { cwd: dir })
+    try {
+      await page.goto(await second.url)
+      await expect(page.getByRole('region', { name: 'guide.md' }).getByRole('button', { name: 'Diff' })).toHaveAttribute('aria-pressed', 'true')
+    } finally {
+      second.child.kill()
+    }
+  })
+})
+
+test('a note on the hunks of a card on Read or Whole file is shown from the panel', async ({ page }) => {
+  await withDocs({ before: { 'guide.md': GUIDE_BEFORE }, after: { 'guide.md': GUIDE_AFTER }, explanation: {} }, async ({ dir, explain }) => {
+    const cli = startCli(['changes', '--explain', explain], {}, { cwd: dir })
+    try {
+      await page.goto(await cli.url)
+      const card = page.getByRole('region', { name: 'guide.md' })
+      await comment(page, '.change-file[data-path="guide.md"] .block-diff-wrapper', 'second line', 'Why split?')
+      const mark = card.locator('.block-diff-wrapper mark.annotation-highlight')
+
+      await card.getByRole('button', { name: 'Read' }).click()
+      await expect(mark).toBeHidden()
+      await page.locator('.note-card', { hasText: 'Why split?' }).click()
+      await expect(card.getByRole('button', { name: 'Diff' })).toHaveAttribute('aria-pressed', 'true')
+      await expect(mark).toBeVisible()
+
+      await card.getByRole('button', { name: 'Whole file' }).click()
+      await expect(mark).toBeHidden()
+      await page.locator('.note-card', { hasText: 'Why split?' }).click()
+      await expect(card.getByRole('button', { name: 'Whole file' })).toHaveAttribute('aria-pressed', 'false')
+      await expect(mark).toBeVisible()
+    } finally {
+      cli.child.kill()
+    }
+  })
+})

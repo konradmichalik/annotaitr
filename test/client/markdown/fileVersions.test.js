@@ -105,12 +105,22 @@ describe('readViewsOf', () => {
     const entries = new Map([['a.md', { diff }], ['b.md', { loading: true, diff: null }], ['c.js', { diff }], ['d.md', { diff: null, error: 'gone' }]])
     const views = readViewsOf(files, entries)
     expect([...views.keys()]).toEqual(['a.md'])
-    expect(views.get('a.md').map((b) => [b.id, b.sortLine])).toEqual([['read:a.md:block-0', 11]])
+    expect(views.get('a.md').blocks.map((b) => [b.id, b.sortLine])).toEqual([['read:a.md:block-0', 11]])
+  })
+
+  it('reuses the blocks of a file whose diff and place did not change', () => {
+    const files = [file('a.md', [7, 9]), file('b.md', [20])]
+    const first = readViewsOf(files, new Map([['a.md', { diff }]]))
+    const second = readViewsOf(files, new Map([['a.md', { diff }], ['b.md', { diff }]]), first)
+    expect(second.get('a.md')).toBe(first.get('a.md'))
+    const moved = readViewsOf([file('a.md', [7, 12])], new Map([['a.md', { diff }]]), second)
+    expect(moved.get('a.md')).not.toBe(first.get('a.md'))
+    expect(moved.get('a.md').blocks[0].sortLine).toBe(12)
   })
 
   it('sorts after the focus line too when that is the card\'s last', () => {
     const views = readViewsOf([file('a.md', [7], { focusBlock: { startLine: 9 } })], new Map([['a.md', { diff }]]))
-    expect(views.get('a.md')[0].sortLine).toBe(9)
+    expect(views.get('a.md').blocks[0].sortLine).toBe(9)
   })
 })
 

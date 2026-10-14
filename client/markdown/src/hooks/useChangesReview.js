@@ -33,6 +33,8 @@ export function useChangesReview({ defaultView = 'diff', onPickView } = {}) {
     setViews((prev) => (prev.get(path) === view ? prev : new Map(prev).set(path, view)))
     if (remember) { onPickView?.(view) }
   }, [onPickView])
+  // Read is stored as the default only once its file has loaded, so a failed load never becomes the next start.
+  const rememberView = useCallback((view) => onPickView?.(view), [onPickView])
 
-  return { collapsed, reviewed, toggle, expand, markReviewed, views, defaultView: startView, setView }
+  return { collapsed, reviewed, toggle, expand, markReviewed, views, defaultView: startView, setView, rememberView }
 }

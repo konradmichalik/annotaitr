@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { groupHtmlWrappers } from '../../utils/htmlWrappers.js'
 import { parseDiffLines } from '../../utils/diffLines.js'
 import { DiffCode } from './CodeBlock.jsx'
@@ -50,19 +50,11 @@ function FileBody({ blocks, agent, blockProps }) {
   )))
 }
 
-/** Whole file open or not, over the walkthrough's shared cache of whole-file diffs. */
-function useWholeFile(path, full) {
-  const [open, setOpen] = useState(false)
-  const entry = full.entries.get(path)
-  const toggle = () => {
-    if (entry?.loading) { return }
-    // Closing a failed load forgets the error, so the next open asks again.
-    if (open && entry?.error) { full.forget(path) }
-    if (!open) { full.load(path) }
-    setOpen(!open)
-  }
-  const whole = { open, loading: open && Boolean(entry?.loading), diff: entry?.diff ?? null, error: open ? entry?.error ?? null : null }
-  return [whole, toggle]
+/** Whole file of a card: open or not, and its entry in the walkthrough's shared cache of whole-file diffs. */
+function wholeFileOf(path, read) {
+  const open = read.whole.has(path)
+  const entry = read.full.entries.get(path)
+  return { open, loading: open && Boolean(entry?.loading), diff: entry?.diff ?? null, error: open ? entry?.error ?? null : null }
 }
 
 function WholeFile({ whole }) {
@@ -100,18 +92,12 @@ function ReadView({ blocks, hidden, blockProps }) {
   )
 }
 
-function readStatus(entry) {
-  if (entry?.error) { return `${entry.error} The diff stays.` }
-  return 'Loading the file to read…'
-}
-
 function FileCard({ file, agent, collapsed, reviewed, onToggle, onReview, read, blockProps }) {
-  const [whole, toggleWhole] = useWholeFile(file.path, read.full)
+  const whole = wholeFileOf(file.path, read)
   const readable = canRead(file)
-  const wantsRead = readable && read.viewOf(file) === 'read'
   const blocks = read.byPath.get(file.path)
-  const reading = wantsRead && Boolean(blocks)
-  const entry = read.full.entries.get(file.path)
+  const reading = readable && read.viewOf(file) === 'read' && Boolean(blocks)
+  const status = readable ? read.statusOf(file) : null
   const bodyId = `change-file-body-${file.heading.id}`
   const classes = ['change-file', collapsed && 'is-collapsed', !file.explained && 'is-unexplained', file.attention === 'high' && 'is-focus', whole.open && !reading && 'is-whole', reading && 'is-read'].filter(Boolean).join(' ')
   return (
@@ -127,9 +113,9 @@ function FileCard({ file, agent, collapsed, reviewed, onToggle, onReview, read, 
         {file.attention === 'high' && <span className="change-flag" role="img" aria-label="Check closely" title="Check closely"><FlagIcon size={15} /></span>}
         <DiffCounts className="change-file-counts" added={file.added} removed={file.removed} />
         {!file.explained && <span className="change-pill">Not explained</span>}
-        {readable && <ViewSwitch reading={reading} busy={wantsRead && Boolean(entry?.loading)} onPick={(view) => read.pick(file.path, view)} />}
+        {readable && <ViewSwitch reading={reading} busy={Boolean(status) && !read.full.entries.get(file.path)?.error} onPick={(view) => read.pick(file.path, view)} />}
         {file.hasDiff && !reading && (
-          <button type="button" className="change-whole-btn" aria-pressed={whole.open} aria-busy={whole.loading} onClick={toggleWhole}>
+          <button type="button" className="change-whole-btn" aria-pressed={whole.open} aria-busy={whole.loading} onClick={() => read.toggleWhole(file.path)}>
             Whole file
           </button>
         )}
@@ -146,7 +132,7 @@ function FileCard({ file, agent, collapsed, reviewed, onToggle, onReview, read, 
           </div>
         )}
         <FileBody blocks={file.blocks} agent={agent} blockProps={{ ...blockProps, inChangeCard: true }} />
-        {wantsRead && !blocks && <p className="change-whole-note change-read-status" role="status">{readStatus(entry)}</p>}
+        {status && <p className="change-whole-note change-read-status" role="status">{status}</p>}
         {blocks && <ReadView blocks={blocks} hidden={!reading} blockProps={blockProps} />}
         {whole.open && !reading && <WholeFile whole={whole} />}
       </div>

@@ -1,33 +1,78 @@
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useFullDiffs } from './useFullDiffs.js'
 import { canRead, fileView, readPathOf, readViewsOf } from '../utils/fileVersions.js'
+import { isDiffBlock } from '../utils/changeSections.js'
 
 const NO_FILES = []
 
+const without = (set, path) => new Set([...set].filter((p) => p !== path))
+
+/** Which cards show Whole file, over the shared cache of whole-file diffs. */
+function useWholeFiles({ entries, load }) {
+  const [whole, setWhole] = useState(() => new Set())
+  const toggleWhole = useCallback((path) => {
+    if (entries.get(path)?.loading) { return }
+    if (whole.has(path)) {
+      setWhole(without(whole, path))
+    } else {
+      setWhole(new Set(whole).add(path))
+      load(path)
+    }
+  }, [whole, entries, load])
+  const closeWhole = useCallback((path) => setWhole((prev) => (prev.has(path) ? without(prev, path) : prev)), [])
+  return { whole, toggleWhole, closeWhole }
+}
+
+/** Parsed Read views by path; a file whose diff did not change keeps its blocks. */
+function useParsedViews(files, entries) {
+  const last = useRef(new Map())
+  const views = useMemo(() => readViewsOf(files, entries, last.current), [files, entries])
+  useEffect(() => { last.current = views }, [views])
+  return useMemo(() => new Map([...views].map(([path, view]) => [path, view.blocks])), [views])
+}
+
+const fileOfBlock = (files, blockId) => files.find((f) =>
+  f.path === readPathOf(blockId) || f.heading.id === blockId || f.focusBlock?.id === blockId || f.blocks.some((b) => b.id === blockId))
+
+/** The view a note needs to be seen: Read for a note in it, Diff for one on the hunks, else none. */
+function viewFor(file, blockId) {
+  if (readPathOf(blockId)) { return 'read' }
+  return file.blocks.some((b) => b.id === blockId && isDiffBlock(b)) ? 'diff' : null
+}
+
 /**
- * The Diff and Read views of a walkthrough's markdown files. A Read view
- * stays mounted once its file has loaded, hidden while Diff is shown, so the
- * highlights in it and in the cards below keep their place.
+ * The Diff and Read views of a walkthrough's markdown files, and Whole file. A
+ * Read view stays mounted once its file has loaded, hidden while Diff is shown,
+ * so the highlights in it and in the cards below keep their place. A file that
+ * cannot be loaded shows its diff and says why in `statusOf`.
  */
 export function useReadViews({ sections, review }) {
   const full = useFullDiffs()
-  const { load } = full
-  const { views, defaultView, setView, collapsed, expand } = review
+  const { entries, load } = full
+  const { views, defaultView, setView, rememberView, collapsed, expand } = review
   const files = sections?.files ?? NO_FILES
-
-  const viewOf = useCallback((file) => fileView(views, file, defaultView), [views, defaultView])
-  const byPath = useMemo(() => readViewsOf(files, full.entries), [files, full.entries])
+  const { whole, toggleWhole, closeWhole } = useWholeFiles(full)
+  const byPath = useParsedViews(files, entries)
   const blocks = useMemo(() => [...byPath.values()].flat(), [byPath])
+
+  const picked = useCallback((file) => fileView(views, file, defaultView), [views, defaultView])
+  const viewOf = useCallback((file) => (picked(file) === 'read' && entries.get(file.path)?.error ? 'diff' : picked(file)), [picked, entries])
+  const statusOf = useCallback((file) => {
+    if (picked(file) !== 'read' || byPath.has(file.path)) { return null }
+    const error = entries.get(file.path)?.error
+    return error ? `${error} The diff stays.` : 'Loading the file to read…'
+  }, [picked, byPath, entries])
 
   // A file that opens in Read by default loads without being asked.
   useEffect(() => {
-    files.filter((file) => viewOf(file) === 'read').forEach((file) => load(file.path))
-  }, [files, viewOf, load])
+    files.filter((file) => picked(file) === 'read').forEach((file) => load(file.path))
+  }, [files, picked, load])
 
   const pick = useCallback((path, view, remember = true) => {
-    setView(path, view, remember)
-    if (view === 'read') { load(path) }
-  }, [setView, load])
+    setView(path, view, remember && view === 'diff')
+    if (view !== 'read') { return }
+    load(path).then((entry) => { if (remember && typeof entry.diff === 'string') { rememberView('read') } })
+  }, [setView, rememberView, load])
 
   const cycle = useCallback((path) => {
     const file = files.find((f) => f.path === path)
@@ -36,23 +81,27 @@ export function useReadViews({ sections, review }) {
     return true
   }, [files, viewOf, pick])
 
-  /** Shows the Read view a note sits in, opening its card. True when anything had to change. */
+  /** Shows the place a note sits in: its card opened, on the view that holds it. True when anything had to change. */
   const reveal = useCallback((ann) => {
-    const file = files.find((f) => f.path === readPathOf(ann?.blockId))
+    const file = fileOfBlock(files, ann?.blockId)
     if (!file) { return false }
-    const hidden = viewOf(file) !== 'read' || collapsed.has(file.path)
-    if (viewOf(file) !== 'read') { pick(file.path, 'read', false) }
-    if (collapsed.has(file.path)) { expand(file.path) }
-    return hidden
-  }, [files, viewOf, collapsed, expand, pick])
+    const wanted = viewFor(file, ann.blockId)
+    const switchView = wanted !== null && canRead(file) && viewOf(file) !== wanted
+    const leaveWhole = wanted === 'diff' && whole.has(file.path)
+    const open = collapsed.has(file.path)
+    if (switchView) { pick(file.path, wanted, false) }
+    if (leaveWhole) { closeWhole(file.path) }
+    if (open) { expand(file.path) }
+    return switchView || leaveWhole || open
+  }, [files, viewOf, whole, collapsed, expand, pick, closeWhole])
 
   /** Loads the Read views the notes sit in; true once each has loaded or failed. */
   const settle = useCallback((annotations) => {
     const paths = [...new Set(annotations.map((ann) => readPathOf(ann.blockId)).filter(Boolean))]
     // A failed load is not asked again here, so waiting on it can end.
-    paths.filter((path) => !full.entries.has(path)).forEach((path) => load(path))
-    return paths.every((path) => full.entries.has(path) && !full.entries.get(path).loading)
-  }, [load, full.entries])
+    paths.filter((path) => !entries.has(path)).forEach((path) => load(path))
+    return paths.every((path) => entries.has(path) && !entries.get(path).loading)
+  }, [load, entries])
 
-  return { full, viewOf, byPath, blocks, pick, cycle, reveal, settle }
+  return { full, viewOf, statusOf, byPath, blocks, pick, cycle, reveal, settle, whole, toggleWhole }
 }
