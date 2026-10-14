@@ -75,6 +75,36 @@ describe('a markdown review session across rounds', () => {
     expect(out).toContain(`Session: ${sessionId} (round 2). Reply per note with:`)
   }, 45_000)
 
+  it('finds a note in round 3 by the text around it in round 2, after that text was edited', async () => {
+    await writeFile(doc, '# Guide\n\nAlpha one says hello there.\n')
+    const first = startCli([doc], env)
+    const api1 = await connect(first)
+    const { files: [file] } = await api1.get('/api/files')
+    const blocks = [{ id: 'block-1', type: 'paragraph', startLine: 3, content: 'Alpha one says hello there.' }]
+    await api1.post('/api/feedback', { files: [{ path: file.path, blocks, annotations: [note(A, 'block-1', 'says hello', 'Friendlier')] }] })
+    await first.exited
+    const sessionId = first.stdout().match(/Session: ([0-9a-f]{12})/)[1]
+    reply(env, sessionId, 'a3f19c2e', 'question', 'How friendly?')
+
+    // Round 2: the words around the quote change, the quote itself is still unique.
+    await writeFile(doc, '# Guide\n\nBravo two says hello again.\n')
+    const second = startCli([doc], env)
+    const api2 = await connect(second)
+    expect((await api2.get('/api/threads')).threads[0]).toMatchObject({ anchor: 'moved' })
+    await api2.post('/api/threads/a3f19c2e/replies', { text: 'Very' })
+    await api2.post('/api/feedback', { files: [{ path: file.path, blocks: [], annotations: [] }] })
+    await second.exited
+    reply(env, sessionId, 'a3f19c2e', 'applied', 'Made it warmer')
+
+    // Round 3: the quote now shows twice; only round 2's context tells them apart.
+    await writeFile(doc, '# Guide\n\nBravo two says hello again.\n\nCharlie three says hello later.\n')
+    const third = startCli([doc], env)
+    const api3 = await connect(third)
+    expect((await api3.get('/api/threads')).threads[0]).toMatchObject({ handle: 'a3f19c2e', anchor: 'moved', place: { line: 3 } })
+    third.child.kill()
+    await third.exited
+  }, 60_000)
+
   it('approves the unchanged file with replies alone and keeps the exact place', async () => {
     const first = startCli([doc], env)
     const api1 = await connect(first)

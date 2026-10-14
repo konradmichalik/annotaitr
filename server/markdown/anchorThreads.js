@@ -168,6 +168,26 @@ export function locateThread(thread, file) {
 }
 
 /**
+ * The anchor a carried thread keeps for the next round: the text around its
+ * quote where it is now, so a later round compares with this round's words,
+ * not with the round it was raised in. An orphan keeps the anchor it had.
+ */
+export function refreshAnchor(thread, file) {
+  if (!thread.anchor || !file || file.contentHash === thread.anchor.contentHash) { return thread.anchor ?? null }
+  const analysis = analyse(file)
+  const found = uniqueMatch(analysis.projected, thread.anchor)
+  if (found.error) { return thread.anchor }
+  const { text, map } = analysis.projected
+  return {
+    ...thread.anchor,
+    prefix: text.slice(Math.max(0, found.at - CONTEXT), found.at),
+    suffix: text.slice(found.at + found.length, found.at + found.length + CONTEXT),
+    where: whereAt(analysis, map[found.at], map[found.at + found.length - 1]),
+    contentHash: file.contentHash
+  }
+}
+
+/**
  * Last round's threads, each with where it is in `files` (`{ absolutePath, path, content, contentHash }`).
  * `anchor` becomes the outcome as in image mode; `quote` keeps the original text, which an orphan still shows.
  */

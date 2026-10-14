@@ -7,7 +7,7 @@
 import { readAnnotatableFile } from './file.js'
 import { hashOf, displayPath } from './fileNames.js'
 import { decidedNotes } from './feedback.js'
-import { createAnchor, locateThread } from './anchorThreads.js'
+import { createAnchor, locateThread, refreshAnchor } from './anchorThreads.js'
 
 /** Every file of the review as it is on disk now. One that cannot be read any more is left out, its threads become orphans. */
 export async function currentFiles(stores) {
@@ -39,8 +39,14 @@ export function placesOf(carried, files) {
   return Object.fromEntries(carried.map((thread) => [thread.handle, locateThread(thread, byPath.get(thread.file))]))
 }
 
+/** Each carried thread's anchor at its place in this round, by handle, for the next round to compare with. */
+export function anchorsOf(carried, files) {
+  const byPath = new Map(files.map((f) => [f.absolutePath, f]))
+  return Object.fromEntries(carried.map((thread) => [thread.handle, refreshAnchor(thread, byPath.get(thread.file))]))
+}
+
 /** The decision fields a session needs. Read once, so notes and carried threads see the same files. */
 export async function sessionFields(stores, submittedFiles, carried) {
   const files = await currentFiles(stores)
-  return { ...decidedThreads(submittedFiles, files), files, places: placesOf(carried, files) }
+  return { ...decidedThreads(submittedFiles, files), files, places: placesOf(carried, files), anchors: anchorsOf(carried, files) }
 }

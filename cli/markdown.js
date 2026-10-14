@@ -48,8 +48,12 @@ function verdict(decision) {
   return decision.approved ? formatMarkdownApproval(decision) : decision.feedback + '\n'
 }
 
+// A carried thread is stored with the text around it as it is now, not as it was when raised.
+const withCurrentAnchors = (carried = [], anchors = {}) => carried.map((t) => (t.handle in anchors ? { ...t, anchor: anchors[t.handle] } : t))
+
 async function sessionOutput(opened, decision) {
-  const line = await recordSession({ ...opened, target: markdownSessionTarget(opened.target, decision.files ?? []) }, decision, {
+  const recorded = { ...decision, carried: withCurrentAnchors(decision.carried, decision.anchors) }
+  const line = await recordSession({ ...opened, target: markdownSessionTarget(opened.target, decision.files ?? []) }, recorded, {
     extra: (annotation) => decision.threadFields?.[annotation.id] ?? {},
     noun: 'note'
   })

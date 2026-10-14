@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createAnchor, locateThread, anchorThreads, project } from '../../../server/markdown/anchorThreads.js'
+import { createAnchor, locateThread, anchorThreads, project, refreshAnchor } from '../../../server/markdown/anchorThreads.js'
 
 const DOC = '# Title\n\nThe intro says hello.\n\nA second paragraph with **bold words** in it.\n'
 const file = (content, extra = {}) => ({ absolutePath: '/abs/a.md', path: 'a.md', content, contentHash: `hash-${content.length}`, ...extra })
@@ -110,5 +110,22 @@ describe('anchoring a large file', () => {
     expect(placed[3]).toMatchObject({ anchor: 'orphan' })
     expect(placed[0]).toMatchObject({ anchor: 'moved', place: { line: 1 } })
     expect(performance.now() - started).toBeLessThan(3000)
+  })
+})
+
+describe('refreshAnchor', () => {
+  const thread = threadFor(note({ originalText: 'intro says' }), paragraph, DOC)
+
+  it('takes the text around the quote where it is now', () => {
+    const edited = '# Title\n\nNew line.\n\nOur intro says goodbye.\n'
+    expect(refreshAnchor(thread, file(edited))).toEqual({
+      quote: 'intro says', prefix: 'TitleNewline.Our', suffix: 'goodbye.', where: 'Line 5', contentHash: `hash-${edited.length}`
+    })
+  })
+
+  it('keeps the anchor of an unchanged file, a lost quote or a missing file', () => {
+    expect(refreshAnchor(thread, file(DOC))).toBe(thread.anchor)
+    expect(refreshAnchor(thread, file('# Other\n'))).toBe(thread.anchor)
+    expect(refreshAnchor(thread, undefined)).toBe(thread.anchor)
   })
 })
