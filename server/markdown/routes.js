@@ -45,6 +45,18 @@ function feedback(files, replyCount) {
   return { message: 'Feedback submitted', decision }
 }
 
+/**
+ * The file as the reviewer saw it in the last round, when it changed since,
+ * so the client can mark what is new. Only what the session stored for this
+ * very path; a changes walkthrough keeps no content and already is a diff.
+ */
+export function previousRoundOf(session, store, content) {
+  if (store.kind === 'changes') { return null }
+  const file = session?.previous?.target?.files?.find((f) => f.path === store.absolutePath)
+  if (typeof file?.content !== 'string' || file.content === content) { return null }
+  return { round: session.previous.round, content: file.content }
+}
+
 /** `session` is the opened review session, or null when the review keeps none (the OpenCode plugin). */
 export function createApiRouter(filePaths, resolveDecision, origin = 'cli', stores = [], session = null) {
   const router = Router()
@@ -77,7 +89,8 @@ export function createApiRouter(filePaths, resolveDecision, origin = 'cli', stor
             kind: store.kind ?? 'document',
             label: store.label ?? null,
             // The walkthrough is regenerated at the same path every run, so a path draft would only mislead.
-            fileId: store.kind === 'changes' ? null : fileIdOf(store.absolutePath)
+            fileId: store.kind === 'changes' ? null : fileIdOf(store.absolutePath),
+            previousRound: previousRoundOf(session, store, content)
           }
         })
       )

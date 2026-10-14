@@ -122,6 +122,35 @@ describe('markdown routes with a review session', () => {
     expect(decision.annotations.map((a) => a.id)).toEqual([OTHER])
   })
 
+  describe('the file as the reviewer saw it last round', () => {
+    const OLD = '# Title\n\nThe intro said hi.\n'
+    const withFiles = (files, target = { kind: 'markdown' }) => ({ ...previousRound(), round: 2, target: { ...target, files } })
+    const filesOf = async (url) => (await (await fetch(`${url}/api/files`)).json()).data.files
+
+    it('serves the content stored for the file when it changed since', async () => {
+      const url = await start(withFiles([{ path, contentHash: sha(OLD), content: OLD }]))
+      expect((await filesOf(url))[0].previousRound).toEqual({ round: 2, content: OLD })
+    })
+
+    it('serves nothing when the file is unchanged, unknown to last round or without stored content', async () => {
+      expect((await filesOf(await start(withFiles([{ path, contentHash: sha(DOC), content: DOC }]))))[0].previousRound).toBeNull()
+      server.stop()
+      expect((await filesOf(await start(withFiles([{ path: join(dir, 'other.md'), contentHash: sha(OLD), content: OLD }]))))[0].previousRound).toBeNull()
+      server.stop()
+      expect((await filesOf(await start(withFiles([{ path, contentHash: sha(OLD) }]))))[0].previousRound).toBeNull()
+      server.stop()
+      expect((await filesOf(await start(null)))[0].previousRound).toBeNull()
+    })
+
+    it('serves nothing for a changes walkthrough, which already is a diff', async () => {
+      server = await buildMarkdownServer({
+        filePaths: [path], kind: 'changes',
+        session: { sessionId: '2f8c1a9e04b7', previous: withFiles([{ path, contentHash: sha(OLD), content: OLD }], { kind: 'changes' }), replies: createReplyStore(null) }
+      })
+      expect((await filesOf(server.url))[0].previousRound).toBeNull()
+    })
+  })
+
   it('keeps printing "No annotations." for feedback without notes or replies', async () => {
     const url = await start(null)
     await post(url, '/api/feedback', { files: [{ path: 'a.md', annotations: [], blocks: [] }] })
