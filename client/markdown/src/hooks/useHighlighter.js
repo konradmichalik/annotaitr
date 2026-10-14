@@ -263,6 +263,7 @@ export function useHighlighter({
 
   const restoreHighlight = (loaded) => {
     const ann = currentNote(loaded)
+    if (ann.unanchored) { return false }
     if (ann.type === 'INSERTION' && r.current.restoreInsertion) { return r.current.restoreInsertion(ann) }
     if (ann.targetType === 'image' || ann.targetType === 'diagram' ||
         ann.targetType === 'pinpoint' || ann.targetType === 'global' ||

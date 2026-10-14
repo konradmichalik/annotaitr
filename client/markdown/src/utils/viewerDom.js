@@ -1,4 +1,5 @@
 import { isOpenableFileLink } from './links.js'
+import { reanchorAnnotations } from './draftAnchors.js'
 
 export function getLinkInfo(el) {
   const linkEl = el.closest('a[data-href]') || el.querySelector('a[data-href]')
@@ -40,6 +41,106 @@ export function diffLineRange(gutter) {
  */
 export function textRootOf(blockEl) {
   return blockEl.querySelector('pre > code') ?? blockEl
+}
+
+/** Every block as `{ id, text }` in document order, in the text selection offsets count in. */
+export function blockTexts(container) {
+  return Array.from(container?.querySelectorAll('[data-block-id]') ?? [], (blockEl) => ({
+    id: blockEl.dataset.blockId,
+    text: textRootOf(blockEl).textContent
+  }))
+}
+
+// web-highlighter's index for a parent that is the root itself.
+const ROOT_INDEX = -2
+
+/** The text node a block offset falls in, as a range start takes it. */
+function textPointAt(root, offset) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  let count = 0
+  while (walker.nextNode()) {
+    const node = walker.currentNode
+    if (count + node.length > offset) { return { node, offset: offset - count } }
+    count += node.length
+  }
+  return null
+}
+
+/** Reads `length` characters on from a point, across blocks as a range does, and where they end. */
+function readFrom(container, start, length) {
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
+  walker.currentNode = start.node
+  let text = start.node.data.slice(start.offset, start.offset + length)
+  let end = { node: start.node, offset: start.offset + text.length }
+  while (text.length < length && walker.nextNode()) {
+    const piece = walker.currentNode.data.slice(0, length - text.length)
+    text += piece
+    end = { node: walker.currentNode, offset: piece.length }
+  }
+  return { text, end }
+}
+
+/** The meta web-highlighter stores for a point: the nearest parent that is no highlight, its index by tag, the text before it. */
+function domMeta(container, { node, offset }) {
+  let parent = node.parentElement
+  while (parent?.dataset.highlightId) { parent = parent.parentElement }
+  const index = parent === container ? ROOT_INDEX : Array.prototype.indexOf.call(container.getElementsByTagName(parent.tagName), parent)
+  const range = document.createRange()
+  range.selectNodeContents(parent)
+  range.setEnd(node, 0)
+  return { parentTagName: parent.tagName, parentIndex: index, textOffset: range.toString().length + offset }
+}
+
+/**
+ * The start and end meta of a selection of `text` from an offset in a block,
+ * for a note whose stored metas no longer match the rendered file. Null when
+ * the block is missing or the rendered text from there is not `text`.
+ */
+export function textAnchorMetas(container, blockId, startOffset, text) {
+  const blockEl = container?.querySelector(`[data-block-id="${blockId}"]`)
+  if (!blockEl) { return null }
+  const start = textPointAt(textRootOf(blockEl), startOffset)
+  if (!start) { return null }
+  const read = readFrom(container, start, text.length)
+  if (read.text !== text) { return null }
+  return { startMeta: domMeta(container, start), endMeta: domMeta(container, read.end) }
+}
+
+const PINPOINT_TEXT_LIMIT = 200
+
+const pinpointText = (blockEl) => {
+  const text = blockEl.textContent || ''
+  return text.length > PINPOINT_TEXT_LIMIT ? `${text.slice(0, PINPOINT_TEXT_LIMIT)}...` : text
+}
+
+/** Per element type: whether a rendered block (and its parsed block) still holds what the note points at. */
+const ELEMENT_CHECKS = {
+  image: (blockEl, _block, ann) => Array.from(blockEl.querySelectorAll('.annotatable-image-wrapper')).some((el) => el.dataset.imageSrc === ann.imageSrc),
+  link: (blockEl, _block, ann) => Array.from(blockEl.querySelectorAll('a[href]')).some((a) => a.textContent === ann.originalText),
+  pinpoint: (blockEl, _block, ann) => pinpointText(blockEl) === ann.originalText,
+  diagram: (_blockEl, block, ann) => block?.content === ann.originalText,
+  math: (_blockEl, block, ann) => block?.content === ann.originalText,
+  token: (blockEl, _block, ann) => findTokenSpan(blockEl, ann) !== null
+}
+
+function elementMatches(container, blocks, ann, blockId) {
+  const blockEl = container.querySelector(`[data-block-id="${blockId}"]`)
+  const check = ELEMENT_CHECKS[ann.targetType]
+  return Boolean(blockEl && check?.(blockEl, blocks.find((block) => block.id === blockId), { ...ann, blockId }))
+}
+
+/**
+ * A restored draft's notes re-anchored to the file as rendered now. Text
+ * selections also get fresh metas: the stored ones count elements of the old
+ * version and would highlight whatever sits there now.
+ */
+export function reanchorToDom(container, blocks, annotations) {
+  const matches = (ann, blockId) => elementMatches(container, blocks, ann, blockId)
+  return reanchorAnnotations(annotations, blockTexts(container), matches).map((ann) => {
+    if (ann.unanchored || ann.targetType || ann.type === 'NOTES' || ann.type === 'INSERTION' || !ann.originalText) { return ann }
+    const metas = textAnchorMetas(container, ann.blockId, ann.startOffset, ann.originalText)
+    return metas ? { ...ann, ...metas } : { ...ann, unanchored: true }
+  })
 }
 
 export function createPersistentInsertionMarker(id, blockEl, offset, number) {

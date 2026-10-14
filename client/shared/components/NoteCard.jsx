@@ -8,10 +8,11 @@ import { PenIcon } from './HeaderIcons.jsx'
  * keyboard handle. Edit and remove show on hover and on keyboard focus.
  */
 export function NoteCard({
-  id, number = null, badgeStyle, word, icon = null, intent = null, location = null, quote = null,
+  id, number = null, badgeStyle, word, icon = null, intent = null, location = null, tag = null, tagHint = null, quote = null,
   selected = false, selectable = true, onActivate, onEdit = null, onRemove = null, label = null, buttonRef = null, children
 }) {
-  const name = label ?? [number !== null ? `${number}. ${word}` : word, location].filter(Boolean).join(', ')
+  const spokenTag = tag && tagHint ? `${tag}: ${tagHint.toLowerCase()}` : tag
+  const name = label ?? [number !== null ? `${number}. ${word}` : word, location, spokenTag].filter(Boolean).join(', ')
   return (
     <li className={`note-card${selected ? ' selected' : ''}`} data-annotation-id={id} onClick={onActivate}>
       <div className="note-card-head">
@@ -27,6 +28,7 @@ export function NoteCard({
           <span className={`note-type${intent ? ` note-type--${intent}` : ''}`}>{icon}{word}</span>
         </button>
         {location && <span className="note-location">{location}</span>}
+        {tag && <span className="note-tag" title={tagHint ?? undefined}>{tag}{tagHint && <span className="visually-hidden">: {tagHint.toLowerCase()}</span>}</span>}
         {(onEdit || onRemove) && (
           <div className="note-card-actions">
             {onEdit && (

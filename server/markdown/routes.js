@@ -7,6 +7,9 @@ import { exportFeedback, exportMultiFileFeedback, intentSummary } from './feedba
 import { listWorkspaceFiles } from './workspace.js'
 import { config } from './config.js'
 
+/** A per-file id for client-side drafts that stays the same across runs and projects without revealing the path. */
+const fileIdOf = (absolutePath) => createHash('sha256').update(absolutePath).digest('hex')
+
 export function createApiRouter(filePaths, resolveDecision, origin = 'cli', stores = []) {
   const router = Router()
 
@@ -36,7 +39,9 @@ export function createApiRouter(filePaths, resolveDecision, origin = 'cli', stor
             hashMismatch: currentHash !== store.contentHash,
             isPlainText: isPlainTextFile(store.absolutePath),
             kind: store.kind ?? 'document',
-            label: store.label ?? null
+            label: store.label ?? null,
+            // The walkthrough is regenerated at the same path every run, so a path draft would only mislead.
+            fileId: store.kind === 'changes' ? null : fileIdOf(store.absolutePath)
           }
         })
       )
@@ -56,7 +61,8 @@ export function createApiRouter(filePaths, resolveDecision, origin = 'cli', stor
         path: relativePath,
         origin,
         contentHash: stores[0]?.contentHash || null,
-        isPlainText: isPlainTextFile(filePaths[0])
+        isPlainText: isPlainTextFile(filePaths[0]),
+        fileId: stores[0]?.kind === 'changes' ? null : fileIdOf(stores[0]?.absolutePath ?? filePaths[0])
       }))
     } catch (error) {
       res.status(500).json(failure(error.message))
@@ -108,7 +114,8 @@ export function createApiRouter(filePaths, resolveDecision, origin = 'cli', stor
         path: relativePath,
         content,
         contentHash,
-        isPlainText: isPlainTextFile(absolutePath)
+        isPlainText: isPlainTextFile(absolutePath),
+        fileId: fileIdOf(absolutePath)
       }))
     } catch (error) {
       res.status(404).json(failure(error.message))

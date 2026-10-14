@@ -284,6 +284,18 @@ describe('formatAnnotationsForExport in code blocks', () => {
   })
 })
 
+describe('formatAnnotationsForExport with unanchored notes', () => {
+  it('leaves out the line reference of a note whose text is gone', () => {
+    const output = formatAnnotationsForExport(
+      [makeAnnotation({ unanchored: true, originalText: 'gone', number: 1 })],
+      [makeBlock({ startLine: 7 })],
+      '/test.md'
+    )
+    expect(output).toContain('## 1. Change · Comment\n\n```\ngone\n```\n\n> Fix this\n')
+    expect(output).not.toContain('Line 7')
+  })
+})
+
 describe('formatAnnotationsForExport inside a quote', () => {
   const blocks = parseMarkdownToBlocks('Intro\n\n> Note:\n>\n> ```js\n> const a = 1\n> const b = 2\n> ```\n>\n> - one\n> - two')
 

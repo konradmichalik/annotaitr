@@ -447,6 +447,29 @@ describe('formatApprovalOutput', () => {
   })
 })
 
+describe('unanchored notes', () => {
+  it('leave out the line reference instead of printing a wrong one', () => {
+    const blocks = [makeBlock({ startLine: 7 })]
+    const annotations = [makeAnnotation({ id: 'ann-1', number: 1, unanchored: true, originalText: 'gone text' })]
+    const output = exportFeedback(annotations, blocks)
+
+    expect(output).toContain('## 1. Change · Text\n```\ngone text\n```\n> Fix this\n')
+    expect(output).not.toContain('Line 7')
+  })
+
+  it('come after the anchored notes of their file', () => {
+    const blocks = [makeBlock({ id: 'block-0', startLine: 1 }), makeBlock({ id: 'block-1', startLine: 9 })]
+    const annotations = [
+      makeAnnotation({ id: 'ann-1', number: 1, blockId: 'block-0', unanchored: true, originalText: 'gone' }),
+      makeAnnotation({ id: 'ann-2', number: 2, blockId: 'block-1' })
+    ]
+    const output = exportFeedback(annotations, blocks)
+
+    expect(output.indexOf('## 2. Change · Text (Line 9)')).toBeGreaterThan(-1)
+    expect(output.indexOf('## 2. Change · Text (Line 9)')).toBeLessThan(output.indexOf('## 1. Change · Text\n'))
+  })
+})
+
 describe('exportFeedback inside a quote', () => {
   const blocks = parseMarkdownToBlocks('Intro\n\n> [!NOTE]\n> ```js\n> const a = 1\n> ```\n> - one\n> - two')
 

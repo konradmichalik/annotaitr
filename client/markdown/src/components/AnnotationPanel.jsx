@@ -62,7 +62,8 @@ function CardText({ ann }) {
 function Card({ ann, number, blocks, selected, onActivate, onEdit, onRemove }) {
   const { word, intent, shape } = noteType(ann)
   // A plain text selection says nothing a quote does not; an insertion or an image does.
-  const location = [noteLocation(ann, blocks), shape === 'Text' ? null : shape].filter(Boolean).join(' · ')
+  // A restored note whose text left the file has no line to show; the tag says so instead.
+  const location = ann.unanchored ? null : [noteLocation(ann, blocks), shape === 'Text' ? null : shape].filter(Boolean).join(' · ')
   return (
     <NoteCard
       id={ann.id}
@@ -72,10 +73,13 @@ function Card({ ann, number, blocks, selected, onActivate, onEdit, onRemove }) {
       intent={intent}
       icon={<IntentIcon intent={intent} />}
       location={location || null}
+      tag={ann.unanchored ? 'Unanchored' : null}
+      tagHint={ann.unanchored ? 'Text no longer in the file' : null}
       quote={quoteOf(ann)}
       selected={selected}
       onActivate={onActivate}
-      onEdit={onEdit}
+      // Editing opens on the note's highlight, which an unanchored note no longer has.
+      onEdit={ann.unanchored ? null : onEdit}
       onRemove={onRemove}
     >
       <CardText ann={ann} />

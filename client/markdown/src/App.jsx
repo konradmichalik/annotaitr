@@ -31,6 +31,7 @@ import { useChangesSidebarWidth } from './hooks/useChangesSidebarWidth.js'
 import { useResizablePanel } from '../../shared/hooks/useResizablePanel.js'
 import { useServerConnection } from '../../shared/hooks/useServerConnection.js'
 import { useAnnotationDraft } from './hooks/useAnnotationDraft.js'
+import { reanchorSourceNotes } from './utils/draftAnchors.js'
 import { useSettings } from './hooks/useSettings.js'
 import { useCrossFileSearch } from './hooks/useCrossFileSearch.js'
 import { useHighlightSync } from './hooks/useHighlightSync.js'
@@ -182,6 +183,7 @@ export default function App() {
   const { draftBanner, restoreDraft, dismissDraft } = useAnnotationDraft({
     annotations,
     contentHash: activeFile?.contentHash,
+    fileId: activeFile?.fileId,
     submitted,
     enabled: settings.keepDrafts,
   })
@@ -335,17 +337,41 @@ export default function App() {
     showToast(`Imported ${result.annotations.length} annotation${result.annotations.length !== 1 ? 's' : ''}`)
   }, [activeFile, filePath, annotations, annDispatch, showToast])
 
+  const applyDraft = useCallback((restored) => {
+    viewerRef.current?.clearAllHighlights()
+    annDispatch({ type: 'RESTORE', annotations: restored })
+    setTimeout(() => {
+      viewerRef.current?.restoreHighlights(restored)
+    }, 100)
+    showToast(`Restored ${restored.length} annotation${restored.length !== 1 ? 's' : ''}`)
+  }, [annDispatch, showToast])
+
+  // Source view notes re-anchor against the file's lines, all others against the rendered preview.
+  const reanchorDraft = useCallback((draftAnnotations) => {
+    const lines = reanchorSourceNotes(draftAnnotations, activeFile?.content ?? '')
+    return isPlainTextFile ? lines : viewerRef.current?.reanchorAnnotations?.(lines) ?? lines
+  }, [activeFile, isPlainTextFile])
+
+  // A changed file's draft restored in the source view waits for the preview, which has the blocks to search.
+  const [draftAwaitingPreview, setDraftAwaitingPreview] = useState(null)
+  useEffect(() => {
+    if (!draftAwaitingPreview || effectiveViewMode !== 'preview') {return}
+    setDraftAwaitingPreview(null)
+    applyDraft(reanchorDraft(draftAwaitingPreview))
+  }, [draftAwaitingPreview, effectiveViewMode, applyDraft, reanchorDraft])
+
   const handleRestoreDraft = useCallback(() => {
-    const restored = restoreDraft()
-    if (restored.length > 0) {
-      viewerRef.current?.clearAllHighlights()
-      annDispatch({ type: 'RESTORE', annotations: restored })
-      setTimeout(() => {
-        viewerRef.current?.restoreHighlights(restored)
-      }, 100)
-      showToast(`Restored ${restored.length} annotation${restored.length !== 1 ? 's' : ''}`)
+    const draft = restoreDraft()
+    if (draft.annotations.length === 0) {return}
+    if (!draft.fileChanged) {
+      applyDraft(draft.annotations)
+    } else if (effectiveViewMode === 'source' && !isPlainTextFile) {
+      setDraftAwaitingPreview(draft.annotations)
+      setViewMode('preview')
+    } else {
+      applyDraft(reanchorDraft(draft.annotations))
     }
-  }, [restoreDraft, annDispatch, showToast])
+  }, [restoreDraft, applyDraft, reanchorDraft, effectiveViewMode, isPlainTextFile])
 
   const handleUndo = useCallback(() => {
     annDispatch({ type: 'UNDO' })

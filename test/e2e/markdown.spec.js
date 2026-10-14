@@ -21,6 +21,85 @@ async function withFiles(files, run) {
   }
 }
 
+/** Selects `text` inside the element matching `selector` the way a drag would, and releases the mouse there. */
+async function selectText(page, selector, text) {
+  await page.locator(selector).evaluate((el, wanted) => {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+    while (walker.nextNode()) {
+      const index = walker.currentNode.textContent.indexOf(wanted)
+      if (index === -1) { continue }
+      const range = document.createRange()
+      range.setStart(walker.currentNode, index)
+      range.setEnd(walker.currentNode, index + wanted.length)
+      window.getSelection().removeAllRanges()
+      window.getSelection().addRange(range)
+      el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
+      return
+    }
+  }, text)
+}
+
+async function comment(page, selector, text, note) {
+  await selectText(page, selector, text)
+  await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: /^Change/ }).click()
+  const composer = page.getByRole('dialog', { name: 'Comment on selection' })
+  await composer.getByRole('textbox').fill(note)
+  await composer.getByRole('button', { name: 'Add', exact: true }).click()
+  await expect(page.locator('.note-card', { hasText: note })).toBeVisible()
+}
+
+for (const view of ['Preview', 'Source']) {
+  test(`a draft survives an edit of the file, restored in ${view}: moved text is re-anchored, vanished text is marked unanchored`, async ({ page }) => {
+    const before = '# Plan\n\nFirst paragraph keeps its words.\n\nSecond paragraph will vanish soon.\n'
+    const after = '# Plan\n\nA new paragraph on top.\n\nFirst paragraph keeps its words.\n\nSecond paragraph was rewritten.\n'
+    await withFiles({ 'plan.md': before }, async ([path]) => {
+      const first = startCli([path])
+      const url = await first.url
+      try {
+        await page.goto(url)
+        await comment(page, '[data-block-id="block-1"]', 'keeps its words', 'Shorter please')
+        await comment(page, '[data-block-id="block-2"]', 'will vanish', 'Why vanish?')
+        // The draft is written after a short debounce.
+        await expect.poll(() => page.evaluate(() => {
+          const key = Object.keys(localStorage).find((name) => name.startsWith('md-annotator-draft-file-'))
+          return key ? JSON.parse(localStorage.getItem(key)).annotations.length : 0
+        })).toBe(2)
+      } finally {
+        first.child.kill()
+        await first.exited
+      }
+
+      await writeFile(path, after)
+      // The same port keeps the origin, and with it the stored draft.
+      const second = startCli([path], { ANNOTAITR_PORT: new URL(url).port })
+      try {
+        await page.goto(await second.url)
+        await page.getByRole('group', { name: 'View' }).getByRole('button', { name: view }).click()
+        await page.getByRole('button', { name: 'Restore' }).click()
+        // The preview has the blocks to search, so a restore from the source view switches to it.
+        await expect(page.getByRole('button', { name: 'Preview' })).toHaveAttribute('aria-pressed', 'true')
+
+        const moved = page.locator('[data-block-id="block-2"] mark', { hasText: 'keeps its words' })
+        await expect(moved).toBeVisible()
+        await expect(page.locator('mark')).toHaveCount(1)
+        const vanished = page.locator('.note-card', { hasText: 'Why vanish?' })
+        await expect(vanished.locator('.note-tag')).toHaveText('Unanchored: text no longer in the file')
+        await expect(page.locator('.note-card', { hasText: 'Shorter please' }).locator('.note-location')).toHaveText('Plan · L5')
+
+        await page.getByRole('button', { name: /^Send feedback/ }).click()
+        await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible()
+        await second.exited
+        const stdout = second.stdout()
+        expect(stdout).toMatch(/## \d\. Change · Text \(Line 5\)/)
+        expect(stdout).toMatch(/## \d\. Change · Text( \[#[0-9a-f]+\])?\n```\nwill vanish\n```/)
+        expect(await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('md-annotator-draft-')))).toEqual([])
+      } finally {
+        if (second.child.exitCode === null) { second.child.kill() }
+      }
+    })
+  })
+}
+
 test('Alt+click opens the insertion bar and its composer at the insertion point', async ({ page }) => {
   await withFiles({ 'notes.md': '# Notes\n\nA paragraph to review.\n' }, async (paths) => {
     const cli = startCli(paths)
