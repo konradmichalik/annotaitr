@@ -85,4 +85,20 @@ describe('noteLocation', () => {
     expect(noteLocation(note('x', 'p1', 0), html)).toBe('L3')
     expect(noteLocation(note('x', 'p2', 0), html)).toBe('Usage guide · L7')
   })
+
+  it('names the file and its new line for a note in a Read view', () => {
+    const read = [{ id: 'read:docs/usage.md:block-1', type: 'paragraph', content: 'one\ntwo', startLine: 14, path: 'docs/usage.md', sortLine: 5 }]
+    expect(noteLocation({ ...note('x', 'read:docs/usage.md:block-1', 0), originalText: 'one\ntwo' }, [...blocks, ...read])).toBe('usage.md · new L14-15')
+  })
+})
+
+describe('sortNotes with Read view notes', () => {
+  it('sorts them at their card, by their line in the file', () => {
+    const read = [
+      { id: 'read:a.md:block-0', type: 'paragraph', content: 'x', startLine: 1, path: 'a.md', sortLine: 3 },
+      { id: 'read:a.md:block-5', type: 'paragraph', content: 'y', startLine: 20, path: 'a.md', sortLine: 3 }
+    ]
+    const sorted = sortNotes([note('late', 'block-3', 0), note('r2', 'read:a.md:block-5', 0), note('r1', 'read:a.md:block-0', 9), note('first', 'block-1', 0)], [...blocks, ...read])
+    expect(sorted.map((n) => n.id)).toEqual(['first', 'r1', 'r2', 'late'])
+  })
 })

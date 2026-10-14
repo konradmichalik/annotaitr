@@ -6,6 +6,7 @@
 import { intentOf, intentWord } from '../../../shared/utils/intents.js'
 import { annotationHandle } from '../../../shared/utils/annotationId.js'
 import { countNewlines, diffLineRef } from './diffLines.js'
+import { readLineRef, sortNotes } from './noteNumbers.js'
 
 function handleTag(id) {
   const handle = annotationHandle(id)
@@ -40,12 +41,7 @@ export function formatAnnotationsForExport(annotations, blocks, filePath) {
     return 'No annotations.'
   }
 
-  const sorted = [...annotations].sort((a, b) => {
-    const blockA = a.unanchored ? Infinity : blocks.findIndex(blk => blk.id === a.blockId)
-    const blockB = b.unanchored ? Infinity : blocks.findIndex(blk => blk.id === b.blockId)
-    if (blockA !== blockB) {return blockA - blockB}
-    return a.startOffset - b.startOffset
-  })
+  const sorted = sortNotes(annotations, blocks)
 
   const globalComments = sorted.filter(a => a.targetType === 'global')
   const regularAnnotations = sorted.filter(a => a.targetType !== 'global')
@@ -105,7 +101,7 @@ export function formatAnnotationsForExport(annotations, blocks, filePath) {
     const newlinesInSelection = countNewlines(ann.originalText)
     const endLine = startLine + newlinesInSelection
 
-    const lineRef = diffLineRef(block, linesBeforeSelection, linesBeforeSelection + newlinesInSelection) ??
+    const lineRef = readLineRef(ann, block) ?? diffLineRef(block, linesBeforeSelection, linesBeforeSelection + newlinesInSelection) ??
       (startLine === endLine ? `Line ${startLine}` : `Lines ${startLine}-${endLine}`)
 
     // A restored draft note whose text is gone from the file has no line left to point at.
