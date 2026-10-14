@@ -22,6 +22,15 @@ describe('review sessions in the CLI', () => {
   })
   afterEach(async () => { await rm(dir, { recursive: true, force: true }) })
 
+  it('refuses to continue by name a session of another kind of review', async () => {
+    const markdown = await openSession({ identity: 'markdown\n/abs/a.md', target: { kind: 'markdown', label: 'a.md' }, now: 1000, dir, log })
+    await recordSession(markdown, { annotations: [pin] }, { now: 2000, dir, log })
+    const opened = await open({ sessionId: markdown.sessionId })
+    expect(opened.error).toBe(`Session ${markdown.sessionId} belongs to a markdown review, not to this image review. Leave out --session to start a new one.`)
+    expect((await openSession({ target: { kind: 'changes' }, sessionId: markdown.sessionId, now: 3000, dir, log })).error).toMatch(/belongs to a markdown review, not to this changes review/)
+    expect((await openSession({ target: { kind: 'markdown' }, sessionId: markdown.sessionId, now: 3000, dir, log })).error).toBeUndefined()
+  })
+
   it('starts round 1 for a target seen for the first time', async () => {
     expect(await open()).toMatchObject({ sessionId: sessionIdFor('/abs/shot.png'), target, previous: null })
   })

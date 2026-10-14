@@ -18,11 +18,16 @@ export function createSessionThreadsRouter({ session, anchor }) {
   const router = Router()
   router.get('/api/threads', async (req, res) => {
     const previous = session?.previous ?? null
-    res.json(success({
-      sessionId: session?.sessionId ?? null,
-      round: previous?.round ?? null,
-      threads: withPending(await anchor(previous, req), session?.replies)
-    }))
+    try {
+      res.json(success({
+        sessionId: session?.sessionId ?? null,
+        round: previous?.round ?? null,
+        threads: withPending(await anchor(previous, req), session?.replies)
+      }))
+    } catch (error) {
+      // The client reads a failed request as an empty round, so a broken session never blocks the review.
+      res.status(500).json(failure(error.message))
+    }
   })
 
   router.post('/api/threads/:handle/replies', (req, res) => {

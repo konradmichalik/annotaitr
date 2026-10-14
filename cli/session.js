@@ -6,10 +6,17 @@ import { buildThreads, nextSession, sessionLine } from '../server/core/session/t
 
 const stderrLine = (line) => process.stderr.write(`${line}\n`)
 
+// Image, URL, video and PDF reviews share their threads' shape; Markdown and changes each have their own.
+const reviewKind = (target) => (target?.kind === 'markdown' || target?.kind === 'changes' ? target.kind : 'image')
+
 async function resumeNamed(sessionId, target, dir) {
   const read = await readSession(sessionId, dir)
   if (read.missing) { return { error: `No review session ${sessionId} in ${dir}` } }
   if (read.error) { return { error: read.error } }
+  const [stored, wanted] = [reviewKind(read.session.target), reviewKind(target)]
+  if (stored !== wanted) {
+    return { error: `Session ${sessionId} belongs to a ${stored} review, not to this ${wanted} review. Leave out --session to start a new one.` }
+  }
   return { sessionId, target, previous: read.session, replies: createReplyStore(read.session) }
 }
 
