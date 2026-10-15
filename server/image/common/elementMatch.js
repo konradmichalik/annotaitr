@@ -100,7 +100,16 @@ export function matchAnnotation(map, annotation) {
   return []
 }
 
-function describeElement({ tag, role, name, media, heading, selector }) {
+// domMap.js keeps only an identifier-like name and a space-free path to a file that exists in the project,
+// so neither can carry a sentence. The page still chose them: they are hints, not facts.
+function describeSource(source) {
+  if (!source) { return '' }
+  const component = source.component ? `<${source.component}>` : ''
+  const file = source.file && source.line ? `${source.file}:${source.line}` : source.file
+  return ` · ${[component, file].filter(Boolean).join(' ')}`
+}
+
+function describeElement({ tag, role, name, media, heading, selector, source }) {
   const roleTag = role && role !== tag ? `${tag}[${role}]` : tag
   // Page text is untrusted: JSON quoting escapes quotes and backslashes, and
   // dropping backticks keeps it from opening a code span in the agent's view.
@@ -108,7 +117,7 @@ function describeElement({ tag, role, name, media, heading, selector }) {
   const quoted = name ? ` ${quote(name)}` : ''
   const file = media ? ` (${quote(media)})` : ''
   const titled = heading ? ` (heading ${quote(heading)})` : ''
-  return `${roleTag}${quoted}${file}${titled} · ${selector}`
+  return `${roleTag}${quoted}${file}${titled}${describeSource(source)} · ${selector}`
 }
 
 /** The matched elements as text, or null when nothing matched. */

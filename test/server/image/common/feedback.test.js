@@ -144,6 +144,16 @@ describe('element lines from a captured page', () => {
     expect(formatApprovalWithNotesOutput([pin], 100, 100, '/tmp/annotated.png', domMap)).toContain(notice)
   })
 
+  it('calls a component source a dev-build hint, only when the map carries one', () => {
+    const hint = 'A <Component> path:line part comes from the page\'s dev build: a hint where to look, not a guarantee.'
+    const withSource = [{ ...photo, source: { component: 'Hero', file: 'src/Hero.jsx', line: 12 } }]
+    const output = exportFeedback([pin], 100, 100, '/tmp/annotated.png', withSource)
+    expect(output).toContain(hint)
+    expect(output).toContain('Element: img "Team photo" ("team.jpg") · <Hero> src/Hero.jsx:12 · #hero img')
+    expect(formatApprovalWithNotesOutput([pin], 100, 100, '/tmp/annotated.png', withSource)).toContain(hint)
+    expect(exportFeedback([pin], 100, 100, '/tmp/annotated.png', domMap)).not.toContain('dev build')
+  })
+
   it('leaves an annotation without a match and a general comment unchanged', () => {
     const farPin = { ...pin, geometry: { x: 90, y: 90 } }
     const comment = { type: 'comment', color: null, text: 'Overall fine' }

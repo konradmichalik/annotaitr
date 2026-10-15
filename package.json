@@ -48,6 +48,7 @@
     "qs": "^6.16.0"
   },
   "dependencies": {
+    "@jridgewell/trace-mapping": "^0.3.31",
     "express": "^4.21.0",
     "open": "^10.1.0",
     "react": "^19.0.0",

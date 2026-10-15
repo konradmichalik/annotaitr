@@ -12,6 +12,7 @@ import { chromium } from 'playwright'
 import { isImageFile, isSvgFile, isSupportedCaptureUrl } from '../common/fileTypes.js'
 import { config } from '../common/config.js'
 import { collectRawElements, normalizeDomMap, CANDIDATES, PANEL_CANDIDATES, MIN_PANEL_SIDE, MAX_ELEMENTS, CONTAINERS } from '../common/domMap.js'
+import { symbolicateSources } from './sourceMap.js'
 
 /**
  * Load and validate a local image file. Rejects unsupported extensions and
@@ -119,10 +120,21 @@ async function rasterizeSvg(source, filePath) {
   return { buffer: canvas.toBuffer('image/png'), image: { width, height } }
 }
 
+// Without mapping, a React 19 element still keeps its component name.
+async function mapSources(raw, page) {
+  try {
+    return await symbolicateSources(raw, page.url())
+  } catch {
+    return raw
+  }
+}
+
 /**
  * Measured after the screenshot without scrolling, so boxes line up with the
  * full-page image. The map is a bonus: a page that breaks the evaluate still
- * gets captured, just without element lines in the feedback.
+ * gets captured, just without element lines in the feedback. Element sources
+ * from a dev build are made relative to the working directory, the project
+ * the calling agent works in.
  */
 async function collectDomMap(page, viewportOnly) {
   try {
@@ -134,7 +146,7 @@ async function collectDomMap(page, viewportOnly) {
       containers: [...CONTAINERS, 'div'],
       viewportOnly
     }
-    return normalizeDomMap(await page.evaluate(collectRawElements, options))
+    return normalizeDomMap(await mapSources(await page.evaluate(collectRawElements, options), page))
   } catch {
     return []
   }
