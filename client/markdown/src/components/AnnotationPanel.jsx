@@ -5,6 +5,7 @@ import { LabelIcon } from './LabelIcon.jsx'
 import { AgentNotes } from './AgentNotes.jsx'
 import { GeneralCommentField } from './GeneralCommentField.jsx'
 import { flashElement } from '../utils/flashElement.js'
+import { blockSelector } from '../utils/viewerDom.js'
 import { noteNumbers, noteLocation, sortNotes } from '../utils/noteNumbers.js'
 import { isGeneralComment } from '../hooks/useReviewDecision.js'
 import { isNumbered } from '../../../shared/utils/intents.js'
@@ -31,7 +32,7 @@ const EMPTY_KEYS = [
 ]
 
 function markOf(ann) {
-  const block = `[data-block-id="${ann.blockId}"]`
+  const block = blockSelector(ann.blockId)
   if (ann.type === 'INSERTION' || ann.targetType === 'pinpoint') { return document.querySelector(block) }
   if (ann.targetType === 'image') { return document.querySelector(`${block} .annotatable-image-wrapper[data-image-src="${CSS.escape(ann.imageSrc)}"]`) }
   if (ann.targetType === 'diagram') { return document.querySelector(`${block} .mermaid-diagram`) || document.querySelector(block) }
@@ -117,7 +118,7 @@ function readImport(event, onImport) {
  * comment of the active file. Numbers follow the feedback output.
  */
 export function AnnotationPanel({
-  files, activeFileIndex, annotations, blocks, selectedAnnotationId, onSelect, onOpenNote, onEdit, onDelete,
+  files, activeFileIndex, annotations, blocks, selectedAnnotationId, onSelect, onOpenNote, onEdit, onDelete, onReveal,
   onExport, onImport, generalComment, onSaveGeneralComment, generalDisabled, approves, collapsed, width
 }) {
   const fileInputRef = useRef(null)
@@ -145,8 +146,14 @@ export function AnnotationPanel({
 
   const activate = useCallback((ann) => {
     onSelect(ann.id)
-    if (ann.targetType !== 'global') { flashElement(markOf(ann)) }
-  }, [onSelect])
+    if (ann.targetType === 'global') { return }
+    // A note in a hidden Read view or a folded card can only be found once it is shown.
+    if (onReveal?.(ann)) {
+      setTimeout(() => flashElement(markOf(ann)), 100)
+    } else {
+      flashElement(markOf(ann))
+    }
+  }, [onSelect, onReveal])
 
   const numberedIds = useMemo(() => sortNotes(annotations.filter(isNumbered), blocks).map(a => a.id), [annotations, blocks])
   const stepNotes = useCallback((delta) => {

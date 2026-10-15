@@ -1,4 +1,5 @@
 import { countDiffLines, parseDiffLines, splitCodeInfo } from './diffLines.js'
+import { readPathOf } from './fileVersions.js'
 
 /**
  * Reads the walkthrough `annotaitr changes` writes (server/changes/walkthrough.js)
@@ -28,7 +29,7 @@ function readFocus(blocks) {
   return { attention: null, focusWhy: null, focusBlock: null, rest: blocks }
 }
 
-function isDiffBlock(block) {
+export function isDiffBlock(block) {
   return block.type === 'code' && splitCodeInfo(block.language).language === 'diff'
 }
 
@@ -106,7 +107,8 @@ export function noteCounts(sections, annotations) {
   for (const ann of annotations) {
     if (ann.type === 'NOTES' || ann.targetType === 'global') { continue }
     if (overviewIds.has(ann.blockId)) { overview += 1; continue }
-    const path = pathOf.get(ann.blockId)
+    // A note in a file's Read view counts for that file, as long as the file is one of the walkthrough's.
+    const path = pathOf.get(ann.blockId) ?? sections.files.find((f) => f.path === readPathOf(ann.blockId))?.path
     if (path) { byPath.set(path, (byPath.get(path) ?? 0) + 1) }
   }
   return { overview, byPath }

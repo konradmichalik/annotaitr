@@ -20,6 +20,8 @@ export function createGeneralComment(text) {
   }
 }
 
+const NO_BLOCKS = []
+
 // Agent notes from --feedback-notes are read-only context and never part of a decision.
 const ownNotes = (annotations) => annotations.filter((a) => a.type !== 'NOTES')
 
@@ -37,8 +39,9 @@ async function post(url, body) {
  * decision dialog's result: the summary becomes the active file's general
  * comment, `approve` discards the notes, `approve-notes` passes them along.
  * A `summary` of null leaves the notes as they are (the split button's main action).
+ * `extraBlocks` go out with the active file's blocks: the Read views of a walkthrough's files.
  */
-export function useReviewDecision({ files, activeFileIndex, annDispatch, setErrorStatus }) {
+export function useReviewDecision({ files, activeFileIndex, annDispatch, setErrorStatus, extraBlocks = NO_BLOCKS }) {
   const [decision, setDecision] = useState(null) // 'approved' | 'feedback'
   const [approvedNoteCount, setApprovedNoteCount] = useState(0)
 
@@ -52,7 +55,7 @@ export function useReviewDecision({ files, activeFileIndex, annDispatch, setErro
     const reviewed = files.map((f, index) => ({
       path: f.path,
       annotations: ownNotes(index === activeFileIndex ? withSummary : f.annState.annotations),
-      blocks: f.blocks
+      blocks: index === activeFileIndex && extraBlocks.length > 0 ? [...f.blocks, ...extraBlocks] : f.blocks
     }))
     const noteCount = reviewed.reduce((sum, f) => sum + f.annotations.length, 0)
 
@@ -69,7 +72,7 @@ export function useReviewDecision({ files, activeFileIndex, annDispatch, setErro
     } catch (err) {
       setErrorStatus(`${choice === 'feedback' ? 'Submit' : 'Approve'} failed: ${err.message}`)
     }
-  }, [files, activeFileIndex, annDispatch, setErrorStatus])
+  }, [files, activeFileIndex, annDispatch, setErrorStatus, extraBlocks])
 
   return { decision, submitted: decision !== null, approvedNoteCount, finish }
 }
