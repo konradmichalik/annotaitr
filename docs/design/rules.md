@@ -146,7 +146,8 @@ A status dot plus the words, never the dot alone. The tooltip names the caller (
 
 ### Feedback panel
 
-- Title `Feedback`, then a two-way switch: `This round · n` and `Replies · n` (image, PDF, web, video, changes) or `This file · n` and `All files · n` (Markdown, code). The switch only shows when its second side can hold something: an earlier round, or more than one file. An empty `Replies · 0` tab would only be a dead end.
+- Title `Feedback`, then a two-way switch: `This round · n` and `Replies · n` (image, PDF, web, video, changes) or `This file · n` and `All files · n` (Markdown, code). Markdown with several files and an earlier round shows all three: `This file · n`, `All files · n`, `Replies · n`. The switch only shows when a side beyond the first can hold something: an earlier round, or more than one file. An empty `Replies · 0` tab would only be a dead end.
+- In Markdown and changes, a thread from the Replies tab opens in place below its card, the canvas has no popover for it. Its earlier text is underlined dashed in `--intent-earlier-mark`; clicking the card scrolls to it. Threads whose text is gone list last under `No longer in the document` with their original quote.
 - With two or more numbered notes the header shows `‹ 2 of 5 ›` between the title and the menu: previous and next note, keys `Shift+N` and `N`. The buttons stop at the first and the last note and are marked disabled there with `aria-disabled` and stay focusable, the counter is a polite live region and reads `5 notes` while none is selected. Stepping selects the note like a click on its mark and never opens its comment box.
 - One card per note: number on the intent colour, intent icon and word, location (page, selector, timecode or line), then the quote and the comment.
 - A note restored from a draft whose text is gone from the edited file shows a dashed `Unanchored` pill in place of its location, like the `Not explained` pill, and is part of the card's accessible name together with its hint `text no longer in the file` (also the pill's tooltip). It lists after the anchored notes, has no highlight and offers delete but no edit.
@@ -212,7 +213,7 @@ A status dot plus the words, never the dot alone. The tooltip names the caller (
 - A thread from an earlier round shows the reviewer's note, the agent's reply and the reviewer's pending reply in order.
 - Agent status is a chip with icon and word: Applied, Partial, Declined, Deferred, Question, No reply. Never colour alone.
 - A pending reply is dashed and says `Pending, sent with your decision`.
-- In changes a thread opens inline below its line, headed `Round n · note m` with intent and status chip, and offers `Reply` and `Mark resolved`. There is no separate resolved list: the thread stays under `Replies`.
+- In Markdown and changes a thread opens in place below its card in the `Replies` tab, with its number, status chip and `Reply`; its earlier text is underlined dashed in the document. Opening it inline below its diff line, with `Mark resolved`, belongs to the deferred later rounds of changes (see Diff, later rounds).
 
 ## Decision
 

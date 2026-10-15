@@ -1,6 +1,6 @@
 import { annotationHandle } from '../core/annotationHandle.js'
 import { normalizeNotes, intentWord, intentCounts } from '../core/notes.js'
-import { countNewlines, diffLineRef } from './diffLines.js'
+import { countNewlines, diffLineRef, lineRefOf } from './diffLines.js'
 
 /**
  * Format an approval decision for stdout.
@@ -21,8 +21,6 @@ export function formatApprovalOutput(decision) {
 }
 
 const quoted = (text) => `> ${(text ?? '').replace(/\n/g, '\n> ')}\n`
-
-const lineRefOf = (startLine, endLine) => (startLine === endLine ? `Line ${startLine}` : `Lines ${startLine}-${endLine}`)
 
 // A block of a changes card's Read view carries its file's path: its lines are lines of the new file.
 const inFile = (block, ref) => (block?.path ? `new ${ref} in ${block.path}` : ref)
@@ -95,6 +93,12 @@ function describeAnnotation(ann, block) {
   return { what: 'Text', where, tag: labelTag, body: selection + quoted(ann.text) }
 }
 
+/** Where a note is, as its feedback heading says: `Line 7`, `Lines 3-4, source`, `new Line 2 in src/a.js`. */
+export const noteWhere = (ann, block) => describeAnnotation(ann, block).where
+
+/** What a note points at, as its feedback heading names it: `Text`, `Insertion`, `Image`, ... */
+export const noteWhat = (ann, block) => describeAnnotation(ann, block).what
+
 /**
  * One numbered note: `## 3. Question · Text (Line 7)`, the handle at the end
  * of the heading, then the quoted selection and the comment. The number is
@@ -162,6 +166,17 @@ function numberedFiles(files) {
     const own = notes.slice(offset, offset + f.annotations.length)
     offset += f.annotations.length
     return { ...f, annotations: own }
+  })
+}
+
+/**
+ * Every decided note in feedback order with the number and intent the
+ * feedback gives it, the index of its file and its block, for the review session.
+ */
+export function decidedNotes(files) {
+  return numberedFiles(files).flatMap((f, fileIndex) => {
+    const ordered = [...f.annotations.filter(a => a.targetType === 'global'), ...f.annotations.filter(a => a.targetType !== 'global')]
+    return ordered.map((annotation) => ({ annotation, fileIndex, block: (f.blocks || []).find(blk => blk.id === annotation.blockId) }))
   })
 }
 

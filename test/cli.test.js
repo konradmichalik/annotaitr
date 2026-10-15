@@ -136,10 +136,11 @@ describe('parseArgs', () => {
 })
 
 describe('session flags', () => {
-  it('rejects session flags for markdown targets', () => {
-    const result = spawnSync('node', ['index.js', '--new-session', 'README.md'], NO_SERVER)
+  it('accepts session flags for markdown targets and refuses an unknown named session before serving', () => {
+    const result = spawnSync('node', ['index.js', '--session', 'aaaaaaaaaaaa', 'README.md'], NO_SERVER)
     expect(result.status).toBe(1)
-    expect(result.stderr.toString()).toMatch(/--session and --new-session only apply to image targets/)
+    expect(result.stderr.toString()).toMatch(/No review session aaaaaaaaaaaa/)
+    expect(result.stderr.toString()).not.toMatch(/only apply to image targets/)
   })
 })
 

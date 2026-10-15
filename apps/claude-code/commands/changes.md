@@ -103,13 +103,22 @@ plus a few words naming the passage, as in "fixed `#a3f19c2e` (cache key)".
 
 ### 5. Present again
 
-After the changes, update the explanation file and open it again with notes on
-what you did, one per handle, each starting with the handle and a few words
-naming the passage:
+The feedback ends with a `Session:` line. After the changes, answer each
+handle with one `annotaitr reply --session <id> --to <handle> --status <status>
+--text "..."`, `<status>` one of `applied`, `partial`, `declined`, `deferred`
+or `question`; the text says what changed, what is left, why you declined,
+when you will do it, or the question. A `## Replies to round N` section
+continues an earlier thread: act on the reviewer's reply and answer it on the
+same handle. Then update the explanation file and open it again. The session
+belongs to the repository, branch and `--base`, so it carries on across new
+commits:
 
 ```bash
-annotaitr changes --origin claude-code --explain <explain.json path> --feedback-notes '[{"text":"#a3f19c2e (cache key): now injected through the constructor"}]'
+annotaitr reply --session <id> --to a3f19c2e --status applied --text "The key is now injected through the constructor"
+annotaitr changes --origin claude-code --explain <explain.json path>
 ```
+
+Use `--feedback-notes` only for notes tied to no handle.
 
 Repeat until the user approves, then act as in step 4. annotaitr deletes the
 walkthrough itself once the user decides; delete `explain.json` once the

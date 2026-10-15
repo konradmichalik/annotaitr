@@ -35,9 +35,15 @@ async function assertPrivateDir(dir) {
   }
 }
 
+const isText = (value) => typeof value === 'string'
+
+// A text note's anchor is optional, but one that is there must hold what finding the text again reads.
+const hasUsableAnchor = (t) => t.anchor === undefined || t.anchor === null ||
+  (isText(t.anchor.quote) && isText(t.anchor.prefix) && isText(t.anchor.suffix))
+
 function isWellFormed(session) {
   return Array.isArray(session.threads) &&
-    session.threads.every((t) => Array.isArray(t?.replies) && t.annotation !== null && typeof t.annotation === 'object') &&
+    session.threads.every((t) => Array.isArray(t?.replies) && t.annotation !== null && typeof t.annotation === 'object' && hasUsableAnchor(t)) &&
     Number.isInteger(session.round) &&
     Number.isFinite(session.writtenAt)
 }

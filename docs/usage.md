@@ -100,7 +100,7 @@ terminal invocation never needs it.
 | `ANNOTAITR_BROWSER` | both | Custom browser application |
 | `ANNOTAITR_TIMEOUT` | both | Heartbeat timeout in ms (default `30000`, range `5000`-`300000`) |
 | `ANNOTAITR_NO_OPEN` | both | Skip opening a browser tab automatically |
-| `ANNOTAITR_SESSION_DIR` | image | Folder for [review sessions](usage/sessions.md) (default `<tmpdir>/annotaitr-sessions`) |
+| `ANNOTAITR_SESSION_DIR` | all | Folder for [review sessions](usage/sessions.md) (default `<tmpdir>/annotaitr-sessions`) |
 | `ANNOTAITR_CAPTURE_TIMEOUT` | image | Page-load timeout in ms for URL capture |
 | `ANNOTAITR_WHISPER_MODEL` | image | Path to a whisper.cpp ggml model; enables [voice notes](#voice-notes) |
 | `ANNOTAITR_WHISPER_BIN` | image | whisper.cpp binary (default `whisper-cli` on `PATH`) |

@@ -40,10 +40,17 @@ async function post(url, body) {
  * comment, `approve` discards the notes, `approve-notes` passes them along.
  * A `summary` of null leaves the notes as they are (the split button's main action).
  * `extraBlocks` go out with the active file's blocks: the Read views of a walkthrough's files.
+ * Pending replies to last round go out with any decision, the server adds them.
+ * `decidePrimary(choice)` opens the dialog through `openDialog(choice)` while
+ * the agent waits for an answer (`unanswered`), so no question is sent away unseen.
  */
-export function useReviewDecision({ files, activeFileIndex, annDispatch, setErrorStatus, extraBlocks = NO_BLOCKS }) {
+export function useReviewDecision({
+  files, activeFileIndex, annDispatch, setErrorStatus, extraBlocks = NO_BLOCKS,
+  replyCount = 0, unanswered = [], openDialog = () => {}
+}) {
   const [decision, setDecision] = useState(null) // 'approved' | 'feedback'
   const [approvedNoteCount, setApprovedNoteCount] = useState(0)
+  const [sentReplyCount, setSentReplyCount] = useState(0)
 
   const finish = useCallback(async ({ choice, summary = null }) => {
     const activeAnnotations = files[activeFileIndex]?.annState.annotations ?? []
@@ -62,17 +69,27 @@ export function useReviewDecision({ files, activeFileIndex, annDispatch, setErro
     try {
       if (choice === 'feedback') {
         await post('/api/feedback', { files: reviewed })
+        setSentReplyCount(replyCount)
         setDecision('feedback')
         return
       }
       const keepNotes = choice === 'approve-notes' && noteCount > 0
       await post('/api/approve', keepNotes ? { files: reviewed } : {})
       setApprovedNoteCount(keepNotes ? noteCount : 0)
+      setSentReplyCount(replyCount)
       setDecision('approved')
     } catch (err) {
       setErrorStatus(`${choice === 'feedback' ? 'Submit' : 'Approve'} failed: ${err.message}`)
     }
-  }, [files, activeFileIndex, annDispatch, setErrorStatus, extraBlocks])
+  }, [files, activeFileIndex, annDispatch, setErrorStatus, extraBlocks, replyCount])
 
-  return { decision, submitted: decision !== null, approvedNoteCount, finish }
+  const decidePrimary = useCallback((choice) => {
+    if (unanswered.length > 0) {
+      openDialog(choice)
+      return
+    }
+    finish({ choice })
+  }, [unanswered, openDialog, finish])
+
+  return { decision, submitted: decision !== null, approvedNoteCount, sentReplyCount, finish, decidePrimary }
 }

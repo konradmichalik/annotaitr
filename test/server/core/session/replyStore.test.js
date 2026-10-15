@@ -58,6 +58,14 @@ describe('createReplyStore', () => {
     }])
   })
 
+  it('carries the file and anchor of a markdown thread and keeps where the mark was in its origin', () => {
+    const anchor = { quote: 'intro', prefix: '', suffix: '', where: 'Line 3', contentHash: 'abc' }
+    const md = { round: 1, threads: [{ handle: 'c1', number: 4, annotation: {}, element: null, file: '/abs/a.md', anchor, replies: [agent] }] }
+    const store = createReplyStore(md)
+    store.add('c1', 'Shorter', { id: 'h4', now: 1 })
+    expect(store.carried()[0]).toMatchObject({ file: '/abs/a.md', anchor, origin: { round: 1, number: 4, where: 'Line 3' } })
+  })
+
   it('carries the origin from previous carried threads', () => {
     const carriedBefore = { round: 2, threads: [{ handle: 'b7210e44', number: null, origin: { round: 1, number: 2 }, annotation: {}, element: null, replies: [agent] }] }
     const store = createReplyStore(carriedBefore)

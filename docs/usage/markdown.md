@@ -15,11 +15,20 @@ Markdown (`.md`, `.markdown`, `.mdown`, `.mkd`) renders as formatted text. Confi
 
 Files above 2 MB are rejected. A real `.env` file is not supported, because it commonly holds secrets.
 
+## Rounds and replies
+
+Reopening the same set of files continues its [review session](sessions.md):
+the agent answers each note with `annotaitr reply`, and the next round lists
+those answers in the panel's **Replies** tab, underlines the earlier text
+dashed in the preview and lets the reviewer answer back. A note whose text was
+edited away is listed under "No longer in the document" with its original
+quote.
+
 ## `--feedback-notes`
 
-Markdown mode only. Attaches read-only AI notes to the first file, so a
-re-opened review round shows what changed since the last submission instead
-of a blank slate. A JSON array of `{text, line?}` objects, inline or as a
+Markdown mode only. Attaches read-only AI notes to the first file, for what
+the agent wants to say that answers no note, such as a summary of the
+changes. An answer to a note goes through `annotaitr reply` instead. A JSON array of `{text, line?}` objects, inline or as a
 file path; `line` is the line number in the file being opened, omitted for a
 general note.
 
@@ -51,6 +60,7 @@ annotaitr changes --base main --explain explain.json
 | `--base <ref>` | Show the whole branch against its merge base with this branch, tag or commit, for a review before a pull request. Default: only the uncommitted changes |
 | `--explain <file>` | The agent's explanation, see below. Without it every file is shown as not explained |
 | `--origin`, `--feedback-notes` | As for Markdown files |
+| `--session <id>`, `--new-session` | As for every [review session](sessions.md). A session belongs to the repository, branch and comparison, so it survives new commits on the branch |
 
 The explanation is a JSON object, every field optional:
 

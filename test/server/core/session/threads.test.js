@@ -20,6 +20,12 @@ describe('buildThreads', () => {
   it('records the element a mark points at when a describer is given', () => {
     expect(buildThreads([pin], () => 'button "Buy" · #buy')[0].element).toBe('button "Buy" · #buy')
   })
+
+  it('adds the fields a mode keeps per thread, such as the file and the anchor of a text note', () => {
+    const anchor = { quote: 'intro', prefix: '', suffix: '', where: 'Line 3' }
+    const [thread] = buildThreads([pin], () => null, () => ({ file: '/abs/a.md', anchor }))
+    expect(thread).toEqual({ handle: 'a3f19c2e', number: 1, annotation: pin, element: null, replies: [], file: '/abs/a.md', anchor })
+  })
 })
 
 describe('nextSession', () => {
@@ -52,6 +58,10 @@ describe('sessionLine', () => {
       '\nSession: 2f8c1a9e04b7 (round 1). Reply per mark with: annotaitr reply --session 2f8c1a9e04b7 ' +
       '--to <handle> --status applied|partial|declined|deferred|question --text "…"\n'
     )
+  })
+
+  it('says note instead of mark where the mode says so', () => {
+    expect(sessionLine(at(buildThreads([pin])), 'note')).toContain('Reply per note with: annotaitr reply')
   })
 
   it('stays silent when there is nothing to reply to', () => {
