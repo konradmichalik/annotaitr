@@ -100,7 +100,7 @@ terminal invocation never needs it.
 | `ANNOTAITR_BROWSER` | both | Custom browser application |
 | `ANNOTAITR_TIMEOUT` | both | Heartbeat timeout in ms (default `30000`, range `5000`-`300000`) |
 | `ANNOTAITR_NO_OPEN` | both | Skip opening a browser tab automatically |
-| `ANNOTAITR_SESSION_DIR` | image | Folder for [review sessions](usage/sessions.md) (default `<tmpdir>/annotaitr-sessions`) |
+| `ANNOTAITR_SESSION_DIR` | all | Folder for [review sessions](usage/sessions.md) (default `<tmpdir>/annotaitr-sessions`) |
 | `ANNOTAITR_CAPTURE_TIMEOUT` | image | Page-load timeout in ms for URL capture |
 | `ANNOTAITR_WHISPER_MODEL` | image | Path to a whisper.cpp ggml model; enables [voice notes](#voice-notes) |
 | `ANNOTAITR_WHISPER_BIN` | image | whisper.cpp binary (default `whisper-cli` on `PATH`) |
@@ -150,6 +150,23 @@ PDF and video feedback use the image form, a general comment has neither
 number nor intent (`### [#c01d9e55] General comment about the whole image`).
 `APPROVED WITH NOTES:` names the count per intent the same way
 (`APPROVED WITH NOTES: 2 notes (1 Change, 1 Question). ...`).
+
+The images the feedback points at are written to a fresh directory in the
+system temp directory (`annotaitr-XXXX`). Next to the annotated image, every
+note on the image gets a full-resolution crop of its area, named by its
+number (`crop-03.png`, `crop-03-05.png` for notes close together, page and
+frame crops start with the page or frame name). The note names it in a
+`Crop:` line under its heading, and the annotated image stays the overview:
+
+```text
+### 1. [#a3f19c2e] Change · Boxed area: top left (~10% from top, ~12% from left)
+Crop: /tmp/annotaitr-XXXX/crop-01.png
+> Move this up
+```
+
+Comments get no crop, and an image gets none where a crop would cover more
+than half of it, so small images keep the annotated image only. One image
+gets at most 20 crops.
 
 | Exit code | Meaning |
 |-----------|---------|

@@ -27,6 +27,7 @@ function showNoteNumber(doms, ann) {
  * - extraAnnotationFields — static fields merged into new annotations
  * - restoreFilter(ann) — only restore annotations matching this predicate
  * - restoreInsertion(ann) — place the marker of an INSERTION note, returns whether it was placed
+ * - refreshAnchor(ann): the metas that fit the DOM as it is now, used on restore; null leaves the note out
  *
  * Keyboard shortcuts are NOT included — each consumer registers its own.
  */
@@ -42,6 +43,7 @@ export function useHighlighter({
   extraAnnotationFields,
   restoreFilter,
   restoreInsertion,
+  refreshAnchor,
 }) {
   const containerRef = useRef(null)
   const highlighterRef = useRef(null)
@@ -55,7 +57,7 @@ export function useHighlighter({
   r.current = {
     onAddAnnotation, onEditAnnotation, annotations, toolbarState,
     onBeforeHighlight, enrichToolbarState, extraAnnotationFields,
-    restoreFilter, restoreInsertion,
+    restoreFilter, restoreInsertion, refreshAnchor,
   }
 
   // --- Highlighter setup ---
@@ -263,6 +265,7 @@ export function useHighlighter({
 
   const restoreHighlight = (loaded) => {
     const ann = currentNote(loaded)
+    if (ann.unanchored) { return false }
     if (ann.type === 'INSERTION' && r.current.restoreInsertion) { return r.current.restoreInsertion(ann) }
     if (ann.targetType === 'image' || ann.targetType === 'diagram' ||
         ann.targetType === 'pinpoint' || ann.targetType === 'global' ||
@@ -270,10 +273,13 @@ export function useHighlighter({
     if (r.current.restoreFilter && !r.current.restoreFilter(ann)) { return false }
     const highlighter = highlighterRef.current
     if (!highlighter) { return false }
+    // With refreshAnchor set, stored metas may point at other text, so a note it cannot place stays out.
+    const anchor = r.current.refreshAnchor ? r.current.refreshAnchor(ann) : ann
+    if (!anchor) { return false }
     const wasRestoring = isRestoringRef.current
     isRestoringRef.current = true
     try {
-      highlighter.fromStore(ann.startMeta, ann.endMeta, ann.originalText, ann.id)
+      highlighter.fromStore(anchor.startMeta, anchor.endMeta, ann.originalText, ann.id)
       highlighter.addClass(ann.type.toLowerCase(), ann.id)
       const intent = intentOf(ann)
       if (intent) { highlighter.addClass(`intent-${intent}`, ann.id) }

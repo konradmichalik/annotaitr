@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { readError } from '../utils/readError.js'
+import { readError } from '../../../shared/utils/readError.js'
 
 export const saveAnnotations = (index, annotations) => fetch(`/api/annotations?index=${index}`, {
   method: 'POST',

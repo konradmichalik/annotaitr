@@ -19,6 +19,11 @@ describe('shortcutGroups', () => {
     expect(labels('markdown')).toContain('Pinpoint')
   })
 
+  it('lists the key that switches a changes card between Diff and Read', () => {
+    expect(labels('markdown', 'read')).toEqual(['Diff or Read view of the current file (changes)'])
+    expect(labels('image')).not.toContain('Diff or Read view of the current file (changes)')
+  })
+
   it('lists the note stepping keys in every mode', () => {
     for (const kind of ['image', 'url', 'pdf', 'video', 'markdown']) {
       expect(labels(kind)).toContain('Next, previous note')

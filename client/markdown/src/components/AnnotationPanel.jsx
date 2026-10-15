@@ -5,6 +5,7 @@ import { LabelIcon } from './LabelIcon.jsx'
 import { AgentNotes } from './AgentNotes.jsx'
 import { GeneralCommentField } from './GeneralCommentField.jsx'
 import { flashElement } from '../utils/flashElement.js'
+import { blockSelector } from '../utils/viewerDom.js'
 import { noteNumbers, noteLocation, sortNotes } from '../utils/noteNumbers.js'
 import { isGeneralComment } from '../hooks/useReviewDecision.js'
 import { isNumbered } from '../../../shared/utils/intents.js'
@@ -21,6 +22,7 @@ import { GeneralCommentCard } from '../../../shared/components/GeneralCommentCar
 import { useGeneralComment } from '../../../shared/hooks/useGeneralComment.js'
 import { IntentIcon } from '../../../shared/components/IntentIcon.jsx'
 import { intentBadgeStyle } from '../../../shared/utils/intents.js'
+import { RepliesPanel } from './RepliesPanel.jsx'
 
 const MAX_IMPORT_SIZE = 5 * 1024 * 1024 // 5 MB
 const ALT = navigator.platform?.includes('Mac') ? '⌥' : 'Alt'
@@ -31,7 +33,7 @@ const EMPTY_KEYS = [
 ]
 
 function markOf(ann) {
-  const block = `[data-block-id="${ann.blockId}"]`
+  const block = blockSelector(ann.blockId)
   if (ann.type === 'INSERTION' || ann.targetType === 'pinpoint') { return document.querySelector(block) }
   if (ann.targetType === 'image') { return document.querySelector(`${block} .annotatable-image-wrapper[data-image-src="${CSS.escape(ann.imageSrc)}"]`) }
   if (ann.targetType === 'diagram') { return document.querySelector(`${block} .mermaid-diagram`) || document.querySelector(block) }
@@ -62,7 +64,8 @@ function CardText({ ann }) {
 function Card({ ann, number, blocks, selected, onActivate, onEdit, onRemove }) {
   const { word, intent, shape } = noteType(ann)
   // A plain text selection says nothing a quote does not; an insertion or an image does.
-  const location = [noteLocation(ann, blocks), shape === 'Text' ? null : shape].filter(Boolean).join(' · ')
+  // A restored note whose text left the file has no line to show; the tag says so instead.
+  const location = ann.unanchored ? null : [noteLocation(ann, blocks), shape === 'Text' ? null : shape].filter(Boolean).join(' · ')
   return (
     <NoteCard
       id={ann.id}
@@ -72,10 +75,13 @@ function Card({ ann, number, blocks, selected, onActivate, onEdit, onRemove }) {
       intent={intent}
       icon={<IntentIcon intent={intent} />}
       location={location || null}
+      tag={ann.unanchored ? 'Unanchored' : null}
+      tagHint={ann.unanchored ? 'Text no longer in the file' : null}
       quote={quoteOf(ann)}
       selected={selected}
       onActivate={onActivate}
-      onEdit={onEdit}
+      // Editing opens on the note's highlight, which an unanchored note no longer has.
+      onEdit={ann.unanchored ? null : onEdit}
       onRemove={onRemove}
     >
       <CardText ann={ann} />
@@ -108,19 +114,51 @@ function readImport(event, onImport) {
 }
 
 /**
+ * The panel tab. A round that opens with last round's replies and no notes
+ * shows them first, a new note brings its card into view, and a thread opened
+ * from outside (the open questions) brings the replies back.
+ */
+function useRepliesTab({ hasReplies, noteCount, focusThread }) {
+  const [tab, setTab] = useState('file')
+  const noteCountRef = useRef(noteCount)
+  useEffect(() => {
+    if (hasReplies && noteCountRef.current === 0) { setTab('replies') }
+  }, [hasReplies])
+  useEffect(() => {
+    if (noteCount > noteCountRef.current) { setTab('file') }
+    noteCountRef.current = noteCount
+  }, [noteCount])
+  useEffect(() => {
+    if (focusThread) { setTab('replies') }
+  }, [focusThread])
+  return [tab, setTab]
+}
+
+function panelTabs({ isMultiFile, hasReplies, fileCount, allCount, replyCount }) {
+  return [
+    { id: 'file', label: isMultiFile || !hasReplies ? `This file · ${fileCount}` : `This round · ${fileCount}` },
+    isMultiFile && { id: 'all', label: `All files · ${allCount}` },
+    hasReplies && { id: 'replies', label: `Replies · ${replyCount}` }
+  ].filter(Boolean)
+}
+
+/**
  * The feedback panel: this file's notes (or, with several files open, all
  * of them, by file), the agent's notes from the last round and the general
  * comment of the active file. Numbers follow the feedback output.
  */
 export function AnnotationPanel({
-  files, activeFileIndex, annotations, blocks, selectedAnnotationId, onSelect, onOpenNote, onEdit, onDelete,
-  onExport, onImport, generalComment, onSaveGeneralComment, generalDisabled, approves, collapsed, width
+  files, activeFileIndex, annotations, blocks, selectedAnnotationId, onSelect, onOpenNote, onEdit, onDelete, onReveal,
+  onExport, onImport, generalComment, onSaveGeneralComment, generalDisabled, approves, collapsed, width,
+  previous = null, onLocateThread, focusThread = null
 }) {
   const fileInputRef = useRef(null)
   const panelRef = useRef(null)
-  const [tab, setTab] = useState('file')
   const isMultiFile = files.length > 1
+  const hasReplies = (previous?.threads.length ?? 0) > 0
+  const [tab, setTab] = useRepliesTab({ hasReplies, noteCount: annotations.filter(a => a.type !== 'NOTES').length, focusThread })
   const showAll = isMultiFile && tab === 'all'
+  const showReplies = hasReplies && tab === 'replies'
   // Scoped to the active file: an open draft is discarded on a file switch, so a save can never reach another file.
   const generalEditor = useGeneralComment({
     text: generalComment?.text || null,
@@ -141,8 +179,14 @@ export function AnnotationPanel({
 
   const activate = useCallback((ann) => {
     onSelect(ann.id)
-    if (ann.targetType !== 'global') { flashElement(markOf(ann)) }
-  }, [onSelect])
+    if (ann.targetType === 'global') { return }
+    // A note in a hidden Read view or a folded card can only be found once it is shown.
+    if (onReveal?.(ann)) {
+      setTimeout(() => flashElement(markOf(ann)), 100)
+    } else {
+      flashElement(markOf(ann))
+    }
+  }, [onSelect, onReveal])
 
   const numberedIds = useMemo(() => sortNotes(annotations.filter(isNumbered), blocks).map(a => a.id), [annotations, blocks])
   const stepNotes = useCallback((delta) => {
@@ -207,6 +251,29 @@ export function AnnotationPanel({
   })
 
   const empty = fileNotes.length === 0 && !hasGeneral && (!showAll || allCount === 0)
+  const tabbed = isMultiFile || hasReplies
+  const tabs = panelTabs({ isMultiFile, hasReplies, fileCount: fileNotes.length + (hasGeneral ? 1 : 0), allCount, replyCount: previous?.threads.length ?? 0 })
+
+  function body() {
+    if (showReplies) {
+      return (
+        <RepliesPanel
+          round={previous.round} threads={previous.threads} multiFile={isMultiFile}
+          kind={files[0]?.kind === 'changes' ? 'changes' : 'markdown'}
+          onLocate={onLocateThread} onReload={previous.reload} focusRequest={focusThread}
+        />
+      )
+    }
+    return (
+      <>
+        {empty && (
+          <PanelEmpty lead="Every selection becomes a numbered note the agent applies to the file." keys={EMPTY_KEYS} approves={approves} />
+        )}
+        {!empty && (showAll ? allFiles : <ul className="note-list">{activeList}</ul>)}
+        {!showAll && <AgentNotes notes={agentNotes} selectedAnnotationId={selectedAnnotationId} onSelect={onSelect} />}
+      </>
+    )
+  }
 
   return (
     <aside ref={panelRef} className="annotation-panel" style={width ? { width: `${width}px` } : undefined}>
@@ -216,21 +283,9 @@ export function AnnotationPanel({
         <NoteStepper count={numberedIds.length} position={notePosition(numberedIds, selectedAnnotationId)} onStep={stepNotes} />
         <PanelMenu items={menuItems} />
       </div>
-      {isMultiFile && (
-        <PanelSwitch
-          label="Feedback"
-          panelId="feedback-tabpanel"
-          value={tab}
-          onChange={setTab}
-          options={[{ id: 'file', label: `This file · ${fileNotes.length + (hasGeneral ? 1 : 0)}` }, { id: 'all', label: `All files · ${allCount}` }]}
-        />
-      )}
-      <div className="panel-body" id="feedback-tabpanel" {...(isMultiFile ? { role: 'tabpanel', 'aria-labelledby': `panel-tab-${tab}` } : {})}>
-        {empty && (
-          <PanelEmpty lead="Every selection becomes a numbered note the agent applies to the file." keys={EMPTY_KEYS} approves={approves} />
-        )}
-        {!empty && (showAll ? allFiles : <ul className="note-list">{activeList}</ul>)}
-        {!showAll && <AgentNotes notes={agentNotes} selectedAnnotationId={selectedAnnotationId} onSelect={onSelect} />}
+      {tabbed && <PanelSwitch label="Feedback" panelId="feedback-tabpanel" value={tab} onChange={setTab} options={tabs} />}
+      <div className="panel-body" id="feedback-tabpanel" {...(tabbed ? { role: 'tabpanel', 'aria-labelledby': `panel-tab-${tab}` } : {})}>
+        {body()}
       </div>
       <GeneralCommentRow editor={generalEditor} Field={GeneralCommentField} />
     </aside>

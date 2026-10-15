@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { parseMarkdownToBlocks } from '../../../client/markdown/src/utils/parser.js'
 import { formatAnnotationsForExport, formatAnnotationsForJsonExport, validateAnnotationImport, shortFileNames } from '../../../client/markdown/src/utils/export.js'
 
 const makeBlock = (overrides = {}) => ({
@@ -280,5 +281,69 @@ describe('formatAnnotationsForExport in code blocks', () => {
     const startOffset = content.indexOf('+b')
     const output = formatAnnotationsForExport([makeAnnotation({ originalText: '+b', startOffset, endOffset: startOffset + 2 })], blocks, 'x.md')
     expect(output).toContain('Comment (new Line 1 in src/x.js)')
+  })
+})
+
+describe('formatAnnotationsForExport with unanchored notes', () => {
+  it('leaves out the line reference of a note whose text is gone', () => {
+    const output = formatAnnotationsForExport(
+      [makeAnnotation({ unanchored: true, originalText: 'gone', number: 1 })],
+      [makeBlock({ startLine: 7 })],
+      '/test.md'
+    )
+    expect(output).toContain('## 1. Change · Comment\n\n```\ngone\n```\n\n> Fix this\n')
+    expect(output).not.toContain('Line 7')
+  })
+})
+
+describe('formatAnnotationsForExport inside a quote', () => {
+  const blocks = parseMarkdownToBlocks('Intro\n\n> Note:\n>\n> ```js\n> const a = 1\n> const b = 2\n> ```\n>\n> - one\n> - two')
+
+  it('points a selection in quoted code at its source line', () => {
+    const code = blocks.find((b) => b.type === 'code')
+    const startOffset = code.content.indexOf('const b')
+    const ann = makeAnnotation({ blockId: code.id, originalText: 'const b', startOffset, endOffset: startOffset + 7 })
+    expect(formatAnnotationsForExport([ann], blocks, 'x.md')).toContain('Comment (Line 7)')
+  })
+
+  it('points a selection in a quoted list item at its source line', () => {
+    const item = blocks.find((b) => b.content === 'two')
+    const ann = makeAnnotation({ blockId: item.id, originalText: 'two', startOffset: 0, endOffset: 3 })
+    expect(formatAnnotationsForExport([ann], blocks, 'x.md')).toContain('Comment (Line 11)')
+  })
+})
+
+describe('formatAnnotationsForExport on a Read view block', () => {
+  const read = (overrides) => makeBlock({ id: 'read:docs/usage.md:block-4', path: 'docs/usage.md', sortLine: 30, ...overrides })
+
+  it('names the new file line and the path', () => {
+    const blocks = [read({ content: 'First line\nsecond line.', startLine: 14 })]
+    const ann = makeAnnotation({ blockId: 'read:docs/usage.md:block-4', number: 2, originalText: 'line\nsecond', startOffset: 6, endOffset: 17 })
+    expect(formatAnnotationsForExport([ann], blocks, 'changes.md')).toContain('## 2. Change · Comment (new Lines 14-15 in docs/usage.md)')
+  })
+
+  it('names the new file line for an image or a diagram, as the agent\'s feedback does', () => {
+    const blocks = [read({ content: '![Logo](logo.png)', startLine: 7 }), read({ id: 'read:docs/usage.md:block-5', type: 'code', language: 'mermaid', content: 'graph TD', startLine: 9 })]
+    const image = makeAnnotation({ blockId: 'read:docs/usage.md:block-4', targetType: 'image', originalText: 'logo.png', imageSrc: 'logo.png' })
+    const diagram = makeAnnotation({ id: 'ann-2', blockId: 'read:docs/usage.md:block-5', targetType: 'diagram', originalText: 'graph TD' })
+    const output = formatAnnotationsForExport([image, diagram], blocks, 'changes.md')
+    expect(output).toContain('Comment on image (new Line 7 in docs/usage.md)')
+    expect(output).toContain('Comment on Mermaid diagram (new Line 9 in docs/usage.md)')
+  })
+
+  it('sorts Read notes at their card, by their line in the file', () => {
+    const blocks = [
+      makeBlock({ id: 'block-1', startLine: 10, content: 'Before' }),
+      makeBlock({ id: 'block-9', startLine: 40, content: 'After' }),
+      read({ id: 'read:docs/usage.md:block-1', startLine: 3, content: 'Early' }),
+      read({ id: 'read:docs/usage.md:block-7', startLine: 50, content: 'Late' })
+    ]
+    const note = (blockId, originalText) => makeAnnotation({ id: `n-${originalText}`, blockId, originalText, endOffset: originalText.length })
+    const output = formatAnnotationsForExport([
+      note('block-9', 'After'), note('read:docs/usage.md:block-7', 'Late'),
+      note('read:docs/usage.md:block-1', 'Early'), note('block-1', 'Before')
+    ], blocks, 'changes.md')
+    const order = ['Before', 'Early', 'Late', 'After'].map((text) => output.indexOf(`\`\`\`\n${text}\n`))
+    expect(order.every((at, i) => at > (order[i - 1] ?? -1))).toBe(true)
   })
 })

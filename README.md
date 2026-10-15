@@ -51,6 +51,7 @@ The mode is auto-detected from what you open, see [Usage](docs/usage.md). The me
 - [**Multi-file review**](docs/usage/markdown.md): several files in one session, with a Files overview of notes and reviewed files
 - [**Config and data files**](docs/usage/markdown.md): YAML, JSON, TOML, CSV, XML and more as raw source with line numbers
 - [**Rich content**](docs/usage/markdown.md): LaTeX math, Mermaid, PlantUML and Kroki diagrams render inline and are annotatable as a whole
+- [**Rounds with replies**](docs/usage/sessions.md#markdown-and-changes): the agent answers each note with a status, the next round shows the answers next to the text, even after it moved, and you can reply back
 - [**Linked navigation**](docs/usage/markdown.md): click relative `.md` links to add them to the review
 - [**File references and quick labels**](docs/usage/markdown.md): type `@` in a comment to autocomplete project files, or categorize a selection with a predefined label
 

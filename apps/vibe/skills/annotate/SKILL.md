@@ -57,17 +57,22 @@ instead, and never invent one.
 
 Unless the user said otherwise, after applying all changes:
 
-1. **Build feedback notes** describing what you changed — a JSON array of
-   `{ "text": "...", "line": <number> }` entries. `line` is the line number in
-   the **updated** file; omit it for general notes. Start each note with the
-   handle of the annotation it answers and a few words naming the passage. The
-   reviewer's original marks are usually gone in the next round, so a bare
-   handle means nothing to them.
+1. **Reply per handle.** The feedback ends with a `Session:` line. Run one
+   `annotaitr reply --session <id> --to <handle> --status <status> --text "..."`
+   per handle, `<status>` one of `applied`, `partial`, `declined`, `deferred`
+   or `question`. The text says what changed, what is left, why you declined,
+   when you will do it, or the question. A `## Replies to round N` section
+   continues an earlier thread: act on the reviewer's reply and answer it on
+   the same handle.
 
-2. **Re-open the annotator** with the notes so the user sees what changed:
+2. **Re-open the annotator** on the same files, so the user sees your replies
+   next to their notes. Add `--feedback-notes` (a JSON array of
+   `{ "text": "...", "line": <number> }`, `line` in the **updated** file) only
+   for notes tied to no handle, such as a summary of the changes:
 
    ```bash
-   annotaitr --origin vibe --feedback-notes '[{"text":"#a3f19c2e (intro): rewrote for clarity","line":5},{"text":"#7b210e44 (install steps): left as-is, the section is referenced elsewhere"}]' <file1.md> [file2.md ...]
+   annotaitr --origin vibe <file1.md> [file2.md ...]
+   annotaitr --origin vibe --feedback-notes '[{"text":"Split the install section into two steps","line":12}]' <file.md>
    ```
 
 3. **Evaluate the result:**

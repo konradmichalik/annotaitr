@@ -6,9 +6,9 @@ import { TOOL_ICONS } from '../utils/icons.jsx'
 import ReplyList from '../../../shared/components/ReplyList.jsx'
 import StatusChip from '../../../shared/components/StatusChip.jsx'
 import { CloseIcon } from '../../../shared/components/CloseIcon.jsx'
-import ReplyForm from './ReplyForm.jsx'
-import { removeReply } from './replyApi.js'
-import { STATUS_DISPLAY, AUTHOR_LABELS, AUTHOR_AVATARS, threadTitle, threadRound, threadStatus } from './threadView.js'
+import ReplyForm from '../../../shared/threads/ReplyForm.jsx'
+import { removeReply } from '../../../shared/threads/replyApi.js'
+import { STATUS_DISPLAY, AUTHOR_LABELS, AUTHOR_AVATARS, threadTitle, threadStatus, threadMessages } from '../../../shared/threads/threadView.js'
 
 const POPOVER_WIDTH = 320
 const GAP = 12
@@ -33,14 +33,6 @@ function computeLayout(anchorPoint, naturalHeight) {
     left,
     ...(below ? { top: anchorPoint.y + GAP } : { bottom: window.innerHeight - anchorPoint.y + GAP })
   }
-}
-
-// The reviewer's note opens the list, so the thread reads top to bottom: note, the agent's answers, the reviewer's replies.
-function threadMessages(thread, round) {
-  const r = threadRound(thread, round)
-  const note = { id: 'note', author: 'human', text: thread.annotation.text, meta: `round ${r}` }
-  const replies = thread.replies.map((reply) => ((reply.author ?? 'agent') === 'agent' ? { ...reply, meta: `after round ${r}` } : reply))
-  return [note, ...replies]
 }
 
 export function ThreadPopoverContent({ thread, round, titleId, onClose, onReload }) {

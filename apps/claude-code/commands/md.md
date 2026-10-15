@@ -38,15 +38,12 @@ If the output shows `APPROVED WITH NOTES:`, the user approved the file as-is but
 
 After applying all changes:
 
-1. **Build feedback notes JSON** describing what you changed. Each note has a `text` field and an optional `line` field (line number in the **updated** file). Omit `line` for general notes. Start each note with the handle of the annotation it answers and a few words naming the passage. The reviewer's original marks are usually gone in the next round, so a bare handle means nothing to them.
+1. **Reply per handle.** The feedback ends with a `Session:` line. Run one `annotaitr reply --session <id> --to <handle> --status <status> --text "..."` per handle, with `<status>` one of `applied`, `partial`, `declined`, `deferred` or `question`. The text says what changed, what is left, why you declined, when you will do it, or the question; ask a blocking question in chat too. A `## Replies to round N` section continues an earlier thread: act on the reviewer's reply and answer it on the same handle. A `Feedback: N replies to round N, no new notes.` decision is a valid decision with work in it.
 
-2. **Re-open the annotator** with inline notes:
+2. **Re-open the annotator** on the same files. The next round shows your replies next to the reviewer's notes. Add `--feedback-notes` only for notes tied to no handle, such as a summary of the changes; each has a `text` field and an optional `line` field (line number in the **updated** file):
    ```bash
-   annotaitr --origin claude-code --feedback-notes '<JSON_ARRAY>' <file1.md> [file2.md ...]
-   ```
-   Example:
-   ```bash
-   annotaitr --origin claude-code --feedback-notes '[{"text":"#a3f19c2e (intro): rewrote for clarity","line":5},{"text":"#7b210e44 (install steps): left as-is, the section is referenced elsewhere"}]' README.md
+   annotaitr --origin claude-code <file1.md> [file2.md ...]
+   annotaitr --origin claude-code --feedback-notes '[{"text":"Split the install section into two steps","line":12}]' README.md
    ```
 
 3. **Evaluate the result:**

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { parseMarkdownToBlocks } from '../../../client/markdown/src/utils/parser.js'
 import { exportFeedback, exportMultiFileFeedback, formatApprovalOutput, intentSummary } from '../../../server/markdown/feedback.js'
 
 const makeBlock = (overrides = {}) => ({
@@ -443,5 +444,91 @@ describe('formatApprovalOutput', () => {
     const output = formatApprovalOutput({ approved: true, annotationCount: 1, feedback: 'note' })
 
     expect(output.startsWith('APPROVED:')).toBe(false)
+  })
+})
+
+describe('unanchored notes', () => {
+  it('leave out the line reference instead of printing a wrong one', () => {
+    const blocks = [makeBlock({ startLine: 7 })]
+    const annotations = [makeAnnotation({ id: 'ann-1', number: 1, unanchored: true, originalText: 'gone text' })]
+    const output = exportFeedback(annotations, blocks)
+
+    expect(output).toContain('## 1. Change · Text\n```\ngone text\n```\n> Fix this\n')
+    expect(output).not.toContain('Line 7')
+  })
+
+  it('come after the anchored notes of their file', () => {
+    const blocks = [makeBlock({ id: 'block-0', startLine: 1 }), makeBlock({ id: 'block-1', startLine: 9 })]
+    const annotations = [
+      makeAnnotation({ id: 'ann-1', number: 1, blockId: 'block-0', unanchored: true, originalText: 'gone' }),
+      makeAnnotation({ id: 'ann-2', number: 2, blockId: 'block-1' })
+    ]
+    const output = exportFeedback(annotations, blocks)
+
+    expect(output.indexOf('## 2. Change · Text (Line 9)')).toBeGreaterThan(-1)
+    expect(output.indexOf('## 2. Change · Text (Line 9)')).toBeLessThan(output.indexOf('## 1. Change · Text\n'))
+  })
+})
+
+describe('exportFeedback inside a quote', () => {
+  const blocks = parseMarkdownToBlocks('Intro\n\n> [!NOTE]\n> ```js\n> const a = 1\n> ```\n> - one\n> - two')
+
+  it('points a selection in quoted code at its source line', () => {
+    const code = blocks.find((b) => b.type === 'code')
+    const ann = makeAnnotation({ blockId: code.id, originalText: 'const a', startOffset: 0, endOffset: 7 })
+    expect(exportFeedback([ann], blocks)).toContain('## 1. Change · Text (Line 5)')
+  })
+
+  it('points a selection in a quoted list item at its source line', () => {
+    const item = blocks.find((b) => b.content === 'two')
+    const ann = makeAnnotation({ blockId: item.id, originalText: 'two', startOffset: 0, endOffset: 3 })
+    expect(exportFeedback([ann], blocks)).toContain('## 1. Change · Text (Line 8)')
+  })
+})
+
+describe('exportFeedback in a plain alert', () => {
+  it('points a selection at the alert text line, not the marker line', () => {
+    const blocks = parseMarkdownToBlocks('Intro\n\n> [!NOTE]\n> Text')
+    const ann = makeAnnotation({ blockId: blocks[1].id, originalText: 'Text', startOffset: 0, endOffset: 4 })
+    expect(exportFeedback([ann], blocks)).toContain('## 1. Change · Text (Line 4)')
+  })
+})
+
+describe('exportFeedback on a Read view block', () => {
+  // The Read view of a changed markdown file, whose card sits at line 30 of the walkthrough.
+  const read = (overrides) => makeBlock({ id: 'read:docs/usage.md:block-4', path: 'docs/usage.md', sortLine: 30, ...overrides })
+
+  it('names the new file line and the path', () => {
+    const blocks = [read({ content: 'First line\nsecond line.', startLine: 14 })]
+    const ann = makeAnnotation({ id: 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d', blockId: 'read:docs/usage.md:block-4', number: 2, originalText: 'line\nsecond', startOffset: 6, endOffset: 17 })
+    expect(exportFeedback([ann], blocks)).toContain('## 2. Change · Text (new Lines 14-15 in docs/usage.md) [#a3f19c2e]\n')
+  })
+
+  it('counts code from the line after the fence and ignores a diff fence inside the file', () => {
+    const blocks = [read({ type: 'code', language: 'diff', content: '@@ -1 +1 @@\n-a\n+b', startLine: 20 })]
+    const ann = makeAnnotation({ blockId: 'read:docs/usage.md:block-4', originalText: '+b', startOffset: 15, endOffset: 17 })
+    expect(exportFeedback([ann], blocks)).toContain('## 1. Change · Text (new Line 23 in docs/usage.md)')
+  })
+
+  it('names the new line of a pinpointed block', () => {
+    const blocks = [read({ startLine: 9 })]
+    const ann = makeAnnotation({ blockId: 'read:docs/usage.md:block-4', targetType: 'pinpoint' })
+    expect(exportFeedback([ann], blocks)).toContain('## 1. Change · Block (new Line 9 in docs/usage.md)')
+  })
+
+  it('sorts Read notes at their card, by their line in the file', () => {
+    const blocks = [
+      makeBlock({ id: 'block-1', startLine: 10, content: 'Before' }),
+      makeBlock({ id: 'block-9', startLine: 40, content: 'After' }),
+      read({ id: 'read:docs/usage.md:block-1', startLine: 3, content: 'Early' }),
+      read({ id: 'read:docs/usage.md:block-7', startLine: 50, content: 'Late' })
+    ]
+    const note = (blockId, originalText) => makeAnnotation({ id: `n-${originalText}`, blockId, originalText, endOffset: originalText.length })
+    const output = exportFeedback([
+      note('block-9', 'After'), note('read:docs/usage.md:block-7', 'Late'),
+      note('read:docs/usage.md:block-1', 'Early'), note('block-1', 'Before')
+    ], blocks)
+    const order = ['Before', 'Early', 'Late', 'After'].map((text) => output.indexOf(`\`\`\`\n${text}\n`))
+    expect(order.every((at, i) => at > (order[i - 1] ?? -1))).toBe(true)
   })
 })

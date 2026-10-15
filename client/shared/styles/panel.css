@@ -622,6 +622,22 @@
   text-align: right;
 }
 
+/* A state such as Unanchored: the word carries it, the dashed outline matches the Not explained pill. */
+.note-tag {
+  flex: none;
+  margin-left: auto;
+  padding: 0 var(--space-2);
+  border: 1px dashed var(--line-control);
+  border-radius: var(--radius-full);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+}
+
+.note-location + .note-tag {
+  margin-left: 0;
+}
+
 .note-card-actions {
   display: flex;
   gap: 2px;

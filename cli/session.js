@@ -3,14 +3,20 @@ import { sessionIdFor, newSessionId } from '../server/core/session/identity.js'
 import { readSession, writeSession, pruneSessions, sessionDir, RESUME_WINDOW_MS } from '../server/core/session/store.js'
 import { createReplyStore } from '../server/core/session/replyStore.js'
 import { buildThreads, nextSession, sessionLine } from '../server/core/session/threads.js'
-import { matchAnnotation, describeMatch } from '../server/image/common/elementMatch.js'
 
 const stderrLine = (line) => process.stderr.write(`${line}\n`)
+
+// Image, URL, video and PDF reviews share their threads' shape; Markdown and changes each have their own.
+const reviewKind = (target) => (target?.kind === 'markdown' || target?.kind === 'changes' ? target.kind : 'image')
 
 async function resumeNamed(sessionId, target, dir) {
   const read = await readSession(sessionId, dir)
   if (read.missing) { return { error: `No review session ${sessionId} in ${dir}` } }
   if (read.error) { return { error: read.error } }
+  const [stored, wanted] = [reviewKind(read.session.target), reviewKind(target)]
+  if (stored !== wanted) {
+    return { error: `Session ${sessionId} belongs to a ${stored} review, not to this ${wanted} review. Leave out --session to start a new one.` }
+  }
   return { sessionId, target, previous: read.session, replies: createReplyStore(read.session) }
 }
 
@@ -42,10 +48,16 @@ export async function openSession({
   return { sessionId: id, target, previous: read.session, replies: createReplyStore(read.session) }
 }
 
-/** Save the decided round. Returns the line telling the agent how to reply, or '' when there is nothing to reply to or saving failed. */
-export async function recordSession(opened, decision, { now = Date.now(), dir = sessionDir(), log = stderrLine } = {}) {
-  const describeElement = (annotation) => describeMatch(matchAnnotation(decision.domMap, annotation))
-  const threads = [...buildThreads(decision.annotations ?? [], describeElement), ...(decision.carried ?? [])]
+/**
+ * Save the decided round. Returns the line telling the agent how to reply, or
+ * '' when there is nothing to reply to or saving failed. `describeElement` and
+ * `extra` come from the mode: the element a mark points at, and what else it
+ * keeps per thread.
+ */
+export async function recordSession(opened, decision, {
+  now = Date.now(), dir = sessionDir(), log = stderrLine, describeElement = () => null, extra = () => ({}), noun = 'mark'
+} = {}) {
+  const threads = [...buildThreads(decision.annotations ?? [], describeElement, extra), ...(decision.carried ?? [])]
   const session = nextSession(opened.previous, {
     sessionId: opened.sessionId, target: opened.target, fingerprint: await opened.fingerprint, threads, now
   })
@@ -56,5 +68,5 @@ export async function recordSession(opened, decision, { now = Date.now(), dir = 
     log(`Warning: could not save review session ${opened.sessionId}: ${error.message}`)
     return ''
   }
-  return sessionLine(session)
+  return sessionLine(session, noun)
 }

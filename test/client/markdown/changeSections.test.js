@@ -63,6 +63,27 @@ describe('groupChangeSections', () => {
   })
 })
 
+describe('groupChangeSections with a quote', () => {
+  it('does not read a heading inside a quote as a file', () => {
+    const md = '# T\n\n## `a.js`\n\n> ## Quoted\n> - point\n\nWhy.\n'
+    const { files } = groupChangeSections(parseMarkdownToBlocks(md))
+    expect(files.map((f) => f.path)).toEqual(['a.js'])
+    expect(files[0].blocks.map((b) => b.type)).toEqual(['blockquote', 'heading', 'list-item', 'paragraph'])
+  })
+
+  it('ignores a diff and the walkthrough markers when they are quoted', () => {
+    const md = [
+      '# T', '',
+      '## `a.js`', '',
+      '> ```diff', '> +x', '> -y', '> ```', '>',
+      '> The agent did not mention this change.', '>',
+      '> +5 −2, not shown: lock file.', '> - note', ''
+    ].join('\n')
+    const { files } = groupChangeSections(parseMarkdownToBlocks(md))
+    expect(files[0]).toMatchObject({ hasDiff: false, added: 0, removed: 0, explained: true })
+  })
+})
+
 describe('groupChangeSections with a review focus', () => {
   const md = [
     '# T', '',
@@ -104,6 +125,16 @@ describe('noteCounts', () => {
     const counts = noteCounts(sections, annotations)
     expect(counts.overview).toBe(1)
     expect([...counts.byPath]).toEqual([['src/a.js', 2]])
+  })
+
+  it('counts notes in the Read view of a file for its path', () => {
+    const sections = groupChangeSections(parseMarkdownToBlocks(walkthrough))
+    const annotations = [
+      { blockId: 'read:docs/new.md:block-0', type: 'COMMENT' },
+      { blockId: 'read:docs/new.md:block-2', type: 'DELETION' },
+      { blockId: 'read:docs/gone.md:block-0', type: 'COMMENT' }
+    ]
+    expect([...noteCounts(sections, annotations).byPath]).toEqual([['docs/new.md', 2]])
   })
 })
 

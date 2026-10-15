@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { composeOutput } from '../../cli/outcome.js'
+import { composeOutput, describeDomElement } from '../../cli/outcome.js'
 import { exportFeedback } from '../../server/image/common/feedback.js'
 
 const carried = [{
@@ -10,6 +10,29 @@ const carried = [{
 const opened = { previous: { round: 1 }, target: { kind: 'file' }, imageSize: { width: 100, height: 100 } }
 const line = 'Session: 2f8c1a9e04b7 (round 2)\n'
 const repliesIndex = (text) => text.indexOf('## Replies to round 1')
+
+describe('describeDomElement', () => {
+  it('names the element of the captured page a mark points at', () => {
+    const domMap = [{ tag: 'button', name: 'Buy', selector: '#buy', box: { x: 0, y: 0, width: 20, height: 20 } }]
+    const pin = { id: 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d', type: 'pin', geometry: { x: 5, y: 5 }, text: 'Fix' }
+    expect(describeDomElement(domMap)(pin)).toBe('button "Buy" · #buy')
+  })
+})
+
+describe('composeOutput with a mode formatter', () => {
+  it('prints the replies section the mode builds from the carried threads and the round', () => {
+    const decision = { approved: false, output: 'Feedback\n', carried, replyCount: 1 }
+    const text = composeOutput(decision, opened, line, (threads, round) => `[${threads.length} of round ${round}]`)
+    expect(text).toBe(`Feedback\n[1 of round 1]${line}`)
+  })
+})
+
+describe('composeOutput with a noun', () => {
+  it('says notes in the replies-only header of a mode that has notes', () => {
+    const decision = { approved: false, repliesOnly: true, output: '', carried, replyCount: 1 }
+    expect(composeOutput(decision, opened, line, () => '', 'note')).toBe(`Feedback: 1 reply to round 1, no new notes.\n${line}`)
+  })
+})
 
 describe('composeOutput', () => {
   it('prints the verdict untouched when nothing was carried', () => {

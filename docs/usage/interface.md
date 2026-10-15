@@ -149,7 +149,7 @@ kept in cookies on `localhost`, so they carry over between runs and modes;
 | --- | --- | --- |
 | General | Theme | Light, Dark, System |
 | General | Close tab after a decision | Never (default), Now, 3 s, 5 s |
-| General | Keep drafts | Markdown only: unsent notes survive a reload or a closed tab (default on). Image modes keep the notes on the server until the decision |
+| General | Keep drafts | Markdown only: unsent notes survive a reload or a closed tab (default on), also when the agent edited the file in between: a restored note moves to where its text (or its image, link or diagram) is now, and one that cannot be found stays in the panel marked `Unanchored` and goes to the agent without a line number. Restoring from the source view switches to the preview to place the notes. A walkthrough from `annotaitr changes` keeps its draft only while it is unchanged. Image modes keep the notes on the server until the decision |
 | General | Tool hints | The help line in the status bar, and in markdown mode the first-run hint for Shift+click (default on) |
 | General | Default intent | The intent new pins, shapes and text selections start with (default Change) |
 | Markdown | Content width, Font size, Starting mode | Markdown mode only |

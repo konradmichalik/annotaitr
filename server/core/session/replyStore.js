@@ -43,15 +43,21 @@ export function createReplyStore(previous) {
   const pending = (rawHandle) => pendingByHandle.get(normalizeHandle(rawHandle)) ?? []
   const count = () => [...pendingByHandle.values()].reduce((sum, list) => sum + list.length, 0)
 
+  // A markdown note's place moves with every edit, so the origin keeps where it was when it was raised.
+  function originOf(thread) {
+    if (thread.origin) { return thread.origin }
+    const where = thread.anchor?.where
+    return { round: previous.round, number: thread.number, ...(where ? { where } : {}) }
+  }
+
   function carried() {
     return [...pendingByHandle.entries()].map(([handle, replies]) => {
       const thread = threadFor(handle)
       return {
+        ...thread,
         handle,
         number: null,
-        origin: thread.origin ?? { round: previous.round, number: thread.number },
-        annotation: thread.annotation,
-        element: thread.element,
+        origin: originOf(thread),
         // Its geometry belongs to the round it was first drawn in, not to the one before this.
         fingerprint: thread.fingerprint ?? previous.fingerprint ?? null,
         replies: [...thread.replies, ...replies]

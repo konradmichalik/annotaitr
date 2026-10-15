@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo } from 'react'
 import { groupHtmlWrappers } from '../../utils/htmlWrappers.js'
 import { parseDiffLines } from '../../utils/diffLines.js'
 import { DiffCode } from './CodeBlock.jsx'
@@ -7,6 +7,7 @@ import { InlineMarkdown } from './InlineMarkdown.jsx'
 import { DiffCounts } from './DiffCounts.jsx'
 import { CheckIcon } from '../FilesSection.jsx'
 import { STATUS_LABEL, countFocus } from '../../utils/changeSections.js'
+import { canRead } from '../../utils/fileVersions.js'
 
 function AgentIcon() {
   return (
@@ -38,39 +39,22 @@ function Chevron({ open }) {
  * set apart from the diffs and labelled with the agent's name.
  */
 function FileBody({ blocks, agent, blockProps }) {
-  return blocks.map((block) => (block.type === 'paragraph' ? (
-    <div key={block.id} className="change-why">
+  // Grouped first, so a quote keeps its child blocks and a paragraph inside it gets no label of its own.
+  return groupHtmlWrappers(blocks).map((node) => (node.kind === 'block' && node.block.type === 'paragraph' ? (
+    <div key={node.block.id} className="change-why">
       <span className="change-why-label"><AgentIcon />{agent.charAt(0).toUpperCase() + agent.slice(1)}</span>
-      <ViewerBlocks nodes={groupHtmlWrappers([block])} {...blockProps} />
+      <ViewerBlocks nodes={[node]} {...blockProps} />
     </div>
   ) : (
-    <ViewerBlocks key={block.id} nodes={groupHtmlWrappers([block])} {...blockProps} />
+    <ViewerBlocks key={node.block.id} nodes={[node]} {...blockProps} />
   )))
 }
 
-/** The file's diff with its whole content as context, loaded the first time the reviewer asks for it. */
-function useWholeFile(path) {
-  const [whole, setWhole] = useState({ open: false, loading: false, diff: null, error: null })
-  const toggle = async () => {
-    if (whole.loading) { return }
-    if (whole.diff !== null) {
-      setWhole((prev) => ({ ...prev, open: !prev.open }))
-      return
-    }
-    // Closing a failed load forgets the error, so the next open asks again.
-    if (whole.error) {
-      setWhole((prev) => ({ ...prev, open: false, error: null }))
-      return
-    }
-    setWhole((prev) => ({ ...prev, open: true, loading: true }))
-    try {
-      const json = await (await fetch(`/api/changes/full?path=${encodeURIComponent(path)}`)).json()
-      setWhole((prev) => ({ ...prev, loading: false, diff: json.success ? json.data.diff : null, error: json.success ? null : 'The whole file is not available.' }))
-    } catch {
-      setWhole((prev) => ({ ...prev, loading: false, error: 'Could not load the whole file.' }))
-    }
-  }
-  return [whole, toggle]
+/** Whole file of a card: open or not, and its entry in the walkthrough's shared cache of whole-file diffs. */
+function wholeFileOf(path, read) {
+  const open = read.whole.has(path)
+  const entry = read.full.entries.get(path)
+  return { open, loading: open && Boolean(entry?.loading), diff: entry?.diff ?? null, error: open ? entry?.error ?? null : null }
 }
 
 function WholeFile({ whole }) {
@@ -85,10 +69,37 @@ function WholeFile({ whole }) {
   )
 }
 
-function FileCard({ file, agent, collapsed, reviewed, onToggle, onReview, blockProps }) {
-  const [whole, toggleWhole] = useWholeFile(file.path)
+/** Diff or Read, the two views of a markdown file's card. P switches them too. */
+function ViewSwitch({ reading, busy, onPick }) {
+  return (
+    <div className="change-view-switch" role="group" aria-label="View">
+      <button type="button" aria-pressed={!reading} aria-keyshortcuts="p" title="Diff (P)" onClick={() => onPick('diff')}>Diff</button>
+      <button type="button" aria-pressed={reading} aria-busy={busy} aria-keyshortcuts="p" title="Read (P)" onClick={() => onPick('read')}>Read</button>
+    </div>
+  )
+}
+
+/**
+ * The file as it is now, rendered like markdown mode renders it. It stays
+ * mounted once loaded and is only hidden on Diff, so highlights keep their place.
+ */
+function ReadView({ blocks, hidden, blockProps }) {
+  const nodes = useMemo(() => groupHtmlWrappers(blocks), [blocks])
+  return (
+    <div className="change-read" hidden={hidden}>
+      <ViewerBlocks nodes={nodes} {...blockProps} diagrams={false} />
+    </div>
+  )
+}
+
+function FileCard({ file, agent, collapsed, reviewed, onToggle, onReview, read, blockProps }) {
+  const whole = wholeFileOf(file.path, read)
+  const readable = canRead(file)
+  const blocks = read.byPath.get(file.path)
+  const reading = readable && read.viewOf(file) === 'read' && Boolean(blocks)
+  const status = readable ? read.statusOf(file) : null
   const bodyId = `change-file-body-${file.heading.id}`
-  const classes = ['change-file', collapsed && 'is-collapsed', !file.explained && 'is-unexplained', file.attention === 'high' && 'is-focus', whole.open && 'is-whole'].filter(Boolean).join(' ')
+  const classes = ['change-file', collapsed && 'is-collapsed', !file.explained && 'is-unexplained', file.attention === 'high' && 'is-focus', whole.open && !reading && 'is-whole', reading && 'is-read'].filter(Boolean).join(' ')
   return (
     <section className={classes} data-path={file.path} aria-label={file.path}>
       {/* The header sits outside every data-block-id, so it never shifts the offsets of a selection. */}
@@ -102,8 +113,9 @@ function FileCard({ file, agent, collapsed, reviewed, onToggle, onReview, blockP
         {file.attention === 'high' && <span className="change-flag" role="img" aria-label="Check closely" title="Check closely"><FlagIcon size={15} /></span>}
         <DiffCounts className="change-file-counts" added={file.added} removed={file.removed} />
         {!file.explained && <span className="change-pill">Not explained</span>}
-        {file.hasDiff && (
-          <button type="button" className="change-whole-btn" aria-pressed={whole.open} aria-busy={whole.loading} onClick={toggleWhole}>
+        {readable && <ViewSwitch reading={reading} busy={Boolean(status) && !read.full.entries.get(file.path)?.error} onPick={(view) => read.pick(file.path, view)} />}
+        {file.hasDiff && !reading && (
+          <button type="button" className="change-whole-btn" aria-pressed={whole.open} aria-busy={whole.loading} onClick={() => read.toggleWhole(file.path)}>
             Whole file
           </button>
         )}
@@ -120,7 +132,9 @@ function FileCard({ file, agent, collapsed, reviewed, onToggle, onReview, blockP
           </div>
         )}
         <FileBody blocks={file.blocks} agent={agent} blockProps={{ ...blockProps, inChangeCard: true }} />
-        {whole.open && <WholeFile whole={whole} />}
+        {status && <p className="change-whole-note change-read-status" role="status">{status}</p>}
+        {blocks && <ReadView blocks={blocks} hidden={!reading} blockProps={blockProps} />}
+        {whole.open && !reading && <WholeFile whole={whole} />}
       </div>
     </section>
   )
@@ -136,6 +150,7 @@ function FileCards({ files, changes, blockProps }) {
       reviewed={changes.reviewed.has(file.path)}
       onToggle={changes.toggle}
       onReview={changes.markReviewed}
+      read={changes.read}
       blockProps={blockProps}
     />
   ))

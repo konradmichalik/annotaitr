@@ -14,6 +14,12 @@ describe('parseChangesArgs', () => {
     })
   })
 
+  it('passes --session and --new-session on, and rejects them together', () => {
+    expect(parseChangesArgs(['--session', '2f8c1a9e04b7'])).toMatchObject({ sessionId: '2f8c1a9e04b7', newSession: false })
+    expect(parseChangesArgs(['--new-session'])).toMatchObject({ sessionId: null, newSession: true })
+    expect(parseChangesArgs(['--session', '2f8c1a9e04b7', '--new-session']).error).toBe('--session and --new-session cannot be combined')
+  })
+
   it('rejects a missing value, a stray target and an unknown origin', () => {
     expect(parseChangesArgs(['--base']).error).toBe('--base requires a value')
     expect(parseChangesArgs(['README.md']).error).toBe('Unexpected argument: README.md')

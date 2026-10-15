@@ -117,6 +117,14 @@ describe('session store', () => {
     expect((await readSession(ID, dir)).error).toMatch(/malformed/)
   })
 
+  it('reports a text note whose anchor lacks its quote or context as malformed', async () => {
+    const thread = (anchor) => ({ handle: 'a3f19c2e', number: 1, annotation: {}, replies: [], anchor })
+    await writeSession(session({ threads: [thread({})] }), dir)
+    expect((await readSession(ID, dir)).error).toMatch(/malformed/)
+    await writeSession(session({ threads: [thread(null), thread({ quote: 'a', prefix: '', suffix: 'b', where: null, contentHash: 'h' })] }), dir)
+    expect((await readSession(ID, dir)).session).toBeTruthy()
+  })
+
   it('waits for a running reply before writing a new round over it', async () => {
     await writeSession(session(), dir)
     const lock = join(dir, `${ID}.json.lock`)

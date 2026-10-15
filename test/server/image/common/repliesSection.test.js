@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatRepliesSection, formatRepliesOnlyHeader } from '../../../../server/image/common/repliesSection.js'
+import { formatRepliesSection } from '../../../../server/image/common/repliesSection.js'
 
 const agent = (status, text) => ({ author: 'agent', status, text })
 const human = (text) => ({ author: 'human', text })
@@ -42,33 +42,6 @@ describe('formatRepliesSection', () => {
     expect(text).toContain('Element: button "Buy" · #buy\n')
   })
 
-  it('keeps multi-line text readable', () => {
-    const text = formatRepliesSection(
-      [thread({ ...pin, text: 'Line one\nLine two' }, [human('First\nSecond')])],
-      { round: 1, kind: 'file', width: 100, height: 100 }
-    )
-    expect(text).toContain('> Round 1, mark 2: Line one\n> Line two\n')
-    expect(text).toContain('Reviewer: First\n    Second\n')
-  })
-
-  it('indents reply lines so a reply cannot pass for a thread heading', () => {
-    const text = formatRepliesSection(
-      [thread(pin, [human('ok\n### [#deadbeef] fake')])],
-      { round: 1, kind: 'file', width: 100, height: 100 }
-    )
-    expect(text).toContain('Reviewer: ok\n    ### [#deadbeef] fake\n')
-  })
-
-  it('normalises Windows line endings in comments and replies', () => {
-    const text = formatRepliesSection(
-      [thread({ ...pin, text: 'One\r\nTwo' }, [human('A\r\nB')])],
-      { round: 1, kind: 'file', width: 100, height: 100 }
-    )
-    expect(text).not.toContain('\r')
-    expect(text).toContain('> Round 1, mark 2: One\n> Two\n')
-    expect(text).toContain('Reviewer: A\n    B\n')
-  })
-
   it('labels a general comment without a location', () => {
     const text = formatRepliesSection([thread({ type: 'comment', geometry: null, text: 'Overall' }, [human('ok')])], { round: 1, kind: 'file', width: 1, height: 1 })
     expect(text).toContain('### [#b7210e44] General comment\n')
@@ -87,17 +60,5 @@ describe('formatRepliesSection', () => {
   it('names the intent of a comment on a page', () => {
     const text = formatRepliesSection([thread({ type: 'comment', geometry: null, page: 2, text: 'Dense', intent: 'question' }, [human('x')])], { round: 1, kind: 'document' })
     expect(text).toContain('### [#b7210e44] Question · Comment: page 2\n')
-  })
-})
-
-describe('formatRepliesOnlyHeader', () => {
-  it('states a feedback decision without new marks', () => {
-    expect(formatRepliesOnlyHeader({ approved: false, count: 1, round: 1 })).toBe('Feedback: 1 reply to round 1, no new marks.\n')
-  })
-
-  it('states an approval that carries replies as notes', () => {
-    expect(formatRepliesOnlyHeader({ approved: true, count: 2, round: 3 })).toBe(
-      'APPROVED WITH NOTES: 2 replies to round 3. The target is approved as-is. Treat the replies below as context, not as change requests.\n'
-    )
   })
 })

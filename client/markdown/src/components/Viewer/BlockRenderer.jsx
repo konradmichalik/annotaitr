@@ -92,8 +92,12 @@ export function HtmlWrapper({ block, noteClass = '', children }) {
   )
 }
 
-export function BlockRenderer({ block, onImageClick, onTableAnnotate, annotatedImages, hasNote, onNoteClick }) {
+export function BlockRenderer({ block, onImageClick, onTableAnnotate, annotatedImages, hasNote, onNoteClick, children }) {
   const noteClass = hasNote ? ' block-has-note' : ''
+  // A quote with nested blocks renders its child blocks, a plain quote its own text.
+  const quoteBody = block.nested
+    ? children
+    : <InlineMarkdown text={block.content} onImageClick={onImageClick} annotatedImages={annotatedImages} blockId={block.id} />
 
   switch (block.type) {
     case 'heading': {
@@ -108,21 +112,21 @@ export function BlockRenderer({ block, onImageClick, onTableAnnotate, annotatedI
 
     case 'blockquote':
       return (
-        <blockquote className={`block-blockquote${noteClass}`} data-block-id={block.id}>
+        <blockquote className={`block-blockquote${block.nested ? ' block-blockquote--nested' : ''}${noteClass}`} data-block-id={block.id}>
           {hasNote && <NoteBorder blockId={block.id} onClick={onNoteClick} />}
-          <InlineMarkdown text={block.content} onImageClick={onImageClick} annotatedImages={annotatedImages} blockId={block.id} />
+          {quoteBody}
         </blockquote>
       )
 
     case 'alert':
       return (
-        <div className={`block-alert block-alert--${block.alertType}${noteClass}`} data-block-id={block.id}>
+        <div className={`block-alert block-alert--${block.alertType}${block.nested ? ' block-alert--nested' : ''}${noteClass}`} data-block-id={block.id}>
           {hasNote && <NoteBorder blockId={block.id} onClick={onNoteClick} />}
           <span className="block-alert-title">
             <AlertIcon type={block.alertType} />
             {block.alertType.charAt(0).toUpperCase() + block.alertType.slice(1)}
           </span>
-          <InlineMarkdown text={block.content} onImageClick={onImageClick} annotatedImages={annotatedImages} blockId={block.id} />
+          {quoteBody}
         </div>
       )
 

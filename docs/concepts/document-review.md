@@ -421,9 +421,14 @@ touched pages, in the style the video output uses:
 ```
 /tmp/annotaitr-XXXX/
   page-03.png
+  page-03-crop-01.png
   page-07.png
+  page-07-crop-03.png
   overview.png
 ```
+
+Each `page-NN-crop-MM.png` is a full-resolution crop of one note's area
+(issue #128), named in a `Crop:` line under that note.
 
 **Overview with mixed page sizes.** `composeContactSheet()`
 (`server/image/common/render.js`) assumes all tiles share one size: it takes width

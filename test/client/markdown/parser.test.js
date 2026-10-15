@@ -349,6 +349,120 @@ describe('parseMarkdownToBlocks', () => {
       expect(blocks).toHaveLength(1)
       expect(blocks[0].content).toBe('Line one\nLine two')
     })
+
+    it('keeps a quote of plain paragraphs as one block', () => {
+      const blocks = parseMarkdownToBlocks('> First\n>\n> Second')
+      expect(blocks).toEqual([
+        { id: 'block-0', type: 'blockquote', content: 'First\n\nSecond', order: 1, startLine: 1 }
+      ])
+    })
+  })
+
+  describe('blockquotes with nested blocks', () => {
+    const issueExample = [
+      '> Note:',
+      '>',
+      '> ```js',
+      '> const a = 1',
+      '> ```',
+      '>',
+      '> - one',
+      '> - two'
+    ].join('\n')
+
+    it('parses a code fence and a list inside a quote into child blocks', () => {
+      expect(parseMarkdownToBlocks(issueExample)).toEqual([
+        { id: 'block-0', type: 'blockquote', content: '', nested: true, order: 1, startLine: 1 },
+        { id: 'block-1', type: 'paragraph', content: 'Note:', level: 0, order: 2, startLine: 1, parentId: 'block-0' },
+        { id: 'block-2', type: 'code', content: 'const a = 1', language: 'js', order: 3, startLine: 3, parentId: 'block-0' },
+        { id: 'block-3', type: 'list-item', content: 'one', level: 0, checked: undefined, order: 4, startLine: 7, parentId: 'block-0' },
+        { id: 'block-4', type: 'list-item', content: 'two', level: 0, checked: undefined, order: 5, startLine: 8, parentId: 'block-0' }
+      ])
+    })
+
+    it('offsets child lines and ids by what comes before the quote', () => {
+      const blocks = parseMarkdownToBlocks('# Title\n\n> - a\n> - b\n\nAfter')
+      expect(blocks.map(({ id, type, startLine, parentId }) => ({ id, type, startLine, parentId }))).toEqual([
+        { id: 'block-0', type: 'heading', startLine: 1, parentId: undefined },
+        { id: 'block-1', type: 'blockquote', startLine: 3, parentId: undefined },
+        { id: 'block-2', type: 'list-item', startLine: 3, parentId: 'block-1' },
+        { id: 'block-3', type: 'list-item', startLine: 4, parentId: 'block-1' },
+        { id: 'block-4', type: 'paragraph', startLine: 6, parentId: undefined }
+      ])
+    })
+
+    it('parses a nested quote with its own list', () => {
+      const blocks = parseMarkdownToBlocks('> Outer\n>\n> > Inner\n> > - x')
+      expect(blocks.map(({ id, type, content, startLine, parentId, nested }) => ({ id, type, content, startLine, parentId, nested }))).toEqual([
+        { id: 'block-0', type: 'blockquote', content: '', startLine: 1, parentId: undefined, nested: true },
+        { id: 'block-1', type: 'paragraph', content: 'Outer', startLine: 1, parentId: 'block-0', nested: undefined },
+        { id: 'block-2', type: 'blockquote', content: '', startLine: 3, parentId: 'block-0', nested: true },
+        { id: 'block-3', type: 'paragraph', content: 'Inner', startLine: 3, parentId: 'block-2', nested: undefined },
+        { id: 'block-4', type: 'list-item', content: 'x', startLine: 4, parentId: 'block-2', nested: undefined }
+      ])
+    })
+
+    it('keeps the indentation of quoted code and nested list items', () => {
+      const blocks = parseMarkdownToBlocks('> ```\n>     indented\n> ```\n> - a\n>   - b')
+      expect(blocks[1]).toMatchObject({ type: 'code', content: '    indented', startLine: 1 })
+      expect(blocks[3]).toMatchObject({ type: 'list-item', content: 'b', level: 1, startLine: 5 })
+    })
+
+    it('parses a list inside a GitHub alert', () => {
+      const blocks = parseMarkdownToBlocks('Intro\n\n> [!NOTE]\n> Remember:\n> - one\n> - two')
+      expect(blocks.map(({ id, type, alertType, content, startLine, parentId }) => ({ id, type, alertType, content, startLine, parentId }))).toEqual([
+        { id: 'block-0', type: 'paragraph', alertType: undefined, content: 'Intro', startLine: 1, parentId: undefined },
+        { id: 'block-1', type: 'alert', alertType: 'note', content: '', startLine: 3, parentId: undefined },
+        { id: 'block-2', type: 'paragraph', alertType: undefined, content: 'Remember:', startLine: 4, parentId: 'block-1' },
+        { id: 'block-3', type: 'list-item', alertType: undefined, content: 'one', startLine: 5, parentId: 'block-1' },
+        { id: 'block-4', type: 'list-item', alertType: undefined, content: 'two', startLine: 6, parentId: 'block-1' }
+      ])
+      expect(blocks[1].nested).toBe(true)
+    })
+
+    it('links the children of a quote inside an HTML wrapper to the rebased quote id', () => {
+      const blocks = parseMarkdownToBlocks('<div>\n\n> - a\n\n</div>')
+      expect(blocks.map(({ id, type, startLine, parentId }) => ({ id, type, startLine, parentId }))).toEqual([
+        { id: 'block-0', type: 'html', startLine: 1, parentId: undefined },
+        { id: 'block-1', type: 'blockquote', startLine: 3, parentId: undefined },
+        { id: 'block-2', type: 'list-item', startLine: 3, parentId: 'block-1' },
+        { id: 'block-3', type: 'html', startLine: 5, parentId: undefined }
+      ])
+    })
+
+    it('keeps the ids before a nested quote when the content after it changes', () => {
+      const before = parseMarkdownToBlocks(`Intro\n\n${issueExample}\n\nAfter`)
+      const after = parseMarkdownToBlocks(`Intro\n\n${issueExample}\n\n- changed\n- tail`)
+      expect(after.slice(0, 6).map((b) => [b.id, b.type, b.startLine])).toEqual(before.slice(0, 6).map((b) => [b.id, b.type, b.startLine]))
+      expect(after.slice(0, 6).map((b) => b.id)).toEqual(['block-0', 'block-1', 'block-2', 'block-3', 'block-4', 'block-5'])
+    })
+
+    it('gives unique ids to a quote nested in an alert inside an accordion', () => {
+      const md = '<details>\n<summary>More</summary>\n\n> [!TIP]\n> > - deep\n> > - deeper\n\n</details>\n\nEnd'
+      const ids = parseMarkdownToBlocks(md).map((b) => b.id)
+      expect(ids).toEqual(['block-0', 'block-1', 'block-2', 'block-3', 'block-4', 'block-5', 'block-6', 'block-7'])
+    })
+
+    it('strips a tab after > from quoted code', () => {
+      const blocks = parseMarkdownToBlocks('> ```\n>\tcode\n> ```')
+      expect(blocks[1]).toMatchObject({ type: 'code', content: 'code' })
+    })
+
+    it('keeps a quote flat when its text only looks like a table, heading or ordered item', () => {
+      expect(parseMarkdownToBlocks('> Run `ls | grep x` first')).toEqual([
+        { id: 'block-0', type: 'blockquote', content: 'Run `ls | grep x` first', order: 1, startLine: 1 }
+      ])
+      expect(parseMarkdownToBlocks('> #123 was fixed')).toEqual([
+        { id: 'block-0', type: 'blockquote', content: '#123 was fixed', order: 1, startLine: 1 }
+      ])
+      expect(parseMarkdownToBlocks('> 2024. was good')).toEqual([
+        { id: 'block-0', type: 'blockquote', content: '2024. was good', order: 1, startLine: 1 }
+      ])
+    })
+
+    it('nests a quote with a single bullet item', () => {
+      expect(parseMarkdownToBlocks('> - one')[0]).toMatchObject({ type: 'blockquote', nested: true })
+    })
   })
 
   describe('GitHub alert boxes', () => {
@@ -376,6 +490,15 @@ describe('parseMarkdownToBlocks', () => {
       const blocks = parseMarkdownToBlocks(md)
       expect(blocks).toHaveLength(1)
       expect(blocks[0].content).toBe('Line one\nLine two')
+    })
+
+    it('starts a plain alert on its first line of text, not on the marker', () => {
+      const blocks = parseMarkdownToBlocks('Intro\n\n> [!NOTE]\n> Text')
+      expect(blocks[1]).toMatchObject({ type: 'alert', content: 'Text', startLine: 4 })
+    })
+
+    it('keeps an empty alert on its marker line', () => {
+      expect(parseMarkdownToBlocks('> [!NOTE]')[0]).toMatchObject({ type: 'alert', content: '', startLine: 1 })
     })
 
     it('does not treat unknown types as alerts', () => {

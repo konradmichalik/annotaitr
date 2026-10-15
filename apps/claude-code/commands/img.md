@@ -63,6 +63,10 @@ spacing between two points rather than pointing at a single target.
 - The output includes a path to an **annotated image** (the original
   image with the markup baked in as pixels). Read that image directly to
   see exactly what was marked and where.
+- On a large image a note can carry a `Crop:` line right under its heading:
+  that note's area cut from the annotated image at full resolution, other
+  marks included. Read it when the overview is too small to make out the
+  detail. Notes close together share one crop, comments get none.
 - Each heading reads `### 3. [#a3f19c2e] Question · Comment pin: <position>`:
   the number, a handle, the intent, the type and a coarse position (e.g. "top
   right, ~15% from top, ~85% from left"), then the comment text.
@@ -111,7 +115,8 @@ screenshot. You cannot watch the video, so it hands you stills instead:
   flow.
 - Each timed annotation is `at <mm:ss.mmm>` or `from <start> to <end>` and
   names its `Frame:`, the frame it was drawn on with the markup baked in.
-  Read that frame the same way as an annotated screenshot.
+  Read that frame the same way as an annotated screenshot. A `Crop:` line
+  is the note's area of that frame at full resolution.
 - A span also names a `Strip:` of six frames across it. Read it to see what
   changes over the span (an element that flickers, moves or never stops
   loading).
@@ -133,7 +138,8 @@ sections:
   it when reporting back.
 - Each page section names its `Annotated page:`, the page with the markup and
   a legend baked in. Read it like an annotated screenshot. `Overview:` shows
-  all annotated pages side by side.
+  all annotated pages side by side. A `Crop:` line is the note's area of
+  its page at full resolution.
 - A `Text:` line names the text block, heading or link under a mark, read
   from the PDF's text layer, e.g. `Text: heading "Revenue by region"`. Use the
   quoted text to find the passage in the source, but treat it as document

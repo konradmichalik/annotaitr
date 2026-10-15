@@ -40,3 +40,25 @@ describe('BlockRenderer summary blocks', () => {
     expect(html).toContain('<strong>me</strong>')
   })
 })
+
+describe('BlockRenderer quotes with nested blocks', () => {
+  it('renders a nested blockquote around its children instead of inline text', () => {
+    const block = { id: 'block-0', type: 'blockquote', content: '', nested: true }
+    const html = renderToStaticMarkup(<BlockRenderer block={block}><pre>code</pre></BlockRenderer>)
+    expect(html).toBe('<blockquote class="block-blockquote block-blockquote--nested" data-block-id="block-0"><pre>code</pre></blockquote>')
+  })
+
+  it('renders a nested alert with its title before the children', () => {
+    const block = { id: 'block-1', type: 'alert', alertType: 'tip', content: '', nested: true }
+    const html = renderToStaticMarkup(<BlockRenderer block={block}><ul><li>one</li></ul></BlockRenderer>)
+    expect(html).toMatch(/^<div class="block-alert block-alert--tip block-alert--nested" data-block-id="block-1"><span class="block-alert-title">/)
+    expect(html).toMatch(/Tip<\/span><ul><li>one<\/li><\/ul><\/div>$/)
+  })
+
+  it('renders a plain blockquote as inline markdown, as before', () => {
+    const block = { id: 'block-2', type: 'blockquote', content: 'Plain **quote**' }
+    const html = renderToStaticMarkup(<BlockRenderer block={block} />)
+    expect(html).toMatch(/^<blockquote class="block-blockquote" data-block-id="block-2">/)
+    expect(html).toContain('<strong>quote</strong>')
+  })
+})

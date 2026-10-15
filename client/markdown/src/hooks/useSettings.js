@@ -8,6 +8,8 @@ const DEFAULTS = {
   fontSize: 15,
   defaultMode: 'select',
   keepDrafts: true,
+  // The view a markdown file's card in a changes walkthrough opens in, until one is picked for it.
+  changesView: 'diff',
 }
 
 export function useSettings() {

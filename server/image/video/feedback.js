@@ -1,5 +1,5 @@
 import { describePosition, findNearbyAnnotationNumbers } from '../common/geometry.js'
-import { annotationLabel, entryMarker } from '../common/feedback.js'
+import { annotationLabel, entryMarker, cropLine, cropNotice } from '../common/feedback.js'
 import { intentCounts } from '../../core/notes.js'
 import { formatTimecode, isTimed } from './timeline.js'
 
@@ -45,6 +45,8 @@ function formatEntries({ ordered, plan, media, files }) {
   return ordered.map((annotation) => {
     const lines = [`### ${entryMarker(annotation)}${heading(annotation, media, nearbyByAnnotation.get(annotation) ?? [])}`]
     if (isTimed(annotation)) { lines.push(`Frame: ${files.frames.get(annotation.time)}`) }
+    const crop = cropLine(files.crops, annotation)
+    if (crop) { lines.push(crop.trimEnd()) }
     if (files.strips.has(annotation.number)) { lines.push(`Strip: ${files.strips.get(annotation.number)}`) }
     // A bare \r would otherwise end the quote and let text pass as a heading.
     lines.push(annotation.text ? `> ${annotation.text.replace(/\r\n?|\n/g, '\n> ')}` : '> (no comment text)')
@@ -68,7 +70,8 @@ export function exportVideoFeedback(context) {
     `(${formatTimecode(media.duration)}, ${media.width}x${media.height}).\n\n` +
     formatPaths(context.files) +
     'Each annotation points to the frame it was drawn on. Read the frame, then match the note to the visible element. ' +
-    'A span also has a strip of frames across it.\n\n' +
+    'A span also has a strip of frames across it.\n' +
+    cropNotice(context.files.crops, 'the frame') + '\n' +
     formatEntries(context)
 }
 
@@ -76,6 +79,6 @@ export function formatVideoApprovalWithNotes(context) {
   const count = context.ordered.length
   return `APPROVED WITH NOTES: ${count} note${count === 1 ? '' : 's'} (${intentCounts(context.ordered)}). ` +
     'The recording is approved as-is. Treat the notes below as context, not as change requests.\n\n' +
-    formatPaths(context.files) + '\n' +
+    formatPaths(context.files) + cropNotice(context.files.crops, 'the frame') + '\n' +
     formatEntries(context) + '\n'
 }

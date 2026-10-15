@@ -18,11 +18,11 @@ Stdout is the contract with the calling agent:
 - `index.js`: CLI entry, dispatches to a mode runner
 - `cli/`: argument parsing (`args.js`), mode detection (`detect.js`), help text, one runner per target kind (`markdown.js`, `image.js`, `video.js`, `document.js`), the stdout output on a decision (`outcome.js`), review session handling (`session.js`), the `reply` subcommand (`reply.js`) and the `changes` subcommand (`changes.js`)
 - `server/core/`: mode-agnostic Express bootstrap, config (`ANNOTAITR_*` environment variables), browser opening, signal handling and review sessions (`session/`: session files and agent replies)
-- `server/markdown/`: markdown mode API routes, feedback formatting and file loading
+- `server/markdown/`: markdown mode API routes, feedback formatting and file loading, and for review sessions where last round's notes are now (`anchorThreads.js`) and what a decision records (`sessionDecision.js`)
 - `server/changes/`: the `changes` walkthrough, rendered in markdown mode: reading the diff from git (`git.js`), building the walkthrough from the diff and the agent's explanation (`walkthrough.js`) and the whole-file route (`routes.js`)
 - `server/image/`: image mode, split into `common/` (rendering, feedback basics, element matching, transcription, config) and one folder per target kind: `still/` (image file, URL capture, clipboard), `video/` and `document/` (PDF)
 - `client/markdown/`, `client/image/`: the two React SPAs with separate Vite roots. The image client keeps video-only and PDF-only code in `src/video/` and `src/document/`, everything shared across target kinds stays in `components/`, `hooks/` and `utils/`
-- `client/shared/`: components, hooks and utils used by both clients
+- `client/shared/`: components, hooks and utils used by both clients, plus `threads/` for last round's threads and the reviewer's replies
 - `apps/claude-code/`: Claude Code plugin (`.claude-plugin/plugin.json`, slash commands `md`, `img`, `review`, `changes`)
 - `apps/codex/`: Codex skill (`skills/annotaitr/SKILL.md`), installed into `~/.agents/skills`
 - `apps/opencode/`: OpenCode plugin (`index.ts`, bundled with tsup)

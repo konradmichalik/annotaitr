@@ -1,4 +1,5 @@
 import { countDiffLines, parseDiffLines, splitCodeInfo } from './diffLines.js'
+import { readPathOf } from './fileVersions.js'
 
 /**
  * Reads the walkthrough `annotaitr changes` writes (server/changes/walkthrough.js)
@@ -28,18 +29,20 @@ function readFocus(blocks) {
   return { attention: null, focusWhy: null, focusBlock: null, rest: blocks }
 }
 
-function isDiffBlock(block) {
+export function isDiffBlock(block) {
   return block.type === 'code' && splitCodeInfo(block.language).language === 'diff'
 }
 
 function fileEntry(heading, allBlocks) {
   const { attention, focusWhy, focusBlock, rest: blocks } = readFocus(allBlocks)
   const suffix = heading.content.match(STATUS_SUFFIX)?.[1]
-  const omittedLine = blocks.find((b) => b.type === 'paragraph' && OMITTED.test(b.content.trim()))
+  // What the walkthrough itself wrote sits at the top level, anything quoted is the agent's text.
+  const own = blocks.filter((b) => !b.parentId)
+  const omittedLine = own.find((b) => b.type === 'paragraph' && OMITTED.test(b.content.trim()))
   const omitted = omittedLine ? omittedLine.content.trim().match(OMITTED) : null
   const counts = omitted
     ? { added: Number(omitted[1]), removed: Number(omitted[2]) }
-    : blocks.filter(isDiffBlock).reduce((sum, b) => {
+    : own.filter(isDiffBlock).reduce((sum, b) => {
       const c = countDiffLines(parseDiffLines(b.content))
       return { added: sum.added + c.added, removed: sum.removed + c.removed }
     }, { added: 0, removed: 0 })
@@ -52,8 +55,8 @@ function fileEntry(heading, allBlocks) {
     attention,
     focusWhy,
     focusBlock,
-    hasDiff: blocks.some(isDiffBlock),
-    explained: !blocks.some((b) => b.type === 'paragraph' && b.content.trim() === NOT_EXPLAINED),
+    hasDiff: own.some(isDiffBlock),
+    explained: !own.some((b) => b.type === 'paragraph' && b.content.trim() === NOT_EXPLAINED),
     ...counts
   }
 }
@@ -70,11 +73,13 @@ export function groupChangeSections(blocks) {
   let group = null
   let file = null
   for (const block of blocks) {
-    if (block.type === 'heading' && block.level === 1 && overview.length > 0) {
+    // A heading inside a quote is part of the quoted text, never a group or a file.
+    const isSection = block.type === 'heading' && !block.parentId
+    if (isSection && block.level === 1 && overview.length > 0) {
       group = { title: block.content, heading: block, blocks: [], files: [] }
       groups.push(group)
       file = null
-    } else if (block.type === 'heading' && block.level === 2) {
+    } else if (isSection && block.level === 2) {
       file = { heading: block, blocks: [], group }
       rawFiles.push(file)
     } else if (file) {
@@ -102,7 +107,8 @@ export function noteCounts(sections, annotations) {
   for (const ann of annotations) {
     if (ann.type === 'NOTES' || ann.targetType === 'global') { continue }
     if (overviewIds.has(ann.blockId)) { overview += 1; continue }
-    const path = pathOf.get(ann.blockId)
+    // A note in a file's Read view counts for that file, as long as the file is one of the walkthrough's.
+    const path = pathOf.get(ann.blockId) ?? sections.files.find((f) => f.path === readPathOf(ann.blockId))?.path
     if (path) { byPath.set(path, (byPath.get(path) ?? 0) + 1) }
   }
   return { overview, byPath }

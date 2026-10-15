@@ -22,6 +22,7 @@ import { UpdateBanner } from '../../shared/components/UpdateBanner.jsx'
 import { FilesSection, MarkReviewedButton } from './components/FilesSection.jsx'
 import { useChangesReview } from './hooks/useChangesReview.js'
 import { useChangesNavigation } from './hooks/useChangesNavigation.js'
+import { useReadViews } from './hooks/useReadViews.js'
 import { ChangedFilesPanel } from './components/ChangedFilesPanel.jsx'
 import { changesFacts, groupChangeSections, noteCounts } from './utils/changeSections.js'
 import { agentName } from '../../shared/utils/origin.js'
@@ -31,6 +32,7 @@ import { useChangesSidebarWidth } from './hooks/useChangesSidebarWidth.js'
 import { useResizablePanel } from '../../shared/hooks/useResizablePanel.js'
 import { useServerConnection } from '../../shared/hooks/useServerConnection.js'
 import { useAnnotationDraft } from './hooks/useAnnotationDraft.js'
+import { reanchorSourceNotes } from './utils/draftAnchors.js'
 import { useSettings } from './hooks/useSettings.js'
 import { useCrossFileSearch } from './hooks/useCrossFileSearch.js'
 import { useHighlightSync } from './hooks/useHighlightSync.js'
@@ -41,6 +43,10 @@ import { useModeShortcuts } from './hooks/useModeShortcuts.js'
 import { SettingsModal } from './components/SettingsModal.jsx'
 import { getItem, setItem } from '../../shared/utils/storage.js'
 import { intentOf } from '../../shared/utils/intents.js'
+import { plural } from '../../shared/utils/decision.js'
+import UnansweredQuestions from '../../shared/threads/UnansweredQuestions.jsx'
+import { useMarkdownPreviousRound } from './hooks/useMarkdownPreviousRound.js'
+import { usePreviousHighlights } from './hooks/usePreviousHighlights.js'
 import 'katex/dist/katex.min.css'
 import './styles.css'
 
@@ -53,6 +59,9 @@ function getInitialSidebarCollapsed() {
 function getInitialTocCollapsed() {
   return getItem('md-annotator-toc-collapsed') === 'true'
 }
+
+// "2 annotations and 1 reply", leaving out what is zero.
+const decisionTitle = (notes, replies) => [notes > 0 && plural(notes, 'annotation'), replies > 0 && plural(replies, 'reply', 'replies')].filter(Boolean).join(' and ')
 
 function FileStats({ content }) {
   const { lines, words, readingTime } = getTextStats(content)
@@ -72,7 +81,10 @@ export default function App() {
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [notesModalOpen, setNotesModalOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState(null)
-  const [decisionOpen, setDecisionOpen] = useState(false)
+  // The decision dialog, with the choice it opens on, or null while closed.
+  const [decisionDialog, setDecisionDialog] = useState(null)
+  const decisionOpen = decisionDialog !== null
+  const [focusThread, setFocusThread] = useState(null)
   const [toast, setToast] = useState(null)
   const [pinpointMode, setPinpointMode] = useState(() => settings.defaultMode === 'pinpoint')
   const [viewMode, setViewMode] = useState('preview') // 'preview' | 'source'
@@ -142,11 +154,17 @@ export default function App() {
   // Cross-file search (only active for multi-file sessions)
   const crossFileSearchState = useCrossFileSearch(files)
   const isMultiFile = files.length > 1
-  const changesReview = useChangesReview()
+  const pickChangesView = useCallback((view) => updateSetting('changesView', view), [updateSetting])
+  const changesReview = useChangesReview({ defaultView: settings.changesView, onPickView: pickChangesView })
   const activeBlocks = activeFile?.blocks
   const changeSections = useMemo(() => (isChanges && activeBlocks ? groupChangeSections(activeBlocks) : null), [isChanges, activeBlocks])
   const changeNotes = useMemo(() => (changeSections ? noteCounts(changeSections, annotations) : null), [changeSections, annotations])
-  const changesNav = useChangesNavigation({ sections: changeSections, expand: changesReview.expand })
+  const readViews = useReadViews({ sections: changeSections, review: changesReview })
+  const changesNav = useChangesNavigation({ sections: changeSections, expand: changesReview.expand, onCycleView: readViews.cycle })
+  // The Read views' blocks join the walkthrough's wherever notes are placed, listed or sent.
+  const readBlocks = isChanges ? readViews.blocks : NO_FILES
+  const withReadBlocks = useMemo(() => (readBlocks.length > 0 ? [...(activeBlocks ?? []), ...readBlocks] : null), [activeBlocks, readBlocks])
+  const reviewBlocks = withReadBlocks ?? blocks
 
   const handleCrossFileSelectResult = useCallback((fileIndex) => {
     if (fileIndex !== activeFileIndex) {
@@ -174,14 +192,19 @@ export default function App() {
     filesDispatch({ type: 'ANN', fileIndex: activeFileIndex, annAction })
   }, [activeFileIndex, filesDispatch])
 
-  const { decision, submitted, approvedNoteCount, finish } = useReviewDecision({
-    files, activeFileIndex, annDispatch, setErrorStatus,
+  const previous = useMarkdownPreviousRound(files.length > 0)
+  const openDecisionOn = useCallback((choice) => setDecisionDialog({ choice }), [])
+  const { decision, submitted, approvedNoteCount, sentReplyCount, finish, decidePrimary } = useReviewDecision({
+    files, activeFileIndex, annDispatch, setErrorStatus, extraBlocks: readBlocks,
+    replyCount: previous.replyCount, unanswered: previous.unanswered, openDialog: openDecisionOn,
   })
+  const decisionItemCount = totalAnnotationCount + previous.replyCount
 
   // Draft auto-save and restore
   const { draftBanner, restoreDraft, dismissDraft } = useAnnotationDraft({
     annotations,
     contentHash: activeFile?.contentHash,
+    fileId: activeFile?.fileId,
     submitted,
     enabled: settings.keepDrafts,
   })
@@ -279,6 +302,11 @@ export default function App() {
       setSidebarCollapsed(false)
       return
     }
+    if (isChanges && readViews.reveal(ann)) {
+      setTimeout(() => viewerRef.current?.openEditToolbar(ann), 200)
+      setSelectedAnnotationId(id)
+      return
+    }
     // Switch to the matching view mode before opening the toolbar
     const needsSource = ann.targetType === 'source'
     const targetMode = needsSource ? 'source' : 'preview'
@@ -292,7 +320,20 @@ export default function App() {
     }
     setSelectedAnnotationId(id)
     setSidebarCollapsed(false)
-  }, [annotations, effectiveViewMode])
+  }, [annotations, effectiveViewMode, isChanges, readViews])
+
+  const applyDraft = useCallback((restored, verb = 'Restored') => {
+    viewerRef.current?.clearAllHighlights()
+    annDispatch({ type: 'RESTORE', annotations: restored })
+    setTimeout(() => {
+      viewerRef.current?.restoreHighlights(restored)
+    }, 100)
+    showToast(`${verb} ${restored.length} annotation${restored.length !== 1 ? 's' : ''}`)
+  }, [annDispatch, showToast])
+
+  // Notes restored or imported into a walkthrough wait for the Read views they sit in. Highlights there are stored by
+  // element index, which other Read views shift, so they always re-anchor against the page as it is now.
+  const [awaitingRead, setAwaitingRead] = useState(null)
 
   const handleImportAnnotations = useCallback((jsonData) => {
     const result = validateAnnotationImport(jsonData)
@@ -327,25 +368,50 @@ export default function App() {
       )
       if (!proceed) {return}
     }
-    viewerRef.current?.clearAllHighlights()
-    annDispatch({ type: 'RESTORE', annotations: result.annotations })
-    setTimeout(() => {
-      viewerRef.current?.restoreHighlights(result.annotations)
-    }, 100)
-    showToast(`Imported ${result.annotations.length} annotation${result.annotations.length !== 1 ? 's' : ''}`)
-  }, [activeFile, filePath, annotations, annDispatch, showToast])
+    if (isChanges) {
+      setAwaitingRead({ annotations: result.annotations, verb: 'Imported' })
+      setViewMode('preview')
+      return
+    }
+    applyDraft(result.annotations, 'Imported')
+  }, [activeFile, filePath, annotations, isChanges, applyDraft])
+
+  // Source view notes re-anchor against the file's lines, all others against the rendered preview.
+  const reanchorDraft = useCallback((draftAnnotations) => {
+    const lines = reanchorSourceNotes(draftAnnotations, activeFile?.content ?? '')
+    return isPlainTextFile ? lines : viewerRef.current?.reanchorAnnotations?.(lines) ?? lines
+  }, [activeFile, isPlainTextFile])
+
+  // A changed file's draft restored in the source view waits for the preview, which has the blocks to search.
+  const [draftAwaitingPreview, setDraftAwaitingPreview] = useState(null)
+  useEffect(() => {
+    if (!draftAwaitingPreview || effectiveViewMode !== 'preview') {return}
+    setDraftAwaitingPreview(null)
+    applyDraft(reanchorDraft(draftAwaitingPreview))
+  }, [draftAwaitingPreview, effectiveViewMode, applyDraft, reanchorDraft])
+
+  const { settle: settleReadViews } = readViews
+  useEffect(() => {
+    if (!awaitingRead || effectiveViewMode !== 'preview' || !settleReadViews(awaitingRead.annotations)) {return}
+    setAwaitingRead(null)
+    applyDraft(reanchorDraft(awaitingRead.annotations), awaitingRead.verb)
+  }, [awaitingRead, effectiveViewMode, settleReadViews, applyDraft, reanchorDraft])
 
   const handleRestoreDraft = useCallback(() => {
-    const restored = restoreDraft()
-    if (restored.length > 0) {
-      viewerRef.current?.clearAllHighlights()
-      annDispatch({ type: 'RESTORE', annotations: restored })
-      setTimeout(() => {
-        viewerRef.current?.restoreHighlights(restored)
-      }, 100)
-      showToast(`Restored ${restored.length} annotation${restored.length !== 1 ? 's' : ''}`)
+    const draft = restoreDraft()
+    if (draft.annotations.length === 0) {return}
+    if (isChanges) {
+      setAwaitingRead({ annotations: draft.annotations, verb: 'Restored' })
+      setViewMode('preview')
+    } else if (!draft.fileChanged) {
+      applyDraft(draft.annotations)
+    } else if (effectiveViewMode === 'source' && !isPlainTextFile) {
+      setDraftAwaitingPreview(draft.annotations)
+      setViewMode('preview')
+    } else {
+      applyDraft(reanchorDraft(draft.annotations))
     }
-  }, [restoreDraft, annDispatch, showToast])
+  }, [restoreDraft, applyDraft, reanchorDraft, effectiveViewMode, isPlainTextFile, isChanges])
 
   const handleUndo = useCallback(() => {
     annDispatch({ type: 'UNDO' })
@@ -371,6 +437,16 @@ export default function App() {
     setTimeout(() => setSelectedAnnotationId(id), 150)
   }, [handleSelectFile])
 
+  // A thread's text sits in the preview of its file, so locating it may switch both.
+  const showThreadFile = useCallback((path) => {
+    const index = files.findIndex(f => f.path === path)
+    if (index !== -1) { handleSelectFile(index) }
+    setViewMode('preview')
+  }, [files, handleSelectFile])
+  const locateThread = usePreviousHighlights({
+    threads: previous.threads, path: filePath, blocks, enabled: effectiveViewMode === 'preview' && !submitted, showFile: showThreadFile,
+  })
+
   const handleOpenSearch = useCallback(() => {
     if (crossFileSearchProps) {
       crossFileSearchState.openSearch()
@@ -383,15 +459,20 @@ export default function App() {
   const pickMode = useCallback((mode) => setPinpointMode(mode === 'pinpoint'), [])
   useModeShortcuts({ disabled: submitted || settingsTab !== null || decisionOpen || exportModalOpen, onChange: pickMode })
 
-  const openDecision = useCallback(() => setDecisionOpen(true), [])
-  const closeDecision = useCallback(() => setDecisionOpen(false), [])
+  const openDecision = useCallback(() => setDecisionDialog({ choice: null }), [])
+  const closeDecision = useCallback(() => setDecisionDialog(null), [])
   useDecisionShortcut(openDecision, !submitted && settingsTab === null)
   const openShortcuts = useCallback(() => setSettingsTab('shortcuts'), [])
   useShortcutListKey(openShortcuts, !submitted && settingsTab === null && !decisionOpen)
 
   const finishFromDialog = (result) => {
-    setDecisionOpen(false)
+    setDecisionDialog(null)
     finish(result)
+  }
+  const answerQuestions = () => {
+    setDecisionDialog(null)
+    setSidebarCollapsed(false)
+    setFocusThread({ handle: previous.unanswered[0].handle })
   }
 
   const { serverGone, reconnectState } = useServerConnection({ submitted })
@@ -406,7 +487,7 @@ export default function App() {
       isOpen={exportModalOpen}
       onClose={() => setExportModalOpen(false)}
       annotations={annotations}
-      blocks={blocks}
+      blocks={reviewBlocks}
       filePath={filePath}
       contentHash={activeFile?.contentHash}
       onToast={showToast}
@@ -416,7 +497,8 @@ export default function App() {
   const outcome = doneOutcome({
     decision,
     serverGone,
-    notes: decision === 'approved' ? approvedNoteCount : totalAnnotationCount
+    notes: decision === 'approved' ? approvedNoteCount : totalAnnotationCount,
+    replies: sentReplyCount
   })
   if (outcome) {
     return (
@@ -424,6 +506,7 @@ export default function App() {
         <MarkdownDoneScreen
           outcome={outcome}
           files={files}
+          replies={sentReplyCount}
           origin={origin}
           target={isMultiFile ? `${files.length} files` : filePath}
           countdown={autoCloseState}
@@ -463,12 +546,10 @@ export default function App() {
         panelCollapsed={sidebarCollapsed}
         onTogglePanel={toggleSidebar}
         decision={{
-          itemCount: totalAnnotationCount,
-          title: totalAnnotationCount > 0
-            ? `Send ${totalAnnotationCount} annotation${totalAnnotationCount === 1 ? '' : 's'}`
-            : 'Approve as-is',
+          itemCount: decisionItemCount,
+          title: decisionItemCount > 0 ? `Send ${decisionTitle(totalAnnotationCount, previous.replyCount)}` : 'Approve as-is',
           dialogOpen: decisionOpen,
-          onPrimary: (choice) => finish({ choice }),
+          onPrimary: decidePrimary,
           onOpenDialog: openDecision,
         }}
       />
@@ -530,7 +611,7 @@ export default function App() {
             <Viewer
               key={activeFile?.path || 'empty'}
               ref={viewerRef}
-              blocks={blocks}
+              blocks={reviewBlocks}
               annotations={annotations}
               onAddAnnotation={handleAddAnnotation}
               onEditAnnotation={handleEditAnnotation}
@@ -544,7 +625,7 @@ export default function App() {
               crossFileSearch={crossFileSearchProps}
               newIntent={settings.defaultIntent}
               toolHints={settings.toolHints}
-              changes={changeSections ? { ...changesReview, sections: changeSections, select: changesNav.select, agent: agentName(origin) ?? 'the agent' } : null}
+              changes={changeSections ? { ...changesReview, sections: changeSections, select: changesNav.select, read: readViews, agent: agentName(origin) ?? 'the agent' } : null}
             />
           ) : (
             <SourceView
@@ -570,9 +651,10 @@ export default function App() {
           files={files}
           activeFileIndex={activeFileIndex}
           annotations={annotations}
-          blocks={blocks}
+          blocks={reviewBlocks}
           selectedAnnotationId={selectedAnnotationId}
           onSelect={handleSelectAnnotation}
+          onReveal={isChanges ? readViews.reveal : undefined}
           onOpenNote={handleOpenNote}
           onEdit={handlePanelEdit}
           onDelete={handleDeleteAnnotation}
@@ -584,6 +666,9 @@ export default function App() {
           approves={totalAnnotationCount === 0}
           collapsed={sidebarCollapsed}
           width={panelWidth}
+          previous={previous}
+          onLocateThread={locateThread}
+          focusThread={focusThread}
         />
       </main>
 
@@ -608,6 +693,10 @@ export default function App() {
           origin={origin}
           noteIntents={decisionNoteIntents}
           generalText={generalComment ? generalComment.text : null}
+          replies={previous.replyCount}
+          info={previous.replyCount > 0 ? `${plural(previous.replyCount, 'pending reply', 'pending replies')} to round ${previous.round} ${previous.replyCount === 1 ? 'goes' : 'go'} out with this.` : null}
+          initialChoice={decisionDialog.choice}
+          warning={previous.unanswered.length > 0 && <UnansweredQuestions threads={previous.unanswered} round={previous.round} onAnswer={answerQuestions} />}
           onSubmit={finishFromDialog}
           onClose={closeDecision}
         />

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { postReply, removeReply } from '../../../client/image/src/threads/replyApi.js'
+import { postReply, removeReply } from '../../../client/shared/threads/replyApi.js'
 
 const respond = (status, body) => vi.fn().mockResolvedValue({ ok: status < 400, status, json: async () => body })
 

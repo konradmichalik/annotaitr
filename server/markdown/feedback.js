@@ -1,6 +1,6 @@
 import { annotationHandle } from '../core/annotationHandle.js'
 import { normalizeNotes, intentWord, intentCounts } from '../core/notes.js'
-import { countNewlines, diffLineRef } from './diffLines.js'
+import { countNewlines, diffLineRef, lineRefOf } from './diffLines.js'
 
 /**
  * Format an approval decision for stdout.
@@ -22,7 +22,8 @@ export function formatApprovalOutput(decision) {
 
 const quoted = (text) => `> ${(text ?? '').replace(/\n/g, '\n> ')}\n`
 
-const lineRefOf = (startLine, endLine) => (startLine === endLine ? `Line ${startLine}` : `Lines ${startLine}-${endLine}`)
+// A block of a changes card's Read view carries its file's path: its lines are lines of the new file.
+const inFile = (block, ref) => (block?.path ? `new ${ref} in ${block.path}` : ref)
 
 const DIAGRAM_NAMES = { plantuml: 'PlantUML diagram' }
 
@@ -59,13 +60,14 @@ function describeAnnotation(ann, block) {
     const body = elementBody(ann, block) + (ann.type === 'DELETION'
       ? `> User wants this ${element.removed} removed from the document.\n`
       : quoted(ann.text))
-    return { what: element.name(block), where: `Line ${blockStartLine}`, body }
+    return { what: element.name(block), where: inFile(block, `Line ${blockStartLine}`), body }
   }
 
   if (ann.targetType === 'token') {
     const lineOffset = countNewlines((block?.content || '').slice(0, ann.startOffset))
     const body = `Token: \`${ann.originalText}\`\n` + (ann.type === 'DELETION' ? '> User wants this token removed.\n' : quoted(ann.text))
-    return { what: 'Token', where: diffLineRef(block, lineOffset, lineOffset) ?? `Line ${contentStartLine + lineOffset}`, body }
+    const inDiff = block?.path ? null : diffLineRef(block, lineOffset, lineOffset)
+    return { what: 'Token', where: inDiff ?? inFile(block, `Line ${contentStartLine + lineOffset}`), body }
   }
 
   // A source view note's blockId is "source-line-N" (0-indexed); any other selection counts lines inside its block.
@@ -75,8 +77,8 @@ function describeAnnotation(ann, block) {
     ? (sourceMatch ? parseInt(sourceMatch[1], 10) + 1 : 1)
     : contentStartLine + lineOffset
   const endLine = startLine + countNewlines(ann.originalText)
-  const inDiff = ann.targetType === 'source' ? null : diffLineRef(block, lineOffset, lineOffset + countNewlines(ann.originalText))
-  const where = inDiff ?? `${lineRefOf(startLine, endLine)}${ann.targetType === 'source' ? ', source' : ''}`
+  const inDiff = ann.targetType === 'source' || block?.path ? null : diffLineRef(block, lineOffset, lineOffset + countNewlines(ann.originalText))
+  const where = inDiff ?? (ann.targetType === 'source' ? `${lineRefOf(startLine, endLine)}, source` : inFile(block, lineRefOf(startLine, endLine)))
 
   if (ann.type === 'INSERTION') {
     const after = ann.afterContext ? `After: \`${ann.afterContext}\`\n` : ''
@@ -91,6 +93,12 @@ function describeAnnotation(ann, block) {
   return { what: 'Text', where, tag: labelTag, body: selection + quoted(ann.text) }
 }
 
+/** Where a note is, as its feedback heading says: `Line 7`, `Lines 3-4, source`, `new Line 2 in src/a.js`. */
+export const noteWhere = (ann, block) => describeAnnotation(ann, block).where
+
+/** What a note points at, as its feedback heading names it: `Text`, `Insertion`, `Image`, ... */
+export const noteWhat = (ann, block) => describeAnnotation(ann, block).what
+
 /**
  * One numbered note: `## 3. Question · Text (Line 7)`, the handle at the end
  * of the heading, then the quoted selection and the comment. The number is
@@ -100,7 +108,9 @@ function formatAnnotation(ann, block, level) {
   const { what, where, tag = '', body } = describeAnnotation(ann, block)
   const handle = annotationHandle(ann.id)
   const handleTag = handle ? ` [#${handle}]` : ''
-  return `${level} ${ann.number}. ${intentWord(ann.intent)} · ${what} (${where})${tag}${handleTag}\n${body}\n`
+  // A restored draft note whose text is gone from the file has no line left to point at.
+  const place = ann.unanchored ? '' : ` (${where})`
+  return `${level} ${ann.number}. ${intentWord(ann.intent)} · ${what}${place}${tag}${handleTag}\n${body}\n`
 }
 
 /**
@@ -114,19 +124,26 @@ function formatGlobalComment(ann, heading) {
   return `${heading} General comment${handleTag}\n> ${(ann.text ?? '').replace(/\n/g, '\n> ')}\n\n`
 }
 
+/**
+ * Where a note sorts: its block's line, and for a Read view block the line of
+ * its card first, then its line in the file.
+ */
 function getBlockOrder(blockId, blocks) {
   const sourceMatch = blockId?.match(/^source-line-(\d+)$/)
-  if (sourceMatch) { return parseInt(sourceMatch[1], 10) + 1 }
+  if (sourceMatch) { return [parseInt(sourceMatch[1], 10) + 1, 0] }
   const block = blocks.find(blk => blk.id === blockId)
-  if (block?.startLine) { return block.startLine }
-  return Infinity
+  if (block?.sortLine) { return [block.sortLine, block.startLine || 0] }
+  if (block?.startLine) { return [block.startLine, 0] }
+  return [Infinity, 0]
 }
 
 function sortAnnotations(annotations, blocks) {
+  const orderOf = (ann) => (ann.unanchored ? [Infinity, 0] : getBlockOrder(ann.blockId, blocks))
   return [...annotations].sort((a, b) => {
-    const blockA = getBlockOrder(a.blockId, blocks)
-    const blockB = getBlockOrder(b.blockId, blocks)
-    if (blockA !== blockB) {return blockA - blockB}
+    const [lineA, inFileA] = orderOf(a)
+    const [lineB, inFileB] = orderOf(b)
+    if (lineA !== lineB) {return lineA - lineB}
+    if (inFileA !== inFileB) {return inFileA - inFileB}
     return a.startOffset - b.startOffset
   })
 }
@@ -149,6 +166,17 @@ function numberedFiles(files) {
     const own = notes.slice(offset, offset + f.annotations.length)
     offset += f.annotations.length
     return { ...f, annotations: own }
+  })
+}
+
+/**
+ * Every decided note in feedback order with the number and intent the
+ * feedback gives it, the index of its file and its block, for the review session.
+ */
+export function decidedNotes(files) {
+  return numberedFiles(files).flatMap((f, fileIndex) => {
+    const ordered = [...f.annotations.filter(a => a.targetType === 'global'), ...f.annotations.filter(a => a.targetType !== 'global')]
+    return ordered.map((annotation) => ({ annotation, fileIndex, block: (f.blocks || []).find(blk => blk.id === annotation.blockId) }))
   })
 }
 

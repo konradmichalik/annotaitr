@@ -83,11 +83,11 @@ async function main() {
     mode = detected.mode
   }
 
-  const flagError = flagErrorForMode(mode, { viewportSpec, delaySpec, feedbackNotesFlagGiven, sessionId, newSession })
+  const flagError = flagErrorForMode(mode, { viewportSpec, delaySpec, feedbackNotesFlagGiven })
   if (flagError) { fail(flagError); return }
 
   if (mode === 'markdown') {
-    await runMarkdown({ targets, origin, feedbackNotes })
+    await runMarkdown({ targets, origin, feedbackNotes, session })
   } else if (mode === 'image') {
     await runImage({ targets, origin, viewportSpec, delaySpec, sourceSpec, pageRanges, session })
   } else {
@@ -96,11 +96,8 @@ async function main() {
 }
 
 /** The error for a flag that does not apply to the mode, or null. */
-function flagErrorForMode(mode, { viewportSpec, delaySpec, feedbackNotesFlagGiven, sessionId, newSession }) {
-  if (mode === 'markdown') {
-    if (sessionId || newSession) { return '--session and --new-session only apply to image targets.' }
-    return captureFlagError('markdown files', { viewportSpec, delaySpec })
-  }
+function flagErrorForMode(mode, { viewportSpec, delaySpec, feedbackNotesFlagGiven }) {
+  if (mode === 'markdown') { return captureFlagError('markdown files', { viewportSpec, delaySpec }) }
   if (mode === 'image' && feedbackNotesFlagGiven) { return '--feedback-notes only applies to markdown targets, not images.' }
   return null
 }

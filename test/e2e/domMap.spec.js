@@ -193,8 +193,8 @@ test('the Element tool outlines and picks a page element, other tools only name 
     await page.getByRole('button', { name: /^Send feedback/ }).click()
     await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible()
     expect(await new Promise((resolve) => child.on('exit', resolve))).toBe(0)
-    expect(stdout()).toMatch(/### 1\. \[#\w+\] Change · Selected element: .*\nElement: img "Team photo" \("team.png"\) · #hero\n> Swap the photo/)
-    expect(stdout()).toMatch(/### 2\. \[#\w+\] Change · Comment pin: .*\nElement: button "Contact us" · #contact/)
+    expect(stdout()).toMatch(/### 1\. \[#\w+\] Change · Selected element: .*\nCrop: .*crop-01-02\.png\nElement: img "Team photo" \("team.png"\) · #hero\n> Swap the photo/)
+    expect(stdout()).toMatch(/### 2\. \[#\w+\] Change · Comment pin: .*\nCrop: .*crop-01-02\.png\nElement: button "Contact us" · #contact/)
   } finally {
     if (child.exitCode === null) { child.kill() }
   }

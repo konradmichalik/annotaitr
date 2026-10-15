@@ -57,3 +57,7 @@ export function serverHeadLength(annotation) {
 export function serverDimensionTickLength(annotation) {
   return serverStrokeWidth(annotation) * DIMENSION_TICK_RATIO
 }
+
+/** Radius of a pin's marker and of the number badge on any other mark, in server units. */
+export const PIN_RADIUS = 14
+export const BADGE_RADIUS = 11
