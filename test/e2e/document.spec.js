@@ -68,7 +68,7 @@ test('a PDF is annotated page by page and the CLI prints per-page feedback with 
     expect(output).toMatch(/## Page 2\n[\s\S]*### 3\. \[#[0-9a-f]{8}\] Change · Page comment\n> Too dense/)
     expect(output).toMatch(/## Page 3\n[\s\S]*### 2\. \[#[0-9a-f]{8}\] Change · Boxed area/)
     const overview = output.match(/Overview: (.*)\n/)[1]
-    expect((await readdir(dirname(overview))).sort()).toEqual(['overview.png', 'page-01.png', 'page-02.png', 'page-03.png'])
+    expect((await readdir(dirname(overview))).sort()).toEqual(['overview.png', 'page-01-crop-01.png', 'page-01.png', 'page-02.png', 'page-03-crop-02.png', 'page-03.png'])
     await rm(dirname(overview), { recursive: true, force: true })
   } finally {
     cli.child.kill()
@@ -122,7 +122,7 @@ test('text on a PDF page is selected word by word and quoted in the feedback', a
 
     await page.getByRole('button', { name: /^Send feedback/ }).click()
     expect(await cli.exited).toBe(0)
-    expect(cli.stdout()).toMatch(/### 1\. \[#[0-9a-f]{8}\] Change · Selected text: [^\n]*\nQuote: "North grew 12% South stayed"\n> Say rose/)
+    expect(cli.stdout()).toMatch(/### 1\. \[#[0-9a-f]{8}\] Change · Selected text: [^\n]*\nCrop: [^\n]*page-01-crop-01\.png\nQuote: "North grew 12% South stayed"\n> Say rose/)
     await rm(cli.stdout().match(/Overview: (.*)\/overview\.png/)[1], { recursive: true, force: true })
   } finally {
     cli.child.kill()

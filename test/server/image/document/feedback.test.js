@@ -68,6 +68,28 @@ describe('exportDocumentFeedback', () => {
   })
 })
 
+describe('crops per note', () => {
+  function withCrops(annotations, crops) {
+    const ordered = orderDocumentAnnotations(annotations)
+    const plan = planDocumentPages(ordered)
+    const files = { dir: '/tmp/out', overview: '/tmp/out/overview.png', pages: new Map(plan.map((p) => [p.page, `/tmp/out/page-${p.page}.png`])), crops }
+    return exportDocumentFeedback({ ordered, plan, document, source: null, files })
+  }
+
+  it('puts the crop under the note heading and explains it once', () => {
+    const output = withCrops([box, pin, pageComment], new Map([[1, '/tmp/out/page-03-crop-01.png']]))
+    expect(output).toContain("A `Crop:` line shows that note's area at full resolution, the page image is the overview.\n")
+    expect(output).toMatch(/### 1\. \[#a3f19c2e\] Change · Boxed area: [^\n]+\nCrop: \/tmp\/out\/page-03-crop-01\.png\n> Use the same/)
+    expect(output).toContain('### 2. [#7b210e44] Change · Page comment\n> Too much text')
+    expect(output).toMatch(/### 3\. Question · Comment pin: [^\n]+\n> Typo/)
+  })
+
+  it('has no crop notice when no crop was written', () => {
+    expect(withCrops([box], new Map())).not.toContain('Crop')
+    expect(render([box])).not.toContain('Crop')
+  })
+})
+
 describe('Text lines', () => {
   const heading = { tag: 'heading', name: 'Revenue by region', selector: '', box: { x: 1500, y: 80, width: 450, height: 160 } }
 

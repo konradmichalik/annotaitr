@@ -151,6 +151,23 @@ number nor intent (`### [#c01d9e55] General comment about the whole image`).
 `APPROVED WITH NOTES:` names the count per intent the same way
 (`APPROVED WITH NOTES: 2 notes (1 Change, 1 Question). ...`).
 
+The images the feedback points at are written to a fresh directory in the
+system temp directory (`annotaitr-XXXX`). Next to the annotated image, every
+note on the image gets a full-resolution crop of its area, named by its
+number (`crop-03.png`, `crop-03-05.png` for notes close together, page and
+frame crops start with the page or frame name). The note names it in a
+`Crop:` line under its heading, and the annotated image stays the overview:
+
+```text
+### 1. [#a3f19c2e] Change · Boxed area: top left (~10% from top, ~12% from left)
+Crop: /tmp/annotaitr-XXXX/crop-01.png
+> Move this up
+```
+
+Comments get no crop, and an image gets none where a crop would cover more
+than half of it, so small images keep the annotated image only. One image
+gets at most 20 crops.
+
 | Exit code | Meaning |
 |-----------|---------|
 | `0` | Approved, or feedback submitted: stdout carries the formatted decision. Also a hint printed instead of opening the annotator (`PASTED CHAT IMAGE:`, `CONVERT TO PDF FIRST:`). `annotaitr reply` exits `0` once the reply is saved, `annotaitr changes` exits `0` with `NO CHANGES:` when there is nothing to review |

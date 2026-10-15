@@ -1,11 +1,10 @@
 import { createCanvas, loadImage } from '@napi-rs/canvas'
 import {
-  resolveArrowStyle, serverStrokeWidth, serverDashArray, serverHeadLength, serverDimensionTickLength
+  resolveArrowStyle, serverStrokeWidth, serverDashArray, serverHeadLength, serverDimensionTickLength, PIN_RADIUS, BADGE_RADIUS
 } from './annotationStyles.js'
 import { isNumbered, intentOf, intentWord } from '../../core/notes.js'
-
-const PIN_RADIUS = 14
-const BADGE_RADIUS = 11
+import { planCrops } from './crops.js'
+import { warnWithoutCrops } from './cropFiles.js'
 // The intent mark colours and the number on them, from client/shared/styles/tokens.css
 // (client and server share no modules, so this duplication is deliberate). Marks keep
 // these colours in both themes, so the rendered image matches the canvas.
@@ -246,6 +245,64 @@ function buildLegendEntries(ctx, annotations, numbers, maxWidth) {
   }))
 }
 
+function legendHeightOf(entries) {
+  const totalLines = entries.reduce((sum, entry) => sum + 1 + entry.lines.length, 0)
+  return entries.length === 0
+    ? 0
+    : LEGEND_PADDING * 2 + totalLines * LEGEND_LINE_HEIGHT + (entries.length - 1) * LEGEND_GAP
+}
+
+function drawLegend(ctx, entries, top, width, height) {
+  ctx.fillStyle = LEGEND_BG
+  ctx.fillRect(0, top, width, height)
+  ctx.textBaseline = 'top'
+  ctx.textAlign = 'left'
+
+  let y = top + LEGEND_PADDING
+  entries.forEach((entry, i) => {
+    ctx.beginPath()
+    ctx.arc(LEGEND_PADDING + 5, y + LEGEND_LINE_HEIGHT / 2, 5, 0, Math.PI * 2)
+    ctx.fillStyle = entry.color
+    ctx.fill()
+
+    ctx.font = `bold ${LEGEND_FONT_SIZE}px sans-serif`
+    ctx.fillStyle = LEGEND_HEADER_COLOR
+    ctx.fillText(entry.label, LEGEND_PADDING + 18, y)
+    y += LEGEND_LINE_HEIGHT
+
+    ctx.font = `${LEGEND_FONT_SIZE}px sans-serif`
+    ctx.fillStyle = LEGEND_TEXT_COLOR
+    for (const line of entry.lines) {
+      ctx.fillText(line, LEGEND_PADDING + 18, y)
+      y += LEGEND_LINE_HEIGHT
+    }
+
+    if (i < entries.length - 1) { y += LEGEND_GAP }
+  })
+}
+
+/** The source with every mark drawn on it and the legend appended below; `image` keeps the source size. */
+async function drawFlattened(imageBuffer, annotations, numbers) {
+  const image = await loadImage(imageBuffer)
+
+  // A throwaway context to measure legend text before the final canvas
+  // (whose height depends on the legend) can be created.
+  const measureCtx = createCanvas(1, 1).getContext('2d')
+  const legendMaxWidth = image.width - LEGEND_PADDING * 2 - 22
+  const entries = annotations.length > 0 ? buildLegendEntries(measureCtx, annotations, numbers, legendMaxWidth) : []
+  const legendHeight = legendHeightOf(entries)
+
+  const canvas = createCanvas(image.width, image.height + legendHeight)
+  const ctx = canvas.getContext('2d')
+
+  ctx.drawImage(image, 0, 0)
+  annotations.forEach((annotation, index) => drawAnnotation(ctx, annotation, numbers[index]))
+  if (legendHeight > 0) { drawLegend(ctx, entries, image.height, image.width, legendHeight) }
+  return { canvas, image }
+}
+
+const defaultNumbers = (annotations) => annotations.map((a, index) => a.number ?? index + 1)
+
 /**
  * Render `annotations` onto a copy of the source image (shapes plus a small
  * numbered badge per shape), and append a text legend below the image
@@ -255,56 +312,38 @@ function buildLegendEntries(ctx, annotations, numbers, maxWidth) {
  * `numbers` are the labels drawn per annotation: a recording numbers across
  * all of its frames, so one frame's annotations need not start at 1.
  */
-export async function flattenAnnotations(imageBuffer, annotations, numbers = annotations.map((a, index) => a.number ?? index + 1)) {
-  const image = await loadImage(imageBuffer)
-
-  // A throwaway context to measure legend text before the final canvas
-  // (whose height depends on the legend) can be created.
-  const measureCtx = createCanvas(1, 1).getContext('2d')
-  const legendMaxWidth = image.width - LEGEND_PADDING * 2 - 22
-  const entries = annotations.length > 0 ? buildLegendEntries(measureCtx, annotations, numbers, legendMaxWidth) : []
-
-  const totalLines = entries.reduce((sum, entry) => sum + 1 + entry.lines.length, 0)
-  const legendHeight = entries.length === 0
-    ? 0
-    : LEGEND_PADDING * 2 + totalLines * LEGEND_LINE_HEIGHT + (entries.length - 1) * LEGEND_GAP
-
-  const canvas = createCanvas(image.width, image.height + legendHeight)
-  const ctx = canvas.getContext('2d')
-
-  ctx.drawImage(image, 0, 0)
-  annotations.forEach((annotation, index) => drawAnnotation(ctx, annotation, numbers[index]))
-
-  if (legendHeight > 0) {
-    ctx.fillStyle = LEGEND_BG
-    ctx.fillRect(0, image.height, image.width, legendHeight)
-    ctx.textBaseline = 'top'
-    ctx.textAlign = 'left'
-
-    let y = image.height + LEGEND_PADDING
-    entries.forEach((entry, i) => {
-      ctx.beginPath()
-      ctx.arc(LEGEND_PADDING + 5, y + LEGEND_LINE_HEIGHT / 2, 5, 0, Math.PI * 2)
-      ctx.fillStyle = entry.color
-      ctx.fill()
-
-      ctx.font = `bold ${LEGEND_FONT_SIZE}px sans-serif`
-      ctx.fillStyle = LEGEND_HEADER_COLOR
-      ctx.fillText(entry.label, LEGEND_PADDING + 18, y)
-      y += LEGEND_LINE_HEIGHT
-
-      ctx.font = `${LEGEND_FONT_SIZE}px sans-serif`
-      ctx.fillStyle = LEGEND_TEXT_COLOR
-      for (const line of entry.lines) {
-        ctx.fillText(line, LEGEND_PADDING + 18, y)
-        y += LEGEND_LINE_HEIGHT
-      }
-
-      if (i < entries.length - 1) { y += LEGEND_GAP }
-    })
-  }
-
+export async function flattenAnnotations(imageBuffer, annotations, numbers = defaultNumbers(annotations)) {
+  const { canvas } = await drawFlattened(imageBuffer, annotations, numbers)
   return canvas.toBuffer('image/png')
+}
+
+function cutCrop(canvas, { x, y, width, height }) {
+  const crop = createCanvas(width, height)
+  crop.getContext('2d').putImageData(canvas.getContext('2d').getImageData(x, y, width, height), 0, 0)
+  return crop.toBuffer('image/png')
+}
+
+/**
+ * The flattened image plus a full-resolution crop per note or group of
+ * close notes, cut from the flattened canvas so neighbouring marks stay
+ * visible. Crops never reach into the legend. `croppable` picks the notes
+ * that get one (a frame also shows spans drawn on earlier frames).
+ */
+export async function renderAnnotatedWithCrops(imageBuffer, annotations, numbers = defaultNumbers(annotations), croppable = () => true) {
+  const { canvas, image } = await drawFlattened(imageBuffer, annotations, numbers)
+  return { full: canvas.toBuffer('image/png'), crops: cutCrops(canvas, image, annotations, numbers, croppable) }
+}
+
+/** Crops are an extra: a failure leaves the feedback as it was without them. */
+function cutCrops(canvas, image, annotations, numbers, croppable) {
+  try {
+    const picked = annotations.map((note, i) => ({ note, number: numbers[i] })).filter(({ note }) => croppable(note))
+    const plan = planCrops(picked.map((p) => p.note), picked.map((p) => p.number), image.width, image.height)
+    return plan.map(({ rect, numbers: cropNumbers }) => ({ numbers: cropNumbers, buffer: cutCrop(canvas, rect) }))
+  } catch (error) {
+    warnWithoutCrops(error)
+    return []
+  }
 }
 
 export const CONTACT_SHEET_GAP = 8

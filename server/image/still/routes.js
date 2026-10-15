@@ -2,7 +2,7 @@ import { freezeReplies } from '../../core/session/replyStore.js'
 import { Router } from 'express'
 import { success, failure } from '../../core/http.js'
 import { annotationsFromBody } from '../common/annotationLimits.js'
-import { flattenAnnotations } from '../common/render.js'
+import { flattenAnnotations, renderAnnotatedWithCrops } from '../common/render.js'
 import { writeAnnotatedImage } from './output.js'
 import { formatApprovalOutput, formatApprovalWithNotesOutput, exportFeedback, formatImageSetOutput } from '../common/feedback.js'
 import { parseCaptureSettings, describeCapture, VIEWPORT_PRESETS } from '../common/config.js'
@@ -44,23 +44,30 @@ const imageAt = (state) => (req, res, next) => {
 
 const totalNotes = (state) => state.images.reduce((sum, entry) => sum + entry.annotations.length, 0)
 
+async function writeAnnotated(buffer, notes) {
+  const { full, crops } = await renderAnnotatedWithCrops(buffer, notes)
+  return writeAnnotatedImage(full, crops)
+}
+
 /** Everything a decision needs from the captures as they are right now, which a recapture may have replaced. */
 async function decisionInputs(state) {
   return Promise.all(state.images.map(async ({ label, capture, annotations }) => {
     const { buffer, width, height, domMap, settings } = capture
     // Image, text and session take the numbers from the same list, so they always agree.
     const notes = normalizeNotes(annotations)
-    const annotatedImagePath = notes.length > 0 ? await writeAnnotatedImage(await flattenAnnotations(buffer, notes)) : null
-    return { label, notes, width, height, annotatedImagePath, domMap, note: settings ? describeCapture(settings) : null }
+    const written = notes.length > 0 ? await writeAnnotated(buffer, notes) : { path: null, cropsByNumber: new Map() }
+    return {
+      label, notes, width, height, annotatedImagePath: written.path, crops: written.cropsByNumber, domMap, note: settings ? describeCapture(settings) : null
+    }
   }))
 }
 
 function renderDecision(inputs, approved) {
   if (inputs.length > 1) { return formatImageSetOutput(inputs, { approved }) }
-  const [{ notes, width, height, annotatedImagePath, domMap, note }] = inputs
+  const [{ notes, width, height, annotatedImagePath, domMap, note, crops }] = inputs
   return approved
-    ? formatApprovalWithNotesOutput(notes, width, height, annotatedImagePath, domMap, note)
-    : exportFeedback(notes, width, height, annotatedImagePath, domMap, note)
+    ? formatApprovalWithNotesOutput(notes, width, height, annotatedImagePath, domMap, note, crops)
+    : exportFeedback(notes, width, height, annotatedImagePath, domMap, note, crops)
 }
 
 function decisionOf(inputs, output, approved, frozen) {

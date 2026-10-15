@@ -16,6 +16,8 @@ annotaitr ./mobile.png ./tablet.png ./desktop.png
 
 ![An image in the dark theme with a note being written](../../site/images/06-image-dark.png)
 
+The feedback points at the annotated image in a temp directory and, on a large image, at a full-resolution crop per note (a `Crop:` line under the note). See [Output and exit codes](../usage.md#output-and-exit-codes).
+
 ## Clipboard
 
 Run `annotaitr` with no target to annotate the image on the macOS clipboard. A screenshot pasted into a Claude Code chat works too: the plugin commands look up the saved file and pass its path. A clipboard image has no identity to find, so a later round continues only with `--session <id>`.
@@ -32,6 +34,6 @@ background. The SVG needs a `width`/`height` in px (or unitless) or a
 
 ## Several images
 
-A set of image files opens in one annotator with a thumbnail strip to switch between them. Each image keeps its own notes and its own numbering, and one decision covers the whole set. The output lists the notes per image under `## Image N of M: <path>`, with one annotated screenshot per image that has notes.
+A set of image files opens in one annotator with a thumbnail strip to switch between them. Each image keeps its own notes and its own numbering, and one decision covers the whole set. The output lists the notes per image under `## Image N of M: <path>`, with one annotated screenshot and its crops per image that has notes.
 
 A set takes local image files only. URLs, the clipboard, videos and PDFs stay single-target, and a set starts no [review session](sessions.md), so `--session` and `--new-session` do not apply.

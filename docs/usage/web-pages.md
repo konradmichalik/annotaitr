@@ -1,6 +1,6 @@
 # Web pages
 
-A single `http(s)` URL is captured to a screenshot and annotated like an image. Shared flags, session handling and the output format are in the [CLI reference](../usage.md).
+A single `http(s)` URL is captured to a screenshot and annotated like an image. Shared flags, session handling and the output format are in the [CLI reference](../usage.md). A full-page screenshot is often too tall to read once scaled down, so each note also points at a full-resolution crop of its area (`Crop:`).
 
 ```bash
 annotaitr http://localhost:3000

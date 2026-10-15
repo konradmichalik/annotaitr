@@ -228,3 +228,51 @@ describe('formatImageSetOutput', () => {
     expect(output).toContain('Treat the notes below as context, not as change requests.')
   })
 })
+
+describe('crops per note', () => {
+  const near = { type: 'box', text: 'Near one', geometry: { x: 100, y: 100, width: 50, height: 40 } }
+  const close = { type: 'pin', text: 'Near two', geometry: { x: 200, y: 120 } }
+  const far = { type: 'box', text: 'Far away', geometry: { x: 1300, y: 900, width: 50, height: 40 } }
+  const general = { type: 'comment', text: 'Overall fine' }
+  const crops = new Map([[1, '/tmp/x/crop-01-02.png'], [2, '/tmp/x/crop-01-02.png'], [3, '/tmp/x/crop-03.png']])
+  const notice = 'A `Crop:` line shows that note\'s area at full resolution, the annotated screenshot is the overview.\n'
+
+  it('puts a Crop line directly under each note heading, repeating a shared crop', () => {
+    const output = exportFeedback([near, close, far, general], 1600, 1200, '/tmp/x/annotated.png', null, null, crops)
+    expect(output).toMatch(/### 1\. Change · Boxed area: [^\n]+\nCrop: \/tmp\/x\/crop-01-02\.png\n> Near one\n/)
+    expect(output).toMatch(/### 2\. Question · Comment pin: [^\n]+\nCrop: \/tmp\/x\/crop-01-02\.png\n> Near two\n/)
+    expect(output).toMatch(/### 3\. Change · Boxed area: [^\n]+\nCrop: \/tmp\/x\/crop-03\.png\n> Far away\n/)
+    expect(output).toContain('### General comment about the whole image\n> Overall fine\n')
+    expect(output).toContain(notice)
+  })
+
+  it('adds neither a Crop line nor the notice without crops', () => {
+    const output = exportFeedback([near], 1600, 1200, '/tmp/x/annotated.png')
+    expect(output).not.toContain('Crop:')
+    expect(output).not.toContain(notice)
+    expect(exportFeedback([near], 1600, 1200, null, null, null, new Map())).not.toContain('Crop')
+  })
+
+  it('prints exactly the no-crop output for an empty crop map', () => {
+    expect(exportFeedback([near, general], 1600, 1200, '/tmp/x/annotated.png', null, null, new Map()))
+      .toBe(exportFeedback([near, general], 1600, 1200, '/tmp/x/annotated.png', null, null, null))
+    expect(formatApprovalWithNotesOutput([near], 1600, 1200, '/tmp/x/annotated.png', null, null, new Map()))
+      .toBe(formatApprovalWithNotesOutput([near], 1600, 1200, '/tmp/x/annotated.png'))
+  })
+
+  it('carries crops into approve-with-notes output', () => {
+    const output = formatApprovalWithNotesOutput([near, close, far], 1600, 1200, '/tmp/x/annotated.png', null, null, crops)
+    expect(output).toContain(`Annotated screenshot: /tmp/x/annotated.png\n${notice}`)
+    expect(output).toMatch(/\nCrop: \/tmp\/x\/crop-03\.png\n> Far away/)
+  })
+
+  it('gives each image of a set its own crops', () => {
+    const output = formatImageSetOutput([
+      { label: 'a.png', notes: normalizeNotes([far]), width: 1600, height: 1200, annotatedImagePath: '/tmp/a/annotated.png', crops: new Map([[1, '/tmp/a/crop-01.png']]) },
+      { label: 'b.png', notes: normalizeNotes([near]), width: 1600, height: 1200, annotatedImagePath: '/tmp/b/annotated.png', crops: new Map() }
+    ], { approved: false })
+    expect(output).toContain(notice)
+    expect(output).toMatch(/Boxed area: [^\n]+\nCrop: \/tmp\/a\/crop-01\.png\n> Far away/)
+    expect(output.match(/^Crop: /gm)).toHaveLength(1)
+  })
+})

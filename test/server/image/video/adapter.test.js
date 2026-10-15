@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
 import { mkdtemp, writeFile, rm, readdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, dirname } from 'node:path'
+import { join, dirname, basename } from 'node:path'
 import { buildVideoServer } from '../../../../server/image/video/adapter.js'
 import { makeFixturePng } from '../../../helpers/fixtureImage.js'
 import { createReplyStore } from '../../../../server/core/session/replyStore.js'
@@ -166,6 +166,25 @@ describe('video annotator server', () => {
     expect((await readdir(dirname(overview))).sort()).toEqual([
       'frame-01-00m01.000s.png', 'frame-02-00m03.000s.png', 'overview.png', 'strip-02-00m03.000s-00m05.000s.png'
     ])
+  })
+
+  it('writes a crop per note next to the frame it was drawn on, not on later frames of a span', async () => {
+    await start()
+    const near = box('a', 1, { endTime: 3, geometry: { x: 100, y: 100, width: 50, height: 40 } })
+    const far = box('b', 2, { geometry: { x: 1300, y: 900, width: 50, height: 40 } })
+    await post('/api/annotations', { annotations: [near, far] })
+    const plan = await post('/api/frame-plan', { duration: DURATION, width: 1600, height: 1200 })
+    for (const time of (await plan.json()).data.times) {
+      expect((await putFrame(time, makeFixturePng(1600, 1200))).status).toBe(200)
+    }
+    await post('/api/feedback', {})
+    const { output } = await server.waitForDecision()
+    const crops = [...output.matchAll(/^Crop: (\S+)$/gm)].map((m) => m[1])
+    expect(crops.map((path) => basename(path))).toEqual(['frame-01-00m01.000s-crop-01.png', 'frame-02-00m02.000s-crop-02.png'])
+    for (const file of crops) { expect(existsSync(file)).toBe(true) }
+    expect(output).toMatch(/Boxed area[^\n]*\nFrame: \S+frame-01-00m01\.000s\.png\nCrop: \S+crop-01\.png\nStrip: /)
+    expect(output).toContain("A `Crop:` line shows that note's area at full resolution, the frame is the overview.\n")
+    expect((await readdir(dirname(crops[0]))).filter((name) => name.includes('crop'))).toHaveLength(2)
   })
 
   it('approves with notes the same way', async () => {

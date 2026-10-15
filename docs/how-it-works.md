@@ -21,7 +21,8 @@ Draw a box, arrow, freehand or highlighter mark, or drop a numbered pin, each wi
 
 On submit:
 
-- The marks are baked into a copy of the image, each number on its intent's colour, with a legend such as `3. Question · Pin`. The copy is written to a fresh temp file and its path goes to the agent.
+- The marks are baked into a copy of the image, each number on its intent's colour, with a legend such as `3. Question · Pin`. The copy is written to a fresh temp directory and its path goes to the agent.
+- Next to it, each note (or group of notes close together) gets a crop of the marked area at full resolution, cut from the marked-up copy, so other marks stay visible. Comments and crops covering more than half the image are skipped. The overview stays one file and the crops carry the detail an agent loses when it scales a large image down.
 - The feedback lists each note with a plain-language position (for example "top right, ~15% from top") and flags notes placed too close for that label to tell them apart.
 
 ### Captured pages

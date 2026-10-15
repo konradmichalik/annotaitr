@@ -59,6 +59,8 @@ Agents cannot watch video, so the feedback points at still images in a temp
 directory:
 
 - one PNG per annotated moment, with the markup and a legend baked in
+- a full-resolution crop per note of the frame it was drawn on
+  (`frame-02-00m03.240s-crop-04.png`, named in a `Crop:` line)
 - a strip of six frames across every span
 - `overview.png`, twelve frames spread over the whole recording with the
   annotation numbers on the nearest frame
