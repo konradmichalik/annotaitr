@@ -22,6 +22,7 @@ describe('mergeSettings', () => {
   it('keeps the view a changes card opens in, and drops one no card offers', () => {
     const withView = { ...defaults, changesView: 'diff' }
     expect(mergeSettings(withView, JSON.stringify({ changesView: 'read' }), null).changesView).toBe('read')
+    expect(mergeSettings(withView, JSON.stringify({ changesView: 'changes' }), null).changesView).toBe('changes')
     expect(mergeSettings(withView, JSON.stringify({ changesView: 'rendered' }), null).changesView).toBe('diff')
   })
 

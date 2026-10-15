@@ -154,8 +154,33 @@ describe('useReadViews', () => {
     expect(handled).toBe(true)
     expect(latest.read.viewOf(fileOf('a.md'))).toBe('read')
     act(() => { latest.read.cycle('a.md') })
+    expect(latest.read.viewOf(fileOf('a.md'))).toBe('changes')
+    act(() => { latest.read.cycle('a.md') })
     expect(latest.read.viewOf(fileOf('a.md'))).toBe('diff')
     expect(picks).toEqual(['diff'])
+  })
+
+  it('shows Changes once the file has loaded, stores it as the default then, and builds its entries', async () => {
+    const { net, picks } = renderRead()
+    act(() => latest.read.pick('a.md', 'changes'))
+    expect(latest.read.statusOf(fileOf('a.md'))).toBe('Loading the file to read…')
+    await net.ok('a.md')
+    expect(latest.read.viewOf(fileOf('a.md'))).toBe('changes')
+    expect(picks).toEqual(['changes'])
+    expect(latest.read.changesByPath.get('a.md').map((e) => e.change)).toEqual(['same', 'added'])
+    expect(latest.read.blocks.map((b) => b.id)).toEqual(['read:a.md:block-0', 'read:a.md:block-1', 'old:a.md:block-0'])
+  })
+
+  it('reveals a note on the old file by opening Changes, and keeps Changes for a note on the new one', async () => {
+    const { net, picks } = renderRead()
+    let changed
+    act(() => { changed = latest.read.reveal({ blockId: 'old:a.md:block-0' }) })
+    expect(changed).toBe(true)
+    expect(latest.read.viewOf(fileOf('a.md'))).toBe('changes')
+    await net.ok('a.md')
+    expect(latest.read.reveal({ blockId: 'read:a.md:block-1' })).toBe(false)
+    expect(latest.read.viewOf(fileOf('a.md'))).toBe('changes')
+    expect(picks).toEqual([])
   })
 
   it('reveals a Read note by opening its card on Read, without storing the view', async () => {

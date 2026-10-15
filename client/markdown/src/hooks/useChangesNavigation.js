@@ -12,7 +12,7 @@ const isComposing = () => document.querySelector('.annotation-toolbar, .comment-
 /**
  * The changed file in view (`null` for the overview): picked in the tree or
  * with `J` and `K`, opened if it was collapsed and scrolled to the top. `P`
- * hands the current file to `onCycleView`, which switches Diff and Read.
+ * hands the current file to `onCycleView`, which switches Diff, Read and Changes.
  */
 export function useChangesNavigation({ sections, expand, onCycleView }) {
   const [current, setCurrent] = useState(null)

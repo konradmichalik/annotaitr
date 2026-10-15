@@ -165,6 +165,8 @@ export default function App() {
   const activeBlocks = activeFile?.blocks
   const changeSections = useMemo(() => (isChanges && activeBlocks ? groupChangeSections(activeBlocks) : null), [isChanges, activeBlocks])
   const changeNotes = useMemo(() => (changeSections ? noteCounts(changeSections, annotations) : null), [changeSections, annotations])
+  // The Changes view keeps blocks with a note out of its folds.
+  const notedBlocks = useMemo(() => new Set(annotations.map((ann) => ann.blockId).filter(Boolean)), [annotations])
   const readViews = useReadViews({ sections: changeSections, review: changesReview })
   const changesNav = useChangesNavigation({ sections: changeSections, expand: changesReview.expand, onCycleView: readViews.cycle })
   // The Read views' blocks join the walkthrough's wherever notes are placed, listed or sent.
@@ -651,7 +653,7 @@ export default function App() {
               crossFileSearch={crossFileSearchProps}
               newIntent={settings.defaultIntent}
               toolHints={settings.toolHints}
-              changes={changeSections ? { ...changesReview, sections: changeSections, select: changesNav.select, read: readViews, agent: agentName(origin) ?? 'the agent' } : null}
+              changes={changeSections ? { ...changesReview, sections: changeSections, select: changesNav.select, read: readViews, noted: notedBlocks, agent: agentName(origin) ?? 'the agent' } : null}
             />
           )}
           {effectiveViewMode === 'source' && (

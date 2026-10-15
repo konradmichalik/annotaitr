@@ -30,7 +30,7 @@ const GROUPS = [
       { label: 'Pinpoint', keys: ['C'], kinds: ['markdown'] },
       { label: 'Other mode while held', keys: ['Shift'], kinds: ['markdown'] },
       { label: 'Insert text at a position', keys: [ALT, 'Click'], kinds: ['markdown'] },
-      { label: 'Diff or Read view of the current file (changes)', keys: ['P'], kinds: ['markdown'] }
+      { label: 'Diff, Read or Changes view of the current file (changes)', keys: ['P'], kinds: ['markdown'] }
     ]
   },
   {

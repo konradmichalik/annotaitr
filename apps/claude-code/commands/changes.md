@@ -86,6 +86,8 @@ Each feedback heading names the note's number, its intent and where it
 points. A note on the diff names the file and the line in it:
 `## 3. Change · Text (new Lines 43-49 in src/Foo.php) [#a3f19c2e]`. `new`
 lines are the code after your change, `old` lines the code that was removed.
+A note on a markdown file the reviewer read rendered works the same way: `old`
+names a block you removed or the version of a block before you changed it.
 A note on your own text, such as the summary or the commit message, names a
 line of the walkthrough instead (`(Line 5)`); its quote shows which part it is.
 With a base, the overview lists the branch's commits: a note on one quotes its

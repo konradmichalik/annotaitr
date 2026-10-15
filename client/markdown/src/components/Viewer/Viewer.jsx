@@ -78,7 +78,7 @@ export const Viewer = forwardRef(function Viewer({
     onEditAnnotation,
     onDeleteAnnotation,
     onSelectAnnotation,
-    exceptSelectors: ['.code-copy-btn', '.annotatable-image-wrapper', '.diagram-render-area', '.diagram-source', '.diagram-controls', '.change-file-header', '.change-overview-label', '.change-why-label', '.change-whole', '.change-read-status'],
+    exceptSelectors: ['.code-copy-btn', '.annotatable-image-wrapper', '.diagram-render-area', '.diagram-source', '.diagram-controls', '.change-file-header', '.change-overview-label', '.change-why-label', '.change-whole', '.change-read-status', '.change-fold', '.round-change-sign'],
     onBeforeHighlight,
     enrichToolbarState,
     refreshAnchor: changes ? refreshAnchor : undefined,
