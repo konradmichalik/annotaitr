@@ -73,7 +73,8 @@ function buildDescendantsMap(headings) {
  * then the contents of the active file with note counts per section, and
  * `footer` (Mark file as reviewed) at the bottom.
  */
-export function TableOfContents({ blocks, annotations = [], collapsed, width, filesSection = null, footer = null, fileName = null }) {
+/** `viewKey` names the view on screen; a new one mounts a new viewer, whose headings the scroll spy observes again. */
+export function TableOfContents({ blocks, annotations = [], collapsed, width, filesSection = null, footer = null, fileName = null, viewKey = null }) {
   const [activeId, setActiveId] = useState(null)
   const [collapsedIds, setCollapsedIds] = useState(() => new Set())
   const observerRef = useRef(null)
@@ -239,7 +240,7 @@ export function TableOfContents({ blocks, annotations = [], collapsed, width, fi
     return () => {
       observerRef.current?.disconnect()
     }
-  }, [collapsed, headings])
+  }, [collapsed, headings, viewKey])
 
   useEffect(() => {
     if (!visibleActiveId || !tocRef.current) {

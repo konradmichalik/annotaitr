@@ -1,6 +1,7 @@
 @import url('../../shared/styles/common.css');
 @import url('./styles/diff.css');
 @import url('./styles/changes.css');
+@import url('./styles/roundDiff.css');
 
 .app-main {
   display: flex;

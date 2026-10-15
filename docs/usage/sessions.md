@@ -78,6 +78,12 @@ tab scrolls to its text, switching file or leaving the source view when
 needed. With several files open the tab groups the threads by file. A general
 comment always keeps its place.
 
+The stored content also lets the next round show what the agent changed in
+a document: **Changes since round N** above the document marks added,
+changed and removed blocks against it (see [Markdown](markdown.md#rounds-and-replies)).
+The browser only receives the stored content of the files under review, and
+only when they changed since.
+
 In the agent's output the heading names where the text is now, or "no longer
 in the document"; the quote line keeps where it was in round N:
 

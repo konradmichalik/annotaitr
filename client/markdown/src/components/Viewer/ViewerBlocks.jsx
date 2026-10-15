@@ -6,7 +6,9 @@ import { MathBlock } from './MathBlock.jsx'
 import { CodeBlock } from './CodeBlock.jsx'
 
 // `diagrams` off renders diagram fences as code, so none of their source goes to a render server.
-function ViewerBlock({ block, annotated, handlers, plantumlServerUrl, krokiServerUrl, inChangeCard = false, diagrams = true, children }) {
+function ViewerBlock({
+  block, annotated, handlers, plantumlServerUrl, krokiServerUrl, inChangeCard = false, earlier = false, diagrams = true, children
+}) {
   const { annotatedImages, annotatedDiagramBlocks, annotatedMathBlocks, noteBlockIds } = annotated
   const hasNote = noteBlockIds.has(block.id)
   const diagramProps = {
@@ -56,6 +58,7 @@ function ViewerBlock({ block, annotated, handlers, plantumlServerUrl, krokiServe
       annotatedImages={annotatedImages}
       hasNote={hasNote}
       onNoteClick={handlers.onNoteClick}
+      earlier={earlier}
     >
       {children}
     </BlockRenderer>

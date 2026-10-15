@@ -1,0 +1,91 @@
+/* Changes since the last round: the switch above the content and the read-only view it shows */
+
+.round-diff-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+}
+
+.round-diff-toggle {
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  font-size: var(--fs-sm);
+}
+
+/* Pressed reads as a heavier outline and weight, never as colour alone. */
+.round-diff-toggle[aria-pressed="true"] {
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
+  font-weight: 600;
+}
+
+.round-diff-counts {
+  font-variant-numeric: tabular-nums;
+}
+
+.round-diff-counts .diff-count-add,
+.round-diff-counts .diff-count-del,
+.round-diff-count-changed {
+  font-weight: 500;
+}
+
+.round-diff-count-changed {
+  color: var(--ink);
+}
+
+.round-change {
+  display: grid;
+  grid-template-columns: var(--space-6) minmax(0, 1fr);
+  margin: var(--space-2) 0;
+  border-left: 3px solid var(--diff-add-text);
+  border-radius: var(--radius-control);
+  background: var(--diff-add);
+}
+
+.round-change-sign {
+  padding-top: var(--space-2);
+  color: var(--diff-add-text);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  text-align: center;
+  user-select: none;
+}
+
+.round-change-body {
+  display: block;
+  min-width: 0;
+  padding: 0 var(--space-3) 0 0;
+}
+
+.round-change ins {
+  display: block;
+  text-decoration: none;
+}
+
+.round-change del {
+  display: block;
+  text-decoration: line-through;
+}
+
+.round-change--removed,
+.round-change-before {
+  border-color: var(--diff-del-text);
+  background: var(--diff-del);
+}
+
+.round-change--removed .round-change-sign {
+  color: var(--diff-del-text);
+}
+
+.round-change-before {
+  margin-bottom: var(--space-2);
+  padding: 0 var(--space-3);
+  border-left: 3px solid var(--diff-del-text);
+  border-radius: var(--radius-control);
+}
