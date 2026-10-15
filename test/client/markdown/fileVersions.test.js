@@ -183,6 +183,16 @@ describe('readViewsOf', () => {
     expect(view.oldBlocks.map((b) => b.id)).toEqual(['old:a.md:block-0', 'old:a.md:block-1', 'old:a.md:block-2'])
   })
 
+  it('numbers every block by its place in the Changes view, the old version of a changed block just before the new one', () => {
+    const changed = ['@@ -1,5 +1,5 @@', ' # Doc', ' ', '-Old text here.', '+New text here.', ' ', ' Same.'].join('\n')
+    const view = readViewsOf([file('a.md', [7])], new Map([['a.md', { diff: changed }]])).get('a.md')
+    const index = Object.fromEntries([...view.blocks, ...view.oldBlocks].map((b) => [b.id, b.entryIndex]))
+    expect(index['read:a.md:block-0']).toBe(1)
+    expect(index['old:a.md:block-1']).toBe(2)
+    expect(index['read:a.md:block-1']).toBe(3)
+    expect(index['read:a.md:block-2']).toBe(5)
+  })
+
   it('sorts after the focus line too when that is the card\'s last', () => {
     const views = readViewsOf([file('a.md', [7], { focusBlock: { startLine: 9 } })], new Map([['a.md', { diff }]]))
     expect(views.get('a.md').blocks[0].sortLine).toBe(9)

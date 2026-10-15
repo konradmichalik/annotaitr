@@ -48,6 +48,9 @@ export function countDiffLines(lines) {
   }
 }
 
+/** `old` for a block of the file as it was in a changes card's Changes view, else `new`. */
+export const sideWord = (block) => (block?.side === 'old' ? 'old' : 'new')
+
 export const countNewlines = (text) => ((text ?? '').match(/\n/g) || []).length
 
 /** A fence info string such as `diff src/Foo.php` holds the language first, then free text. */

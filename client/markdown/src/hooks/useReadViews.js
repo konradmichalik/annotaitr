@@ -29,7 +29,6 @@ function useParsedViews(files, entries) {
   const views = useMemo(() => readViewsOf(files, entries, last.current), [files, entries])
   useEffect(() => { last.current = views }, [views])
   return useMemo(() => ({
-    byPath: new Map([...views].map(([path, view]) => [path, view.blocks])),
     changesByPath: new Map([...views].map(([path, view]) => [path, view.entries])),
     blocks: [...views.values()].flatMap((view) => [...view.blocks, ...view.oldBlocks])
   }), [views])
@@ -62,15 +61,15 @@ export function useReadViews({ sections, review }) {
   const { views, defaultView, setView, rememberView, collapsed, expand } = review
   const files = sections?.files ?? NO_FILES
   const { whole, toggleWhole, closeWhole } = useWholeFiles(full)
-  const { byPath, changesByPath, blocks } = useParsedViews(files, entries)
+  const { changesByPath, blocks } = useParsedViews(files, entries)
 
   const picked = useCallback((file) => fileView(views, file, defaultView), [views, defaultView])
   const viewOf = useCallback((file) => (picked(file) !== 'diff' && entries.get(file.path)?.error ? 'diff' : picked(file)), [picked, entries])
   const statusOf = useCallback((file) => {
-    if (picked(file) === 'diff' || byPath.has(file.path)) { return null }
+    if (picked(file) === 'diff' || changesByPath.has(file.path)) { return null }
     const error = entries.get(file.path)?.error
     return error ? `${error} The diff stays.` : 'Loading the file to read…'
-  }, [picked, byPath, entries])
+  }, [picked, changesByPath, entries])
 
   // A file that opens in Read or Changes by default loads without being asked.
   useEffect(() => {
@@ -112,5 +111,5 @@ export function useReadViews({ sections, review }) {
     return paths.every((path) => entries.has(path) && !entries.get(path).loading)
   }, [load, entries])
 
-  return { full, viewOf, statusOf, byPath, changesByPath, blocks, pick, cycle, reveal, settle, whole, toggleWhole }
+  return { full, viewOf, statusOf, changesByPath, blocks, pick, cycle, reveal, settle, whole, toggleWhole }
 }

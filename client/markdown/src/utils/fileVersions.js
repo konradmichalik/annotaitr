@@ -89,10 +89,26 @@ export const oldBlocks = (path, diff, sortLine) => sideBlocks(OLD_PREFIX, oldFil
 // Read views render below the card's own blocks, so their notes sort after the card's last line.
 const lastLineOf = (file) => Math.max(file.heading.startLine, file.focusBlock?.startLine ?? 0, ...file.blocks.map((b) => b.startLine))
 
+const nodeIds = (node) => [node.block.id, ...(node.children ?? []).flatMap(nodeIds)]
+
+/**
+ * Each block's place in the Changes view: two per entry, the old version just
+ * before the new one, since lines of the old and the new file do not compare.
+ */
+function entryIndexes(entries) {
+  return new Map(entries.flatMap((entry, i) => [
+    ...(entry.before ? nodeIds(entry.before).map((id) => [id, 2 * i]) : []),
+    ...(entry.change === 'removed' ? nodeIds(entry.node).map((id) => [id, 2 * i]) : nodeIds(entry.node).map((id) => [id, 2 * i + 1]))
+  ]))
+}
+
 function viewOf(path, diff, sortLine) {
-  const blocks = readBlocks(path, diff, sortLine)
-  const before = oldBlocks(path, diff, sortLine)
-  return { diff, sortLine, blocks, oldBlocks: before, entries: diffBlocks(before, blocks) }
+  const read = readBlocks(path, diff, sortLine)
+  const old = oldBlocks(path, diff, sortLine)
+  const entries = diffBlocks(old, read)
+  const index = entryIndexes(entries)
+  const placed = (block) => ({ ...block, entryIndex: index.get(block.id) ?? 0 })
+  return { diff, sortLine, blocks: read.map(placed), oldBlocks: old.map(placed), entries }
 }
 
 /**
@@ -121,8 +137,6 @@ export function isOldBlock(blockId) {
   return Boolean(blockId?.startsWith(OLD_PREFIX) && readPathOf(blockId))
 }
 
-const nodeIds = (node) => [node.block.id, ...(node.children ?? []).flatMap(nodeIds)]
-
 /**
  * The unchanged runs the Changes view folds, as `{ from, to, key }` entry
  * indices (`to` exclusive), leaving the blocks next to a change open. A run
@@ -131,13 +145,20 @@ const nodeIds = (node) => [node.block.id, ...(node.children ?? []).flatMap(nodeI
  */
 export function foldRuns(entries, noted) {
   const changedNear = (i) => entries.slice(Math.max(0, i - FOLD_CONTEXT), i + FOLD_CONTEXT + 1).some((e) => e.change !== 'same')
-  const runs = entries.reduce((acc, entry, i) => {
-    if (entry.change !== 'same' || changedNear(i)) { return acc }
-    const last = acc.at(-1)
-    return last?.to === i ? [...acc.slice(0, -1), { from: last.from, to: i + 1 }] : [...acc, { from: i, to: i + 1 }]
-  }, [])
-  const hasNote = (run) => entries.slice(run.from, run.to).some((entry) => nodeIds(entry.node).some((id) => noted.has(id)))
-  return runs
-    .filter((run) => run.to - run.from >= MIN_FOLD && !hasNote(run))
-    .map((run) => ({ ...run, key: entries[run.from].node.block.id }))
+  const hasNote = (entry) => nodeIds(entry.node).some((id) => noted.has(id))
+  const folds = []
+  let from = null
+  let open = false
+  const close = (to) => {
+    if (from !== null && !open && to - from >= MIN_FOLD) { folds.push({ from, to, key: entries[from].node.block.id }) }
+    from = null
+    open = false
+  }
+  entries.forEach((entry, i) => {
+    if (entry.change !== 'same' || changedNear(i)) { close(i); return }
+    if (from === null) { from = i }
+    open = open || hasNote(entry)
+  })
+  close(entries.length)
+  return folds
 }

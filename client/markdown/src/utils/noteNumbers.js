@@ -1,4 +1,4 @@
-import { countNewlines, diffLineRef, splitCodeInfo } from './diffLines.js'
+import { countNewlines, diffLineRef, sideWord, splitCodeInfo } from './diffLines.js'
 
 // Mirrors getBlockOrder and sortAnnotations in server/markdown/feedback.js, so the
 // cards list the notes in the order the feedback the agent reads lists them.
@@ -11,21 +11,19 @@ function lineOf(blockId, blocks) {
   return sourceLine(blockId) ?? blocks.find((block) => block.id === blockId)?.startLine ?? null
 }
 
-/** A note's line, and for a Read view block the line of its card first, then its line in the file. */
+/** A note's line, and for a Read or Changes view block the line of its card, its place in the view, then its line. */
 function blockOrder(blockId, blocks) {
   const block = blocks.find((b) => b.id === blockId)
-  if (block?.sortLine) { return [block.sortLine, block.startLine || 0] }
-  return [lineOf(blockId, blocks) || Infinity, 0]
+  if (block?.sortLine) { return [block.sortLine, block.entryIndex ?? 0, block.startLine || 0] }
+  return [lineOf(blockId, blocks) || Infinity, 0, 0]
 }
 
 export function sortNotes(annotations, blocks) {
-  const orderOf = (ann) => (ann.unanchored ? [Infinity, 0] : blockOrder(ann.blockId, blocks))
+  const orderOf = (ann) => (ann.unanchored ? [Infinity, 0, 0] : blockOrder(ann.blockId, blocks))
   return [...annotations].sort((a, b) => {
-    const [lineA, inFileA] = orderOf(a)
-    const [lineB, inFileB] = orderOf(b)
-    if (lineA !== lineB) { return lineA - lineB }
-    if (inFileA !== inFileB) { return inFileA - inFileB }
-    return a.startOffset - b.startOffset
+    const [orderA, orderB] = [orderOf(a), orderOf(b)]
+    const differing = orderA.findIndex((part, i) => part !== orderB[i])
+    return differing === -1 ? a.startOffset - b.startOffset : orderA[differing] - orderB[differing]
   })
 }
 
@@ -34,7 +32,7 @@ function readLocation(annotation, block) {
   if (!block?.path) { return null }
   const first = (block.startLine || 1) + (block.type === 'code' ? 1 : 0) + countNewlines((block.content ?? '').slice(0, annotation.startOffset))
   const last = first + countNewlines(annotation.originalText)
-  return `${block.path.split('/').pop()} · ${block.side === 'old' ? 'old' : 'new'} L${first === last ? first : `${first}-${last}`}`
+  return `${block.path.split('/').pop()} · ${sideWord(block)} L${first === last ? first : `${first}-${last}`}`
 }
 
 /** Card number per note id: the stable number each note got when it was added. */

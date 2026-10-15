@@ -97,6 +97,21 @@ describe('noteLocation', () => {
   })
 })
 
+describe('Changes view notes', () => {
+  const entry = (id, startLine, side, entryIndex, extra = {}) => ({ id, type: 'paragraph', content: 'x\ny', startLine, path: 'a.md', sortLine: 3, entryIndex, ...(side ? { side } : {}), ...extra })
+
+  it('sorts old and new blocks by where they sit in the view, not by their unrelated line numbers', () => {
+    const view = [entry('read:a.md:block-1', 4, null, 3), entry('old:a.md:block-9', 40, 'old', 4), entry('read:a.md:block-8', 2, null, 5)]
+    const sorted = sortNotes([note('c', 'read:a.md:block-8', 0), note('b', 'old:a.md:block-9', 0), note('a', 'read:a.md:block-1', 0)], [...blocks, ...view])
+    expect(sorted.map((n) => n.id)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('counts an old code block from the line after its fence', () => {
+    const code = [entry('old:a.md:block-2', 10, 'old', 2, { type: 'code', content: 'a\nb' })]
+    expect(noteLocation({ ...note('x', 'old:a.md:block-2', 2), originalText: 'b' }, [...blocks, ...code])).toBe('a.md · old L12')
+  })
+})
+
 describe('sortNotes with Read view notes', () => {
   it('sorts them at their card, by their line in the file', () => {
     const read = [

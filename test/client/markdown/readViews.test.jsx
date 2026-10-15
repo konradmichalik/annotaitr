@@ -119,7 +119,7 @@ describe('useReadViews', () => {
     expect(latest.read.viewOf(fileOf('a.md'))).toBe('read')
     await net.ok('a.md')
     expect(picks).toEqual(['read'])
-    expect(latest.read.byPath.get('a.md')[0].id).toBe('read:a.md:block-0')
+    expect(latest.read.changesByPath.get('a.md')[0].node.block.id).toBe('read:a.md:block-0')
   })
 
   it('stays on Diff when the file cannot be loaded, says so and keeps the default', async () => {
@@ -242,9 +242,9 @@ describe('useReadViews', () => {
     const { net } = renderRead()
     act(() => latest.read.pick('a.md', 'read'))
     await net.ok('a.md')
-    const before = latest.read.byPath.get('a.md')
+    const before = latest.read.changesByPath.get('a.md')
     act(() => latest.read.pick('b.md', 'read'))
     await net.ok('b.md')
-    expect(latest.read.byPath.get('a.md')).toBe(before)
+    expect(latest.read.changesByPath.get('a.md')).toBe(before)
   })
 })
