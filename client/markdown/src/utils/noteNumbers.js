@@ -29,12 +29,12 @@ export function sortNotes(annotations, blocks) {
   })
 }
 
-/** `usage.md · new L14-15` for a note in a changes card's Read view, null for any other note. */
+/** `usage.md · new L14-15` for a note in a changes card's Read or Changes view (`old L8` on the old file), null for any other note. */
 function readLocation(annotation, block) {
   if (!block?.path) { return null }
   const first = (block.startLine || 1) + (block.type === 'code' ? 1 : 0) + countNewlines((block.content ?? '').slice(0, annotation.startOffset))
   const last = first + countNewlines(annotation.originalText)
-  return `${block.path.split('/').pop()} · new L${first === last ? first : `${first}-${last}`}`
+  return `${block.path.split('/').pop()} · ${block.side === 'old' ? 'old' : 'new'} L${first === last ? first : `${first}-${last}`}`
 }
 
 /** Card number per note id: the stable number each note got when it was added. */

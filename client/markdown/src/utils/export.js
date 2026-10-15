@@ -10,8 +10,8 @@ import { sortNotes } from './noteNumbers.js'
 
 const lineRefOf = (startLine, endLine) => (startLine === endLine ? `Line ${startLine}` : `Lines ${startLine}-${endLine}`)
 
-// As in server/markdown/feedback.js: a block of a changes card's Read view counts lines of the new file.
-const inFile = (block, ref) => (block?.path ? `new ${ref} in ${block.path}` : ref)
+// As in server/markdown/feedback.js: a block of a changes card's Read or Changes view counts lines of the new file, or of the old one.
+const inFile = (block, ref) => (block?.path ? `${block.side === 'old' ? 'old' : 'new'} ${ref} in ${block.path}` : ref)
 
 function handleTag(id) {
   const handle = annotationHandle(id)

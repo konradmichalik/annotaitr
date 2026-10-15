@@ -504,6 +504,12 @@ describe('exportFeedback on a Read view block', () => {
     expect(exportFeedback([ann], blocks)).toContain('## 2. Change · Text (new Lines 14-15 in docs/usage.md) [#a3f19c2e]\n')
   })
 
+  it('names the old file line for a block of the old file in the Changes view', () => {
+    const blocks = [makeBlock({ id: 'old:docs/usage.md:block-2', path: 'docs/usage.md', side: 'old', sortLine: 30, content: 'Old line\nmore.', startLine: 9 })]
+    const ann = makeAnnotation({ blockId: 'old:docs/usage.md:block-2', originalText: 'more', startOffset: 9, endOffset: 13 })
+    expect(exportFeedback([ann], blocks)).toContain('## 1. Change · Text (old Line 10 in docs/usage.md)')
+  })
+
   it('counts code from the line after the fence and ignores a diff fence inside the file', () => {
     const blocks = [read({ type: 'code', language: 'diff', content: '@@ -1 +1 @@\n-a\n+b', startLine: 20 })]
     const ann = makeAnnotation({ blockId: 'read:docs/usage.md:block-4', originalText: '+b', startOffset: 15, endOffset: 17 })

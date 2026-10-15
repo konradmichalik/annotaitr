@@ -22,8 +22,9 @@ export function formatApprovalOutput(decision) {
 
 const quoted = (text) => `> ${(text ?? '').replace(/\n/g, '\n> ')}\n`
 
-// A block of a changes card's Read view carries its file's path: its lines are lines of the new file.
-const inFile = (block, ref) => (block?.path ? `new ${ref} in ${block.path}` : ref)
+// A block of a changes card's Read or Changes view carries its file's path: its lines are lines
+// of the new file, or of the old one for a block that side `old` marks as removed or replaced.
+const inFile = (block, ref) => (block?.path ? `${block.side === 'old' ? 'old' : 'new'} ${ref} in ${block.path}` : ref)
 
 const DIAGRAM_NAMES = { plantuml: 'PlantUML diagram' }
 

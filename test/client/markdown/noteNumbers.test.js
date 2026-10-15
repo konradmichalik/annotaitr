@@ -90,6 +90,11 @@ describe('noteLocation', () => {
     const read = [{ id: 'read:docs/usage.md:block-1', type: 'paragraph', content: 'one\ntwo', startLine: 14, path: 'docs/usage.md', sortLine: 5 }]
     expect(noteLocation({ ...note('x', 'read:docs/usage.md:block-1', 0), originalText: 'one\ntwo' }, [...blocks, ...read])).toBe('usage.md · new L14-15')
   })
+
+  it('names the old line for a note on a block of the old file', () => {
+    const old = [{ id: 'old:docs/usage.md:block-1', type: 'paragraph', content: 'gone', startLine: 8, path: 'docs/usage.md', side: 'old', sortLine: 5 }]
+    expect(noteLocation({ ...note('x', 'old:docs/usage.md:block-1', 0), originalText: 'gone' }, [...blocks, ...old])).toBe('usage.md · old L8')
+  })
 })
 
 describe('sortNotes with Read view notes', () => {
