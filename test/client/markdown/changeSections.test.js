@@ -126,6 +126,16 @@ describe('noteCounts', () => {
     expect(counts.overview).toBe(1)
     expect([...counts.byPath]).toEqual([['src/a.js', 2]])
   })
+
+  it('counts notes in the Read view of a file for its path', () => {
+    const sections = groupChangeSections(parseMarkdownToBlocks(walkthrough))
+    const annotations = [
+      { blockId: 'read:docs/new.md:block-0', type: 'COMMENT' },
+      { blockId: 'read:docs/new.md:block-2', type: 'DELETION' },
+      { blockId: 'read:docs/gone.md:block-0', type: 'COMMENT' }
+    ]
+    expect([...noteCounts(sections, annotations).byPath]).toEqual([['docs/new.md', 2]])
+  })
 })
 
 describe('groupChangeSections with groups', () => {

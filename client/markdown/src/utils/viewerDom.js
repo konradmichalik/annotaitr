@@ -1,6 +1,14 @@
 import { isOpenableFileLink } from './links.js'
 import { reanchorAnnotations } from './draftAnchors.js'
 
+/**
+ * The selector of a rendered block. A Read view block id holds its file's
+ * path, so quotes, backslashes and line breaks are escaped for the attribute.
+ */
+export function blockSelector(id) {
+  return `[data-block-id="${String(id).replace(/["\\]/g, '\\$&').replace(/\n/g, '\\a ')}"]`
+}
+
 export function getLinkInfo(el) {
   const linkEl = el.closest('a[data-href]') || el.querySelector('a[data-href]')
   const linkUrl = linkEl?.dataset?.href || null
@@ -97,7 +105,7 @@ function domMeta(container, { node, offset }) {
  * the block is missing or the rendered text from there is not `text`.
  */
 export function textAnchorMetas(container, blockId, startOffset, text) {
-  const blockEl = container?.querySelector(`[data-block-id="${blockId}"]`)
+  const blockEl = container?.querySelector(blockSelector(blockId))
   if (!blockEl) { return null }
   const start = textPointAt(textRootOf(blockEl), startOffset)
   if (!start) { return null }
@@ -159,7 +167,7 @@ const ELEMENT_CHECKS = {
 }
 
 function elementMatches(container, blocks, ann, blockId) {
-  const blockEl = container.querySelector(`[data-block-id="${blockId}"]`)
+  const blockEl = container.querySelector(blockSelector(blockId))
   const check = ELEMENT_CHECKS[ann.targetType]
   return Boolean(blockEl && check?.(blockEl, blocks.find((block) => block.id === blockId), { ...ann, blockId }))
 }
@@ -254,7 +262,7 @@ function findTokenSpan(blockEl, ann) {
 
 /** The rendered element an element-level annotation (image, diagram, math, pinpoint, link, token) points at. */
 export function findAnnotationElement(container, ann) {
-  const blockEl = container?.querySelector(`[data-block-id="${ann.blockId}"]`)
+  const blockEl = container?.querySelector(blockSelector(ann.blockId))
   if (!blockEl) { return null }
   switch (ann.targetType) {
     case 'image':
