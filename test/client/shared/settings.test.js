@@ -19,6 +19,12 @@ describe('mergeSettings', () => {
     expect(mergeSettings(defaults, null, shared).fontSize).toBe(15)
   })
 
+  it('keeps the view a changes card opens in, and drops one no card offers', () => {
+    const withView = { ...defaults, changesView: 'diff' }
+    expect(mergeSettings(withView, JSON.stringify({ changesView: 'read' }), null).changesView).toBe('read')
+    expect(mergeSettings(withView, JSON.stringify({ changesView: 'rendered' }), null).changesView).toBe('diff')
+  })
+
   it('ignores a cookie that is not valid JSON', () => {
     expect(mergeSettings(defaults, '{broken', 'also broken')).toEqual(defaults)
   })

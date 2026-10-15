@@ -6,6 +6,12 @@
 import { intentOf, intentWord } from '../../../shared/utils/intents.js'
 import { annotationHandle } from '../../../shared/utils/annotationId.js'
 import { countNewlines, diffLineRef } from './diffLines.js'
+import { sortNotes } from './noteNumbers.js'
+
+const lineRefOf = (startLine, endLine) => (startLine === endLine ? `Line ${startLine}` : `Lines ${startLine}-${endLine}`)
+
+// As in server/markdown/feedback.js: a block of a changes card's Read view counts lines of the new file.
+const inFile = (block, ref) => (block?.path ? `new ${ref} in ${block.path}` : ref)
 
 function handleTag(id) {
   const handle = annotationHandle(id)
@@ -40,12 +46,7 @@ export function formatAnnotationsForExport(annotations, blocks, filePath) {
     return 'No annotations.'
   }
 
-  const sorted = [...annotations].sort((a, b) => {
-    const blockA = a.unanchored ? Infinity : blocks.findIndex(blk => blk.id === a.blockId)
-    const blockB = b.unanchored ? Infinity : blocks.findIndex(blk => blk.id === b.blockId)
-    if (blockA !== blockB) {return blockA - blockB}
-    return a.startOffset - b.startOffset
-  })
+  const sorted = sortNotes(annotations, blocks)
 
   const globalComments = sorted.filter(a => a.targetType === 'global')
   const regularAnnotations = sorted.filter(a => a.targetType !== 'global')
@@ -74,7 +75,7 @@ export function formatAnnotationsForExport(annotations, blocks, filePath) {
     if (ann.targetType === 'image') {
       const isDeletion = ann.type === 'DELETION'
       const label = isDeletion ? 'Remove image' : 'Comment on image'
-      output += `## ${heading}${label} (Line ${blockStartLine})${tag}\n\n`
+      output += `## ${heading}${label} (${inFile(block, `Line ${blockStartLine}`)})${tag}\n\n`
       output += `Image: \`${ann.originalText}\`\n\n`
       if (ann.imageAlt) { output += `Alt text: "${ann.imageAlt}"\n\n` }
       if (ann.imageSrc) { output += `Source: ${ann.imageSrc}\n\n` }
@@ -88,7 +89,7 @@ export function formatAnnotationsForExport(annotations, blocks, filePath) {
     if (ann.targetType === 'diagram') {
       const isDeletion = ann.type === 'DELETION'
       const label = isDeletion ? 'Remove Mermaid diagram' : 'Comment on Mermaid diagram'
-      output += `## ${heading}${label} (Line ${blockStartLine})${tag}\n\n`
+      output += `## ${heading}${label} (${inFile(block, `Line ${blockStartLine}`)})${tag}\n\n`
       output += `\`\`\`mermaid\n${block?.content || ann.originalText}\n\`\`\`\n\n`
       if (isDeletion) {
         output += `> User wants this diagram removed from the document.\n\n`
@@ -105,8 +106,9 @@ export function formatAnnotationsForExport(annotations, blocks, filePath) {
     const newlinesInSelection = countNewlines(ann.originalText)
     const endLine = startLine + newlinesInSelection
 
-    const lineRef = diffLineRef(block, linesBeforeSelection, linesBeforeSelection + newlinesInSelection) ??
-      (startLine === endLine ? `Line ${startLine}` : `Lines ${startLine}-${endLine}`)
+    const lineRef = block?.path
+      ? inFile(block, lineRefOf(startLine, endLine))
+      : diffLineRef(block, linesBeforeSelection, linesBeforeSelection + newlinesInSelection) ?? lineRefOf(startLine, endLine)
 
     // A restored draft note whose text is gone from the file has no line left to point at.
     const place = ann.unanchored ? '' : ` (${lineRef})`

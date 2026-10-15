@@ -16,7 +16,7 @@ import { formatLabelText } from '../../utils/quickLabels.js'
 import { getItem, setItem } from '../../../../shared/utils/storage.js'
 import { groupHtmlWrappers } from '../../utils/htmlWrappers.js'
 import { isOpenableFileLink } from '../../utils/links.js'
-import { getLinkInfo, removeInsertionMarker, createPersistentInsertionMarker, createTemporaryInsertionMarker, insertionPointAfter, findAnnotationElement, diffLineRange, reanchorToDom } from '../../utils/viewerDom.js'
+import { getLinkInfo, removeInsertionMarker, createPersistentInsertionMarker, createTemporaryInsertionMarker, insertionPointAfter, findAnnotationElement, diffLineRange, reanchorToDom, textAnchorMetas, blockSelector } from '../../utils/viewerDom.js'
 import { createInsertionAnnotation, createTokenAnnotation, createElementAnnotation, getBlockLabel } from '../../utils/viewerAnnotations.js'
 
 const PINPOINT_HINT_LEARNED_KEY = 'md-annotator-pinpoint-hint-learned'
@@ -52,6 +52,13 @@ export const Viewer = forwardRef(function Viewer({
 
   const enrichToolbarState = useCallback((element) => getLinkInfo(element), [])
 
+  // Highlights are stored by element index in the article, which a Read view mounted above shifts.
+  // In changes the stored text and offset place a restored note instead.
+  const refreshAnchor = useCallback((ann) => {
+    if (!ann.blockId || !ann.originalText) { return null }
+    return textAnchorMetas(containerRef.current, ann.blockId, ann.startOffset, ann.originalText)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const {
     containerRef,
     highlighterRef,
@@ -71,11 +78,12 @@ export const Viewer = forwardRef(function Viewer({
     onEditAnnotation,
     onDeleteAnnotation,
     onSelectAnnotation,
-    exceptSelectors: ['.code-copy-btn', '.annotatable-image-wrapper', '.diagram-render-area', '.diagram-source', '.diagram-controls', '.change-file-header', '.change-overview-label', '.change-why-label', '.change-whole'],
+    exceptSelectors: ['.code-copy-btn', '.annotatable-image-wrapper', '.diagram-render-area', '.diagram-source', '.diagram-controls', '.change-file-header', '.change-overview-label', '.change-why-label', '.change-whole', '.change-read-status'],
     onBeforeHighlight,
     enrichToolbarState,
+    refreshAnchor: changes ? refreshAnchor : undefined,
     restoreInsertion: (ann) => {
-      const blockEl = containerRef.current?.querySelector(`[data-block-id="${ann.blockId}"]`)
+      const blockEl = containerRef.current?.querySelector(blockSelector(ann.blockId))
       if (!blockEl) { return false }
       if (!blockEl.querySelector(`[data-insertion-id="${ann.id}"]`)) {
         createPersistentInsertionMarker(ann.id, blockEl, ann.startOffset, ann.number)
@@ -129,7 +137,7 @@ export const Viewer = forwardRef(function Viewer({
       removeInsertionMarker(toolbarState.element)
       if (insertionText) {
         const newAnnotation = createInsertionAnnotation(toolbarState.insertionData, insertionText)
-        const blockEl = containerRef.current?.querySelector(`[data-block-id="${newAnnotation.blockId}"]`)
+        const blockEl = containerRef.current?.querySelector(blockSelector(newAnnotation.blockId))
         if (blockEl) {
           createPersistentInsertionMarker(newAnnotation.id, blockEl, newAnnotation.startOffset)
         }
@@ -338,7 +346,8 @@ export const Viewer = forwardRef(function Viewer({
     const anchor = e.target.closest('a[href]')
     if (anchor) {
       const href = anchor.getAttribute('href')
-      if (isOpenableFileLink(href)) {
+      // A walkthrough serves no files next to it, so a link to a file opens nothing there.
+      if (isOpenableFileLink(href) && !changes) {
         e.preventDefault()
         onOpenFile?.(href)
       }
@@ -384,7 +393,7 @@ export const Viewer = forwardRef(function Viewer({
     }
     setRequestedToolbarStep(null)
     setPinpointTarget({ element: blockEl, label: getBlockLabel(blocks.find(b => b.id === blockId)) })
-  }, [pinpointMode, onSelectAnnotation, onOpenFile, blocks, clearPendingSource, containerRef, setToolbarState, setRequestedToolbarStep])
+  }, [pinpointMode, onSelectAnnotation, onOpenFile, changes, blocks, clearPendingSource, containerRef, setToolbarState, setRequestedToolbarStep])
 
   // --- Token-level selection in code blocks ---
   const handleTokenSelect = useCallback(({ blockId, element, tokenText, charStart, charEnd }) => {
@@ -492,7 +501,7 @@ export const Viewer = forwardRef(function Viewer({
           editAnnotation={toolbarState?.mode === 'edit' ? toolbarState.annotation : null}
           elementMode={toolbarState?.elementMode || false}
           insertionMode={toolbarState?.insertionMode || false}
-          linkUrl={toolbarState?.linkUrl || null}
+          linkUrl={toolbarState?.linkIsOpenable && changes ? null : toolbarState?.linkUrl || null}
           onOpenLink={toolbarState?.linkIsOpenable ? onOpenFile : null}
           newIntent={newIntent}
         />

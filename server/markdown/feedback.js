@@ -22,6 +22,9 @@ export function formatApprovalOutput(decision) {
 
 const quoted = (text) => `> ${(text ?? '').replace(/\n/g, '\n> ')}\n`
 
+// A block of a changes card's Read view carries its file's path: its lines are lines of the new file.
+const inFile = (block, ref) => (block?.path ? `new ${ref} in ${block.path}` : ref)
+
 const DIAGRAM_NAMES = { plantuml: 'PlantUML diagram' }
 
 /** The element a note points at, as named in its heading, and what a removal of it says. */
@@ -57,13 +60,14 @@ function describeAnnotation(ann, block) {
     const body = elementBody(ann, block) + (ann.type === 'DELETION'
       ? `> User wants this ${element.removed} removed from the document.\n`
       : quoted(ann.text))
-    return { what: element.name(block), where: `Line ${blockStartLine}`, body }
+    return { what: element.name(block), where: inFile(block, `Line ${blockStartLine}`), body }
   }
 
   if (ann.targetType === 'token') {
     const lineOffset = countNewlines((block?.content || '').slice(0, ann.startOffset))
     const body = `Token: \`${ann.originalText}\`\n` + (ann.type === 'DELETION' ? '> User wants this token removed.\n' : quoted(ann.text))
-    return { what: 'Token', where: diffLineRef(block, lineOffset, lineOffset) ?? `Line ${contentStartLine + lineOffset}`, body }
+    const inDiff = block?.path ? null : diffLineRef(block, lineOffset, lineOffset)
+    return { what: 'Token', where: inDiff ?? inFile(block, `Line ${contentStartLine + lineOffset}`), body }
   }
 
   // A source view note's blockId is "source-line-N" (0-indexed); any other selection counts lines inside its block.
@@ -73,8 +77,8 @@ function describeAnnotation(ann, block) {
     ? (sourceMatch ? parseInt(sourceMatch[1], 10) + 1 : 1)
     : contentStartLine + lineOffset
   const endLine = startLine + countNewlines(ann.originalText)
-  const inDiff = ann.targetType === 'source' ? null : diffLineRef(block, lineOffset, lineOffset + countNewlines(ann.originalText))
-  const where = inDiff ?? `${lineRefOf(startLine, endLine)}${ann.targetType === 'source' ? ', source' : ''}`
+  const inDiff = ann.targetType === 'source' || block?.path ? null : diffLineRef(block, lineOffset, lineOffset + countNewlines(ann.originalText))
+  const where = inDiff ?? (ann.targetType === 'source' ? `${lineRefOf(startLine, endLine)}, source` : inFile(block, lineRefOf(startLine, endLine)))
 
   if (ann.type === 'INSERTION') {
     const after = ann.afterContext ? `After: \`${ann.afterContext}\`\n` : ''
@@ -120,19 +124,26 @@ function formatGlobalComment(ann, heading) {
   return `${heading} General comment${handleTag}\n> ${(ann.text ?? '').replace(/\n/g, '\n> ')}\n\n`
 }
 
+/**
+ * Where a note sorts: its block's line, and for a Read view block the line of
+ * its card first, then its line in the file.
+ */
 function getBlockOrder(blockId, blocks) {
   const sourceMatch = blockId?.match(/^source-line-(\d+)$/)
-  if (sourceMatch) { return parseInt(sourceMatch[1], 10) + 1 }
+  if (sourceMatch) { return [parseInt(sourceMatch[1], 10) + 1, 0] }
   const block = blocks.find(blk => blk.id === blockId)
-  if (block?.startLine) { return block.startLine }
-  return Infinity
+  if (block?.sortLine) { return [block.sortLine, block.startLine || 0] }
+  if (block?.startLine) { return [block.startLine, 0] }
+  return [Infinity, 0]
 }
 
 function sortAnnotations(annotations, blocks) {
+  const orderOf = (ann) => (ann.unanchored ? [Infinity, 0] : getBlockOrder(ann.blockId, blocks))
   return [...annotations].sort((a, b) => {
-    const blockA = a.unanchored ? Infinity : getBlockOrder(a.blockId, blocks)
-    const blockB = b.unanchored ? Infinity : getBlockOrder(b.blockId, blocks)
-    if (blockA !== blockB) {return blockA - blockB}
+    const [lineA, inFileA] = orderOf(a)
+    const [lineB, inFileB] = orderOf(b)
+    if (lineA !== lineB) {return lineA - lineB}
+    if (inFileA !== inFileB) {return inFileA - inFileB}
     return a.startOffset - b.startOffset
   })
 }

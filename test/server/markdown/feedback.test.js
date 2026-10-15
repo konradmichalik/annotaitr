@@ -493,3 +493,42 @@ describe('exportFeedback in a plain alert', () => {
     expect(exportFeedback([ann], blocks)).toContain('## 1. Change · Text (Line 4)')
   })
 })
+
+describe('exportFeedback on a Read view block', () => {
+  // The Read view of a changed markdown file, whose card sits at line 30 of the walkthrough.
+  const read = (overrides) => makeBlock({ id: 'read:docs/usage.md:block-4', path: 'docs/usage.md', sortLine: 30, ...overrides })
+
+  it('names the new file line and the path', () => {
+    const blocks = [read({ content: 'First line\nsecond line.', startLine: 14 })]
+    const ann = makeAnnotation({ id: 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d', blockId: 'read:docs/usage.md:block-4', number: 2, originalText: 'line\nsecond', startOffset: 6, endOffset: 17 })
+    expect(exportFeedback([ann], blocks)).toContain('## 2. Change · Text (new Lines 14-15 in docs/usage.md) [#a3f19c2e]\n')
+  })
+
+  it('counts code from the line after the fence and ignores a diff fence inside the file', () => {
+    const blocks = [read({ type: 'code', language: 'diff', content: '@@ -1 +1 @@\n-a\n+b', startLine: 20 })]
+    const ann = makeAnnotation({ blockId: 'read:docs/usage.md:block-4', originalText: '+b', startOffset: 15, endOffset: 17 })
+    expect(exportFeedback([ann], blocks)).toContain('## 1. Change · Text (new Line 23 in docs/usage.md)')
+  })
+
+  it('names the new line of a pinpointed block', () => {
+    const blocks = [read({ startLine: 9 })]
+    const ann = makeAnnotation({ blockId: 'read:docs/usage.md:block-4', targetType: 'pinpoint' })
+    expect(exportFeedback([ann], blocks)).toContain('## 1. Change · Block (new Line 9 in docs/usage.md)')
+  })
+
+  it('sorts Read notes at their card, by their line in the file', () => {
+    const blocks = [
+      makeBlock({ id: 'block-1', startLine: 10, content: 'Before' }),
+      makeBlock({ id: 'block-9', startLine: 40, content: 'After' }),
+      read({ id: 'read:docs/usage.md:block-1', startLine: 3, content: 'Early' }),
+      read({ id: 'read:docs/usage.md:block-7', startLine: 50, content: 'Late' })
+    ]
+    const note = (blockId, originalText) => makeAnnotation({ id: `n-${originalText}`, blockId, originalText, endOffset: originalText.length })
+    const output = exportFeedback([
+      note('block-9', 'After'), note('read:docs/usage.md:block-7', 'Late'),
+      note('read:docs/usage.md:block-1', 'Early'), note('block-1', 'Before')
+    ], blocks)
+    const order = ['Before', 'Early', 'Late', 'After'].map((text) => output.indexOf(`\`\`\`\n${text}\n`))
+    expect(order.every((at, i) => at > (order[i - 1] ?? -1))).toBe(true)
+  })
+})

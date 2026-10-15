@@ -11,17 +11,30 @@ function lineOf(blockId, blocks) {
   return sourceLine(blockId) ?? blocks.find((block) => block.id === blockId)?.startLine ?? null
 }
 
+/** A note's line, and for a Read view block the line of its card first, then its line in the file. */
 function blockOrder(blockId, blocks) {
-  return lineOf(blockId, blocks) || Infinity
+  const block = blocks.find((b) => b.id === blockId)
+  if (block?.sortLine) { return [block.sortLine, block.startLine || 0] }
+  return [lineOf(blockId, blocks) || Infinity, 0]
 }
 
 export function sortNotes(annotations, blocks) {
+  const orderOf = (ann) => (ann.unanchored ? [Infinity, 0] : blockOrder(ann.blockId, blocks))
   return [...annotations].sort((a, b) => {
-    const blockA = a.unanchored ? Infinity : blockOrder(a.blockId, blocks)
-    const blockB = b.unanchored ? Infinity : blockOrder(b.blockId, blocks)
-    if (blockA !== blockB) { return blockA - blockB }
+    const [lineA, inFileA] = orderOf(a)
+    const [lineB, inFileB] = orderOf(b)
+    if (lineA !== lineB) { return lineA - lineB }
+    if (inFileA !== inFileB) { return inFileA - inFileB }
     return a.startOffset - b.startOffset
   })
+}
+
+/** `usage.md · new L14-15` for a note in a changes card's Read view, null for any other note. */
+function readLocation(annotation, block) {
+  if (!block?.path) { return null }
+  const first = (block.startLine || 1) + (block.type === 'code' ? 1 : 0) + countNewlines((block.content ?? '').slice(0, annotation.startOffset))
+  const last = first + countNewlines(annotation.originalText)
+  return `${block.path.split('/').pop()} · new L${first === last ? first : `${first}-${last}`}`
 }
 
 /** Card number per note id: the stable number each note got when it was added. */
@@ -50,6 +63,9 @@ function diffLocation(annotation, blocks) {
 export function noteLocation(annotation, blocks) {
   const line = lineOf(annotation.blockId, blocks)
   if (!line) { return null }
+  const block = blocks.find((b) => b.id === annotation.blockId)
+  const inRead = readLocation(annotation, block)
+  if (inRead) { return inRead }
   const inDiff = diffLocation(annotation, blocks)
   if (inDiff) { return inDiff }
   const heading = blocks.filter((block) => block.type === 'heading' && block.startLine <= line).at(-1)
