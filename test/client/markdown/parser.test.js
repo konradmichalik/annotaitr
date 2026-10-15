@@ -540,6 +540,17 @@ describe('parseMarkdownToBlocks', () => {
       expect(blocks).toHaveLength(1)
       expect(blocks[0].content.split('\n')).toHaveLength(4)
     })
+
+    it('keeps a line with pipes but no delimiter row as a paragraph', () => {
+      const blocks = parseMarkdownToBlocks('Editors set mit || im Feld einen Umbruch.')
+      expect(blocks).toHaveLength(1)
+      expect(blocks[0].type).toBe('paragraph')
+    })
+
+    it('does not take a pipe line above a bare rule for a table header', () => {
+      const blocks = parseMarkdownToBlocks('a | b\n---')
+      expect(blocks.map((block) => block.type)).toEqual(['paragraph', 'hr'])
+    })
   })
 
   describe('html blocks', () => {

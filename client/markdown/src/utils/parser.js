@@ -41,6 +41,9 @@ function rebaseBlocks(inner, firstId, lineOffset, parentId) {
   })
 }
 
+// A table needs its delimiter row (`|---|---|`), so a stray `||` in prose stays text.
+const TABLE_DELIMITER_ROW = /^(?=.*\|)\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/
+
 const NESTING_TYPES = new Set(['code', 'blockquote', 'alert', 'math'])
 
 /**
@@ -287,7 +290,7 @@ export function parseMarkdownToBlocks(markdown, { allowFrontmatter = true } = {}
     }
 
     // Tables
-    if (trimmed.startsWith('|') || (trimmed.includes('|') && trimmed.match(/^\|?.+\|.+\|?$/))) {
+    if (trimmed.includes('|') && TABLE_DELIMITER_ROW.test(lines[i + 1] ?? '')) {
       flush()
       const tableStartLine = currentLineNum
       const tableLines = [line]
