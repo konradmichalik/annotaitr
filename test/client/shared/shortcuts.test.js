@@ -20,8 +20,8 @@ describe('shortcutGroups', () => {
   })
 
   it('lists the key that switches a changes card between Diff and Read', () => {
-    expect(labels('markdown', 'read')).toEqual(['Diff or Read view of the current file (changes)'])
-    expect(labels('image')).not.toContain('Diff or Read view of the current file (changes)')
+    expect(labels('markdown', 'read')).toEqual(['Diff, Read or Changes view of the current file (changes)'])
+    expect(labels('image')).not.toContain('Diff, Read or Changes view of the current file (changes)')
   })
 
   it('lists the note stepping keys in every mode', () => {

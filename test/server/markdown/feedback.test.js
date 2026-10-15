@@ -504,6 +504,27 @@ describe('exportFeedback on a Read view block', () => {
     expect(exportFeedback([ann], blocks)).toContain('## 2. Change · Text (new Lines 14-15 in docs/usage.md) [#a3f19c2e]\n')
   })
 
+  it('names the old file line for a block of the old file in the Changes view', () => {
+    const blocks = [makeBlock({ id: 'old:docs/usage.md:block-2', path: 'docs/usage.md', side: 'old', sortLine: 30, content: 'Old line\nmore.', startLine: 9 })]
+    const ann = makeAnnotation({ blockId: 'old:docs/usage.md:block-2', originalText: 'more', startOffset: 9, endOffset: 13 })
+    expect(exportFeedback([ann], blocks)).toContain('## 1. Change · Text (old Line 10 in docs/usage.md)')
+  })
+
+  it('counts an old code block from the line after its fence too', () => {
+    const blocks = [makeBlock({ id: 'old:docs/usage.md:block-2', path: 'docs/usage.md', side: 'old', sortLine: 30, type: 'code', language: 'js', content: 'a\nb', startLine: 20 })]
+    const ann = makeAnnotation({ blockId: 'old:docs/usage.md:block-2', originalText: 'b', startOffset: 2, endOffset: 3 })
+    expect(exportFeedback([ann], blocks)).toContain('(old Line 22 in docs/usage.md)')
+  })
+
+  it('orders notes in the Changes view by their place in it, old and new blocks alike', () => {
+    const at = (id, startLine, entryIndex, side) => read({ id, content: 'x', startLine, entryIndex, ...(side ? { side } : {}) })
+    const blocks = [at('read:docs/usage.md:block-1', 4, 3), at('old:docs/usage.md:block-9', 40, 4, 'old'), at('read:docs/usage.md:block-8', 2, 5)]
+    const note = (blockId, text) => makeAnnotation({ blockId, originalText: 'x', startOffset: 0, endOffset: 1, text })
+    const out = exportFeedback([note('read:docs/usage.md:block-8', 'c'), note('old:docs/usage.md:block-9', 'b'), note('read:docs/usage.md:block-1', 'a')], blocks)
+    expect(out.indexOf('> a')).toBeLessThan(out.indexOf('> b'))
+    expect(out.indexOf('> b')).toBeLessThan(out.indexOf('> c'))
+  })
+
   it('counts code from the line after the fence and ignores a diff fence inside the file', () => {
     const blocks = [read({ type: 'code', language: 'diff', content: '@@ -1 +1 @@\n-a\n+b', startLine: 20 })]
     const ann = makeAnnotation({ blockId: 'read:docs/usage.md:block-4', originalText: '+b', startOffset: 15, endOffset: 17 })

@@ -12,7 +12,7 @@ const ALLOWED = {
   theme: ['light', 'dark', 'auto'],
   autoCloseDelay: ['off', '0', '3', '5'],
   defaultIntent: INTENTS.map((intent) => intent.id),
-  changesView: ['diff', 'read']
+  changesView: ['diff', 'read', 'changes']
 }
 
 function parse(raw) {

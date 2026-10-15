@@ -22,8 +22,9 @@ export function formatApprovalOutput(decision) {
 
 const quoted = (text) => `> ${(text ?? '').replace(/\n/g, '\n> ')}\n`
 
-// A block of a changes card's Read view carries its file's path: its lines are lines of the new file.
-const inFile = (block, ref) => (block?.path ? `new ${ref} in ${block.path}` : ref)
+// A block of a changes card's Read or Changes view carries its file's path: its lines are lines
+// of the new file, or of the old one for a block that side `old` marks as removed or replaced.
+const inFile = (block, ref) => (block?.path ? `${block.side === 'old' ? 'old' : 'new'} ${ref} in ${block.path}` : ref)
 
 const DIAGRAM_NAMES = { plantuml: 'PlantUML diagram' }
 
@@ -125,26 +126,25 @@ function formatGlobalComment(ann, heading) {
 }
 
 /**
- * Where a note sorts: its block's line, and for a Read view block the line of
- * its card first, then its line in the file.
+ * Where a note sorts: its block's line, and for a Read or Changes view block the
+ * line of its card first, then its place in the view (old and new lines do not
+ * compare), then its line in the file.
  */
 function getBlockOrder(blockId, blocks) {
   const sourceMatch = blockId?.match(/^source-line-(\d+)$/)
-  if (sourceMatch) { return [parseInt(sourceMatch[1], 10) + 1, 0] }
+  if (sourceMatch) { return [parseInt(sourceMatch[1], 10) + 1, 0, 0] }
   const block = blocks.find(blk => blk.id === blockId)
-  if (block?.sortLine) { return [block.sortLine, block.startLine || 0] }
-  if (block?.startLine) { return [block.startLine, 0] }
-  return [Infinity, 0]
+  if (block?.sortLine) { return [block.sortLine, block.entryIndex ?? 0, block.startLine || 0] }
+  if (block?.startLine) { return [block.startLine, 0, 0] }
+  return [Infinity, 0, 0]
 }
 
 function sortAnnotations(annotations, blocks) {
-  const orderOf = (ann) => (ann.unanchored ? [Infinity, 0] : getBlockOrder(ann.blockId, blocks))
+  const orderOf = (ann) => (ann.unanchored ? [Infinity, 0, 0] : getBlockOrder(ann.blockId, blocks))
   return [...annotations].sort((a, b) => {
-    const [lineA, inFileA] = orderOf(a)
-    const [lineB, inFileB] = orderOf(b)
-    if (lineA !== lineB) {return lineA - lineB}
-    if (inFileA !== inFileB) {return inFileA - inFileB}
-    return a.startOffset - b.startOffset
+    const [orderA, orderB] = [orderOf(a), orderOf(b)]
+    const differing = orderA.findIndex((part, i) => part !== orderB[i])
+    return differing === -1 ? a.startOffset - b.startOffset : orderA[differing] - orderB[differing]
   })
 }
 

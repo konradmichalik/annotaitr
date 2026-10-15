@@ -1,5 +1,6 @@
 import { isOpenableFileLink } from './links.js'
 import { reanchorAnnotations } from './draftAnchors.js'
+import { isOldBlock } from './fileVersions.js'
 
 /**
  * The selector of a rendered block. A Read view block id holds its file's
@@ -74,9 +75,14 @@ function textPointAt(root, offset) {
   return null
 }
 
-/** Reads `length` characters on from a point, across blocks as a range does, and where they end. */
+// Text a selection never takes: parts of a changes card that are switched off, and labels for screen readers.
+export const OFF_TEXT = '.is-off, .visually-hidden'
+
+/** Reads `length` characters on from a point, across blocks as a range does but without switched off text, and where they end. */
 function readFrom(container, start, length) {
-  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) => (node.parentElement?.closest(OFF_TEXT) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT)
+  })
   walker.currentNode = start.node
   let text = start.node.data.slice(start.offset, start.offset + length)
   let end = { node: start.node, offset: start.offset + text.length }
@@ -179,7 +185,10 @@ function elementMatches(container, blocks, ann, blockId) {
  */
 export function reanchorToDom(container, blocks, annotations) {
   const matches = (ann, blockId) => elementMatches(container, blocks, ann, blockId)
-  return reanchorAnnotations(annotations, blockTexts(container), matches).map((ann) => {
+  const texts = blockTexts(container)
+  // A note on the old file looks among old blocks only, any other among the rest: both can hold the same words.
+  const textsFor = (ann) => texts.filter((block) => isOldBlock(block.id) === isOldBlock(ann.blockId))
+  return annotations.map((ann) => reanchorAnnotations([ann], textsFor(ann), matches)[0]).map((ann) => {
     if (ann.unanchored || ann.targetType || ann.type === 'NOTES' || ann.type === 'INSERTION' || !ann.originalText) { return ann }
     const metas = textAnchorMetas(container, ann.blockId, ann.startOffset, ann.originalText)
     return metas ? { ...ann, ...metas } : { ...ann, unanchored: true }

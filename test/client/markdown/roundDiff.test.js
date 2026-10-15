@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { diffRounds, roundDiffCounts, roundDiffOf, shownView } from '../../../client/markdown/src/utils/roundDiff.js'
+import { diffBlocks, diffRounds, roundDiffCounts, roundDiffOf, shownView } from '../../../client/markdown/src/utils/roundDiff.js'
 import { parseMarkdownToBlocks } from '../../../client/markdown/src/utils/parser.js'
 
 const diff = (before, after) => diffRounds(parseMarkdownToBlocks(before), parseMarkdownToBlocks(after))
@@ -72,6 +72,12 @@ describe('diffRounds', () => {
     const entries = diff('One step.\n', 'One step more.\n')
     expect(entries[0].node.block.id).toBe('block-0')
     expect(entries[0].before.block.id).toBe('earlier-block-0')
+  })
+
+  it('compares blocks that carry their own ids, a path and a side, by what they say only', () => {
+    const tag = (blocks, prefix, extra) => blocks.map((b) => ({ ...b, id: `${prefix}${b.id}`, path: 'a.md', sortLine: 4, ...extra }))
+    const entries = diffBlocks(tag(parseMarkdownToBlocks('# Plan\n\nOne.\n'), 'old:', { side: 'old' }), tag(parseMarkdownToBlocks('# Plan\n\nTwo.\n'), 'read:', {}))
+    expect(entries.map((e) => [e.change, e.node.block.id])).toEqual([['same', 'read:block-0'], ['removed', 'old:block-1'], ['added', 'read:block-1']])
   })
 
   it('keeps a long document with one edit fast and exact by setting the common start and end aside', () => {

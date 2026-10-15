@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useFullDiffs } from './useFullDiffs.js'
-import { canRead, fileView, readPathOf, readViewsOf } from '../utils/fileVersions.js'
+import { canRead, fileView, isOldBlock, nextView, readPathOf, readViewsOf } from '../utils/fileVersions.js'
 import { isDiffBlock } from '../utils/changeSections.js'
 
 const NO_FILES = []
@@ -23,28 +23,37 @@ function useWholeFiles({ entries, load }) {
   return { whole, toggleWhole, closeWhole }
 }
 
-/** Parsed Read views by path; a file whose diff did not change keeps its blocks. */
+/** Parsed Read and Changes views by path; a file whose diff did not change keeps its blocks. */
 function useParsedViews(files, entries) {
   const last = useRef(new Map())
   const views = useMemo(() => readViewsOf(files, entries, last.current), [files, entries])
   useEffect(() => { last.current = views }, [views])
-  return useMemo(() => new Map([...views].map(([path, view]) => [path, view.blocks])), [views])
+  return useMemo(() => ({
+    changesByPath: new Map([...views].map(([path, view]) => [path, view.entries])),
+    blocks: [...views.values()].flatMap((view) => [...view.blocks, ...view.oldBlocks])
+  }), [views])
 }
 
 const fileOfBlock = (files, blockId) => files.find((f) =>
   f.path === readPathOf(blockId) || f.heading.id === blockId || f.focusBlock?.id === blockId || f.blocks.some((b) => b.id === blockId))
 
-/** The view a note needs to be seen: Read for a note in it, Diff for one on the hunks, else none. */
-function viewFor(file, blockId) {
-  if (readPathOf(blockId)) { return 'read' }
+/**
+ * The view a note needs to be seen: Changes for one on the old file, Read for
+ * one on the new file unless Changes already shows it, Diff for one on the
+ * hunks, else none.
+ */
+function viewFor(file, blockId, shown) {
+  if (isOldBlock(blockId)) { return 'changes' }
+  if (readPathOf(blockId)) { return shown === 'changes' ? 'changes' : 'read' }
   return file.blocks.some((b) => b.id === blockId && isDiffBlock(b)) ? 'diff' : null
 }
 
 /**
- * The Diff and Read views of a walkthrough's markdown files, and Whole file. A
- * Read view stays mounted once its file has loaded, hidden while Diff is shown,
- * so the highlights in it and in the cards below keep their place. A file that
- * cannot be loaded shows its diff and says why in `statusOf`.
+ * The Diff, Read and Changes views of a walkthrough's markdown files, and
+ * Whole file. Read and Changes are one rendering that stays mounted once its
+ * file has loaded, hidden while Diff is shown, so the highlights in it and in
+ * the cards below keep their place. A file that cannot be loaded shows its
+ * diff and says why in `statusOf`.
  */
 export function useReadViews({ sections, review }) {
   const full = useFullDiffs()
@@ -52,32 +61,31 @@ export function useReadViews({ sections, review }) {
   const { views, defaultView, setView, rememberView, collapsed, expand } = review
   const files = sections?.files ?? NO_FILES
   const { whole, toggleWhole, closeWhole } = useWholeFiles(full)
-  const byPath = useParsedViews(files, entries)
-  const blocks = useMemo(() => [...byPath.values()].flat(), [byPath])
+  const { changesByPath, blocks } = useParsedViews(files, entries)
 
   const picked = useCallback((file) => fileView(views, file, defaultView), [views, defaultView])
-  const viewOf = useCallback((file) => (picked(file) === 'read' && entries.get(file.path)?.error ? 'diff' : picked(file)), [picked, entries])
+  const viewOf = useCallback((file) => (picked(file) !== 'diff' && entries.get(file.path)?.error ? 'diff' : picked(file)), [picked, entries])
   const statusOf = useCallback((file) => {
-    if (picked(file) !== 'read' || byPath.has(file.path)) { return null }
+    if (picked(file) === 'diff' || changesByPath.has(file.path)) { return null }
     const error = entries.get(file.path)?.error
     return error ? `${error} The diff stays.` : 'Loading the file to read…'
-  }, [picked, byPath, entries])
+  }, [picked, changesByPath, entries])
 
-  // A file that opens in Read by default loads without being asked.
+  // A file that opens in Read or Changes by default loads without being asked.
   useEffect(() => {
-    files.filter((file) => picked(file) === 'read').forEach((file) => load(file.path))
+    files.filter((file) => picked(file) !== 'diff').forEach((file) => load(file.path))
   }, [files, picked, load])
 
   const pick = useCallback((path, view, remember = true) => {
     setView(path, view, remember && view === 'diff')
-    if (view !== 'read') { return }
-    load(path).then((entry) => { if (remember && typeof entry.diff === 'string') { rememberView('read') } })
+    if (view === 'diff') { return }
+    load(path).then((entry) => { if (remember && typeof entry.diff === 'string') { rememberView(view) } })
   }, [setView, rememberView, load])
 
   const cycle = useCallback((path) => {
     const file = files.find((f) => f.path === path)
     if (!canRead(file)) { return false }
-    pick(path, viewOf(file) === 'read' ? 'diff' : 'read')
+    pick(path, nextView(viewOf(file)))
     return true
   }, [files, viewOf, pick])
 
@@ -85,7 +93,7 @@ export function useReadViews({ sections, review }) {
   const reveal = useCallback((ann) => {
     const file = fileOfBlock(files, ann?.blockId)
     if (!file) { return false }
-    const wanted = viewFor(file, ann.blockId)
+    const wanted = viewFor(file, ann.blockId, viewOf(file))
     const switchView = wanted !== null && canRead(file) && viewOf(file) !== wanted
     const leaveWhole = wanted === 'diff' && whole.has(file.path)
     const open = collapsed.has(file.path)
@@ -103,5 +111,5 @@ export function useReadViews({ sections, review }) {
     return paths.every((path) => entries.has(path) && !entries.get(path).loading)
   }, [load, entries])
 
-  return { full, viewOf, statusOf, byPath, blocks, pick, cycle, reveal, settle, whole, toggleWhole }
+  return { full, viewOf, statusOf, changesByPath, blocks, pick, cycle, reveal, settle, whole, toggleWhole }
 }

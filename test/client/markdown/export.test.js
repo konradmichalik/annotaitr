@@ -322,6 +322,18 @@ describe('formatAnnotationsForExport on a Read view block', () => {
     expect(formatAnnotationsForExport([ann], blocks, 'changes.md')).toContain('## 2. Change · Comment (new Lines 14-15 in docs/usage.md)')
   })
 
+  it('names the old file line for a block of the old file in the Changes view', () => {
+    const blocks = [read({ id: 'old:docs/usage.md:block-2', side: 'old', content: 'Old line\nmore.', startLine: 9 })]
+    const ann = makeAnnotation({ blockId: 'old:docs/usage.md:block-2', originalText: 'more', startOffset: 9, endOffset: 13 })
+    expect(formatAnnotationsForExport([ann], blocks, 'changes.md')).toContain('(old Line 10 in docs/usage.md)')
+  })
+
+  it('counts an old code block from the line after its fence too', () => {
+    const blocks = [read({ id: 'old:docs/usage.md:block-2', side: 'old', type: 'code', language: 'js', content: 'a\nb', startLine: 20 })]
+    const ann = makeAnnotation({ blockId: 'old:docs/usage.md:block-2', originalText: 'b', startOffset: 2, endOffset: 3 })
+    expect(formatAnnotationsForExport([ann], blocks, 'changes.md')).toContain('(old Line 22 in docs/usage.md)')
+  })
+
   it('names the new file line for an image or a diagram, as the agent\'s feedback does', () => {
     const blocks = [read({ content: '![Logo](logo.png)', startLine: 7 }), read({ id: 'read:docs/usage.md:block-5', type: 'code', language: 'mermaid', content: 'graph TD', startLine: 9 })]
     const image = makeAnnotation({ blockId: 'read:docs/usage.md:block-4', targetType: 'image', originalText: 'logo.png', imageSrc: 'logo.png' })

@@ -1,5 +1,6 @@
 /**
- * What changed in a document since the reviewer's last round, block by block.
+ * What changed in a document block by block: since the reviewer's last round,
+ * or in a markdown file of a changes walkthrough.
  * Top-level nodes are compared, so a quote or an HTML wrapper counts as one
  * unit with everything inside it. A removed node is read as changed only when
  * an added node near it has the same type and shares enough words; a moved
@@ -12,7 +13,8 @@ import { parseMarkdownToBlocks } from './parser.js'
 import { editScript } from './editScript.js'
 
 // Where a block sits says nothing about what it says, and shifts with every edit above it.
-const POSITION = new Set(['id', 'order', 'startLine', 'parentId'])
+// Path, side and sortLine only place a changes card's blocks, the same on both sides.
+const POSITION = new Set(['id', 'order', 'startLine', 'parentId', 'path', 'side', 'sortLine'])
 // Half the words in common (Dice) still reads as a revision of the same block; less is a rewrite.
 const PAIR_SIMILARITY = 0.5
 // How far ahead a removed node is looked for, so pairing stays linear in long runs.
@@ -80,12 +82,13 @@ function pairRun(removed, added) {
 }
 
 /**
- * The current document as `{ change, node, before? }` entries in reading
- * order: `same`, `added` and `changed` carry a current node (a changed one its
- * earlier version as `before`), `removed` an earlier node.
+ * The current blocks against earlier ones as `{ change, node, before? }`
+ * entries in reading order: `same`, `added` and `changed` carry a current node
+ * (a changed one its earlier version as `before`), `removed` an earlier node.
+ * The two sides need ids apart from each other.
  */
-export function diffRounds(previousBlocks, currentBlocks) {
-  const earlier = groupHtmlWrappers(asEarlier(previousBlocks))
+export function diffBlocks(earlierBlocks, currentBlocks) {
+  const earlier = groupHtmlWrappers(earlierBlocks)
   const current = groupHtmlWrappers(currentBlocks)
   const entries = []
   let removed = []
@@ -101,6 +104,9 @@ export function diffRounds(previousBlocks, currentBlocks) {
   }
   return [...entries, ...pairRun(removed, added)]
 }
+
+/** A document against its last round, block by block; see diffBlocks. */
+export const diffRounds = (previousBlocks, currentBlocks) => diffBlocks(asEarlier(previousBlocks), currentBlocks)
 
 /** How many nodes were added, changed and removed. */
 export function roundDiffCounts(entries) {

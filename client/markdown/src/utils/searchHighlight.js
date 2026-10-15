@@ -17,6 +17,8 @@ const SKIP_SELECTOR = [
   '.diagram-source',
   '.diagram-controls',
   '.code-copy-btn',
+  '[hidden]',
+  '.visually-hidden',
 ].join(', ')
 
 /**

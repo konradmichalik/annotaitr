@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { newFileText, isMarkdownPath, canRead, fileView, readBlocks, readPathOf, readViewsOf } from '../../../client/markdown/src/utils/fileVersions.js'
+import { newFileText, oldFileText, isMarkdownPath, canRead, fileView, nextView, readBlocks, oldBlocks, readPathOf, isOldBlock, readViewsOf, foldRuns } from '../../../client/markdown/src/utils/fileVersions.js'
 
 describe('newFileText', () => {
   it('keeps context and added lines without their sign and drops removed lines', () => {
@@ -24,6 +24,27 @@ describe('newFileText', () => {
 
   it('is empty for a deleted file', () => {
     expect(newFileText(['@@ -1,2 +0,0 @@', '-# Gone', '-text'].join('\n'))).toBe('')
+  })
+})
+
+describe('oldFileText', () => {
+  it('keeps context and removed lines without their sign and drops added lines', () => {
+    const diff = ['@@ -1,3 +1,3 @@', ' # Title', '-old line', '+new line', ' end'].join('\n')
+    expect(oldFileText(diff)).toBe('# Title\nold line\nend')
+  })
+
+  it('keeps a blank context line and skips the no-newline marker', () => {
+    const diff = ['@@ -1,3 +1,2 @@', ' a', ' ', '-b', '\\ No newline at end of file', '+c'].join('\n')
+    expect(oldFileText(diff)).toBe('a\n\nb')
+  })
+
+  it('is empty for an added file, headers and all', () => {
+    const diff = ['diff --git a/notes.md b/notes.md', 'new file mode 100644', '--- /dev/null', '+++ b/notes.md', '@@ -0,0 +1,2 @@', '+# Notes', '+Text', ''].join('\n')
+    expect(oldFileText(diff)).toBe('')
+  })
+
+  it('reads a removed line that starts like a file header as content', () => {
+    expect(oldFileText(['@@ -1,2 +1 @@', '--- a rule', ' kept'].join('\n'))).toBe('-- a rule\nkept')
   })
 })
 
@@ -73,6 +94,17 @@ describe('fileView', () => {
   it('treats an unknown stored default as diff', () => {
     expect(fileView(new Map(), file, 'rendered')).toBe('diff')
   })
+
+  it('knows the Changes view, picked or as the default', () => {
+    expect(fileView(new Map([['docs/usage.md', 'changes']]), file, 'diff')).toBe('changes')
+    expect(fileView(new Map(), file, 'changes')).toBe('changes')
+  })
+})
+
+describe('nextView', () => {
+  it('cycles Diff, Read and Changes and back', () => {
+    expect(['diff', 'read', 'changes', 'other'].map(nextView)).toEqual(['read', 'changes', 'diff', 'diff'])
+  })
 })
 
 describe('readBlocks', () => {
@@ -93,6 +125,28 @@ describe('readBlocks', () => {
     const blocks = readBlocks('a.md', nested, 1)
     const child = blocks.find((b) => b.parentId)
     expect(child.parentId).toBe('read:a.md:block-0')
+  })
+})
+
+describe('oldBlocks', () => {
+  const diff = ['@@ -1,5 +1,3 @@', ' # Usage', ' ', '-Old.', '-', ' > Quoted'].join('\n')
+
+  it('parses the old file with ids of their own, the old side, the path and where the card sorts', () => {
+    const blocks = oldBlocks('docs/usage.md', diff, 12)
+    expect(blocks.map((b) => [b.id, b.type, b.startLine, b.side])).toEqual([
+      ['old:docs/usage.md:block-0', 'heading', 1, 'old'],
+      ['old:docs/usage.md:block-1', 'paragraph', 3, 'old'],
+      ['old:docs/usage.md:block-2', 'blockquote', 5, 'old']
+    ])
+    expect(blocks.every((b) => b.path === 'docs/usage.md' && b.sortLine === 12)).toBe(true)
+  })
+
+  it('names its blocks as old ones of the file', () => {
+    const [block] = oldBlocks('a.md', diff, 1)
+    expect(readPathOf(block.id)).toBe('a.md')
+    expect(isOldBlock(block.id)).toBe(true)
+    expect(isOldBlock('read:a.md:block-0')).toBe(false)
+    expect(isOldBlock('block-0')).toBe(false)
   })
 })
 
@@ -118,6 +172,27 @@ describe('readViewsOf', () => {
     expect(moved.get('a.md').blocks[0].sortLine).toBe(12)
   })
 
+  it('compares the old file with the new one block by block, current blocks keeping their Read ids', () => {
+    const changed = ['@@ -1,5 +1,5 @@', ' # Doc', ' ', '-Old text here.', '+New text here.', ' ', ' Same.'].join('\n')
+    const view = readViewsOf([file('a.md', [7])], new Map([['a.md', { diff: changed }]])).get('a.md')
+    expect(view.entries.map((e) => [e.change, e.node.block.id, e.before?.block.id])).toEqual([
+      ['same', 'read:a.md:block-0', undefined],
+      ['changed', 'read:a.md:block-1', 'old:a.md:block-1'],
+      ['same', 'read:a.md:block-2', undefined]
+    ])
+    expect(view.oldBlocks.map((b) => b.id)).toEqual(['old:a.md:block-0', 'old:a.md:block-1', 'old:a.md:block-2'])
+  })
+
+  it('numbers every block by its place in the Changes view, the old version of a changed block just before the new one', () => {
+    const changed = ['@@ -1,5 +1,5 @@', ' # Doc', ' ', '-Old text here.', '+New text here.', ' ', ' Same.'].join('\n')
+    const view = readViewsOf([file('a.md', [7])], new Map([['a.md', { diff: changed }]])).get('a.md')
+    const index = Object.fromEntries([...view.blocks, ...view.oldBlocks].map((b) => [b.id, b.entryIndex]))
+    expect(index['read:a.md:block-0']).toBe(1)
+    expect(index['old:a.md:block-1']).toBe(2)
+    expect(index['read:a.md:block-1']).toBe(3)
+    expect(index['read:a.md:block-2']).toBe(5)
+  })
+
   it('sorts after the focus line too when that is the card\'s last', () => {
     const views = readViewsOf([file('a.md', [7], { focusBlock: { startLine: 9 } })], new Map([['a.md', { diff }]]))
     expect(views.get('a.md').blocks[0].sortLine).toBe(9)
@@ -130,9 +205,40 @@ describe('readPathOf', () => {
     expect(readPathOf('read:c:/x.md:block-12')).toBe('c:/x.md')
   })
 
+  it('reads the path back from an old block id', () => {
+    expect(readPathOf('old:docs/usage.md:block-3')).toBe('docs/usage.md')
+  })
+
   it('is null for any other block', () => {
     expect(readPathOf('block-3')).toBeNull()
     expect(readPathOf('')).toBeNull()
     expect(readPathOf(undefined)).toBeNull()
+  })
+})
+
+describe('foldRuns', () => {
+  const same = (n) => ({ change: 'same', node: { block: { id: `s${n}` } } })
+  const added = (n) => ({ change: 'added', node: { block: { id: `a${n}` } } })
+  const none = new Set()
+
+  it('folds unchanged runs past one block of context around each change', () => {
+    const entries = [same(0), same(1), same(2), same(3), added(0), same(4), same(5), same(6), same(7), same(8), added(1), same(9)]
+    expect(foldRuns(entries, none)).toEqual([{ from: 0, to: 3, key: 's0' }, { from: 6, to: 9, key: 's5' }])
+  })
+
+  it('leaves a run of fewer than three blocks open, a button would hide less than it costs', () => {
+    const entries = [same(0), same(1), added(0), same(2), same(3), same(4), added(1)]
+    expect(foldRuns(entries, none)).toEqual([])
+  })
+
+  it('folds a file without changed blocks whole', () => {
+    expect(foldRuns([same(0), same(1), same(2)], none)).toEqual([{ from: 0, to: 3, key: 's0' }])
+  })
+
+  it('leaves a run open that holds a note, nested ones included, so adding one never folds what was opened', () => {
+    const quote = { change: 'same', node: { block: { id: 'q' }, children: [{ block: { id: 'q-1' } }] } }
+    const entries = [same(0), same(1), same(2), quote, same(3), added(0), same(4), same(5), same(6), same(7)]
+    expect(foldRuns(entries, none)).toEqual([{ from: 0, to: 4, key: 's0' }, { from: 7, to: 10, key: 's5' }])
+    expect(foldRuns(entries, new Set(['q-1']))).toEqual([{ from: 7, to: 10, key: 's5' }])
   })
 })

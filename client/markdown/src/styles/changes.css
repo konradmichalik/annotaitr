@@ -381,7 +381,7 @@
   display: none;
 }
 
-/* Diff or Read: a markdown file's two views, a segmented switch like the dock's Preview and Source */
+/* Diff, Read or Changes: a markdown file's views, a segmented switch like the dock's Preview and Source */
 .change-view-switch {
   display: inline-flex;
   gap: 2px;
@@ -413,13 +413,55 @@
   font-weight: 500;
 }
 
-/* The file as it is now replaces the hunks while Read is shown */
+/* The rendered file replaces the hunks while Read or Changes is shown */
 .change-file.is-read .change-file-body > .block-diff-wrapper {
   display: none;
 }
 
 .change-read {
   padding: var(--space-3) var(--space-4);
+}
+
+/* Read and Changes share one rendering: on Read its wrappers leave no box, so the blocks lay out as plain markdown. */
+.change-entry,
+.round-change-plain,
+.round-change-plain .round-change-body {
+  display: contents;
+}
+
+.change-entry[hidden],
+.round-change-plain [hidden] {
+  display: none;
+}
+
+.round-change-plain ins {
+  display: block;
+  text-decoration: none;
+}
+
+/* An unchanged run folded in the Changes view: a full-width row like a hunk's hidden context */
+.change-fold {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 28px;
+  margin: var(--space-2) 0;
+  padding: 0 var(--space-3);
+  border: 1px dashed var(--line-control);
+  border-radius: var(--radius-control);
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+}
+
+.change-fold:hover {
+  color: var(--ink);
 }
 
 .change-whole-note {
