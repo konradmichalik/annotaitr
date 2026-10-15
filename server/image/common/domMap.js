@@ -5,7 +5,7 @@
  * collectRawElements runs in the page, everything else is plain Node.
  */
 
-import { statSync } from 'node:fs'
+import { realpathSync, statSync } from 'node:fs'
 import { basename, dirname, extname, isAbsolute, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -279,15 +279,29 @@ function normalizeElement(raw, project) {
 /** Validate and clean what the page returned; the page may have tampered with any of it. */
 export function normalizeDomMap(raw, { root = process.cwd() } = {}) {
   if (!Array.isArray(raw)) { return [] }
-  const project = { root, isFile: cachedIsFile() }
+  const project = { root, isFile: cachedIsFile(root) }
   return raw.slice(0, MAX_ELEMENTS * 2).map((el) => normalizeElement(el, project)).filter(Boolean).slice(0, MAX_ELEMENTS)
 }
 
+/** The real location of a path, or null when it does not exist. */
+function realPathOf(path) {
+  try { return realpathSync(path) } catch { return null }
+}
+
+/** Whether a file exists and really lies under the root: a symlink in the project may point anywhere. */
+function isProjectFile(path, realRoot) {
+  const real = realPathOf(path)
+  if (!real || !realRoot || !statSync(real).isFile()) { return false }
+  const inside = relative(realRoot, real)
+  return inside !== '' && !inside.startsWith('..') && !isAbsolute(inside)
+}
+
 // Many elements share a component file, so each path is looked up once per map.
-function cachedIsFile() {
+function cachedIsFile(root) {
+  const realRoot = realPathOf(root)
   const known = new Map()
   return (path) => {
-    if (!known.has(path)) { known.set(path, statSync(path, { throwIfNoEntry: false })?.isFile() ?? false) }
+    if (!known.has(path)) { known.set(path, isProjectFile(path, realRoot)) }
     return known.get(path)
   }
 }

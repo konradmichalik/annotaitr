@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { mediaName, normalizeDomMap } from '../../../../server/image/common/domMap.js'
@@ -210,6 +210,21 @@ describe('normalizeDomMap with a dev-build source', () => {
   it('drops a path that does not exist under the root, such as one relative to a nested Vite root', () => {
     expect(sourceOf({ name: 'App', file: 'src/App.tsx', line: 2 })).toEqual({ component: 'App', file: '', line: null })
     expect(sourceOf({ name: 'Src', file: 'src', line: 2 })).toEqual({ component: 'Src', file: '', line: null })
+  })
+
+  it('drops a symlink in the project that points to a file outside it, keeps one that points inside', () => {
+    const outside = mkdtempSync(join(tmpdir(), 'annotaitr-outside-'))
+    try {
+      writeFileSync(join(outside, 'Secret.jsx'), '')
+      symlinkSync(join(outside, 'Secret.jsx'), join(root, 'src/Linked.jsx'))
+      symlinkSync(join(root, 'src/Card.jsx'), join(root, 'src/Alias.jsx'))
+      expect(sourceOf({ name: 'Linked', file: 'src/Linked.jsx', line: 1 })).toEqual({ component: 'Linked', file: '', line: null })
+      expect(sourceOf({ name: 'Alias', file: 'src/Alias.jsx', line: 1 })).toEqual({ component: 'Alias', file: 'src/Alias.jsx', line: 1 })
+    } finally {
+      rmSync(join(root, 'src/Linked.jsx'), { force: true })
+      rmSync(join(root, 'src/Alias.jsx'), { force: true })
+      rmSync(outside, { recursive: true, force: true })
+    }
   })
 
   it('names a Svelte or Vue component without a name after its file', () => {
