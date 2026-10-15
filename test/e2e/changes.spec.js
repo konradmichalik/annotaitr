@@ -381,6 +381,60 @@ test('the Changes view marks what changed in a markdown file, folds the rest and
   })
 })
 
+/** Selects from `fromText` in one visible paragraph of guide.md to the end of `toText` in another, as a drag across blocks would, and adds a Change note. */
+async function commentAcross(page, fromText, toText, note) {
+  await page.evaluate(([from, to]) => {
+    const visible = [...document.querySelectorAll('.change-file[data-path="guide.md"] .change-read p')].filter((el) => !el.closest('[hidden]') && !el.closest('.visually-hidden'))
+    const place = (text) => {
+      const el = visible.find((p) => p.textContent.includes(text))
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+      while (walker.nextNode()) {
+        const index = walker.currentNode.textContent.indexOf(text)
+        if (index !== -1) { return { el, node: walker.currentNode, index } }
+      }
+      throw new Error(`"${text}" not found`)
+    }
+    const [start, end] = [place(from), place(to)]
+    const range = document.createRange()
+    range.setStart(start.node, start.index)
+    range.setEnd(end.node, end.index + to.length)
+    window.getSelection().removeAllRanges()
+    window.getSelection().addRange(range)
+    end.el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
+  }, [fromText, toText])
+  await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: /^Change/ }).click()
+  const composer = page.getByRole('dialog', { name: 'Comment on selection' })
+  await composer.getByRole('textbox').fill(note)
+  await composer.getByRole('button', { name: 'Add', exact: true }).click()
+  await expect(page.locator('.note-card', { hasText: note })).toBeVisible()
+}
+
+test('a selection across a changed block quotes only what is shown: Read leaves out the old text, Changes the labels', async ({ page }) => {
+  for (const [view, quote] of [['Read', 'Four.New step'], ['Changes', 'Four.Old step here.New step']]) {
+    await withDocs(STEPS, async ({ dir, explain }) => {
+      const cli = startCli(['changes', '--explain', explain], {}, { cwd: dir })
+      try {
+        await page.goto(await cli.url)
+        const card = page.getByRole('region', { name: 'guide.md' })
+        await card.getByRole('button', { name: view, exact: true }).click()
+        await card.locator('.change-read').getByText('Four.').first().waitFor()
+        if (view === 'Changes') { await card.getByRole('button', { name: '4 unchanged blocks' }).click() }
+        await card.locator('.change-read').getByText('Brand new text.').scrollIntoViewIfNeeded()
+        await commentAcross(page, 'Four.', 'New step', `across in ${view}`)
+        await expect(page.locator('.note-card', { hasText: `across in ${view}` })).toContainText('guide.md · new L9')
+        await page.getByRole('button', { name: /^Send feedback/ }).click()
+        expect(await cli.exited).toBe(0)
+        const out = cli.stdout()
+        expect(out).toContain(`(new Line 9 in guide.md)`)
+        expect(out).toContain(`\`\`\`\n${quote}\n\`\`\``)
+        for (const leaked of view === 'Read' ? ['Old step', 'Changed, before', 'Now:', '±'] : ['Changed, before', 'Now:', '±']) { expect(out).not.toContain(leaked) }
+      } finally {
+        if (cli.child.exitCode === null) { cli.child.kill() }
+      }
+    })
+  }
+})
+
 test('P cycles a markdown file through Diff, Read and Changes, and Changes opens the next walkthrough', async ({ page }) => {
   await withDocs(STEPS, async ({ dir, explain }) => {
     const first = startCli(['changes', '--explain', explain], {}, { cwd: dir })

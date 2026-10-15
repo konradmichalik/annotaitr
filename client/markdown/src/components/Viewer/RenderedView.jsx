@@ -44,7 +44,7 @@ export function RenderedView({ entries, view, hidden, noted, blockProps }) {
         return (
           <Fragment key={entry.node.block.id}>
             {changes && fold?.from === i && <FoldButton fold={fold} open={!folded} onToggle={toggle} />}
-            <div className="change-entry" hidden={folded || gone}>
+            <div className={folded || gone ? 'change-entry is-off' : 'change-entry'} hidden={folded || gone}>
               {entry.change === 'same' ? render(entry.node, false) : <BlockChange entry={entry} labels={LABELS} render={render} marked={changes} />}
             </div>
           </Fragment>

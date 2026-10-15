@@ -59,6 +59,30 @@ describe('RenderedView on Changes', () => {
     expect(shown(block('read:a.md:block-0'))).toBe(true)
   })
 
+  it('keeps an opened fold open when the entries are rebuilt', () => {
+    mount({ view: 'changes' })
+    act(() => fold().click())
+    render({ view: 'changes', entries: diffBlocks(tagged(OLD, 'old:a.md:', { side: 'old' }), tagged(NEW, 'read:a.md:')) })
+    expect(fold().getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('switches off what is hidden for the highlighter: folded and removed entries, the old half and the sign', () => {
+    mount({ view: 'read' })
+    const off = [...host.querySelectorAll('.is-off')]
+    expect(off.every((el) => el.hasAttribute('hidden'))).toBe(true)
+    expect(block('old:a.md:block-5').closest('.is-off')).not.toBeNull()
+    expect(host.querySelector('.change-read.is-off')).toBeNull()
+    expect([...host.querySelectorAll('.round-change-sign')].every((sign) => sign.classList.contains('is-off'))).toBe(true)
+    expect(host.querySelector('.round-change-before').classList.contains('is-off')).toBe(true)
+    render({ view: 'changes' })
+    expect(host.querySelector('.round-change-sign').classList.contains('is-off')).toBe(false)
+    expect(host.querySelector('.round-change-before').classList.contains('is-off')).toBe(false)
+    expect(fold().querySelector('.is-off')).toBeNull()
+    expect(block('read:a.md:block-0').closest('.is-off')).not.toBeNull()
+    act(() => fold().click())
+    expect(block('read:a.md:block-0').closest('.is-off')).toBeNull()
+  })
+
   it('does not fold a run that holds a note', () => {
     mount({ view: 'changes', noted: new Set(['read:a.md:block-1']) })
     expect(fold()).toBeNull()
@@ -71,6 +95,12 @@ describe('RenderedView on Changes', () => {
 })
 
 describe('RenderedView on Read', () => {
+  it('leaves the whole view switchable for restores while Diff hides it', () => {
+    mount({ view: 'read', hidden: true })
+    expect(host.querySelector('.change-read').hasAttribute('hidden')).toBe(true)
+    expect(host.querySelector('.change-read').classList.contains('is-off')).toBe(false)
+  })
+
   it('shows the new file only: no signs, labels, folds or old blocks', () => {
     mount({ view: 'read' })
     expect(fold()).toBeNull()

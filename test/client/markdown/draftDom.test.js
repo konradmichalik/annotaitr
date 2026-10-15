@@ -83,6 +83,37 @@ describe('textAnchorMetas', () => {
   })
 })
 
+describe('text across hidden parts', () => {
+  const HIDDEN = '<p data-block-id="a">Four.</p>' +
+    '<div class="is-off" hidden><p data-block-id="old:x">Old step</p></div>' +
+    '<span class="visually-hidden">Now: </span><p data-block-id="c">New step</p>'
+
+  it('reads a selection across blocks without the text of hidden parts and labels', () => {
+    const host = render(HIDDEN)
+    expect(textAnchorMetas(host, 'a', 0, 'Four.New')).toEqual({
+      startMeta: { parentTagName: 'P', parentIndex: 0, textOffset: 0 },
+      endMeta: { parentTagName: 'P', parentIndex: 2, textOffset: 3 }
+    })
+    expect(textAnchorMetas(host, 'a', 0, 'Four.Old step')).toBeNull()
+  })
+})
+
+describe('reanchorToDom on a Changes view', () => {
+  const VIEW = '<p data-block-id="old:x:block-1" class="is-off">Same words</p><p data-block-id="read:x:block-1">Same words</p>'
+
+  it('keeps a note on the new file off the hidden old block with the same text', () => {
+    const host = render(VIEW)
+    const ann = { id: 'a', type: 'COMMENT', blockId: 'read:x:block-0', startOffset: 0, endOffset: 4, originalText: 'Same', startMeta: stale, endMeta: stale }
+    expect(reanchorToDom(host, [], [ann])[0].blockId).toBe('read:x:block-1')
+  })
+
+  it('still finds a note on the old file in the old block', () => {
+    const host = render(VIEW)
+    const ann = { id: 'a', type: 'COMMENT', blockId: 'old:x:block-9', startOffset: 0, endOffset: 4, originalText: 'Same', startMeta: stale, endMeta: stale }
+    expect(reanchorToDom(host, [], [ann])[0].blockId).toBe('old:x:block-1')
+  })
+})
+
 describe('reanchorToDom', () => {
   it('moves a text note with fresh metas and marks a vanished one unanchored', () => {
     const host = render(DOC)

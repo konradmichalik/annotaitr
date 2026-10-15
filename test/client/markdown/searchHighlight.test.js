@@ -8,6 +8,13 @@ function createContainer(html) {
   return div
 }
 
+describe('highlightMatches on invisible text', () => {
+  it('skips text inside a hidden element and a visually hidden label', () => {
+    const container = createContainer('<p>word</p><div hidden><p>word</p></div><span class="visually-hidden">word </span><p>word</p>')
+    expect(highlightMatches(container, 'word')).toHaveLength(2)
+  })
+})
+
 describe('highlightMatches', () => {
   it('finds a single match in a text node', () => {
     const container = createContainer('<p>Hello world</p>')

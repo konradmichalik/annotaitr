@@ -164,6 +164,8 @@ export function useHighlighter({
     if (!highlighter || !source) { return }
 
     const doms = highlighter.getDoms(source.id)
+    // The range's own text also holds what the highlighter skipped (switched off parts, labels), the marks hold what is quoted.
+    const originalText = doms?.length > 0 ? doms.map((dom) => dom.textContent).join('') : source.text
     let blockId = ''
     let startOffset = 0
 
@@ -186,10 +188,10 @@ export function useHighlighter({
       id: source.id,
       blockId,
       startOffset,
-      endOffset: startOffset + source.text.length,
+      endOffset: startOffset + originalText.length,
       type,
       text: text || null,
-      originalText: source.text,
+      originalText,
       createdAt: Date.now(),
       startMeta: source.startMeta,
       endMeta: source.endMeta,
