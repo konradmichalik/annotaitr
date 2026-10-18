@@ -32,6 +32,7 @@ import { useChangesSidebarWidth } from './hooks/useChangesSidebarWidth.js'
 import { useResizablePanel } from '../../shared/hooks/useResizablePanel.js'
 import { useServerConnection } from '../../shared/hooks/useServerConnection.js'
 import { useAnnotationDraft } from './hooks/useAnnotationDraft.js'
+import { useStrayDropGuard } from './hooks/useStrayDropGuard.js'
 import { reanchorSourceNotes } from './utils/draftAnchors.js'
 import { useSettings } from './hooks/useSettings.js'
 import { useCrossFileSearch } from './hooks/useCrossFileSearch.js'
@@ -208,6 +209,8 @@ export default function App() {
     replyCount: previous.replyCount, unanswered: previous.unanswered, openDialog: openDecisionOn,
   })
   const decisionItemCount = totalAnnotationCount + previous.replyCount
+
+  useStrayDropGuard()
 
   // Draft auto-save and restore
   const { draftBanner, restoreDraft, dismissDraft } = useAnnotationDraft({
