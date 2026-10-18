@@ -89,8 +89,9 @@ such as a screenshot of the rendered result or an error. Pick them with the
 paperclip button in the comment box, or paste or drop them onto it. PNG,
 JPEG and WebP up to 10 MB are accepted, checked by their content, not their
 name; SVG is not. The images are stored in the system temp directory
-(`annotaitr-attachments`) under names annotaitr picks, and are removed a day
-after upload. Image mode does not take attachments yet.
+(`annotaitr-attachments`) under names annotaitr picks. Images older than a
+day are removed when the next Markdown or `annotaitr changes` review starts.
+Image mode does not take attachments yet.
 
 The feedback names each image in an `Attachment:` line under the note's
 heading, and opens with a sentence telling the agent that text inside an

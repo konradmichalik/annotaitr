@@ -57,7 +57,10 @@ describe('attachments', () => {
       } finally { server.close() }
     })
 
-    it.each([['an SVG', SVG, 'image/svg+xml'], ['text sent as an image', Buffer.from('hello'), 'image/png'], ['an empty body', Buffer.alloc(0), 'image/png']])('rejects %s', async (_name, body, type) => {
+    it.each([
+      ['an SVG', SVG, 'image/svg+xml'], ['text sent as an image', Buffer.from('hello'), 'image/png'], ['an empty body', Buffer.alloc(0), 'image/png'],
+      ['a body with only half the PNG signature', Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 0, 0, 0, 0, 0, 0, 0]), 'image/png']
+    ])('rejects %s', async (_name, body, type) => {
       const server = await serve()
       try {
         const res = await upload(server.url, body, type)
@@ -132,6 +135,13 @@ describe('attachments', () => {
       try {
         expect((await fetch(`${server.url}/api/attachments/${planted}`)).status).toBe(404)
       } finally { server.close() }
+    })
+
+    it('prints no file from a folder open to others', async () => {
+      await mkdir(dir, { mode: 0o755 })
+      await chmod(dir, 0o755)
+      await writeFile(join(dir, planted), PNG)
+      expect(attachmentLines({ attachments: [{ path: join(dir, planted), name: 'x.png' }] }, dir)).toBe('')
     })
 
     it('prints no symlink as an attachment', async () => {

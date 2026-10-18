@@ -189,8 +189,14 @@ describe('attaching images to a note', () => {
 })
 
 describe('withAvailableAttachments', () => {
+  it('keeps an attachment the check could not reach', async () => {
+    globalThis.fetch = vi.fn(async () => { throw new TypeError('Failed to fetch') })
+    const annotations = [{ id: 'a', attachments: [stored(1)] }]
+    expect(await withAvailableAttachments(annotations)).toEqual({ annotations, dropped: 0 })
+  })
+
   it('drops attachments whose file the server no longer holds and counts them', async () => {
-    globalThis.fetch = vi.fn(async (url) => ({ ok: url.includes('1111') }))
+    globalThis.fetch = vi.fn(async (url) => ({ ok: url.includes('1111'), status: url.includes('1111') ? 200 : 404 }))
     const annotations = [{ id: 'a', attachments: [stored(1), stored(2)] }, { id: 'b' }]
     const result = await withAvailableAttachments(annotations)
     expect(result.annotations).toEqual([{ id: 'a', attachments: [stored(1)] }, { id: 'b' }])

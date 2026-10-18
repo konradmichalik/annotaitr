@@ -14,8 +14,9 @@ export async function uploadAttachment(file) {
   return { id: body.data.id, path: body.data.path, name: file.name }
 }
 
+// Only the server's 404 says the file is gone; a failed request must not strip it from the saved draft.
 const isAvailable = (attachment) => fetch(attachmentUrl(attachment), { method: 'HEAD' })
-  .then((response) => response.ok, () => false)
+  .then((response) => response.status !== 404, () => true)
 
 /** The notes of a restored draft without the images the server no longer holds, and how many were dropped. */
 export async function withAvailableAttachments(annotations) {

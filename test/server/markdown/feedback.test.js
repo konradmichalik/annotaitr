@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { join } from 'node:path'
-import { mkdir, writeFile, rm } from 'node:fs/promises'
+import { mkdir, writeFile, rm, chmod } from 'node:fs/promises'
 import { attachmentDir } from '../../../server/markdown/attachments.js'
 import { parseMarkdownToBlocks } from '../../../client/markdown/src/utils/parser.js'
 import { exportFeedback, exportMultiFileFeedback, formatApprovalOutput, intentSummary } from '../../../server/markdown/feedback.js'
@@ -563,6 +563,7 @@ describe('attachments', () => {
 
   beforeAll(async () => {
     await mkdir(dir, { recursive: true, mode: 0o700 })
+    await chmod(dir, 0o700)
     await writeFile(path, 'png')
   })
 

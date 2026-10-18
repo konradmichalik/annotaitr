@@ -12,7 +12,7 @@ import { join, basename, dirname } from 'node:path'
 import { mkdir, writeFile, readdir, lstat, rm } from 'node:fs/promises'
 import { success, failure } from '../core/http.js'
 import { imageType } from '../core/imageType.js'
-import { assertPrivateDir, RESUME_WINDOW_MS } from '../core/session/store.js'
+import { assertPrivateDir, isPrivateDir, RESUME_WINDOW_MS } from '../core/session/store.js'
 
 export const MAX_ATTACHMENTS = 5
 const UPLOAD_LIMIT = '10mb'
@@ -25,7 +25,7 @@ export const attachmentDir = () => join(tmpdir(), 'annotaitr-attachments')
 const isOwnFile = (info) => Boolean(info?.isFile()) && (typeof process.getuid !== 'function' || info.uid === process.getuid())
 
 const isAttachmentPath = (path, dir) => typeof path === 'string' && dirname(path) === dir && ATTACHMENT_ID.test(basename(path)) &&
-  isOwnFile(lstatSync(path, { throwIfNoEntry: false }))
+  isPrivateDir(lstatSync(dir, { throwIfNoEntry: false })) && isOwnFile(lstatSync(path, { throwIfNoEntry: false }))
 
 const isPrivate = (dir) => assertPrivateDir(dir).then(() => true, () => false)
 
