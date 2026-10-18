@@ -7,26 +7,8 @@ import { writeAnnotatedImage } from './output.js'
 import { formatApprovalOutput, formatApprovalWithNotesOutput, exportFeedback, formatImageSetOutput } from '../common/feedback.js'
 import { parseCaptureSettings, describeCapture, VIEWPORT_PRESETS } from '../common/config.js'
 import { normalizeNotes } from '../../core/notes.js'
+import { imageType } from '../../core/imageType.js'
 
-/**
- * Sniff the actual image format from its magic bytes. The captured/loaded
- * buffer can be PNG, JPEG, or WebP (a screenshot is always PNG, but a local
- * file or clipboard image is served through as-is) - always answering
- * `image/png` regardless mislabels a JPEG/WebP response, which a browser
- * with strict MIME sniffing disabled would refuse to render.
- */
-function sniffImageType(buffer) {
-  if (buffer.length >= 8 && buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
-    return 'png'
-  }
-  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
-    return 'jpeg'
-  }
-  if (buffer.length >= 12 && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') {
-    return 'webp'
-  }
-  return 'png'
-}
 
 // The presets travel with the meta so the client's viewport picker never
 // needs its own copy of the sizes.
@@ -137,7 +119,8 @@ export function createApiRouter({ origin, targetLabel, state, voiceNotes = false
 
   router.get('/api/image', image, (req, res) => {
     // A recapture replaces the image behind the same URL.
-    res.set('Cache-Control', 'no-store').type(sniffImageType(req.entry.capture.buffer)).send(req.entry.capture.buffer)
+    // A local file or clipboard image is served as-is, which need not be the PNG a screenshot is.
+    res.set('Cache-Control', 'no-store').type(imageType(req.entry.capture.buffer) ?? 'png').send(req.entry.capture.buffer)
   })
 
   router.get('/api/meta', image, (req, res) => {
