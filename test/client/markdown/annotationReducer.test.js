@@ -76,6 +76,15 @@ describe('annotationReducer', () => {
   })
 
   describe('EDIT', () => {
+    it('replaces the attached images when the edit carries them, and keeps them otherwise', () => {
+      const shot = { id: 'a.png', path: '/tmp/a.png', name: 'a.png' }
+      const state = annotationReducer(initialAnnotationState, { type: 'ADD', annotation: makeAnnotation({ attachments: [shot] }) })
+      const kept = annotationReducer(state, { type: 'EDIT', id: 'ann-1', annotationType: 'COMMENT', text: 'New' })
+      expect(kept.annotations[0].attachments).toEqual([shot])
+      const cleared = annotationReducer(state, { type: 'EDIT', id: 'ann-1', annotationType: 'COMMENT', text: 'New', attachments: [] })
+      expect(cleared.annotations[0].attachments).toEqual([])
+    })
+
     it('updates annotation type and text', () => {
       const ann = makeAnnotation()
       const state = annotationReducer(initialAnnotationState, { type: 'ADD', annotation: ann })

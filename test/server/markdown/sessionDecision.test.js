@@ -20,4 +20,10 @@ describe('decidedThreads', () => {
     const submitted = [{ path: 'gone.md', annotations: [note('c3333333-0000-4000-8000-000000000000', 'Gone')], blocks: [] }]
     expect(decidedThreads(submitted, []).threadFields['c3333333-0000-4000-8000-000000000000']).toEqual({ file: null, anchor: null })
   })
+
+  it('keeps only the names of attached images, whose files belong to this round', () => {
+    const attached = { ...note('d4444444-0000-4000-8000-000000000000', 'Alpha'), attachments: [{ path: '/tmp/annotaitr-attachments/x.png', name: 'shot.png' }] }
+    const { annotations } = decidedThreads([{ path: 'a.md', annotations: [attached], blocks: [] }], [file('/p/a.md', 'a.md', 'Alpha text\n')])
+    expect(annotations[0].attachments).toEqual([{ name: 'shot.png' }])
+  })
 })

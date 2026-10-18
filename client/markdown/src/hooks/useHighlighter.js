@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import Highlighter from 'web-highlighter'
 import { INTENTS, intentOf } from '../../../shared/utils/intents.js'
+import { withAttachments } from '../utils/viewerAnnotations.js'
 
 const INTENT_CLASSES = INTENTS.map(({ id }) => `intent-${id}`)
 
@@ -158,7 +159,7 @@ export function useHighlighter({
   }, [annotations])
 
   // --- Create annotation from text selection ---
-  const createAnnotationFromSource = useCallback((type, text, label, intent) => {
+  const createAnnotationFromSource = useCallback((type, text, label, intent, attachments) => {
     const highlighter = highlighterRef.current
     const source = r.current.toolbarState?.source
     if (!highlighter || !source) { return }
@@ -197,6 +198,7 @@ export function useHighlighter({
       endMeta: source.endMeta,
       label: label || null,
       ...(intent ? { intent } : {}),
+      ...withAttachments(attachments),
       ...r.current.extraAnnotationFields,
     }
 
@@ -207,7 +209,7 @@ export function useHighlighter({
   }, [])
 
   // --- Handle text annotation (edit or new) ---
-  const handleTextAnnotate = useCallback((type, text, label, intent) => {
+  const handleTextAnnotate = useCallback((type, text, label, intent, attachments) => {
     if (!toolbarState) { return }
     const highlighter = highlighterRef.current
     if (!highlighter) { return }
@@ -217,9 +219,9 @@ export function useHighlighter({
       highlighter.removeClass('deletion', annotation.id)
       highlighter.removeClass('comment', annotation.id)
       highlighter.addClass(type.toLowerCase(), annotation.id)
-      r.current.onEditAnnotation(annotation.id, type, text, label, intent)
+      r.current.onEditAnnotation(annotation.id, type, text, label, intent, attachments)
     } else {
-      createAnnotationFromSource(type, text, label, intent)
+      createAnnotationFromSource(type, text, label, intent, attachments)
       pendingSourceRef.current = null
     }
 

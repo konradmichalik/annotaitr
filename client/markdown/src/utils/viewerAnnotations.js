@@ -1,5 +1,8 @@
 import { createAnnotationId } from '../../../shared/utils/annotationId.js'
 
+/** The images a new note keeps, left out entirely when there are none. */
+export const withAttachments = (attachments) => (attachments?.length > 0 ? { attachments } : {})
+
 export function createInsertionAnnotation({ blockId, offset, afterContext }, text) {
   return {
     id: createAnnotationId(),

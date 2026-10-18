@@ -50,6 +50,7 @@ import { usePreviousHighlights } from './hooks/usePreviousHighlights.js'
 import { useRoundDiff } from './hooks/useRoundDiff.js'
 import { useViewMode } from './hooks/useViewMode.js'
 import { shownView } from './utils/roundDiff.js'
+import { withAvailableAttachments } from './utils/attachments.js'
 import { RoundDiffBar } from './components/RoundDiffBar.jsx'
 import { RoundDiffView } from './components/Viewer/RoundDiffView.jsx'
 import 'katex/dist/katex.min.css'
@@ -297,8 +298,8 @@ export default function App() {
     setSelectedAnnotationId(prev => prev === id ? null : prev)
   }, [annDispatch])
 
-  const handleEditAnnotation = useCallback((id, annotationType, text, label, intent) => {
-    annDispatch({ type: 'EDIT', id, annotationType, text, label, intent })
+  const handleEditAnnotation = useCallback((id, annotationType, text, label, intent, attachments) => {
+    annDispatch({ type: 'EDIT', id, annotationType, text, label, intent, attachments })
   }, [annDispatch])
 
   const handlePanelEdit = useCallback((id) => {
@@ -330,13 +331,13 @@ export default function App() {
     setSidebarCollapsed(false)
   }, [annotations, effectiveViewMode, isChanges, readViews, setViewMode])
 
-  const applyDraft = useCallback((restored, verb = 'Restored') => {
+  const applyDraft = useCallback((restored, verb = 'Restored', note = '') => {
     viewerRef.current?.clearAllHighlights()
     annDispatch({ type: 'RESTORE', annotations: restored })
     setTimeout(() => {
       viewerRef.current?.restoreHighlights(restored)
     }, 100)
-    showToast(`${verb} ${restored.length} annotation${restored.length !== 1 ? 's' : ''}`)
+    showToast(`${verb} ${restored.length} annotation${restored.length !== 1 ? 's' : ''}${note}`)
   }, [annDispatch, showToast])
 
   // Notes restored or imported into a walkthrough wait for the Read views they sit in. Highlights there are stored by
@@ -395,30 +396,33 @@ export default function App() {
   useEffect(() => {
     if (!draftAwaitingPreview || effectiveViewMode !== 'preview') {return}
     setDraftAwaitingPreview(null)
-    applyDraft(draftAwaitingPreview.reanchor ? reanchorDraft(draftAwaitingPreview.annotations) : draftAwaitingPreview.annotations)
+    applyDraft(draftAwaitingPreview.reanchor ? reanchorDraft(draftAwaitingPreview.annotations) : draftAwaitingPreview.annotations, 'Restored', draftAwaitingPreview.note)
   }, [draftAwaitingPreview, effectiveViewMode, applyDraft, reanchorDraft])
 
   const { settle: settleReadViews } = readViews
   useEffect(() => {
     if (!awaitingRead || effectiveViewMode !== 'preview' || !settleReadViews(awaitingRead.annotations)) {return}
     setAwaitingRead(null)
-    applyDraft(reanchorDraft(awaitingRead.annotations), awaitingRead.verb)
+    applyDraft(reanchorDraft(awaitingRead.annotations), awaitingRead.verb, awaitingRead.note)
   }, [awaitingRead, effectiveViewMode, settleReadViews, applyDraft, reanchorDraft])
 
-  const handleRestoreDraft = useCallback(() => {
+  const handleRestoreDraft = useCallback(async () => {
     const draft = restoreDraft()
     if (draft.annotations.length === 0) {return}
+    // An attached image is pruned a day after its upload, a draft can outlive it.
+    const { annotations, dropped } = await withAvailableAttachments(draft.annotations)
+    const note = dropped > 0 ? `, ${dropped} attached image${dropped !== 1 ? 's' : ''} no longer available` : ''
     if (isChanges) {
-      setAwaitingRead({ annotations: draft.annotations, verb: 'Restored' })
+      setAwaitingRead({ annotations, verb: 'Restored', note })
       setViewMode('preview')
     } else if (effectiveViewMode === 'changes' || (draft.fileChanged && effectiveViewMode === 'source' && !isPlainTextFile)) {
       // The changes view draws no notes, so a restore there waits for the preview like one from the source view.
-      setDraftAwaitingPreview({ annotations: draft.annotations, reanchor: draft.fileChanged })
+      setDraftAwaitingPreview({ annotations, reanchor: draft.fileChanged, note })
       setViewMode('preview')
     } else if (!draft.fileChanged) {
-      applyDraft(draft.annotations)
+      applyDraft(annotations, 'Restored', note)
     } else {
-      applyDraft(reanchorDraft(draft.annotations))
+      applyDraft(reanchorDraft(annotations), 'Restored', note)
     }
   }, [restoreDraft, applyDraft, reanchorDraft, effectiveViewMode, isPlainTextFile, isChanges, setViewMode])
 

@@ -27,7 +27,7 @@ function sessionPath(dir, sessionId) {
 
 // On Linux tmpdir() is the shared /tmp: a folder another user created first
 // could let them plant or swap session files, or a symlink under our temp name.
-async function assertPrivateDir(dir) {
+export async function assertPrivateDir(dir) {
   const info = await lstat(dir)
   const foreign = typeof process.getuid === 'function' && info.uid !== process.getuid()
   if (!info.isDirectory() || foreign || (info.mode & 0o077) !== 0) {

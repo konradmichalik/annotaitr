@@ -8,6 +8,7 @@ import { readAnnotatableFile } from './file.js'
 import { hashOf, displayPath } from './fileNames.js'
 import { decidedNotes } from './feedback.js'
 import { createAnchor, locateThread, refreshAnchor } from './anchorThreads.js'
+import { withAttachmentNames } from './attachments.js'
 
 /** Every file of the review as it is on disk now. One that cannot be read any more is left out, its threads become orphans. */
 export async function currentFiles(stores) {
@@ -30,7 +31,7 @@ export function decidedThreads(submittedFiles, files) {
     const file = fileFor(files, submittedFiles[fileIndex], fileIndex)
     threadFields[annotation.id] = file ? { file: file.absolutePath, anchor: createAnchor(annotation, block, file) } : { file: null, anchor: null }
   }
-  return { annotations: notes.map((n) => n.annotation), threadFields }
+  return { annotations: notes.map((n) => withAttachmentNames(n.annotation)), threadFields }
 }
 
 /** Where each carried thread is in this round, by handle, for the heading the agent reads. */

@@ -15,6 +15,7 @@ import { convertNotesToAnnotations } from './notes.js'
 import { createSessionThreadsRouter } from '../core/session/threadsRoute.js'
 import { anchorThreads } from './anchorThreads.js'
 import { currentFiles } from './sessionDecision.js'
+import { createAttachmentsRouter, pruneAttachments } from './attachments.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DIST_DIR = join(__dirname, '..', '..', 'client', 'dist', 'markdown')
@@ -62,6 +63,8 @@ export async function buildMarkdownServer(options) {
     })
   )
 
+  await pruneAttachments(Date.now())
+
   // Serve static files from each annotated file's directory (relative images,
   // etc.), plus cwd as a fallback for absolute-style paths. A changes
   // walkthrough references no files, and its cwd is a source tree that may hold secrets.
@@ -79,6 +82,7 @@ export async function buildMarkdownServer(options) {
         session,
         anchor: async (previous) => (previous ? anchorThreads(previous, await currentFiles(stores)) : [])
       }))
+      app.use(createAttachmentsRouter())
       app.use(createApiRouter(filePaths, safeResolve, origin, stores, session))
     }
   })

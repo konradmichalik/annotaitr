@@ -121,4 +121,9 @@ describe('threadMessages', () => {
       { author: 'human', text: 'Thanks' }
     ])
   })
+
+  it('names the images the note had attached as text', () => {
+    const t = thread(box({ attachments: [{ name: 'shot.png' }, { name: 'error.webp' }] }), { origin: { round: 1, number: 2 } })
+    expect(threadMessages(t, 2)[0].text).toBe('Fix\n(attached: shot.png, error.webp)')
+  })
 })

@@ -23,6 +23,7 @@ import { useGeneralComment } from '../../../shared/hooks/useGeneralComment.js'
 import { IntentIcon } from '../../../shared/components/IntentIcon.jsx'
 import { intentBadgeStyle } from '../../../shared/utils/intents.js'
 import { RepliesPanel } from './RepliesPanel.jsx'
+import { NoteAttachments } from './Attachments.jsx'
 
 const MAX_IMPORT_SIZE = 5 * 1024 * 1024 // 5 MB
 const ALT = navigator.platform?.includes('Mac') ? '⌥' : 'Alt'
@@ -85,6 +86,7 @@ function Card({ ann, number, blocks, selected, onActivate, onEdit, onRemove }) {
       onRemove={onRemove}
     >
       <CardText ann={ann} />
+      <NoteAttachments attachments={ann.attachments} />
     </NoteCard>
   )
 }

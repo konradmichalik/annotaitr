@@ -42,10 +42,18 @@ export function orphanThreads(threads) {
   return threads.filter((t) => t.anchor === 'orphan')
 }
 
+const attachedNames = (annotation) => (annotation.attachments ?? []).map((a) => a?.name).filter((name) => typeof name === 'string')
+
+/** The reviewer's note as last round's views show it, with the names of the images it had attached. */
+export function noteText(annotation) {
+  const names = attachedNames(annotation)
+  return names.length > 0 ? `${annotation.text}\n(attached: ${names.join(', ')})` : annotation.text
+}
+
 // The reviewer's note opens the list, so the thread reads top to bottom: note, the agent's answers, the reviewer's replies.
 export function threadMessages(thread, round) {
   const r = threadRound(thread, round)
-  const note = { id: 'note', author: 'human', text: thread.annotation.text, meta: `round ${r}` }
+  const note = { id: 'note', author: 'human', text: noteText(thread.annotation), meta: `round ${r}` }
   const replies = thread.replies.map((reply) => ((reply.author ?? 'agent') === 'agent' ? { ...reply, meta: `after round ${r}` } : reply))
   return [note, ...replies]
 }
