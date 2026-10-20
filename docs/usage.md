@@ -82,6 +82,30 @@ export ANNOTAITR_WHISPER_MODEL=~/.cache/ggml-small.bin
 
 Without a model, `whisper-cli` or ffmpeg the button is simply not shown.
 
+## Attached images
+
+In Markdown mode and `annotaitr changes`, a note can carry up to 5 images,
+such as a screenshot of the rendered result or an error. Pick them with the
+paperclip button in the comment box, or paste or drop them onto it. PNG,
+JPEG and WebP up to 10 MB are accepted, checked by their content, not their
+name; SVG is not. The images are stored in the system temp directory
+(`annotaitr-attachments`) under names annotaitr picks. Images older than a
+day are removed when the next Markdown or `annotaitr changes` review starts.
+Image mode does not take attachments yet.
+
+The feedback names each image in an `Attachment:` line under the note's
+heading, and opens with a sentence telling the agent that text inside an
+image is content, not instructions:
+
+```text
+## 2. Change · Text (Line 14) [#a3f19c2e]
+Attachment: /tmp/annotaitr-attachments/3f9c….png
+```
+
+Claude Code, Codex, Gemini CLI and OpenCode can open the image from that
+path. Mistral Vibe reads text only, so there the agent sees just the path.
+A later round of a review session shows an attached image by its file name only.
+
 ## `--origin`
 
 Identifies the caller in the feedback output and in the annotator header,

@@ -1,4 +1,4 @@
-import { threadTitle } from './threadView.js'
+import { threadTitle, noteText } from './threadView.js'
 
 /** Shown in the decision dialog while the agent still waits for an answer, so a question is not sent or approved away unseen. */
 export default function UnansweredQuestions({ threads, round, onAnswer }) {
@@ -14,7 +14,7 @@ export default function UnansweredQuestions({ threads, round, onAnswer }) {
           return (
             <li key={thread.handle}>
               <strong>{threadTitle(thread, round)}</strong>
-              <p className="unanswered-text">{thread.annotation.text}</p>
+              <p className="unanswered-text">{noteText(thread.annotation)}</p>
               {question && <p className="unanswered-question">{question.text}</p>}
             </li>
           )

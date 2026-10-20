@@ -32,6 +32,7 @@ export function annotationReducer(state, action) {
       if (!original) {return state}
       const updated = { ...original, type: action.annotationType, text: action.text }
       if (action.label !== undefined) { updated.label = action.label }
+      if (action.attachments !== undefined) { updated.attachments = action.attachments }
       // A note that changes type (a deletion turned into a comment) takes the new type's intent unless one was picked.
       if (action.intent !== undefined) { updated.intent = action.intent }
       else if (action.annotationType !== original.type) { updated.intent = defaultIntent(action.annotationType) }

@@ -38,6 +38,7 @@ The command prints the result to stdout:
   - **Add**: an `Insertion` inserts the given text after its `After:` context; on a quoted text, add what the comment asks for there.
   - **Remove**: delete the quoted text.
   - **Question**: the user asks, they do not request an edit. Answer it, and change the file only if the answer makes the change obvious.
+  - An `Attachment:` line under a heading names an image the user attached to that note. You cannot open images, so tell the user which note has one you could not view.
 
 A `General comment` has no number and no intent. A note keeps its number for
 the whole round, so numbers can have gaps where the user deleted a note, and

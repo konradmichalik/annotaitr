@@ -7,8 +7,12 @@ import { getOffscreenSide } from '../utils/popoverVisibility.js'
 import { Composer } from '../../../shared/components/Composer.jsx'
 import { ExpandIcon } from '../../../shared/components/HeaderIcons.jsx'
 import { hasDraft } from '../../../shared/utils/composerDraft.js'
+import { useAttachments } from '../hooks/useAttachments.js'
+import { AttachButton, AttachmentList } from './Attachments.jsx'
 
 const POPOVER_WIDTH = 320
+// One array for every note without images, so an untouched composer compares equal to its start.
+const NO_ATTACHMENTS = []
 const GAP = 8
 
 function computePosition(anchorRect) {
@@ -30,6 +34,7 @@ function computePosition(anchorRect) {
  * counts as untouched: the stored comment when editing, nothing for a new one
  * (even when typing a key opened it with that key already in the field).
  * `initialIntent` shows the intent chip; an insertion has none, it is always Add.
+ * `attachable` offers images next to the text, picked, pasted or dropped.
  */
 export function CommentPopover({
   anchorEl,
@@ -39,6 +44,8 @@ export function CommentPopover({
   placeholder = 'Add a comment…',
   submitLabel = 'Save',
   initialIntent = null,
+  initialAttachments = NO_ATTACHMENTS,
+  attachable = true,
   onSubmit,
   onClose,
 }) {
@@ -51,6 +58,7 @@ export function CommentPopover({
   const textareaRef = useRef(null)
   const popoverRef = useRef(null)
   const titleId = useId()
+  const images = useAttachments(initialAttachments)
 
   const hasText = text.trim().length > 0
   const autocomplete = useFileAutocomplete(text, cursorPos)
@@ -121,9 +129,33 @@ export function CommentPopover({
 
   const handleSubmit = useCallback(() => {
     if (text.trim()) {
-      onSubmit(text, intent ?? undefined)
+      onSubmit(text, intent ?? undefined, images.attachments)
     }
-  }, [text, intent, onSubmit])
+  }, [text, intent, images.attachments, onSubmit])
+
+  // The removed thumbnail took the focus with it, which would otherwise fall out of the composer.
+  const removeAttachment = (id) => {
+    images.remove(id)
+    textareaRef.current?.focus()
+  }
+
+  const imageFiles = (files) => [...(files ?? [])].filter((file) => file.type.startsWith('image/'))
+  // Pasted text stays text; only an image on the clipboard becomes an attachment.
+  const handlePaste = (event) => {
+    const files = imageFiles(event.clipboardData?.files)
+    if (!attachable || files.length === 0) { return }
+    event.preventDefault()
+    images.add(files)
+  }
+  const handleDragOver = (event) => {
+    if (attachable && event.dataTransfer?.types?.includes('Files')) { event.preventDefault() }
+  }
+  const handleDrop = (event) => {
+    const files = imageFiles(event.dataTransfer?.files)
+    if (!attachable || files.length === 0) { return }
+    event.preventDefault()
+    images.add(files)
+  }
 
   // Accepting a suggestion takes Enter and Tab, the composer around the field handles Escape and ⌘↵.
   const handleKeyDown = (e) => {
@@ -143,6 +175,13 @@ export function CommentPopover({
       <ExpandIcon size={14} />
     </button>
   ) : null
+
+  const tools = (
+    <>
+      {attachable && <AttachButton busy={images.busy} onAdd={images.add} />}
+      {expandButton}
+    </>
+  )
 
   const isDialog = mode === 'dialog'
   // Escape in the expanded editor only collapses it. The field it leaves is gone by the time the
@@ -167,17 +206,17 @@ export function CommentPopover({
       titleId={titleId}
       className={isDialog ? 'comment-popover--dialog' : ''}
       style={popoverStyle}
-      dirty={hasDraft(text, draftBaseline, intent !== initialIntent)}
+      dirty={hasDraft(text, draftBaseline, intent !== initialIntent) || images.attachments !== initialAttachments}
       submitLabel={submitLabel}
-      submitDisabled={!hasText}
+      submitDisabled={!hasText || images.busy}
       intent={intent}
       onIntentChange={initialIntent ? setIntent : null}
-      tools={expandButton}
+      tools={tools}
       onSave={handleSubmit}
       onDiscard={onClose}
       onEscape={isDialog ? collapse : onClose}
     >
-      <div className="comment-popover-body">
+      <div className="comment-popover-body" onPaste={handlePaste} onDragOver={handleDragOver} onDrop={handleDrop}>
         <div className="textarea-backdrop-wrap">
           <TextareaBackdrop value={text} textareaRef={textareaRef} />
           <textarea
@@ -196,6 +235,7 @@ export function CommentPopover({
             onKeyDown={handleKeyDown}
           />
         </div>
+        <AttachmentList attachments={images.attachments} busy={images.busy} error={images.error} onRemove={removeAttachment} />
         {autocomplete.isOpen && (
           <FileAutocomplete
             items={autocomplete.items}

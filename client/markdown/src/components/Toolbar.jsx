@@ -155,8 +155,8 @@ export function Toolbar({ highlightElement, onAnnotate, onAddAfter = null, onClo
 
   const isInsertion = insertionMode || editAnnotation?.type === 'INSERTION'
 
-  const handlePopoverSubmit = (text, pickedIntent) => {
-    onAnnotate(isInsertion ? 'INSERTION' : 'COMMENT', text, undefined, pickedIntent)
+  const handlePopoverSubmit = (text, pickedIntent, attachments) => {
+    onAnnotate(isInsertion ? 'INSERTION' : 'COMMENT', text, undefined, pickedIntent, attachments)
   }
 
   const handlePopoverClose = () => {
@@ -236,6 +236,8 @@ export function Toolbar({ highlightElement, onAnnotate, onAddAfter = null, onClo
           placeholder={insertionMode ? 'Text to insert…' : 'Add a comment…'}
           submitLabel={editAnnotation ? 'Save' : 'Add'}
           initialIntent={isInsertion ? null : intent}
+          initialAttachments={editAnnotation?.attachments}
+          attachable={!isInsertion}
           onSubmit={handlePopoverSubmit}
           onClose={handlePopoverClose}
         />

@@ -17,7 +17,7 @@ import { getItem, setItem } from '../../../../shared/utils/storage.js'
 import { groupHtmlWrappers } from '../../utils/htmlWrappers.js'
 import { isOpenableFileLink } from '../../utils/links.js'
 import { getLinkInfo, removeInsertionMarker, createPersistentInsertionMarker, createTemporaryInsertionMarker, insertionPointAfter, findAnnotationElement, diffLineRange, reanchorToDom, textAnchorMetas, blockSelector } from '../../utils/viewerDom.js'
-import { createInsertionAnnotation, createTokenAnnotation, createElementAnnotation, getBlockLabel } from '../../utils/viewerAnnotations.js'
+import { createInsertionAnnotation, createTokenAnnotation, createElementAnnotation, getBlockLabel, withAttachments } from '../../utils/viewerAnnotations.js'
 
 const PINPOINT_HINT_LEARNED_KEY = 'md-annotator-pinpoint-hint-learned'
 const HINT_SKIP_SELECTOR = 'a[href], button, .code-copy-btn, .diagram-controls, .annotation-highlight, .annotation-toolbar, .comment-popover'
@@ -128,7 +128,7 @@ export const Viewer = forwardRef(function Viewer({
   }, [setToolbarState, setRequestedToolbarStep])
 
   // --- Viewer-specific annotate (insertion + element + text) ---
-  const handleAnnotate = useCallback((type, text, label, intent) => {
+  const handleAnnotate = useCallback((type, text, label, intent, attachments) => {
     if (!toolbarState) { return }
 
     // Insertion annotations bypass web-highlighter
@@ -150,7 +150,7 @@ export const Viewer = forwardRef(function Viewer({
 
     // Token annotations in code blocks
     if (toolbarState.tokenMode && !toolbarState.mode) {
-      onAddAnnotationRef.current({ ...createTokenAnnotation(toolbarState.tokenData, type, text, label), ...(intent ? { intent } : {}) })
+      onAddAnnotationRef.current({ ...createTokenAnnotation(toolbarState.tokenData, type, text, label), ...(intent ? { intent } : {}), ...withAttachments(attachments) })
       closeToolbar()
       return
     }
@@ -158,16 +158,16 @@ export const Viewer = forwardRef(function Viewer({
     // Element annotations (image/diagram) bypass web-highlighter
     if (toolbarState.elementMode) {
       if (toolbarState.mode === 'edit') {
-        onEditAnnotationRef.current(toolbarState.annotation.id, type, text, undefined, intent)
+        onEditAnnotationRef.current(toolbarState.annotation.id, type, text, undefined, intent, attachments)
       } else {
-        onAddAnnotationRef.current({ ...createElementAnnotation(toolbarState.elementData, type, text, label), ...(intent ? { intent } : {}) })
+        onAddAnnotationRef.current({ ...createElementAnnotation(toolbarState.elementData, type, text, label), ...(intent ? { intent } : {}), ...withAttachments(attachments) })
       }
       closeToolbar()
       return
     }
 
     // Text annotation — delegate to hook
-    handleTextAnnotate(type, text, label, intent)
+    handleTextAnnotate(type, text, label, intent, attachments)
   }, [toolbarState, handleTextAnnotate, closeToolbar, containerRef])
 
   // Add on a text selection inserts after it: the pending highlight gives way to an insertion point at its end.
