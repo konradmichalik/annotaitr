@@ -81,6 +81,7 @@ The output may start with a note before the decision:
 - `APPROVED:`: commit with the proposed message. Stage only the files of the walkthrough. Push or open a pull request only if the user asked for that in this conversation.
 - `APPROVED WITH NOTES:`: commit as above. Treat the notes as context, mention them briefly, change nothing because of them.
 - Annotation feedback: revise, then present again (step 5). Do not commit.
+- No output and exit code 1, with `No decision made.` on stderr: the user closed the tab or interrupted the review without deciding. That is not an approval. Do not commit and do not present again, ask what they want instead.
 
 Each feedback heading names the note's number, its intent and where it
 points. A note on the diff names the file and the line in it:

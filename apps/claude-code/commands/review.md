@@ -33,6 +33,8 @@ Keynote AppleScript export, Marp's or Slidev's PDF export), then run the
 command the hint prints with the Bash tool and `run_in_background: true`.
 If you cannot render it, ask the user to export a PDF.
 
+If the command printed nothing and exited with code 1 (`No decision made.` on stderr), the user closed the tab or interrupted the review. That is not an approval: change nothing and ask what they want.
+
 Use this command when you don't know in advance whether `$ARGUMENTS` is an
 image target or a markdown target — `annotaitr` auto-detects it (see `--help`
 for the exact rules) and the output above will be in one of two shapes:

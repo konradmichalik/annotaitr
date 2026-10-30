@@ -28,7 +28,9 @@ that created it, then run the command the hint prints.
 
 > Requires the `annotaitr` CLI on your `PATH` (`npm install -g annotaitr`).
 
-The output is one of these shapes. Stdout is the contract:
+If the command printed nothing and exited with code 1 (`No decision made.` on stderr), the user closed the tab or interrupted the review. That is not an approval: change nothing and ask what they want.
+
+Otherwise the output is one of these shapes. Stdout is the contract:
 
 **Image feedback**, recognizable by an `Annotated screenshot:` path near the
 top. The user marked up an image or captured web page: boxes, arrows,

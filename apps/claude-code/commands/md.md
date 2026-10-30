@@ -39,6 +39,8 @@ If the output shows `APPROVED:`, the user approved the file with no changes need
 
 If the output shows `APPROVED WITH NOTES:`, the user approved the file as-is but left annotations. Do **not** edit the file. Read the notes, acknowledge them, and stop — they are context for your understanding, not change requests.
 
+If the command printed nothing and exited with code 1 (`No decision made.` on stderr), the user closed the tab or interrupted the review. That is not an approval: change nothing and ask what they want.
+
 ## Re-review loop
 
 After applying all changes:
