@@ -5,7 +5,7 @@ import { QuickLabelPicker } from './QuickLabelPicker.jsx'
 import { CloseIcon } from '../../../shared/components/CloseIcon.jsx'
 import { MOD } from '../../../shared/utils/keys.js'
 import { useRovingFocus } from '../../../shared/hooks/useRovingFocus.js'
-import { TrashIcon, PencilIcon, PlusIcon, ExternalLinkIcon, FileIcon, TagIcon } from './Icons.jsx'
+import { TrashIcon, PencilIcon, ExternalLinkIcon, FileIcon, TagIcon } from './Icons.jsx'
 import { IntentIcon } from '../../../shared/components/IntentIcon.jsx'
 import { intentOf } from '../../../shared/utils/intents.js'
 
@@ -44,18 +44,14 @@ const OpenLinkButton = ({ linkUrl, onOpenLink }) => {
   )
 }
 
-// The selection bar's keys: the four intents in the order the composer's chip lists them.
-const BAR_KEYS = { 1: 'change', 2: 'add', 3: 'remove', 4: 'question' }
-
 /**
- * The bar over a selection: Change, Add, Remove and Ask (keys 1 to 4), Label
- * and Open, then the composer. `onAddAfter` inserts text after a text
- * selection; without it (an element, a token, the source view) Add is not offered.
+ * The bar over a selection: Comment and Remove, Label and Open. Typing
+ * starts a comment at once, `⌫` marks the selection for removal, so the bar
+ * only has to be read, never used. Either way a comment composer follows.
  */
-export function Toolbar({ highlightElement, onAnnotate, onAddAfter = null, onClose, onDelete, onQuickLabel, requestedStep: requestedStepProp, editAnnotation, elementMode, insertionMode, linkUrl, onOpenLink, newIntent = 'change' }) {
+export function Toolbar({ highlightElement, onAnnotate, onClose, onDelete, onQuickLabel, requestedStep: requestedStepProp, editAnnotation, elementMode, insertionMode, linkUrl, onOpenLink }) {
   const [step, setStep] = useState('menu')
   const [initialText, setInitialText] = useState('')
-  const [intent, setIntent] = useState(newIntent)
   const [position, setPosition] = useState(null)
   const [labelPickerOpen, setLabelPickerOpen] = useState(false)
   const roving = useRovingFocus()
@@ -71,46 +67,44 @@ export function Toolbar({ highlightElement, onAnnotate, onAddAfter = null, onClo
     if (editAnnotation) {
       setStep('menu')
       setInitialText(editAnnotation.text || '')
-      setIntent(intentOf(editAnnotation) ?? 'change')
     } else if (insertionMode) {
-      // Add on a selection opens the field for the new text straight away.
       setStep(requestedStepProp ? 'input' : 'menu')
       setInitialText('')
     } else if (requestedStepProp) {
       setStep('input')
       setInitialText('')
-      setIntent(newIntent)
     } else {
       setStep('menu')
       setInitialText('')
-      setIntent(newIntent)
     }
-  }, [highlightElement, requestedStepProp, editAnnotation, elementMode, insertionMode, newIntent])
+  }, [highlightElement, requestedStepProp, editAnnotation, elementMode, insertionMode])
 
-  const openComposer = (nextIntent, text = '') => {
-    setIntent(nextIntent)
+  const openComposer = (text = '') => {
     setInitialText(text)
     setStep('input')
   }
 
-  // Keys 1 to 4 pick an intent, any other printable key starts a comment with the default intent and that key.
+  // ⌫ marks the selection for removal, any printable key starts a comment with that key. ⌫ on a
+  // button of the bar or in the label picker belongs to that control, not to the selection.
   useEffect(() => {
     if (step !== 'menu' || !highlightElement || editAnnotation || insertionMode) {return}
     const handleKeyDown = (e) => {
       const tag = document.activeElement?.tagName?.toLowerCase()
       if (tag === 'textarea' || tag === 'input') {return}
       if (e.metaKey || e.ctrlKey || e.altKey) {return}
+      if (e.key === 'Backspace') {
+        if (tag === 'button' || labelPickerOpen) {return}
+        e.preventDefault()
+        onAnnotate('DELETION')
+        return
+      }
       if (e.key.length !== 1) {return}
-      const picked = BAR_KEYS[e.key]
-      if (picked === 'add' && !onAddAfter) {return}
       e.preventDefault()
-      if (picked === 'remove') { onAnnotate('DELETION') }
-      else if (picked === 'add') { onAddAfter() }
-      else { openComposer(picked ?? newIntent, picked ? '' : e.key) }
+      openComposer(e.key)
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [step, highlightElement, editAnnotation, insertionMode, onAddAfter, onAnnotate, newIntent])
+  }, [step, highlightElement, editAnnotation, insertionMode, onAnnotate, labelPickerOpen])
 
   useEffect(() => {
     if (!highlightElement) {
@@ -155,8 +149,11 @@ export function Toolbar({ highlightElement, onAnnotate, onAddAfter = null, onClo
 
   const isInsertion = insertionMode || editAnnotation?.type === 'INSERTION'
 
-  const handlePopoverSubmit = (text, pickedIntent, attachments) => {
-    onAnnotate(isInsertion ? 'INSERTION' : 'COMMENT', text, undefined, pickedIntent, attachments)
+  // A comment added to a removal is still a removal, which the type alone no longer says.
+  const keptKind = editAnnotation && intentOf(editAnnotation) === 'remove' ? 'remove' : undefined
+
+  const handlePopoverSubmit = (text, attachments) => {
+    onAnnotate(isInsertion ? 'INSERTION' : 'COMMENT', text, undefined, keptKind, attachments)
   }
 
   const handlePopoverClose = () => {
@@ -167,8 +164,8 @@ export function Toolbar({ highlightElement, onAnnotate, onAddAfter = null, onClo
     }
   }
 
-  let composerTitle = intent === 'question' ? 'Question on selection' : 'Comment on selection'
-  if (editAnnotation) { composerTitle = 'Edit comment' } else if (insertionMode) { composerTitle = 'Text to insert' }
+  let composerTitle = 'Comment on selection'
+  if (editAnnotation) { composerTitle = 'Edit comment' } else if (insertionMode) { composerTitle = 'Comment at this position' }
 
   const linkButton = linkUrl && <OpenLinkButton linkUrl={linkUrl} onOpenLink={onOpenLink} />
   const divider = <span className="selection-bar-divider" aria-hidden="true" />
@@ -189,7 +186,7 @@ export function Toolbar({ highlightElement, onAnnotate, onAddAfter = null, onClo
   } else if (insertionMode) {
     actions = (
       <>
-        <BarButton icon={<PlusIcon />} label="Add" title="Add text here" onClick={() => setStep('input')} />
+        <BarButton icon={<IntentIcon intent="comment" />} label="Comment" title="Comment at this position" onClick={() => setStep('input')} />
         {divider}
         {closeButton('Cancel')}
       </>
@@ -197,10 +194,8 @@ export function Toolbar({ highlightElement, onAnnotate, onAddAfter = null, onClo
   } else {
     actions = (
       <>
-        <BarButton icon={<IntentIcon intent="change" />} label="Change" hint="1" shortcut={`1 ${IS_MAC ? 'Meta+K' : 'Control+K'}`} title={`Change (1 or ${modKey('K')})`} onClick={() => openComposer('change')} />
-        {onAddAfter && <BarButton icon={<IntentIcon intent="add" />} label="Add" hint="2" shortcut="2" title="Add text after the selection (2)" onClick={onAddAfter} />}
-        <BarButton icon={<IntentIcon intent="remove" />} label="Remove" hint="3" shortcut={`3 ${IS_MAC ? 'Meta+D' : 'Control+D'}`} title={`Remove (3 or ${modKey('D')})`} onClick={() => onAnnotate('DELETION')} />
-        <BarButton icon={<IntentIcon intent="question" />} label="Ask" hint="4" shortcut="4" title="Ask a question (4)" onClick={() => openComposer('question')} />
+        <BarButton icon={<IntentIcon intent="comment" />} label="Comment" hint={modKey('K')} shortcut={IS_MAC ? 'Meta+K' : 'Control+K'} title={`Comment (type, or ${modKey('K')})`} onClick={() => openComposer()} />
+        <BarButton icon={<IntentIcon intent="remove" />} label="Remove" hint="⌫" shortcut={`Backspace ${IS_MAC ? 'Meta+D' : 'Control+D'}`} title={`Remove (⌫ or ${modKey('D')})`} onClick={() => onAnnotate('DELETION')} />
         <BarButton icon={<TagIcon />} label="Label" hint={LABEL_KEYS} title="Quick label" onClick={() => setLabelPickerOpen(true)} />
         {linkButton}
         {divider}
@@ -233,11 +228,11 @@ export function Toolbar({ highlightElement, onAnnotate, onAddAfter = null, onClo
           title={composerTitle}
           initialText={initialText}
           draftBaseline={editAnnotation ? initialText : ''}
-          placeholder={insertionMode ? 'Text to insert…' : 'Add a comment…'}
+          placeholder="Add a comment…"
           submitLabel={editAnnotation ? 'Save' : 'Add'}
-          initialIntent={isInsertion ? null : intent}
           initialAttachments={editAnnotation?.attachments}
           attachable={!isInsertion}
+          onRemove={editAnnotation || isInsertion ? null : () => onAnnotate('DELETION')}
           onSubmit={handlePopoverSubmit}
           onClose={handlePopoverClose}
         />

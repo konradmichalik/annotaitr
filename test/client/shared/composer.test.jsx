@@ -94,4 +94,77 @@ describe('Composer', () => {
     act(() => { field().dispatchEvent(new MouseEvent('mousedown', { bubbles: true, detail: 1 })) })
     expect(onDiscard).not.toHaveBeenCalled()
   })
+
+  describe('removal', () => {
+    const typeInto = (value) => act(() => {
+      field().value = value
+      field().dispatchEvent(new Event('input', { bubbles: true }))
+    })
+
+    it('has no Remove button and ignores Backspace without onRemove', () => {
+      renderComposer()
+      expect([...container.querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Remove⌫')
+      const event = new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true })
+      act(() => { field().dispatchEvent(event) })
+      expect(event.defaultPrevented).toBe(false)
+    })
+
+    it('offers a Remove button that removes instead of saving', () => {
+      const onRemove = vi.fn()
+      const { onSave } = renderComposer({ onRemove })
+      const button = [...container.querySelectorAll('button')].find((b) => b.textContent.startsWith('Remove'))
+      expect(button.getAttribute('type')).toBe('button')
+      expect(button.getAttribute('aria-keyshortcuts')).toBe('Backspace')
+      act(() => button.click())
+      expect(onRemove).toHaveBeenCalledTimes(1)
+      expect(onSave).not.toHaveBeenCalled()
+    })
+
+    it('removes on Backspace in a field nothing was typed into', () => {
+      const onRemove = vi.fn()
+      renderComposer({ onRemove })
+      const event = new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true })
+      act(() => { field().dispatchEvent(event) })
+      expect(onRemove).toHaveBeenCalledTimes(1)
+      expect(event.defaultPrevented).toBe(true)
+    })
+
+    it('never turns typed and then cleared text into a removal', () => {
+      const onRemove = vi.fn()
+      renderComposer({ onRemove })
+      typeInto('a')
+      typeInto('')
+      press(field(), 'Backspace')
+      expect(onRemove).not.toHaveBeenCalled()
+    })
+
+    it('leaves Backspace on a focused button alone, as a button has an empty value too', () => {
+      const onRemove = vi.fn()
+      const { onDiscard } = renderComposer({ onRemove })
+      const cancel = [...container.querySelectorAll('button')].find((b) => b.textContent === 'Cancel')
+      const event = new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true })
+      act(() => { cancel.dispatchEvent(event) })
+      expect(onRemove).not.toHaveBeenCalled()
+      expect(onDiscard).not.toHaveBeenCalled()
+      expect(event.defaultPrevented).toBe(false)
+    })
+
+    it('leaves Backspace pressed while an input method composes text alone', () => {
+      const onRemove = vi.fn()
+      renderComposer({ onRemove })
+      act(() => { field().dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true, isComposing: true })) })
+      expect(onRemove).not.toHaveBeenCalled()
+    })
+
+    it('leaves Backspace in a field that holds text, and Backspace with a modifier, alone', () => {
+      const onRemove = vi.fn()
+      renderComposer({ onRemove })
+      field().value = 'draft'
+      press(field(), 'Backspace')
+      field().value = ''
+      press(field(), 'Backspace', { metaKey: true })
+      press(field(), 'Backspace', { altKey: true })
+      expect(onRemove).not.toHaveBeenCalled()
+    })
+  })
 })

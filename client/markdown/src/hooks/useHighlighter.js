@@ -1,18 +1,20 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import Highlighter from 'web-highlighter'
-import { INTENTS, intentOf } from '../../../shared/utils/intents.js'
+import { markIndex, intentOf } from '../../../shared/utils/intents.js'
 import { withAttachments } from '../utils/viewerAnnotations.js'
 
-const INTENT_CLASSES = INTENTS.map(({ id }) => `intent-${id}`)
+/** A removal is struck through, also a comment that was added to one. Any other type is named after itself. */
+export const highlightClassOf = (type, intent) => (type === 'DELETION' || intent === 'remove' ? 'deletion' : type.toLowerCase())
 
 /**
  * The note's stable number sits on the first mark that is its own (overlaps
- * nest marks of other notes inside it), where CSS draws it as a badge.
+ * nest marks of other notes inside it), where CSS draws it as a badge. Every
+ * mark of the note carries the colour of that number, round and round.
  */
 function showNoteNumber(doms, ann) {
-  doms.forEach((dom) => { if (dom.dataset.highlightId === ann.id) { delete dom.dataset.noteNumber } })
-  const first = doms.find((dom) => dom.dataset.highlightId === ann.id)
-  if (first && Number.isInteger(ann.number)) { first.dataset.noteNumber = String(ann.number) }
+  const own = doms.filter((dom) => dom.dataset.highlightId === ann.id)
+  own.forEach((dom) => { delete dom.dataset.noteNumber; dom.dataset.noteMark = String(markIndex(ann.number)) })
+  if (own[0] && Number.isInteger(ann.number)) { own[0].dataset.noteNumber = String(ann.number) }
 }
 
 /**
@@ -146,12 +148,7 @@ export function useHighlighter({
       try {
         const doms = highlighter.getDoms(ann.id)
         if (doms?.length > 0) {
-          if (ann.type === 'DELETION') { highlighter.addClass('deletion', ann.id) }
-          else if (ann.type === 'COMMENT') { highlighter.addClass('comment', ann.id) }
-          // The underline and tint follow the intent; an edit can change it.
-          const intent = intentOf(ann)
-          INTENT_CLASSES.forEach((name) => highlighter.removeClass(name, ann.id))
-          if (intent) { highlighter.addClass(`intent-${intent}`, ann.id) }
+          if (ann.type === 'DELETION' || ann.type === 'COMMENT') { highlighter.addClass(highlightClassOf(ann.type, intentOf(ann)), ann.id) }
           showNoteNumber(doms, ann)
         }
       } catch (_e) { /* ignore */ }
@@ -218,7 +215,7 @@ export function useHighlighter({
       const { annotation } = toolbarState
       highlighter.removeClass('deletion', annotation.id)
       highlighter.removeClass('comment', annotation.id)
-      highlighter.addClass(type.toLowerCase(), annotation.id)
+      highlighter.addClass(highlightClassOf(type, intent), annotation.id)
       r.current.onEditAnnotation(annotation.id, type, text, label, intent, attachments)
     } else {
       createAnnotationFromSource(type, text, label, intent, attachments)
@@ -284,9 +281,7 @@ export function useHighlighter({
     isRestoringRef.current = true
     try {
       highlighter.fromStore(anchor.startMeta, anchor.endMeta, ann.originalText, ann.id)
-      highlighter.addClass(ann.type.toLowerCase(), ann.id)
-      const intent = intentOf(ann)
-      if (intent) { highlighter.addClass(`intent-${intent}`, ann.id) }
+      highlighter.addClass(highlightClassOf(ann.type, intentOf(ann)), ann.id)
       showNoteNumber(highlighter.getDoms(ann.id) ?? [], ann)
       return true
     } catch (_e) {
@@ -305,12 +300,12 @@ export function useHighlighter({
     containerRef.current?.querySelectorAll('.annotation-highlight, [data-highlight-id]').forEach(unwrapOrRemove)
   }
 
-  const updateHighlightType = (id, type) => {
+  const updateHighlightType = (id, type, intent) => {
     const highlighter = highlighterRef.current
     if (!highlighter) { return }
     highlighter.removeClass('deletion', id)
     highlighter.removeClass('comment', id)
-    highlighter.addClass(type.toLowerCase(), id)
+    highlighter.addClass(highlightClassOf(type, intent), id)
   }
 
   return {

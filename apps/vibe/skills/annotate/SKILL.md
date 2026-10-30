@@ -35,15 +35,13 @@ The command prints the result to stdout:
   closed the tab or interrupted the review. That is not an approval: change
   nothing and ask what they want.
 - Structured annotation feedback → apply the requested edits to the file(s).
-  Each heading names the note's number and intent, such as
-  `## 3. Question · Text (Line 7) [#a3f19c2e]`:
-  - **Change**: apply the user's comment as a change to the quoted text.
-  - **Add**: an `Insertion` inserts the given text after its `After:` context; on a quoted text, add what the comment asks for there.
-  - **Remove**: delete the quoted text.
-  - **Question**: the user asks, they do not request an edit. Answer it, and change the file only if the answer makes the change obvious.
+  Each heading names the note's number and what it points at, such as
+  `## 3. Text (Line 7) [#a3f19c2e]`. A note is a comment or a removal:
+  - **Remove**: the heading says `Remove ·` after the number. Delete the quoted text.
+  - **Comment**: every other note. Its text says what the user wants: a change to the quoted text, something to add there, or a question. An `Insertion` comments at a position, with the `After:` context before it, and if it says to add something, add it there. A question is not a request for an edit: answer it, and change the file only if the answer makes the change obvious.
   - An `Attachment:` line under a heading names an image the user attached to that note. You cannot open images, so tell the user which note has one you could not view.
 
-A `General comment` has no number and no intent. A note keeps its number for
+A `General comment` has no number. A note keeps its number for
 the whole round, so numbers can have gaps where the user deleted a note, and
 notes are listed in document order. Each heading normally ends with a short
 handle in brackets, such as `[#a3f19c2e]`, which stays fixed for as long as

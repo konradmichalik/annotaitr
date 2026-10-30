@@ -14,7 +14,7 @@ describe('formatApprovalOutput', () => {
 describe('formatApprovalWithNotesOutput', () => {
   it('includes the annotation count, the image path, and each note', () => {
     const output = formatApprovalWithNotesOutput([pin], 100, 100, '/tmp/annotated.png')
-    expect(output).toContain('APPROVED WITH NOTES: 1 note (1 Question).')
+    expect(output).toContain('APPROVED WITH NOTES: 1 note (1 Comment).')
     expect(output).toContain('Annotated screenshot: /tmp/annotated.png')
     expect(output).toContain('This spacing looks off')
     expect(output).toContain('top left')
@@ -22,17 +22,17 @@ describe('formatApprovalWithNotesOutput', () => {
 
   it('pluralizes the count correctly', () => {
     const output = formatApprovalWithNotesOutput([pin, box], 100, 100, '/tmp/annotated.png')
-    expect(output).toContain('APPROVED WITH NOTES: 2 notes (1 Change, 1 Question).')
+    expect(output).toContain('APPROVED WITH NOTES: 2 notes (2 Comment).')
   })
 })
 
 describe('exportFeedback', () => {
   it('lists every annotation with its type, position, and comment', () => {
     const output = exportFeedback([pin, box], 100, 100, '/tmp/annotated.png')
-    expect(output).toContain('2 annotations (1 Change, 1 Question) on the screenshot.')
+    expect(output).toContain('2 annotations (2 Comment) on the screenshot.')
     expect(output).toContain('Annotated screenshot: /tmp/annotated.png')
-    expect(output).toContain('### 1. Question · Comment pin:')
-    expect(output).toContain('### 2. Change · Boxed area:')
+    expect(output).toContain('### 1. Comment pin:')
+    expect(output).toContain('### 2. Boxed area:')
     expect(output).toContain('This spacing looks off')
     expect(output).toContain('(no comment text)')
   })
@@ -45,17 +45,17 @@ describe('exportFeedback', () => {
     const doubleArrow = { type: 'arrow', arrowStyle: 'double', color: '#e11d48', text: '', geometry }
     const unknownArrow = { type: 'arrow', arrowStyle: 'triangle', color: '#e11d48', text: '', geometry }
     const output = exportFeedback([headArrow, dimensionArrow, noneArrow, doubleArrow, unknownArrow], 100, 100, '/tmp/annotated.png')
-    expect(output).toContain('1. Change · Arrow pointing to')
-    expect(output).toContain('2. Change · Distance/spacing between two points near')
-    expect(output).toContain('3. Change · Line connecting')
-    expect(output).toContain('4. Change · Two-way connection between')
-    expect(output).toContain('5. Change · Arrow pointing to')
+    expect(output).toContain('1. Arrow pointing to')
+    expect(output).toContain('2. Distance/spacing between two points near')
+    expect(output).toContain('3. Line connecting')
+    expect(output).toContain('4. Two-way connection between')
+    expect(output).toContain('5. Arrow pointing to')
   })
 
   it('labels a highlighter mark', () => {
     const highlighter = { type: 'highlighter', color: '#e11d48', text: '', geometry: { points: [{ x: 0, y: 0 }, { x: 10, y: 10 }] } }
     const output = exportFeedback([highlighter], 100, 100, '/tmp/annotated.png')
-    expect(output).toContain('1. Change · Highlighted area')
+    expect(output).toContain('1. Highlighted area')
   })
 
   it('calls out annotations positioned close together', () => {
@@ -74,7 +74,7 @@ describe('exportFeedback', () => {
   it('puts the handle right after the number for a shape annotation', () => {
     const marked = { ...box, id: 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d' }
     const output = exportFeedback([marked], 100, 100, '/tmp/annotated.png')
-    expect(output).toContain('### 1. [#a3f19c2e] Change · Boxed area:')
+    expect(output).toContain('### 1. [#a3f19c2e] Boxed area:')
   })
 
   it('puts the handle first for an unnumbered general comment', () => {
@@ -92,20 +92,20 @@ describe('exportFeedback', () => {
     const a = { id: 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d', type: 'box', color: '#e11d48', text: '', geometry: { x: 85, y: 15, width: 4, height: 4 } }
     const b = { id: '7b210e44-9f2c-4a1b-8e6d-3c7a5b9d1e2f', type: 'box', color: '#e11d48', text: '', geometry: { x: 90, y: 18, width: 4, height: 4 } }
     const output = exportFeedback([a, b], 100, 100, '/tmp/annotated.png')
-    expect(output).toContain('### 1. [#a3f19c2e] Change · Boxed area:')
+    expect(output).toContain('### 1. [#a3f19c2e] Boxed area:')
     expect(output).toContain('close to annotation 2')
   })
 
   it('omits the handle when the annotation has no id', () => {
     const output = exportFeedback([box], 100, 100, '/tmp/annotated.png')
-    expect(output).toContain('### 1. Change · Boxed area:')
+    expect(output).toContain('### 1. Boxed area:')
     expect(output).not.toContain('[#')
   })
 
   it('carries handles into approve-with-notes output', () => {
     const marked = { ...pin, id: 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d' }
     const output = formatApprovalWithNotesOutput([marked], 100, 100, '/tmp/annotated.png')
-    expect(output).toContain('### 1. [#a3f19c2e] Question · Comment pin:')
+    expect(output).toContain('### 1. [#a3f19c2e] Comment pin:')
   })
 
   it('formats a general comment without a position or nearby-marker note', () => {
@@ -122,7 +122,7 @@ describe('feedback text without a written image', () => {
   it('leaves out the screenshot path, which only means something to the agent', () => {
     const output = exportFeedback([pin], 100, 100, null)
     expect(output).not.toContain('Annotated screenshot:')
-    expect(output).toContain('1 annotation (1 Question) on the screenshot.')
+    expect(output).toContain('1 annotation (1 Comment) on the screenshot.')
     expect(output).toContain('This spacing looks off')
   })
 })
@@ -134,7 +134,7 @@ describe('element lines from a captured page', () => {
   it('adds the matched element under the heading, ahead of the comment', () => {
     const output = exportFeedback([pin], 100, 100, '/tmp/annotated.png', domMap)
     expect(output).toContain(
-      '### 1. Question · Comment pin: top left (~10% from top, ~10% from left)\nElement: img "Team photo" ("team.jpg") · #hero img\n> This spacing looks off'
+      '### 1. Comment pin: top left (~10% from top, ~10% from left)\nElement: img "Team photo" ("team.jpg") · #hero img\n> This spacing looks off'
     )
   })
 
@@ -165,7 +165,7 @@ describe('element lines from a captured page', () => {
     const banner = { tag: 'div', role: '', name: '', media: '', selector: 'div.banner', box: { x: 0, y: 0, width: 60, height: 60 } }
     const selected = { type: 'element', color: '#e11d48', text: 'Too loud', geometry: { x: 0, y: 0, width: 40, height: 40 } }
     const output = exportFeedback([selected], 100, 100, '/tmp/annotated.png', [banner, photo])
-    expect(output).toContain('### 1. Change · Selected element: top left')
+    expect(output).toContain('### 1. Selected element: top left')
     expect(output).toContain('Element: img "Team photo" ("team.jpg") · #hero img')
   })
 
@@ -178,14 +178,14 @@ describe('element lines from a captured page', () => {
 })
 
 describe('intents and stable numbers', () => {
-  it('prints the number and intent each note carries, gaps included', () => {
+  it('prints the number each note carries, gaps included, and marks a removal', () => {
     const output = exportFeedback([
       { ...box, number: 1, intent: 'remove' },
       { ...pin, number: 3, intent: 'add', geometry: { x: 90, y: 90 } }
     ], 100, 100, '/tmp/annotated.png')
-    expect(output).toContain('2 annotations (1 Add, 1 Remove) on the screenshot.')
+    expect(output).toContain('2 annotations (1 Comment, 1 Remove) on the screenshot.')
     expect(output).toContain('### 1. Remove · Boxed area:')
-    expect(output).toContain('### 3. Add · Comment pin:')
+    expect(output).toContain('### 3. Comment pin:')
     expect(output).not.toContain('### 2.')
   })
 
@@ -193,16 +193,16 @@ describe('intents and stable numbers', () => {
     const a = { type: 'box', text: '', number: 2, geometry: { x: 85, y: 15, width: 4, height: 4 } }
     const b = { type: 'box', text: '', number: 5, geometry: { x: 90, y: 18, width: 4, height: 4 } }
     const output = exportFeedback([a, b], 100, 100, '/tmp/annotated.png')
-    expect(output).toContain('### 2. Change · Boxed area: top right (~17% from top, ~87% from left) — close to annotation 5')
+    expect(output).toContain('### 2. Boxed area: top right (~17% from top, ~87% from left) — close to annotation 5')
     expect(output).toContain('close to annotation 2, check')
   })
 
   it('leaves the general comment unnumbered and counts it as General', () => {
     const comment = { type: 'comment', geometry: null, text: 'Overall fine' }
     const output = exportFeedback([comment, box], 100, 100, '/tmp/annotated.png')
-    expect(output).toContain('2 annotations (1 Change, 1 General) on the screenshot.')
+    expect(output).toContain('2 annotations (1 Comment, 1 General) on the screenshot.')
     expect(output).toContain('### General comment about the whole image')
-    expect(output).toContain('### 1. Change · Boxed area:')
+    expect(output).toContain('### 1. Boxed area:')
   })
 })
 
@@ -215,7 +215,7 @@ describe('formatImageSetOutput', () => {
 
   it('groups the notes per image under the image label', () => {
     const output = formatImageSetOutput(sets, { approved: false })
-    expect(output).toContain('2 annotations (1 Change, 1 Question) on 3 screenshots.')
+    expect(output).toContain('2 annotations (2 Comment) on 3 screenshots.')
     expect(output).toContain('## Image 1 of 3: a.png')
     expect(output).toContain('Annotated screenshot: /tmp/a/annotated.png')
     expect(output).toContain('## Image 3 of 3: c.png')
@@ -234,7 +234,7 @@ describe('formatImageSetOutput', () => {
 
   it('frames an approval as context, not change requests', () => {
     const output = formatImageSetOutput(sets, { approved: true })
-    expect(output).toContain('APPROVED WITH NOTES: 2 notes (1 Change, 1 Question) on 3 screenshots.')
+    expect(output).toContain('APPROVED WITH NOTES: 2 notes (2 Comment) on 3 screenshots.')
     expect(output).toContain('Treat the notes below as context, not as change requests.')
   })
 })
@@ -249,9 +249,9 @@ describe('crops per note', () => {
 
   it('puts a Crop line directly under each note heading, repeating a shared crop', () => {
     const output = exportFeedback([near, close, far, general], 1600, 1200, '/tmp/x/annotated.png', null, null, crops)
-    expect(output).toMatch(/### 1\. Change · Boxed area: [^\n]+\nCrop: \/tmp\/x\/crop-01-02\.png\n> Near one\n/)
-    expect(output).toMatch(/### 2\. Question · Comment pin: [^\n]+\nCrop: \/tmp\/x\/crop-01-02\.png\n> Near two\n/)
-    expect(output).toMatch(/### 3\. Change · Boxed area: [^\n]+\nCrop: \/tmp\/x\/crop-03\.png\n> Far away\n/)
+    expect(output).toMatch(/### 1\. Boxed area: [^\n]+\nCrop: \/tmp\/x\/crop-01-02\.png\n> Near one\n/)
+    expect(output).toMatch(/### 2\. Comment pin: [^\n]+\nCrop: \/tmp\/x\/crop-01-02\.png\n> Near two\n/)
+    expect(output).toMatch(/### 3\. Boxed area: [^\n]+\nCrop: \/tmp\/x\/crop-03\.png\n> Far away\n/)
     expect(output).toContain('### General comment about the whole image\n> Overall fine\n')
     expect(output).toContain(notice)
   })

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { createPersistentInsertionMarker, insertionPointAfter } from '../../../client/markdown/src/utils/viewerDom.js'
+import { createPersistentInsertionMarker } from '../../../client/markdown/src/utils/viewerDom.js'
 
 // A code block as CodeBlock renders it: toolbar and diff header come before the code in the DOM.
 function codeBlock() {
@@ -11,15 +11,7 @@ function codeBlock() {
   return host
 }
 
-describe('insertion offsets in a code block', () => {
-  it('count from the code, not from the header and toolbar before it', () => {
-    const host = codeBlock()
-    const point = insertionPointAfter(host.querySelector('#added'))
-    expect(point.offset).toBe('-a\n+b'.length)
-    expect(point.afterContext).toBe('-a\n+b')
-    host.remove()
-  })
-
+describe('insertion markers in a code block', () => {
   it('place a restored marker at the same offset inside the code', () => {
     const host = codeBlock()
     const marker = createPersistentInsertionMarker('ann-1', host.querySelector('[data-block-id]'), 2, 1)

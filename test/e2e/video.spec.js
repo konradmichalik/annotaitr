@@ -82,8 +82,8 @@ test('a video gets a point and a span annotation and the CLI prints frames for b
 
     expect(await cli.exited).toBe(0)
     const stdout = cli.stdout()
-    expect(stdout).toContain('2 annotations (2 Change) on the recording clip.webm (00:02.000, 160x90).')
-    expect(stdout).toMatch(/### 2\. \[#\w+\] Change · from 00:00\.900 to 00:01\.200, Span comment[\s\S]*### 1\. \[#\w+\] Change · at 00:01\.000, Boxed area/)
+    expect(stdout).toContain('2 annotations (2 Comment) on the recording clip.webm (00:02.000, 160x90).')
+    expect(stdout).toMatch(/### 2\. \[#\w+\] from 00:00\.900 to 00:01\.200, Span comment[\s\S]*### 1\. \[#\w+\] at 00:01\.000, Boxed area/)
     for (const [, path] of stdout.matchAll(/(?:Frame|Strip|Overview): (\S+)/g)) {
       expect(existsSync(path)).toBe(true)
     }
@@ -217,7 +217,7 @@ test('a GIF steps frame by frame and exports the annotated frame', async ({ page
     await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible({ timeout: 20_000 })
 
     expect(await cli.exited).toBe(0)
-    expect(cli.stdout()).toMatch(/### 1\. \[#\w+\] Change · at 00:00\.200, Boxed area/)
+    expect(cli.stdout()).toMatch(/### 1\. \[#\w+\] at 00:00\.200, Boxed area/)
     expect(cli.stdout()).toMatch(/Frame: \S+frame-01-00m00\.200s\.png/)
   } finally {
     await rm(dir, { recursive: true, force: true })
@@ -257,7 +257,7 @@ test('close notes merge into a cluster whose list opens above the lanes and work
     await page.keyboard.press('Enter')
     await expect(chip).toHaveAttribute('aria-expanded', 'true')
     const list = page.getByRole('group', { name: '2 notes around 00:01.000' })
-    const first = list.getByRole('button', { name: /^1\s*Change\s*00:01\.000/ })
+    const first = list.getByRole('button', { name: /^1\s*Comment\s*00:01\.000/ })
     await expect(first).toBeFocused()
 
     const listBox = await list.boundingBox()
@@ -267,7 +267,7 @@ test('close notes merge into a cluster whose list opens above the lanes and work
     expect(listBox.y + listBox.height).toBeLessThan(controls.y)
 
     await page.keyboard.press('ArrowDown')
-    await expect(list.getByRole('button', { name: /^2\s*Change/ })).toBeFocused()
+    await expect(list.getByRole('button', { name: /^2\s*Comment/ })).toBeFocused()
     await page.keyboard.press('Escape')
     await expect(list).toHaveCount(0)
     await expect(chip).toBeFocused()

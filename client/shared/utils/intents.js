@@ -1,21 +1,17 @@
 /**
- * What a note asks the agent to do, and the number it keeps for the whole
- * round. Mirrors server/core/notes.js (client and server share no modules):
- * the intent and the number are part of the stdout contract, so the card
- * and the output must agree.
+ * The kind of a note and the number it keeps for the whole round. A note is a
+ * comment or a removal: what a comment asks for is in its words. Mirrors
+ * server/core/notes.js (client and server share no modules): the kind and the
+ * number are part of the stdout contract, so the card and the output must agree.
  */
 
 export const INTENTS = [
-  { id: 'change', word: 'Change', key: '1' },
-  { id: 'add', word: 'Add', key: '2' },
-  { id: 'remove', word: 'Remove', key: '3' },
-  { id: 'question', word: 'Question', key: '4' }
+  { id: 'comment', word: 'Comment' },
+  { id: 'remove', word: 'Remove' }
 ]
 
-const IDS = INTENTS.map((intent) => intent.id)
-
 // A markdown deletion or insertion is what it is, whatever an imported field claims.
-const FIXED_BY_TYPE = { DELETION: 'remove', INSERTION: 'add' }
+const FIXED_BY_TYPE = { DELETION: 'remove', INSERTION: 'comment' }
 
 /** A comment about the whole target: markdown's global comment, or an image comment without shape, page or time. */
 export function isGeneral(annotation) {
@@ -26,28 +22,16 @@ export function isGeneral(annotation) {
 
 export const isNumbered = (annotation) => annotation.type !== 'NOTES' && !isGeneral(annotation)
 
-/**
- * The intent a new note of this type starts with: `preferred` (the Default
- * intent setting, Change unless set), except for the fixed markdown types.
- */
-export function defaultIntent(type, preferred = 'change') {
-  return FIXED_BY_TYPE[type] ?? (IDS.includes(preferred) ? preferred : 'change')
-}
+/** The kind a new note of this type starts with: a comment, except the fixed markdown types. */
+export const defaultIntent = (type) => FIXED_BY_TYPE[type] ?? 'comment'
 
-/** The note's intent; old data without the field gets the default of its type. Null for general comments. */
+/** The kind of the note. The Change, Add and Question of older data read as comments. Null for general comments. */
 export function intentOf(annotation) {
   if (!isNumbered(annotation)) { return null }
-  const fixed = FIXED_BY_TYPE[annotation.type]
-  if (fixed) { return fixed }
-  if (IDS.includes(annotation.intent)) { return annotation.intent }
-  // Pins saved before the Default intent applied to them were Questions.
-  return annotation.type === 'pin' ? 'question' : defaultIntent(annotation.type)
+  return FIXED_BY_TYPE[annotation.type] ?? (annotation.intent === 'remove' ? 'remove' : 'comment')
 }
 
 export const intentWord = (intent) => INTENTS.find((i) => i.id === intent)?.word ?? 'General'
-
-/** The intent a key from 1 to 4 picks, or null. */
-export const intentForKey = (key) => INTENTS.find((i) => i.key === key)?.id ?? null
 
 const validNumber = (value) => Number.isInteger(value) && value > 0
 
@@ -83,7 +67,10 @@ export function normalizeNotes(annotations, { order = (list) => list, reserved =
   })
 }
 
-/** The note badge colours: the intent's mark with its number colour. */
-export function intentBadgeStyle(intent) {
-  return intent ? { background: `var(--intent-${intent}-mark)`, color: `var(--intent-${intent}-on-mark)` } : undefined
-}
+const MARK_COUNT = 4
+
+/** Which of the four mark colours note `number` takes: 1 for note 1, round and round. The first without a usable number. */
+export const markIndex = (number) => (Number.isInteger(number) && number > 0 ? ((number - 1) % MARK_COUNT) + 1 : 1)
+
+/** The colour of a note's number, which is the colour of its mark: the mark with its number colour. */
+export const markStyle = (number) => ({ background: `var(--mark-${markIndex(number)})`, color: `var(--mark-${markIndex(number)}-on)` })

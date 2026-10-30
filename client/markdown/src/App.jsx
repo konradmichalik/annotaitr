@@ -658,7 +658,6 @@ export default function App() {
               krokiServerUrl={serverConfig.krokiServerUrl}
               selectedAnnotationId={selectedAnnotationId}
               crossFileSearch={crossFileSearchProps}
-              newIntent={settings.defaultIntent}
               toolHints={settings.toolHints}
               changes={changeSections ? { ...changesReview, sections: changeSections, select: changesNav.select, read: readViews, noted: notedBlocks, agent: agentName(origin) ?? 'the agent' } : null}
             />
@@ -673,7 +672,6 @@ export default function App() {
               onEditAnnotation={handleEditAnnotation}
               onDeleteAnnotation={handleDeleteAnnotation}
               onSelectAnnotation={handleSelectAnnotation}
-              newIntent={settings.defaultIntent}
             />
           )}
         </div>

@@ -27,7 +27,7 @@ new annotation is pinned to, `At 00:01.000` or `Span 00:01.000 → 00:03.000`.
 | `Alt` + `←` / `→` on a focused marker | Move it one frame, with `Shift` its end (a moment becomes a span) |
 
 Each annotation shows as a marker in one of two lanes above the scrubber.
-**Notes** holds the moments as numbered dots in the intent's colour, **Spans**
+**Notes** holds the moments as numbered dots in the colour of their number, **Spans**
 holds the ranges as bars with the tool icon (or a speech bubble for a
 text-only span) and the start of the comment; overlapping spans each get a
 row of their own. A line marks the playhead across both lanes. Click a marker
@@ -38,7 +38,7 @@ undone.
 
 Notes closer together than a marker is wide merge into a cluster chip with
 their colours and their count. A click or `Enter` opens a list of them
-(number, intent, timecode) above the lanes; the arrow keys move through it,
+(number, kind, timecode) above the lanes; the arrow keys move through it,
 `Enter` jumps to a note and `Esc` closes the list. Marks from the earlier
 round sit on the same lanes, dashed and grey, and open their thread.
 

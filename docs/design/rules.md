@@ -7,7 +7,7 @@ The screens these rules produce are listed in [screens.md](screens.md). The toke
 ## Principles
 
 1. **Ink for the tool, colour for the feedback.** The chrome is ink and greys. Every colour on screen is an annotation or a status.
-2. **Intent before looks.** A note says what the agent should do (Change, Add, Remove, Question). Colour, icon and word carry the same intent.
+2. **Mark and type.** A note is a comment or a removal, nothing to choose before typing. What a comment asks for is in its words. The kind is icon and word, never colour: the colour only tells notes apart.
 3. **One number, two places.** A mark on the canvas and its card in the panel share number, colour and focus.
 4. **One exit, clearly named.** One split button whose default follows the state. Before anything is sent, the reviewer sees what goes out.
 5. **Keyboard first.** Every tool has a letter, every drag has a click alternative, every focus stays visible.
@@ -32,20 +32,28 @@ All colours come from tokens in `client/shared/styles/tokens.css`, with a light 
 - **`--line` is decoration, `--line-control` is a boundary.** A field outlined with `--line` fails WCAG 1.4.11.
 - **Status colours differ from ink in lightness, not only in hue.**
 
-### Intents
+### Marks
 
-| Intent | Icon | Mark | Number on mark | Label light | Label dark |
-| --- | --- | --- | --- | --- | --- |
-| Change | Pen | `#c04a00` | white | `#9a3b00` | `#ffb07a` |
-| Add | Plus | `#e69f00` | ink | `#7a5400` | `#f0c05a` |
-| Remove | Minus | `#a8457e` | white | `#8a3466` | `#f0abd0` |
-| Question | Question mark | `#0072b2` | white | `#005a8c` | `#8fd0f5` |
-| Earlier round | none | dashed `#5a6170` outline, never filled | ink | `--ink-muted` | `--ink-muted` |
+A note takes the colour at its number, round and round, so neighbouring notes differ. The colour never says what a note asks for.
 
-- The palette is derived from Okabe-Ito and stays distinct under protanopia and deuteranopia. White numbers hold at least 4.98:1 on the mark colours.
-- **Marks follow the image, not the theme.** The marks on the canvas use the same colours in light and dark theme, because the image under them does not change. Only labels in the chrome switch to the dark values.
+| Note number | Token | Mark | Number on mark |
+| --- | --- | --- | --- |
+| 1, 5, 9 | `--mark-1` | `#c04a00` | white |
+| 2, 6, 10 | `--mark-2` | `#e69f00` | ink |
+| 3, 7, 11 | `--mark-3` | `#0072b2` | white |
+| 4, 8, 12 | `--mark-4` | `#a8457e` | white |
+| Earlier round | `--intent-earlier-mark` | dashed `#5a6170` outline, never filled | ink |
+
+| Kind | Icon | Word |
+| --- | --- | --- |
+| Comment | Pen | Comment |
+| Remove | Minus | Remove, and the text is struck through |
+
+- Four colours, no more: further hues would collide with the status colours, the syntax colours and the diff colours. The palette is derived from Okabe-Ito and stays distinct under protanopia and deuteranopia. White numbers hold at least 4.98:1 on the mark colours.
+- **Marks follow the image, not the theme.** The marks on the canvas use the same colours in light and dark theme, because the image under them does not change.
 - A mark gets a soft 1px light halo (`rgba(255,255,255,0.6)`) that only shows where the image under it is dark. No hard dark outline.
-- The ink colour of a shape is a separate, optional style for visibility on busy images. It never replaces the intent: the number badge keeps the intent colour. New marks have no ink unless one is fixed in the dock (`Intent colour` is the default).
+- The ink colour of a shape is a separate, optional style for visibility on busy images. It never replaces the number's colour: the number badge keeps it. New marks have no ink unless one is fixed in the dock (`Automatic colour` is the default).
+- Notes on a whole block (diagram, image, formula) in markdown are still tinted by their type from `base.css`, with the `--intent-*` tokens. Moving them to the marks is open.
 
 ### Changes and code
 
@@ -67,8 +75,8 @@ Changes and code modes add tokens for diff lines and syntax. They switch with th
 | `--syntax-comment` | `#6b7280` | `#8b93a1` | Comments, in italics |
 
 - Added and removed differ by the sign column and by which line number column is filled, never by colour alone. Line references in cards carry the side: `+L43` for the new file, `−L43` for the old one.
-- A line with a note gets a wash of its intent colour (7 to 10% alpha) behind the code, and the mark sits in the gutter. Diff colours stay below the wash, so the intent stays readable on added and removed lines.
-- Syntax colours stay muted. They never reuse an intent colour.
+- A line with a note gets a wash of its mark colour (7 to 10% alpha) behind the code, and the mark sits in the gutter. Diff colours stay below the wash, so the mark stays readable on added and removed lines.
+- Syntax colours stay muted. They never reuse a mark colour.
 
 ## Typography
 
@@ -82,7 +90,7 @@ Changes and code modes add tokens for diff lines and syntax. They switch with th
 
 - **12px is the minimum** for text. Key caps may use 11px Geist Mono.
 - Numbers that change or line up (counts, timecodes, page numbers, zoom) use tabular digits.
-- No uppercase badges. An intent is a word with an icon, in sentence case.
+- No uppercase badges. A kind is a word with an icon, in sentence case.
 - The target keeps its own fonts. The markdown preview may use a reading face, the chrome never does.
 - Geist and Geist Mono ship inside the single-file bundle (OFL). No font CDN: no request leaves localhost.
 
@@ -149,7 +157,7 @@ A status dot plus the words, never the dot alone. The tooltip names the caller (
 - Title `Feedback`, then a two-way switch: `This round · n` and `Replies · n` (image, PDF, web, video, changes) or `This file · n` and `All files · n` (Markdown, code). Markdown with several files and an earlier round shows all three: `This file · n`, `All files · n`, `Replies · n`. The switch only shows when a side beyond the first can hold something: an earlier round, or more than one file. An empty `Replies · 0` tab would only be a dead end.
 - In Markdown and changes, a thread from the Replies tab opens in place below its card, the canvas has no popover for it. Its earlier text is underlined dashed in `--intent-earlier-mark`; clicking the card scrolls to it. Threads whose text is gone list last under `No longer in the document` with their original quote.
 - With two or more numbered notes the header shows `‹ 2 of 5 ›` between the title and the menu: previous and next note, keys `Shift+N` and `N`. The buttons stop at the first and the last note and are marked disabled there with `aria-disabled` and stay focusable, the counter is a polite live region and reads `5 notes` while none is selected. Stepping selects the note like a click on its mark and never opens its comment box.
-- One card per note: number on the intent colour, intent icon and word, location (page, selector, timecode or line), then the quote and the comment.
+- One card per note: number on its mark colour, the kind as icon and word, location (page, selector, timecode or line), then the quote and the comment.
 - A note restored from a draft whose text is gone from the edited file shows a dashed `Unanchored` pill in place of its location, like the `Not explained` pill, and is part of the card's accessible name together with its hint `text no longer in the file` (also the pill's tooltip). It lists after the anchored notes, has no highlight and offers delete but no edit.
 - Card actions are visible on hover and on `:focus-within`, never on hover only.
 - The general comment is a collapsed row `+ General comment` (key `G`) at the bottom. It opens into a field on click. Once written, the row reads `Edit general comment` and does not repeat the text.
@@ -194,16 +202,16 @@ A status dot plus the words, never the dot alone. The tooltip names the caller (
 ## Notes
 
 - Numbers are stable for the whole round. Deleting a note never renumbers the others, or the agent's references break. The output lists notes by position, so their numbers need not ascend. The next round starts at 1.
-- The general comment has no number and no intent.
+- The general comment has no number and no kind.
 - Selecting a mark selects its card and scrolls it into view, and the other way round.
 - Marks from an earlier round are grey and dashed so they never compete with new notes.
 
 ### Composer
 
 - **Text first.** The popover opens with the text field focused, placeholder `Add a comment…`. Nothing sits above it.
-- One footer row: the intent chip (`✎ Change ▾`), a palette icon for ink and stroke, `Cancel` as text and `Add ⌘↵` as the only filled button. In changes and code the palette icon is replaced by `Suggest code`, which opens a suggestion block below the field: the selected lines as `−`, the reviewer's version as `+`. The block can be removed again and never sits above the field.
+- One footer row: `Remove ⌫`, a palette icon for ink and stroke, `Cancel` as text and `Add ⌘↵` as the only filled button. In changes and code the palette icon is replaced by `Suggest code`, which opens a suggestion block below the field: the selected lines as `−`, the reviewer's version as `+`. The block can be removed again and never sits above the field.
 - In changes and code the composer opens inline, below the last selected line, so the code above stays visible.
-- Default intent: Change for every mark, pins included. Keys `1` to `4` switch it without opening the menu while focus is in the composer but outside its text field (on the chip after `Tab`, for example), so digits typed into a comment stay text. A markdown insertion has no chip, it is always Add. The default is configurable in Settings.
+- Every mark starts as a comment, pins included. `Remove ⌫` saves a removal at once, and `⌫` does the same in a field nothing was typed into. Text that was typed and then deleted never removes. A saved note keeps its kind. A markdown insertion has no `Remove`, it is a comment at a position.
 - The focused popover border is the focus indicator: 1.5px `--focus` plus a soft ring while focus is inside. The field itself has no outline. Buttons inside keep the 2px ring.
 - A voice note, where available, is its own microphone button next to the palette, not behind it: closing the palette must not stop a recording.
 - A draft survives a click outside in every mode. A draft is typed text that differs from what the composer opened with, or a changed ink or stroke. An untouched composer closes on a click outside, and a mark drawn just before goes with it. `Esc` and `Cancel` discard.
@@ -220,7 +228,7 @@ A status dot plus the words, never the dot alone. The tooltip names the caller (
 ## Decision
 
 - The split button's main action follows the state: `Approve` with no notes, `Send feedback n` with notes. The chevron opens the decision dialog. While the agent waits for answers to its questions, the main action opens the dialog first, with that option selected and the open questions listed.
-- The dialog offers three options with one sentence each: Send feedback, Approve with notes, Approve. It shows the note count by intent, an optional summary for the agent and how many pending replies go out.
+- The dialog offers three options with one sentence each: Send feedback, Approve with notes, Approve. It shows the note count by kind, an optional summary for the agent and how many pending replies go out.
 - Choosing Approve while notes exist asks once before discarding them.
 - In Changes the decision gates the agent's next step: Approve lets it commit or open the pull request with the proposed message, Approve with notes does the same and passes the notes on as context, Send feedback asks it to revise and present again. The dialog says this in its one sentence per option.
 - `⌘⇧↵` opens the decision from anywhere. `⌘↵` only saves a note or submits the open dialog, so a composer can never send the review by accident.
@@ -241,7 +249,7 @@ Session gone builds its exports in the browser, since the server has stopped: th
 ## Settings
 
 - Sections in a left column: General, Markdown, Shortcuts, About. Changes apply immediately. The footer only holds `Reset to defaults`.
-- General: Theme (Light, Dark, System as preview tiles), Close tab after a decision (Never, Now, 3 s, 5 s), Keep drafts (markdown only, the image modes keep no drafts), Tool hints, Default intent.
+- General: Theme (Light, Dark, System as preview tiles), Close tab after a decision (Never, Now, 3 s, 5 s), Keep drafts (markdown only, the image modes keep no drafts), Tool hints.
 - Markdown: content width, font size, starting mode.
 - Shortcuts: a searchable list grouped by Tools, Notes, Pages or Timeline, Review; markdown, changes and code add Search, still images and web pages have View for zoom. It lists only the keys of the open mode and opens directly with `?`.
 
@@ -253,7 +261,7 @@ Session gone builds its exports in the browser, since the server has stopped: th
 | `V` `L` | Select text, Lines (changes and code; `V` is Select text as in Markdown) |
 | `J` `K` | Next and previous file (changes) |
 | `P` | Diff, Read or Changes view of the current markdown file (changes) |
-| `1` to `4` | Intent in the composer (outside its text field), of the markdown selection or of the note selected on the canvas |
+| `⌫` | Remove, in a composer nothing was typed into or on a markdown selection |
 | `G` | General comment |
 | `⌘↵` | Save note, submit the open dialog |
 | `⌘⇧↵` | Open the decision |
@@ -301,19 +309,19 @@ Nothing else moves.
 
 ## Output contract
 
-The intent is a field of every annotation and part of the stdout output. Adding or renaming an intent changes the contract with the calling agent, so it goes with tests and an update to [usage.md](../usage.md).
+Every annotation has an `intent` field: `comment` or `remove`, and `null` for the general comment. In the stdout output only a removal is named (`Remove ·`), a comment has no word. Adding a kind changes the contract with the calling agent, so it goes with tests, the instructions in `apps/` and an update to [usage.md](../usage.md).
 
 Changes round 1 is built on the markdown client (`annotaitr changes` writes the walkthrough, the client lays it out); code and later rounds are deferred. Changes adds to the contract in both directions:
 
 - **In:** the agent's explanation, read from a file it writes: title, summary, proposed commit message, one line per file and per hunk. annotaitr reads the diff from git itself and matches the explanation to it by path and line range; text for a path without changes is shown as a warning, not dropped.
-- **Out:** each note names its file, the side (`old` or `new`) and the line or line range, keeping the heading grammar (`## 1. Change · Text (new Lines 43-49 in src/Foo.php) [#a3f19c2e]`), followed by the quoted lines and the comment. A code suggestion follows as `Replaces:` and `Suggested code:` blocks. A note in the Read view of a markdown file names the new side the same way (`new Lines 14-15 in docs/usage.md`), and so does a note in its Changes view, except on a removed block or the old version of a changed one, which names the old side (`old Line 9 in docs/usage.md`). Notes on the overview name `Overview` or `Commit message`. The output starts with one line naming what was compared, and the decision says whether the agent may commit.
+- **Out:** each note names its file, the side (`old` or `new`) and the line or line range, keeping the heading grammar (`## 1. Text (new Lines 43-49 in src/Foo.php) [#a3f19c2e]`), followed by the quoted lines and the comment. A code suggestion follows as `Replaces:` and `Suggested code:` blocks. A note in the Read view of a markdown file names the new side the same way (`new Lines 14-15 in docs/usage.md`), and so does a note in its Changes view, except on a removed block or the old version of a changed one, which names the old side (`old Line 9 in docs/usage.md`). Notes on the overview name `Overview` or `Commit message`. The output starts with one line naming what was compared, and the decision says whether the agent may commit.
 
 All of it goes with tests and an update to [usage.md](../usage.md) in the same pull request as the mode.
 
 ## Landing page
 
 - `site/` is plain HTML, one CSS file and one small script, no build step and no framework. `.github/workflows/pages.yml` deploys it together with `scripts/install.sh`.
-- Colours, fonts and spacing are CSS custom properties on `:root`, taken from the token table above. Intent colours come as a pair: the mark colour and its darker label colour for text.
+- Colours, fonts and spacing are CSS custom properties on `:root`, taken from the token table above. Each mark colour comes as a pair with the colour of its number (`--mark-1` and `--mark-1-on`).
 - Geist and Geist Mono are self-hosted from `site/fonts/` with their licence. No CDN, analytics, embeds or any other third-party request. URLs are relative, because the site is served under `/annotaitr/`.
 - Animation follows the Motion rules: it sits inside `prefers-reduced-motion: no-preference`, the static state is the final state, and scroll reveal runs only inside `@supports (animation-timeline: view())` and never hides content otherwise.
 - No horizontal scrolling down to 320px. Code wraps instead of scrolling.
@@ -325,7 +333,7 @@ All of it goes with tests and an update to [usage.md](../usage.md) in the same p
 
 - [ ] Colours come from tokens, no literals
 - [ ] Text at 12px or more, Geist Mono only for paths, selectors, timecodes and keys
-- [ ] Every note carries an intent with icon and word
+- [ ] Every note carries its kind as icon and word, and its number on the colour at its number
 - [ ] Mark and card share number, colour and focus
 - [ ] Every drag has a click or key alternative
 - [ ] Light, dark and reduced motion checked, screenshot in the PR

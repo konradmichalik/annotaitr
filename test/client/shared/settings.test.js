@@ -60,7 +60,7 @@ describe('migrateSettings', () => {
   })
 
   it('drops values no control offers, so their defaults apply', () => {
-    expect(migrateSettings({ autoCloseDelay: '10', theme: 'sepia', defaultIntent: 'praise', fontSize: 17 })).toEqual({ fontSize: 17 })
+    expect(migrateSettings({ autoCloseDelay: '10', theme: 'sepia', fontSize: 17 })).toEqual({ fontSize: 17 })
   })
 
   it('leaves the stored object untouched', () => {
@@ -72,7 +72,11 @@ describe('migrateSettings', () => {
 
 describe('sharedPart', () => {
   it('keeps only the keys both modes share', () => {
-    expect(sharedPart({ theme: 'dark', autoCloseDelay: '3', toolHints: false, defaultIntent: 'add', fontSize: 17 }))
-      .toEqual({ theme: 'dark', autoCloseDelay: '3', toolHints: false, defaultIntent: 'add' })
+    expect(sharedPart({ theme: 'dark', autoCloseDelay: '3', toolHints: false, fontSize: 17 }))
+      .toEqual({ theme: 'dark', autoCloseDelay: '3', toolHints: false })
+  })
+
+  it('does not carry on the default intent an earlier version stored', () => {
+    expect(sharedPart({ theme: 'dark', defaultIntent: 'add' })).toEqual({ theme: 'dark' })
   })
 })

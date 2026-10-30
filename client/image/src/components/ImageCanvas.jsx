@@ -6,12 +6,11 @@ import {
 } from '../utils/drawing.js'
 import { pickStyleFields } from '../utils/annotationStyles.js'
 import { cursorForTool } from '../utils/cursors.js'
-import { intentChangeForKey } from '../utils/toolShortcuts.js'
 import { elementCaption } from '../utils/elementWalk.js'
 import { useElementWalk } from '../hooks/useElementWalk.js'
 import { matchAnnotation, matchPoint, describeElements } from '../utils/elementMatch.js'
 import { wordIndexAt, selectWords } from '../document/textSelection.js'
-import { markColor, intentMark } from '../utils/annotationColors.js'
+import { markColor, numberMark } from '../utils/annotationColors.js'
 import { ACTION_ICONS } from '../utils/icons.jsx'
 import CommentPopover from './CommentPopover.jsx'
 import { noteType } from '../../../shared/utils/noteTypes.js'
@@ -107,7 +106,7 @@ function SelectionToolbar({ point, onEdit, onRemove, onClose }) {
 export default function ImageCanvas({
   imageUrl, imageAlt = 'Image being annotated', imageWidth, imageHeight, activeTool, annotations, zoom, onZoomBy,
   editingAnnotationId, onAddAnnotation, onUpdateAnnotation, onCommitEdit, onRemoveAnnotation, onRequestEdit,
-  onUndo, onRedo, colorMode = 'intent', fixedColor = null, newIntent = 'change', imageRef = null,
+  onUndo, onRedo, colorMode = 'intent', fixedColor = null, imageRef = null,
   // A video passes its player element, the frame-visible subset of its
   // annotations and a hook to pause playback before any pointer interaction.
   // `nextNumber` is the number the note being drawn will keep.
@@ -205,20 +204,6 @@ export default function ImageCanvas({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [selectedId, pending, onRemoveAnnotation])
 
-  // 1 to 4 set the intent of the selected mark, undoable like any other edit.
-  useEffect(() => {
-    if (!selectedId || pending) { return }
-    const handleKeyDown = (event) => {
-      const before = annotations.find((a) => a.id === selectedId)
-      const intent = intentChangeForKey(event, before)
-      if (!intent) { return }
-      event.preventDefault()
-      onCommitEdit(selectedId, before, { ...before, intent })
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedId, pending, annotations, onCommitEdit])
-
   // Cmd/Ctrl+Z to undo, Cmd/Ctrl+Shift+Z or Ctrl+Y to redo. Same guards as
   // Delete/Backspace above: skipped while the popover is open or another
   // text input has focus.
@@ -314,7 +299,7 @@ export default function ImageCanvas({
     onRequestSelect?.(null)
   }, [selectRequestId, annotations, zoom, onRequestSelect])
 
-  // A new mark has no ink of its own and takes its intent's colour, unless
+  // A new mark has no ink of its own and takes the colour of its number, unless
   // the reviewer fixed an ink in the dock. The composer can still change it.
   const nextColor = colorMode === 'fixed' ? fixedColor : null
 
@@ -428,11 +413,11 @@ export default function ImageCanvas({
 
   // Every `setPending` call that starts a brand-new annotation (as opposed to editing an existing one).
   const createPending = useCallback((partial) => {
-    setPending({ ...partial, intent: defaultIntent(partial.type, newIntent) })
+    setPending({ ...partial, intent: defaultIntent(partial.type) })
     // The pointer now rests on the new mark, so the hover outline would
     // otherwise linger over it until the next mouse move.
     setHoverPoint(null)
-  }, [newIntent])
+  }, [])
 
   // The tool-specific dispatch for "a drag/click just finished, and it was a
   // draw gesture rather than a move/resize/select" - split out of
@@ -555,16 +540,15 @@ export default function ImageCanvas({
   const openThread = previousVisible && openThreadHandle ? previousThreads.find((t) => t.handle === openThreadHandle) : null
 
   let livePreview = null
-  const previewIntent = (type) => defaultIntent(type, newIntent)
   if (activeTool === 'box' && dragStart && dragPoint) {
-    livePreview = { type: 'box', geometry: boxFromPoints(dragStart, dragPoint), color: nextColor, intent: previewIntent('box') }
+    livePreview = { type: 'box', geometry: boxFromPoints(dragStart, dragPoint), color: nextColor, intent: 'comment' }
   } else if (activeTool === 'arrow' && dragStart && dragPoint) {
-    livePreview = { type: 'arrow', geometry: { x1: dragStart.x, y1: dragStart.y, x2: dragPoint.x, y2: dragPoint.y }, color: nextColor, arrowStyle: 'head', intent: previewIntent('arrow') }
+    livePreview = { type: 'arrow', geometry: { x1: dragStart.x, y1: dragStart.y, x2: dragPoint.x, y2: dragPoint.y }, color: nextColor, arrowStyle: 'head', intent: 'comment' }
   } else if (isPointCollectingTool(activeTool) && strokePoints.length > 1) {
-    livePreview = { type: activeTool, geometry: { points: strokePoints }, color: nextColor, intent: previewIntent(activeTool) }
+    livePreview = { type: activeTool, geometry: { points: strokePoints }, color: nextColor, intent: 'comment' }
   } else if (activeTool === 'text' && dragStart && dragPoint) {
     const selection = selectWords(words, wordIndexAt(words, dragStart), wordIndexAt(words, dragPoint))
-    livePreview = selection ? { type: 'text', ...selection, color: nextColor, intent: previewIntent('text') } : null
+    livePreview = selection ? { type: 'text', ...selection, color: nextColor, intent: 'comment' } : null
   }
 
   // Only the Element tool outlines what is under the pointer; every tool
@@ -600,7 +584,7 @@ export default function ImageCanvas({
       >
         <defs>
           <marker id="arrowhead-preview" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 Z" fill={pending ? markColor(pending) : (nextColor ?? intentMark(defaultIntent('arrow', newIntent)))} />
+            <path d="M0,0 L10,5 L0,10 Z" fill={pending ? markColor(pending, pendingNumber) : (nextColor ?? numberMark(nextNumber))} />
           </marker>
           <ArrowMarkers annotations={annotations} />
         </defs>
@@ -669,7 +653,6 @@ export default function ImageCanvas({
           timeBadge={describeTime ? describeTime(pending.id ? pending.before : null) : null}
           voiceNotes={voiceNotes}
           elementHint={elementHint}
-          onIntentChange={(intent) => setPending((current) => (current && !current.id ? { ...current, intent } : current))}
           onSubmit={handleCommentSubmit}
           onClose={handleCommentClose}
         />

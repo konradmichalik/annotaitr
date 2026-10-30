@@ -656,7 +656,6 @@ export default function App() {
                 onRedo={redo}
                 colorMode={settings.colorMode}
                 fixedColor={settings.fixedColor}
-                newIntent={settings.defaultIntent}
                 imageRef={keepImage}
                 previousThreads={previousThreads}
                 previousRound={previous.round}

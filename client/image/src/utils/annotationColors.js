@@ -1,9 +1,9 @@
-import { intentOf } from '../../../shared/utils/intents.js'
+import { markIndex } from '../../../shared/utils/intents.js'
 
 /**
  * Ink colours: an optional style a shape can carry for visibility on a busy
- * image. Without one a mark takes its intent's colour, which never changes:
- * the number badge always shows the intent (docs/design/rules.md, Intents).
+ * image. Without one a mark takes the colour of its number, round and round,
+ * so neighbouring notes differ and the colour never says what a note asks for.
  */
 export const ANNOTATION_COLORS = [
   { id: 'red', hex: '#bf616a' },
@@ -20,10 +20,10 @@ export const ANNOTATION_COLORS = [
 
 export const DEFAULT_ANNOTATION_COLOR = ANNOTATION_COLORS[0].hex
 
-export const intentMark = (intent) => `var(--intent-${intent ?? 'change'}-mark)`
-export const intentOnMark = (intent) => `var(--intent-${intent ?? 'change'}-on-mark)`
+export const numberMark = (number) => `var(--mark-${markIndex(number)})`
+export const numberOnMark = (number) => `var(--mark-${markIndex(number)}-on)`
 
-/** The colour a shape is drawn in: its ink when it has one, its intent's mark colour otherwise. */
-export function markColor(annotation) {
-  return annotation.color || intentMark(intentOf(annotation))
+/** The colour a shape is drawn in: its ink when it has one, the colour of its number otherwise. */
+export function markColor(annotation, number = annotation.number) {
+  return annotation.color || numberMark(number)
 }

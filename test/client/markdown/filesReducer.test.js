@@ -114,9 +114,9 @@ describe('filesReducer', () => {
       let state = ann(two(), 0, { type: 'ADD', annotation: note('a') })
       state = ann(state, 1, { type: 'ADD', annotation: note('b', { type: 'DELETION' }) })
       state = ann(state, 0, { type: 'DELETE', id: 'a' })
-      state = ann(state, 0, { type: 'ADD', annotation: note('c', { intent: 'question' }) })
+      state = ann(state, 0, { type: 'ADD', annotation: note('c', { intent: 'remove' }) })
       expect(state[1].annState.annotations.map((a) => [a.id, a.number, a.intent])).toEqual([['b', 2, 'remove']])
-      expect(state[0].annState.annotations.map((a) => [a.id, a.number, a.intent])).toEqual([['c', 3, 'question']])
+      expect(state[0].annState.annotations.map((a) => [a.id, a.number, a.intent])).toEqual([['c', 3, 'remove']])
     })
 
     it('leaves a general comment unnumbered', () => {
@@ -130,7 +130,7 @@ describe('filesReducer', () => {
         type: 'RESTORE',
         annotations: [note('late', { blockId: 'block-1' }), note('early', { type: 'DELETION' })]
       })
-      expect(state[0].annState.annotations.map((a) => [a.id, a.number, a.intent])).toEqual([['late', 3, 'change'], ['early', 2, 'remove']])
+      expect(state[0].annState.annotations.map((a) => [a.id, a.number, a.intent])).toEqual([['late', 3, 'comment'], ['early', 2, 'remove']])
     })
   })
 

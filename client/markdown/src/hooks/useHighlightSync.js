@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { intentOf } from '../../../shared/utils/intents.js'
 
 // Element annotations (image/diagram) and global comments have no web-highlighter DOM
 const hasNoHighlighter = (ann) =>
@@ -12,7 +13,7 @@ function applyLastAction(viewer, lastAction) {
     }
   } else if (lastAction.type === 'edit') {
     if (!hasNoHighlighter(lastAction.updated)) {
-      viewer?.updateHighlightType(lastAction.updated.id, lastAction.updated.type)
+      viewer?.updateHighlightType(lastAction.updated.id, lastAction.updated.type, intentOf(lastAction.updated))
     }
   } else if (lastAction.type === 'undo') {
     const { entry } = lastAction
@@ -22,7 +23,7 @@ function applyLastAction(viewer, lastAction) {
     } else if (entry.action === 'delete') {
       viewer?.restoreHighlight(entry.annotation)
     } else if (entry.action === 'edit') {
-      viewer?.updateHighlightType(entry.annotation.id, entry.annotation.type)
+      viewer?.updateHighlightType(entry.annotation.id, entry.annotation.type, intentOf(entry.annotation))
     }
   } else if (lastAction.type === 'redo') {
     const { entry } = lastAction
@@ -32,7 +33,7 @@ function applyLastAction(viewer, lastAction) {
     } else if (entry.action === 'delete') {
       viewer?.removeHighlight(entry.annotation.id)
     } else if (entry.action === 'edit') {
-      viewer?.updateHighlightType(entry.updated.id, entry.updated.type)
+      viewer?.updateHighlightType(entry.updated.id, entry.updated.type, intentOf(entry.updated))
     }
   }
 }

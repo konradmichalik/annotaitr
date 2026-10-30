@@ -88,7 +88,7 @@ In the agent's output the heading names where the text is now, or "no longer
 in the document"; the quote line keeps where it was in round N:
 
 ```text
-### [#a3f19c2e] Change · Text (Line 5, docs/guide.md)
+### [#a3f19c2e] Text (Line 5, docs/guide.md)
 Selected: `intro says hello`
 > Round 1, note 1 (Line 3): Make this friendlier
 Agent (question): Warmer or shorter?
@@ -123,7 +123,7 @@ any new marks and before the `Session:` line:
 ```text
 ## Replies to round 1
 
-### [#b7210e44] Question · Comment pin: bottom (~80% from top, ~50% from left)
+### [#b7210e44] Comment pin: bottom (~80% from top, ~50% from left)
 > Round 1, mark 2: Button-Farbe passt nicht zur CI
 Agent (question): Soll es das CI-Grün #2e7d32 sein oder das Blau aus dem Header?
 Reviewer: CI-Grün #2e7d32

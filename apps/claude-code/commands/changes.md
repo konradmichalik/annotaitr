@@ -83,9 +83,9 @@ The output may start with a note before the decision:
 - Annotation feedback: revise, then present again (step 5). Do not commit.
 - No output and exit code 1, with `No decision made.` on stderr: the user closed the tab or interrupted the review without deciding. That is not an approval. Do not commit and do not present again, ask what they want instead.
 
-Each feedback heading names the note's number, its intent and where it
-points. A note on the diff names the file and the line in it:
-`## 3. Change · Text (new Lines 43-49 in src/Foo.php) [#a3f19c2e]`. `new`
+Each feedback heading names the note's number and where it points, and
+says `Remove ·` in front of it for a removal. A note on the diff names the file and the line in it:
+`## 3. Text (new Lines 43-49 in src/Foo.php) [#a3f19c2e]`. `new`
 lines are the code after your change, `old` lines the code that was removed.
 A note on a markdown file the reviewer read rendered works the same way: `old`
 names a block you removed or the version of a block before you changed it.
@@ -100,12 +100,10 @@ short sha and subject and asks you to reword, split or squash that commit
 before the pull request. Rewrite commits that are already pushed only if the
 user agrees.
 
-- **Change**: apply the comment to the quoted code or text
-- **Add**: add what the comment asks for there; an `Insertion` gives the text to insert after its `After:` context
 - **Remove**: remove the quoted code or text
-- **Question**: answer it when you report back, and change something only if the answer makes the change obvious
+- **Comment**: every other note. Its text says what the reviewer wants: a change to the quoted code or text, something to add there (an `Insertion` comments at a position, with the `After:` context before it), or a question. Answer a question when you report back, and change something only if the answer makes the change obvious
 
-A `General comment` has no number and no intent. Refer to a note by its handle
+A `General comment` has no number. Refer to a note by its handle
 plus a few words naming the passage, as in "fixed `#a3f19c2e` (cache key)".
 
 ### 5. Present again

@@ -16,7 +16,7 @@ The rules behind these screens are in [rules.md](rules.md). The previews are exp
 | 2 | Image, first run | Tools for a plain image, empty panel, first-run hint, Approve as the main action with no notes | <a href="screens/02-image-first-run.png"><img src="screens/02-image-first-run.png" width="200" alt="Board 2"></a> |
 | 3 | Web capture | Collapsed capture control, Element tool with selector label, cards with selector and element text | <a href="screens/03-web-capture.png"><img src="screens/03-web-capture.png" width="200" alt="Board 3"></a> |
 | 4 | Video, GIF | Timeline with Notes and Spans lanes, cluster chip for close notes, overlapping spans, timecodes on cards | <a href="screens/04-video.png"><img src="screens/04-video.png" width="200" alt="Board 4"></a> |
-| 5 | Markdown | Files overview with review state, contents with counts, selection bar with intents, This file and All files | <a href="screens/05-markdown.png"><img src="screens/05-markdown.png" width="200" alt="Board 5"></a> |
+| 5 | Markdown | Files overview with review state, contents with counts, selection bar with Comment and Remove, This file and All files | <a href="screens/05-markdown.png"><img src="screens/05-markdown.png" width="200" alt="Board 5"></a> |
 | 6 | Image, dark theme | Dark tokens, marks that keep their colours, the composer in dark | <a href="screens/06-image-dark.png"><img src="screens/06-image-dark.png" width="200" alt="Board 6"></a> |
 | 12 | Changes | Changed files as a folder tree, agent overview with commit message, explanation per file and hunk, Not explained, line notes on the diff. A sketch board sits next to it | not exported yet |
 | 13 | Changes, round 2 (deferred) | Since round and Whole branch, earlier notes inline with their thread | not exported yet |
@@ -26,8 +26,8 @@ The rules behind these screens are in [rules.md](rules.md). The previews are exp
 
 | Board | Screen | What it settles | Preview |
 | --- | --- | --- | --- |
-| 7 | Composer and thread | Text-first composer with intent chip, thread with agent reply, status chip and pending reply | <a href="screens/07-composer-thread.png"><img src="screens/07-composer-thread.png" width="140" alt="Board 7"></a> |
+| 7 | Composer and thread | Text-first composer with Remove, thread with agent reply, status chip and pending reply | <a href="screens/07-composer-thread.png"><img src="screens/07-composer-thread.png" width="140" alt="Board 7"></a> |
 | 8 | Decision | Split button, decision dialog with three options, summary and pending replies | <a href="screens/08-decision.png"><img src="screens/08-decision.png" width="140" alt="Board 8"></a> |
 | 9 | Done page | Send feedback, Approve, Approve with notes, Session gone | <a href="screens/09-done.png"><img src="screens/09-done.png" width="200" alt="Board 9"></a> |
 | 10 | Settings | General with theme tiles and switches, Shortcuts with search and groups | <a href="screens/10-settings.png"><img src="screens/10-settings.png" width="200" alt="Board 10"></a> |
-| 11 | Tokens | Type scale, chrome colours with contrast, spacing, radii, elevation, intent palette, accessibility rules | <a href="screens/11-tokens.png"><img src="screens/11-tokens.png" width="200" alt="Board 11"></a> |
+| 11 | Tokens | Type scale, chrome colours with contrast, spacing, radii, elevation, mark palette, accessibility rules | <a href="screens/11-tokens.png"><img src="screens/11-tokens.png" width="200" alt="Board 11"></a> |

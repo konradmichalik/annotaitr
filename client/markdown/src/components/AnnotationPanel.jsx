@@ -8,7 +8,7 @@ import { flashElement } from '../utils/flashElement.js'
 import { blockSelector } from '../utils/viewerDom.js'
 import { noteNumbers, noteLocation, sortNotes } from '../utils/noteNumbers.js'
 import { isGeneralComment } from '../hooks/useReviewDecision.js'
-import { isNumbered } from '../../../shared/utils/intents.js'
+import { isNumbered, markStyle } from '../../../shared/utils/intents.js'
 import { noteType } from '../../../shared/utils/noteTypes.js'
 import { PanelMenu } from '../../../shared/components/PanelMenu.jsx'
 import { NoteCard } from '../../../shared/components/NoteCard.jsx'
@@ -21,15 +21,14 @@ import { GeneralCommentRow } from '../../../shared/components/GeneralCommentRow.
 import { GeneralCommentCard } from '../../../shared/components/GeneralCommentCard.jsx'
 import { useGeneralComment } from '../../../shared/hooks/useGeneralComment.js'
 import { IntentIcon } from '../../../shared/components/IntentIcon.jsx'
-import { intentBadgeStyle } from '../../../shared/utils/intents.js'
 import { RepliesPanel } from './RepliesPanel.jsx'
 import { NoteAttachments } from './Attachments.jsx'
 
 const MAX_IMPORT_SIZE = 5 * 1024 * 1024 // 5 MB
 const ALT = navigator.platform?.includes('Mac') ? '⌥' : 'Alt'
 const EMPTY_KEYS = [
-  { key: 'V', label: 'Select text to comment on it or remove it' },
-  { key: `${ALT}+click`, label: 'Insert text at a position' },
+  { key: 'V', label: 'Select text, then type to comment or ⌫ to remove' },
+  { key: `${ALT}+click`, label: 'Comment at a position' },
   { key: 'C', label: 'Pinpoint a paragraph, image or diagram' }
 ]
 
@@ -71,7 +70,7 @@ function Card({ ann, number, blocks, selected, onActivate, onEdit, onRemove }) {
     <NoteCard
       id={ann.id}
       number={number ?? null}
-      badgeStyle={intentBadgeStyle(intent)}
+      badgeStyle={intent ? markStyle(ann.number) : undefined}
       word={word}
       intent={intent}
       icon={<IntentIcon intent={intent} />}

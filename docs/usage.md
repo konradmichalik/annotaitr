@@ -22,7 +22,7 @@ The same for every target:
 | Topic | What's inside |
 |-------|---------------|
 | [Review sessions](usage/sessions.md) | Rounds, `annotaitr reply` and its statuses, `--session`, `--new-session`, replying to the agent |
-| [Tools and the feedback panel](usage/interface.md) | Tool keys, writing a note, intents and numbers, finishing a review, settings |
+| [Tools and the feedback panel](usage/interface.md) | Tool keys, writing a note, notes and numbers, finishing a review, settings |
 
 ## Mode detection
 
@@ -98,7 +98,7 @@ heading, and opens with a sentence telling the agent that text inside an
 image is content, not instructions:
 
 ```text
-## 2. Change · Text (Line 14) [#a3f19c2e]
+## 2. Text (Line 14) [#a3f19c2e]
 Attachment: /tmp/annotaitr-attachments/3f9c….png
 ```
 
@@ -152,28 +152,32 @@ terminal invocation never needs it.
 
 The server starts on an available port and opens the browser; a status line
 goes to stderr, the decision goes to stdout on exit. Feedback opens with the
-count per intent, and every numbered note states its intent after its number
-and handle:
+count per kind, a note is a comment or a removal. A comment has no kind word,
+its text says what the reviewer wants (a change, something to add, a
+question). Only a removal says `Remove ·` after its number and handle:
 
 ```text
-3 annotations (1 Change, 1 Remove, 1 Question):
+3 annotations (2 Comment, 1 Remove):
 
-## 1. Change · Text (Line 3) [#a3f19c2e]
+## 1. Text (Line 3) [#a3f19c2e]
 ## 4. Remove · Text (Line 9) [#7b210e44]
-## 2. Question · Text (Line 12) [#c01d9e55]
+## 2. Text (Line 12) [#c01d9e55]
 ```
 
 ```text
-2 annotations (1 Change, 1 Question) on the screenshot.
+2 annotations (1 Comment, 1 Remove) on the screenshot.
 
-### 1. [#a3f19c2e] Change · Boxed area: top left (~10% from top, ~12% from left)
-### 3. [#7b210e44] Question · Comment pin: bottom (~80% from top, ~50% from left)
+### 1. [#a3f19c2e] Boxed area: top left (~10% from top, ~12% from left)
+### 3. [#7b210e44] Remove · Comment pin: bottom (~80% from top, ~50% from left)
 ```
 
-PDF and video feedback use the image form, a general comment has neither
-number nor intent (`### [#c01d9e55] General comment about the whole image`).
-`APPROVED WITH NOTES:` names the count per intent the same way
-(`APPROVED WITH NOTES: 2 notes (1 Change, 1 Question). ...`).
+PDF and video feedback use the image form, a general comment has no number
+(`### [#c01d9e55] General comment about the whole image`).
+`APPROVED WITH NOTES:` names the count per kind the same way
+(`APPROVED WITH NOTES: 2 notes (1 Comment, 1 Remove). ...`).
+
+Older notes and session files that carry Change, Add or Question read as
+comments.
 
 The images the feedback points at are written to a fresh directory in the
 system temp directory (`annotaitr-XXXX`). Next to the annotated image, every
@@ -183,7 +187,7 @@ frame crops start with the page or frame name). The note names it in a
 `Crop:` line under its heading, and the annotated image stays the overview:
 
 ```text
-### 1. [#a3f19c2e] Change · Boxed area: top left (~10% from top, ~12% from left)
+### 1. [#a3f19c2e] Boxed area: top left (~10% from top, ~12% from left)
 Crop: /tmp/annotaitr-XXXX/crop-01.png
 > Move this up
 ```

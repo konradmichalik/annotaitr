@@ -54,14 +54,14 @@ test('a full box annotation submits and the CLI prints structured feedback', asy
     // Exact match: other buttons, such as a card's, also contain "Add".
     await page.getByRole('button', { name: 'Add', exact: true }).click()
 
-    await expect(page.getByRole('button', { name: /^1\. Change, Box/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^1\. Comment, Box/ })).toBeVisible()
 
     await page.getByRole('button', { name: /^Send feedback/ }).click()
     await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible()
 
     const exitCode = await new Promise((resolve) => child.on('exit', resolve))
     expect(exitCode).toBe(0)
-    expect(stdout).toContain('1 annotation (1 Change) on the screenshot.')
+    expect(stdout).toContain('1 annotation (1 Comment) on the screenshot.')
     expect(stdout).toContain('Annotated screenshot:')
     expect(stdout).toContain('Move this element up')
 
@@ -151,7 +151,7 @@ test('the composer keeps a draft on a click outside and discards it on Escape', 
     await field.focus()
     await page.keyboard.press('Escape')
     await expect(composer).toHaveCount(0)
-    await expect(page.getByRole('button', { name: /^1\. Change, Box/ })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /^1\. Comment, Box/ })).toHaveCount(0)
   } finally {
     await rm(dir, { recursive: true, force: true })
     if (cli.child.exitCode === null) { cli.child.kill() }
@@ -171,7 +171,7 @@ test('Cmd+Shift+Enter in an open composer opens the decision without saving the 
     await page.keyboard.press('ControlOrMeta+Shift+Enter')
 
     await expect(page.getByRole('dialog', { name: 'Finish review' })).toBeVisible()
-    await expect(page.getByRole('button', { name: /^1\. Change, Box/ })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /^1\. Comment, Box/ })).toHaveCount(0)
     await expect(page.getByPlaceholder('Add a comment…')).toHaveValue('Not yet')
   } finally {
     await rm(dir, { recursive: true, force: true })
@@ -179,40 +179,38 @@ test('Cmd+Shift+Enter in an open composer opens the decision without saving the 
   }
 })
 
-test('the composer sets the intent with 1 to 4 outside the field, and a deleted note leaves its number unused', async ({ page }) => {
+test('a removal is marked with the Remove button, notes take their colour by number, and a deleted note leaves its number unused', async ({ page }) => {
   const dir = await mkdtemp(join(tmpdir(), 'annotaitr-e2e-'))
   const { path: imagePath, buffer } = makeFixturePngFile(dir)
   await writeFile(imagePath, buffer)
   const cli = startCli([imagePath])
 
-  const drawAndAdd = async (from, to, text, key = null) => {
+  const draw = async (from, to, text) => {
     await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Box \(/ }).click()
     const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
     await page.mouse.move(canvas.x + from[0], canvas.y + from[1])
     await page.mouse.down()
     await page.mouse.move(canvas.x + to[0], canvas.y + to[1])
     await page.mouse.up()
-    const field = page.getByPlaceholder('Add a comment…')
-    // A digit typed in the field is text, not an intent.
-    await field.fill(`${text} 4`)
-    if (key) {
-      // The composer focuses its field in a zero-delay timer set on mount; a timer queued now runs after it,
-      // so it cannot pull focus back from the chip once Tab has moved it there.
-      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 0)))
-      await field.press('Tab')
-      await expect(page.getByRole('button', { name: 'Intent: Change' })).toBeFocused()
-      await page.keyboard.press(key)
-    }
-    await page.getByRole('button', { name: 'Add', exact: true }).click()
+    await page.getByPlaceholder('Add a comment…').fill(`${text} 4`)
   }
 
   try {
     await page.goto(await cli.url)
-    await drawAndAdd([10, 10], [40, 40], 'First')
-    await drawAndAdd([60, 10], [90, 40], 'Second', '4')
-    await drawAndAdd([110, 10], [140, 40], 'Third', '3')
-    await expect(page.getByRole('button', { name: /^2\. Question, Box/ })).toBeVisible()
+    await draw([10, 10], [40, 40], 'First')
+    await page.getByRole('button', { name: 'Add', exact: true }).click()
+    await draw([60, 10], [90, 40], 'Second')
+    await page.getByRole('button', { name: 'Add', exact: true }).click()
+    await draw([110, 10], [140, 40], 'Third')
+    await page.getByRole('button', { name: /^Remove/ }).click()
+    await expect(page.getByRole('button', { name: /^2\. Comment, Box/ })).toBeVisible()
     await expect(page.getByRole('button', { name: /^3\. Remove, Box/ })).toBeVisible()
+
+    // The colour follows the number, never the kind: note 3 is blue though it is the removal.
+    const badge = (n) => page.locator('.note-number').filter({ hasText: new RegExp(`^${n}$`) })
+    await expect(badge(1)).toHaveCSS('background-color', 'rgb(192, 74, 0)')
+    await expect(badge(2)).toHaveCSS('background-color', 'rgb(230, 159, 0)')
+    await expect(badge(3)).toHaveCSS('background-color', 'rgb(0, 114, 178)')
 
     await page.locator('[data-annotation-id]').filter({ hasText: 'Second' }).getByRole('button', { name: 'Delete annotation' }).click()
     await expect(page.getByRole('button', { name: /^3\. Remove, Box/ })).toBeVisible()
@@ -220,8 +218,8 @@ test('the composer sets the intent with 1 to 4 outside the field, and a deleted 
     await page.getByRole('button', { name: /^Send feedback/ }).click()
     expect(await cli.exited).toBe(0)
     const stdout = cli.stdout()
-    expect(stdout).toContain('2 annotations (1 Change, 1 Remove) on the screenshot.')
-    expect(stdout).toMatch(/### 1\. \[#\w+\] Change · Boxed area: [^\n]*\n> First 4/)
+    expect(stdout).toContain('2 annotations (1 Comment, 1 Remove) on the screenshot.')
+    expect(stdout).toMatch(/### 1\. \[#\w+\] Boxed area: [^\n]*\n> First 4/)
     expect(stdout).toMatch(/### 3\. \[#\w+\] Remove · Boxed area: [^\n]*\n> Third 4/)
     expect(stdout).not.toContain('### 2.')
   } finally {
@@ -230,31 +228,40 @@ test('the composer sets the intent with 1 to 4 outside the field, and a deleted 
   }
 })
 
-test('keys 1 to 4 set the intent of the mark selected on the canvas, and undo restores it', async ({ page }) => {
+test('Backspace in a composer nothing was typed into removes, and typed then cleared text never does', async ({ page }) => {
   const dir = await mkdtemp(join(tmpdir(), 'annotaitr-e2e-'))
   const { path: imagePath, buffer } = makeFixturePngFile(dir)
   await writeFile(imagePath, buffer)
   const cli = startCli([imagePath])
-  try {
-    await page.goto(await cli.url)
+
+  const draw = async (from, to) => {
     await page.getByRole('toolbar', { name: 'Annotation tools' }).getByRole('button', { name: /^Box \(/ }).click()
     const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
-    await page.mouse.move(canvas.x + 20, canvas.y + 20)
+    await page.mouse.move(canvas.x + from[0], canvas.y + from[1])
     await page.mouse.down()
-    await page.mouse.move(canvas.x + 90, canvas.y + 70)
+    await page.mouse.move(canvas.x + to[0], canvas.y + to[1])
     await page.mouse.up()
-    await page.getByPlaceholder('Add a comment…').fill('Box note')
-    await page.getByRole('button', { name: 'Add', exact: true }).click()
-    await expect(page.getByRole('button', { name: /^1\. Change, Box/ })).toBeVisible()
+    // The composer focuses its field in a zero-delay timer set on mount.
+    await expect(page.getByPlaceholder('Add a comment…')).toBeFocused()
+  }
 
-    await page.keyboard.press('v')
-    await page.mouse.click(canvas.x + 20, canvas.y + 45)
-    await page.keyboard.press('3')
+  try {
+    await page.goto(await cli.url)
+    await draw([10, 10], [40, 40])
+    await page.keyboard.press('Backspace')
     await expect(page.getByRole('button', { name: /^1\. Remove, Box/ })).toBeVisible()
-    await page.keyboard.press('4')
-    await expect(page.getByRole('button', { name: /^1\. Question, Box/ })).toBeVisible()
-    await page.keyboard.press('ControlOrMeta+z')
-    await expect(page.getByRole('button', { name: /^1\. Remove, Box/ })).toBeVisible()
+
+    await draw([60, 10], [90, 40])
+    await page.keyboard.type('a')
+    await page.keyboard.press('Backspace')
+    await page.keyboard.press('Backspace')
+    await expect(page.getByRole('button', { name: 'Add', exact: true })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('button', { name: /^2\./ })).toHaveCount(0)
+
+    await page.getByRole('button', { name: /^Send feedback/ }).click()
+    expect(await cli.exited).toBe(0)
+    expect(cli.stdout()).toMatch(/### 1\. \[#\w+\] Remove · Boxed area: [^\n]*\n> \(no comment text\)/)
   } finally {
     await rm(dir, { recursive: true, force: true })
     if (cli.child.exitCode === null) { cli.child.kill() }
@@ -331,7 +338,7 @@ test('two distant boxes on a large image each get a crop next to the annotated s
     const box = await page.locator('.image-canvas-wrapper').boundingBox()
     await drawBox(box, 60, 60, 'Top left')
     await drawBox(box, 700, 420, 'Bottom right')
-    await expect(page.getByRole('button', { name: /^2\. Change, Box/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^2\. Comment, Box/ })).toBeVisible()
 
     await page.getByRole('button', { name: /^Send feedback/ }).click()
     await expect(page.getByRole('heading', { name: /^Sent to / })).toBeVisible()

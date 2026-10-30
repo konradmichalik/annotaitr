@@ -13,8 +13,7 @@ export const SourceView = forwardRef(function SourceView({
   onEditAnnotation,
   onDeleteAnnotation,
   onSelectAnnotation,
-  selectedAnnotationId: _selectedAnnotationId,
-  newIntent = 'change'
+  selectedAnnotationId: _selectedAnnotationId
 }, ref) {
   const lines = useMemo(() => content.split('\n'), [content])
 
@@ -128,7 +127,6 @@ export const SourceView = forwardRef(function SourceView({
           insertionMode={false}
           linkUrl={null}
           onOpenLink={null}
-          newIntent={newIntent}
         />
       </div>
       {search.isOpen && (

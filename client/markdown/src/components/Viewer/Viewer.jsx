@@ -13,10 +13,11 @@ import { useViewerShortcuts } from '../../hooks/useViewerShortcuts.js'
 import { useInsertionClick } from '../../hooks/useInsertionClick.js'
 import { useAnnotatedBlocks } from '../../hooks/useAnnotatedBlocks.js'
 import { formatLabelText } from '../../utils/quickLabels.js'
+import { markIndex } from '../../../../shared/utils/intents.js'
 import { getItem, setItem } from '../../../../shared/utils/storage.js'
 import { groupHtmlWrappers } from '../../utils/htmlWrappers.js'
 import { isOpenableFileLink } from '../../utils/links.js'
-import { getLinkInfo, removeInsertionMarker, createPersistentInsertionMarker, createTemporaryInsertionMarker, insertionPointAfter, findAnnotationElement, diffLineRange, reanchorToDom, textAnchorMetas, blockSelector } from '../../utils/viewerDom.js'
+import { getLinkInfo, removeInsertionMarker, createPersistentInsertionMarker, findAnnotationElement, diffLineRange, reanchorToDom, textAnchorMetas, blockSelector } from '../../utils/viewerDom.js'
 import { createInsertionAnnotation, createTokenAnnotation, createElementAnnotation, getBlockLabel, withAttachments } from '../../utils/viewerAnnotations.js'
 
 const PINPOINT_HINT_LEARNED_KEY = 'md-annotator-pinpoint-hint-learned'
@@ -36,7 +37,6 @@ export const Viewer = forwardRef(function Viewer({
   krokiServerUrl,
   selectedAnnotationId: _selectedAnnotationId,
   crossFileSearch,
-  newIntent = 'change',
   toolHints = true,
   changes = null,
 }, ref) {
@@ -110,7 +110,7 @@ export const Viewer = forwardRef(function Viewer({
     annotations.forEach((ann) => {
       if (ann.type !== 'INSERTION' || !Number.isInteger(ann.number)) { return }
       const marker = container.querySelector(`[data-insertion-id="${CSS.escape(ann.id)}"]`)
-      if (marker) { marker.dataset.noteNumber = String(ann.number) }
+      if (marker) { marker.dataset.noteNumber = String(ann.number); marker.dataset.noteMark = String(markIndex(ann.number)) }
     })
   }, [annotations, containerRef])
 
@@ -169,23 +169,6 @@ export const Viewer = forwardRef(function Viewer({
     // Text annotation — delegate to hook
     handleTextAnnotate(type, text, label, intent, attachments)
   }, [toolbarState, handleTextAnnotate, closeToolbar, containerRef])
-
-  // Add on a text selection inserts after it: the pending highlight gives way to an insertion point at its end.
-  const handleAddAfter = useCallback(() => {
-    const highlighter = highlighterRef.current
-    const source = toolbarState?.source
-    const last = source && highlighter?.getDoms(source.id)?.at(-1)
-    if (!last) { return }
-    const point = insertionPointAfter(last)
-    if (!point) { return }
-    highlighter.remove(source.id)
-    pendingSourceRef.current = null
-    window.getSelection()?.removeAllRanges()
-    const { blockEl, ...insertionData } = point
-    const marker = createTemporaryInsertionMarker(blockEl, insertionData.offset)
-    setToolbarState({ element: marker, insertionMode: true, insertionData })
-    setRequestedToolbarStep((prev) => (prev ?? 0) + 1)
-  }, [toolbarState, highlighterRef, pendingSourceRef, setToolbarState, setRequestedToolbarStep])
 
   // --- Viewer-specific close (insertion cleanup + base) ---
   const handleToolbarClose = useCallback(() => {
@@ -493,7 +476,6 @@ export const Viewer = forwardRef(function Viewer({
         <Toolbar
           highlightElement={toolbarState?.element ?? null}
           onAnnotate={handleAnnotate}
-          onAddAfter={toolbarState?.source && !toolbarState.mode ? handleAddAfter : null}
           onClose={handleToolbarClose}
           onDelete={handleToolbarDelete}
           onQuickLabel={handleQuickLabel}
@@ -503,7 +485,6 @@ export const Viewer = forwardRef(function Viewer({
           insertionMode={toolbarState?.insertionMode || false}
           linkUrl={toolbarState?.linkIsOpenable && changes ? null : toolbarState?.linkUrl || null}
           onOpenLink={toolbarState?.linkIsOpenable ? onOpenFile : null}
-          newIntent={newIntent}
         />
         {pinpointMode && <PinpointOverlay target={pinpointTarget} />}
         {!pinpointMode && toolHints && <BlockHoverHint target={hoverHintTarget} />}

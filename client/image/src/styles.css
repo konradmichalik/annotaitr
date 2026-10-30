@@ -1202,7 +1202,7 @@ button.voice-note:hover {
   border: 2px solid var(--bg-card);
   border-radius: var(--radius-full);
   background: var(--marker-color, var(--danger));
-  color: var(--marker-on-color, var(--intent-change-on-mark));
+  color: var(--marker-on-color, var(--mark-1-on));
   font-size: var(--fs-sm);
   font-weight: 700;
   line-height: 16px;
