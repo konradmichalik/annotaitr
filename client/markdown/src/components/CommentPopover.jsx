@@ -10,7 +10,7 @@ import { hasDraft } from '../../../shared/utils/composerDraft.js'
 import { useAttachments } from '../hooks/useAttachments.js'
 import { AttachButton, AttachmentList } from './Attachments.jsx'
 
-const POPOVER_WIDTH = 320
+const POPOVER_WIDTH = 360
 // One array for every note without images, so an untouched composer compares equal to its start.
 const NO_ATTACHMENTS = []
 const GAP = 8
