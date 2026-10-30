@@ -5,6 +5,7 @@ import { PinpointOverlay } from '../PinpointOverlay.jsx'
 import { BlockHoverHint } from '../BlockHoverHint.jsx'
 import { SearchBar } from '../SearchBar.jsx'
 import { ViewerBlocks } from './ViewerBlocks.jsx'
+import { ImageRegionDraw, ImageRegionBoxes } from './ImageRegions.jsx'
 import { ChangesBlocks } from './ChangesBlocks.jsx'
 import { useHighlighter } from '../../hooks/useHighlighter.js'
 import { useDocumentSearch } from '../../hooks/useDocumentSearch.js'
@@ -257,9 +258,12 @@ export const Viewer = forwardRef(function Viewer({
     if (annId) { onSelectAnnotation(annId) }
   }, [noteBlockIds, onSelectAnnotation])
 
+  const [regionDraw, setRegionDraw] = useState(null)
+
   // Open the toolbar on an element: edit its existing annotation, or start a new one
   const openElementToolbar = useCallback((element, existing, newState) => {
     clearPendingSource()
+    setRegionDraw(null)
     if (existing) {
       onSelectAnnotation(existing.id)
       setToolbarState({ element, annotation: existing, mode: 'edit', elementMode: true })
@@ -271,12 +275,41 @@ export const Viewer = forwardRef(function Viewer({
 
   const handleImageClick = useCallback(({ alt, src, blockId, element }) => {
     const existing = annotationsRef.current.find(
-      a => a.targetType === 'image' && a.blockId === blockId && a.imageSrc === src
+      a => a.targetType === 'image' && a.blockId === blockId && a.imageSrc === src && !a.imageRegion
     )
     openElementToolbar(element, existing, {
       elementData: { targetType: 'image', blockId, imageAlt: alt, imageSrc: src, originalText: `![${alt}](${src})` }
     })
   }, [openElementToolbar])
+
+  // The Region button unmounts with the toolbar, so focus goes back to the image the box is drawn on.
+  const startRegionDraw = useCallback(() => {
+    const { annotation } = toolbarState
+    const elementData = toolbarState.elementData ?? {
+      targetType: 'image', blockId: annotation.blockId, imageAlt: annotation.imageAlt, imageSrc: annotation.imageSrc, originalText: annotation.originalText
+    }
+    setRegionDraw({ wrapper: toolbarState.element, elementData })
+    toolbarState.element.focus()
+    closeToolbar()
+  }, [toolbarState, closeToolbar])
+
+  const finishRegionDraw = useCallback((imageRegion) => {
+    openElementToolbar(regionDraw.wrapper, null, { elementData: { ...regionDraw.elementData, imageRegion } })
+  }, [regionDraw, openElementToolbar])
+
+  const cancelRegionDraw = useCallback(() => {
+    regionDraw?.wrapper.focus()
+    setRegionDraw(null)
+  }, [regionDraw])
+
+  // The wrappers of the images that notes point into only exist once the blocks are rendered.
+  const [regionTargets, setRegionTargets] = useState([])
+  useEffect(() => {
+    setRegionTargets(annotations
+      .filter(a => a.targetType === 'image' && a.imageRegion)
+      .map(annotation => ({ annotation, wrapper: findAnnotationElement(containerRef.current, annotation) }))
+      .filter(target => target.wrapper))
+  }, [annotations, blocks, containerRef])
 
   const makeElementHandler = useCallback((targetType) => ({ blockId, content, element }) => {
     const existing = annotationsRef.current.find(
@@ -430,6 +463,9 @@ export const Viewer = forwardRef(function Viewer({
     setHoverHintTarget(null)
   }, [])
 
+  // A region note can be added to an image from a new note and from the note on the whole image.
+  const regionSource = toolbarState?.mode === 'edit' ? toolbarState.annotation : toolbarState?.elementData
+
   const blockNodes = useMemo(() => groupHtmlWrappers(blocks), [blocks])
   const changeSections = changes?.sections ?? null
 
@@ -476,6 +512,7 @@ export const Viewer = forwardRef(function Viewer({
         <Toolbar
           highlightElement={toolbarState?.element ?? null}
           onAnnotate={handleAnnotate}
+          onDrawRegion={regionSource?.targetType === 'image' && !regionSource.imageRegion ? startRegionDraw : null}
           onClose={handleToolbarClose}
           onDelete={handleToolbarDelete}
           onQuickLabel={handleQuickLabel}
@@ -486,6 +523,8 @@ export const Viewer = forwardRef(function Viewer({
           linkUrl={toolbarState?.linkIsOpenable && changes ? null : toolbarState?.linkUrl || null}
           onOpenLink={toolbarState?.linkIsOpenable ? onOpenFile : null}
         />
+        <ImageRegionBoxes targets={regionTargets} onSelect={(annotation, wrapper) => openElementToolbar(wrapper, annotation, {})} />
+        {regionDraw && <ImageRegionDraw wrapper={regionDraw.wrapper} onDone={finishRegionDraw} onCancel={cancelRegionDraw} />}
         {pinpointMode && <PinpointOverlay target={pinpointTarget} />}
         {!pinpointMode && toolHints && <BlockHoverHint target={hoverHintTarget} />}
       </article>

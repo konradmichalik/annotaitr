@@ -25,6 +25,38 @@ const makeAnnotation = (overrides = {}) => ({
 })
 
 describe('exportFeedback', () => {
+  describe('a note on an image', () => {
+    const image = { targetType: 'image', originalText: '![Team](team.png)', imageAlt: 'Team', imageSrc: 'team.png', startOffset: 0, endOffset: 0 }
+
+    it('names the image, its alt text and its source', () => {
+      const output = exportFeedback([makeAnnotation({ ...image, originalText: image.originalText })], [makeBlock()])
+      expect(output).toContain('Image: `![Team](team.png)`\nAlt text: "Team"\nSource: team.png\n')
+      expect(output).not.toContain('Region:')
+    })
+
+    it('names the region in the pixels of the image itself', () => {
+      const imageRegion = { x: 120, y: 40, width: 300, height: 180, imageWidth: 1200, imageHeight: 800 }
+      const output = exportFeedback([makeAnnotation({ ...image, imageRegion })], [makeBlock()])
+      expect(output).toContain('Source: team.png\nRegion: x 120, y 40, 300 x 180 px of 1200 x 800 px\n')
+    })
+
+    it.each([
+      ['a missing size', { x: 1, y: 1, width: 0, height: 5, imageWidth: 10, imageHeight: 10 }],
+      ['a null coordinate', { x: null, y: 1, width: 5, height: 5, imageWidth: 10, imageHeight: 10 }],
+      ['text instead of numbers', { x: '1', y: '1', width: '5', height: '5', imageWidth: '10', imageHeight: '10' }],
+      ['a negative origin', { x: -4, y: 1, width: 5, height: 5, imageWidth: 10, imageHeight: 10 }]
+    ])('leaves the region line out for %s', (_name, imageRegion) => {
+      const output = exportFeedback([makeAnnotation({ ...image, imageRegion })], [makeBlock()])
+      expect(output).not.toContain('Region:')
+    })
+
+    it('says part of the image when a removal points at a region', () => {
+      const imageRegion = { x: 120, y: 40, width: 300, height: 180, imageWidth: 1200, imageHeight: 800 }
+      const output = exportFeedback([makeAnnotation({ ...image, type: 'DELETION', text: null, imageRegion })], [makeBlock()])
+      expect(output).toContain('> User wants this part of the image removed from the document.')
+    })
+  })
+
   it('returns "No annotations." for empty array', () => {
     expect(exportFeedback([], [])).toBe('No annotations.')
   })

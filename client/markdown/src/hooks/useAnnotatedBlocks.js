@@ -13,7 +13,8 @@ function typesByBlock(annotations, targetType) {
 export function useAnnotatedBlocks(annotations, containerRef) {
   const annotatedImages = useMemo(() => {
     const map = new Map()
-    annotations.filter(a => a.targetType === 'image').forEach(a => { map.set(`${a.blockId}::${a.imageSrc}`, a.type) })
+    // A note on part of an image is drawn as its own box, it does not mark the whole image.
+    annotations.filter(a => a.targetType === 'image' && !a.imageRegion).forEach(a => { map.set(`${a.blockId}::${a.imageSrc}`, a.type) })
     return map
   }, [annotations])
 

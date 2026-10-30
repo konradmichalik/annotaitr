@@ -506,6 +506,43 @@
   opacity: 0.5;
 }
 
+.image-region-draw {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  cursor: crosshair;
+  touch-action: none;
+  background: color-mix(in srgb, var(--comment-border) 10%, transparent);
+}
+
+.image-region-draw-box,
+.image-region-box {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--comment-border);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--comment-border) 18%, transparent);
+
+  /* A light ring keeps the box visible on dark and on orange parts of an image */
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 90%);
+}
+
+.image-region-box {
+  cursor: pointer;
+}
+
+.image-region-draw-hint {
+  position: absolute;
+  inset: 4px auto auto 4px;
+  max-width: calc(100% - 8px);
+  padding: 2px 6px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 0.75rem;
+  pointer-events: none;
+}
+
 /* === Code Blocks === */
 .block-code-wrapper {
   position: relative;

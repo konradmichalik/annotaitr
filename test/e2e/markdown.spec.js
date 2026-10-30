@@ -2,6 +2,7 @@
 // Markdown mode details: the insertion point and the files overview.
 import { writeFile, rm, mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
+import { deflateSync, crc32 } from 'node:zlib'
 import { join } from 'node:path'
 import { test, expect } from '@playwright/test'
 import { startCli } from '../helpers/cli.js'
@@ -19,6 +20,24 @@ async function withFiles(files, run) {
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
+}
+
+/** A plain PNG of the given size, enough for a browser to load it with a natural size. */
+function pngBuffer(width, height) {
+  const chunk = (type, data) => {
+    const body = Buffer.concat([Buffer.from(type), data])
+    const length = Buffer.alloc(4)
+    length.writeUInt32BE(data.length)
+    const crc = Buffer.alloc(4)
+    crc.writeUInt32BE(crc32(body))
+    return Buffer.concat([length, body, crc])
+  }
+  const header = Buffer.alloc(13)
+  header.writeUInt32BE(width, 0)
+  header.writeUInt32BE(height, 4)
+  header.set([8, 2, 0, 0, 0], 8)
+  const rows = Buffer.concat(Array.from({ length: height }, () => Buffer.concat([Buffer.from([0]), Buffer.alloc(width * 3, 180)])))
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', header), chunk('IDAT', deflateSync(rows)), chunk('IEND', Buffer.alloc(0))])
 }
 
 /** Selects `text` inside the element matching `selector` the way a drag would, and releases the mouse there. */
@@ -229,6 +248,74 @@ test('an image attached to a note shows below the field and reaches the feedback
       expect(stdout).toMatch(/## 1\. Text \(Line 3\)( \[#[0-9a-f]+\])?\nAttachment: \S+annotaitr-attachments\/[0-9a-f]{32}\.png\n/)
     } finally {
       if (cli.child.exitCode === null) { cli.child.kill() }
+    }
+  })
+})
+
+test('a note on part of an image names the region in the pixels of the image itself', async ({ page }) => {
+  await withFiles({ 'doc.md': '# Demo\n\n![Chart](chart.png)\n', 'chart.png': pngBuffer(400, 200) }, async ([path]) => {
+    const cli = startCli([path])
+    try {
+      await page.goto(await cli.url)
+      await page.locator('.annotatable-image-wrapper').click()
+      await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: 'Region' }).click()
+      const image = await page.locator('.annotatable-image-wrapper img').boundingBox()
+      await page.mouse.move(image.x + image.width * 0.25, image.y + image.height * 0.2)
+      await page.mouse.down()
+      await page.mouse.move(image.x + image.width * 0.6, image.y + image.height * 0.5, { steps: 8 })
+      await page.mouse.up()
+      await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: /^Comment/ }).click()
+      const composer = page.getByRole('dialog', { name: 'Comment on selection' })
+      await composer.getByRole('textbox').fill('Thicker bar')
+      await composer.getByRole('button', { name: 'Add', exact: true }).click()
+
+      await expect(page.locator('.image-region-box')).toHaveCount(1)
+      await expect(page.locator('.annotatable-image-wrapper')).not.toHaveClass(/annotated/)
+
+      await page.getByRole('button', { name: /^Send feedback/ }).click()
+      await cli.exited
+      expect(cli.stdout()).toContain('Region: x 100, y 40, 140 x 60 px of 400 x 200 px')
+    } finally {
+      cli.child.kill()
+      await cli.exited
+    }
+  })
+})
+
+test('a region note can be added to an image that already has a note on the whole image', async ({ page }) => {
+  await withFiles({ 'doc.md': '# Demo\n\n![Chart](chart.png)\n', 'chart.png': pngBuffer(400, 200) }, async ([path]) => {
+    const cli = startCli([path])
+    try {
+      await page.goto(await cli.url)
+      const bar = page.getByRole('toolbar', { name: 'Selection' })
+      const composer = page.getByRole('dialog', { name: 'Comment on selection' })
+
+      await page.locator('.annotatable-image-wrapper').click()
+      await bar.getByRole('button', { name: /^Comment/ }).click()
+      await composer.getByRole('textbox').fill('Wrong colours')
+      await composer.getByRole('button', { name: 'Add', exact: true }).click()
+
+      await page.locator('.annotatable-image-wrapper').click()
+      await bar.getByRole('button', { name: 'Region' }).click()
+      const image = await page.locator('.annotatable-image-wrapper img').boundingBox()
+      await page.mouse.move(image.x + image.width * 0.5, image.y + image.height * 0.5)
+      await page.mouse.down()
+      await page.mouse.move(image.x + image.width * 0.75, image.y + image.height * 0.75, { steps: 8 })
+      await page.mouse.up()
+      await bar.getByRole('button', { name: /^Comment/ }).click()
+      await composer.getByRole('textbox').fill('Legend is cut off')
+      await composer.getByRole('button', { name: 'Add', exact: true }).click()
+
+      await expect(page.locator('.note-card')).toHaveCount(2)
+      await page.getByRole('button', { name: /^Send feedback/ }).click()
+      await cli.exited
+      const stdout = cli.stdout()
+      expect(stdout).toContain('Wrong colours')
+      expect(stdout).toContain('Legend is cut off')
+      expect(stdout.match(/^Region: /gm)).toHaveLength(1)
+    } finally {
+      cli.child.kill()
+      await cli.exited
     }
   })
 })
