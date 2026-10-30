@@ -57,6 +57,38 @@ describe('startAnnotatorServer request guard', () => {
     const port = await start()
     expect((await get(port, { host: `evil.example:${port}` })).statusCode).toBe(403)
   })
+
+  describe('write requests', () => {
+    async function startWithPost() {
+      server = await startAnnotatorServer({
+        htmlContent: '<p>ok</p>',
+        mountRoutes(app) { app.post('/api/ping', (_req, res) => res.json({ ok: true })) }
+      })
+      return server.port
+    }
+
+    it('rejects a POST from another website', async () => {
+      const port = await startWithPost()
+      const origin = await get(port, { method: 'POST', headers: { Origin: 'https://evil.example' } })
+      const site = await get(port, { method: 'POST', headers: { 'Sec-Fetch-Site': 'cross-site' } })
+      expect(origin.statusCode).toBe(403)
+      expect(site.statusCode).toBe(403)
+    })
+
+    it('accepts a POST from its own page', async () => {
+      const port = await startWithPost()
+      const res = await get(port, {
+        method: 'POST',
+        headers: { Origin: `http://127.0.0.1:${port}`, 'Sec-Fetch-Site': 'same-origin' }
+      })
+      expect(res.statusCode).toBe(200)
+    })
+
+    it('accepts a POST without browser headers, as sent by the CLI', async () => {
+      const port = await startWithPost()
+      expect((await get(port, { method: 'POST' })).statusCode).toBe(200)
+    })
+  })
 })
 
 describe('isAllowedHost', () => {
