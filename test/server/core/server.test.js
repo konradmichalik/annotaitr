@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { request } from 'node:http'
-import { startAnnotatorServer, isAllowedHost } from '../../../server/core/server.js'
+import { startAnnotatorServer, isAllowedHost, isAllowedWrite } from '../../../server/core/server.js'
 
 function get(port, { host, method = 'GET', headers = {} } = {}) {
   return new Promise((resolve, reject) => {
@@ -56,6 +56,69 @@ describe('startAnnotatorServer request guard', () => {
   it('rejects a foreign Host, as sent after DNS rebinding', async () => {
     const port = await start()
     expect((await get(port, { host: `evil.example:${port}` })).statusCode).toBe(403)
+  })
+
+  describe('write requests', () => {
+    async function startWithPost() {
+      server = await startAnnotatorServer({
+        htmlContent: '<p>ok</p>',
+        mountRoutes(app) { app.post('/api/ping', (_req, res) => res.json({ ok: true })) }
+      })
+      return server.port
+    }
+
+    it('rejects a POST from another website', async () => {
+      const port = await startWithPost()
+      const origin = await get(port, { method: 'POST', headers: { Origin: 'https://evil.example' } })
+      const site = await get(port, { method: 'POST', headers: { 'Sec-Fetch-Site': 'cross-site' } })
+      expect(origin.statusCode).toBe(403)
+      expect(site.statusCode).toBe(403)
+    })
+
+    it('accepts a POST from its own page', async () => {
+      const port = await startWithPost()
+      const res = await get(port, {
+        method: 'POST',
+        headers: { Origin: `http://127.0.0.1:${port}`, 'Sec-Fetch-Site': 'same-origin' }
+      })
+      expect(res.statusCode).toBe(200)
+    })
+
+    it('accepts a POST without browser headers, as sent by the CLI', async () => {
+      const port = await startWithPost()
+      expect((await get(port, { method: 'POST' })).statusCode).toBe(200)
+    })
+  })
+})
+
+describe('isAllowedWrite', () => {
+  const own = { host: '127.0.0.1:4000' }
+
+  it('lets safe methods through whatever they carry', () => {
+    expect(isAllowedWrite('GET', { ...own, origin: 'https://evil.example' })).toBe(true)
+    expect(isAllowedWrite('OPTIONS', { ...own, 'sec-fetch-site': 'cross-site' })).toBe(true)
+  })
+
+  it('rejects another port on the same machine, which browsers call same-site', () => {
+    expect(isAllowedWrite('POST', { ...own, 'sec-fetch-site': 'same-site' })).toBe(false)
+    expect(isAllowedWrite('POST', { ...own, origin: 'http://127.0.0.1:4001' })).toBe(false)
+  })
+
+  it('rejects an HTTPS Origin, since the server only speaks HTTP', () => {
+    expect(isAllowedWrite('POST', { ...own, origin: 'https://127.0.0.1:4000' })).toBe(false)
+  })
+
+  it('rejects an opaque or malformed Origin', () => {
+    expect(isAllowedWrite('POST', { ...own, origin: 'null' })).toBe(false)
+    expect(isAllowedWrite('POST', { ...own, origin: 'not a url' })).toBe(false)
+  })
+
+  it('rejects when Fetch Metadata and Origin disagree', () => {
+    expect(isAllowedWrite('POST', { ...own, 'sec-fetch-site': 'same-origin', origin: 'https://evil.example' })).toBe(false)
+  })
+
+  it('accepts the page itself', () => {
+    expect(isAllowedWrite('POST', { ...own, 'sec-fetch-site': 'same-origin', origin: 'http://127.0.0.1:4000' })).toBe(true)
   })
 })
 

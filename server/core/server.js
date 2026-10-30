@@ -32,6 +32,29 @@ export function isAllowedHost(hostHeader, port, bindHost) {
   return LOOPBACK_NAMES.has(name) || name === bindName.toLowerCase()
 }
 
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
+const OWN_PAGE_FETCH_SITES = new Set(['same-origin', 'none'])
+
+/**
+ * Whether a state-changing request comes from the annotator's own page.
+ * Browsers mark cross-site requests with Sec-Fetch-Site and Origin, which a
+ * page cannot forge. Non-browser clients send neither. The Origin check is
+ * the fallback for browsers without Fetch Metadata.
+ */
+export function isAllowedWrite(method, headers) {
+  if (SAFE_METHODS.has(method)) { return true }
+  const fetchSite = headers['sec-fetch-site']
+  if (fetchSite && !OWN_PAGE_FETCH_SITES.has(fetchSite)) { return false }
+  const origin = headers.origin
+  if (!origin) { return true }
+  try {
+    const { protocol, host } = new URL(origin)
+    return protocol === 'http:' && host === headers.host
+  } catch {
+    return false
+  }
+}
+
 /**
  * Bind to the first free port in `candidates`. The listen error must be
  * observed. Without a handler an occupied port leaves the promise pending
@@ -83,6 +106,10 @@ export async function startAnnotatorServer({ bundleDir, htmlContent = null, stat
   app.use((req, res, next) => {
     if (isAllowedHost(req.headers.host, req.socket.localPort, config.host)) { return next() }
     res.status(403).json({ success: false, error: 'Forbidden host' })
+  })
+  app.use((req, res, next) => {
+    if (isAllowedWrite(req.method, req.headers)) { return next() }
+    res.status(403).json({ success: false, error: 'Forbidden origin' })
   })
   app.use(express.json({ limit: config.jsonLimit }))
 
