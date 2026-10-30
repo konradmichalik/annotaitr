@@ -783,7 +783,7 @@ test('a file of the repository gives way to the walkthrough on K at the start of
       await page.mouse.down()
       await page.mouse.move(rect.x + 200, rect.y + rect.height / 2, { steps: 4 })
       await page.mouse.up()
-      await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: 'Change' }).click()
+      await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: 'Comment' }).click()
       await page.getByRole('dialog', { name: 'Comment on selection' }).getByRole('textbox', { name: 'Comment on selection' }).fill('Rename this')
       await page.keyboard.press('ControlOrMeta+Enter')
       await expect(page.locator('.note-card', { hasText: 'Rename this' })).toBeVisible()
