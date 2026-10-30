@@ -394,6 +394,37 @@ test('? opens the shortcut list of the open mode', async ({ page }) => {
   })
 })
 
+test('a comment added to a markdown removal keeps it a removal, struck through, also after a reload of the highlights', async ({ page }) => {
+  await withTargets(async ({ markdown }) => {
+    const cli = startCli([markdown])
+    try {
+      await page.goto(await cli.url)
+      const rect = await page.getByText('A paragraph to review.').boundingBox()
+      await page.mouse.move(rect.x + 2, rect.y + rect.height / 2)
+      await page.mouse.down()
+      await page.mouse.move(rect.x + 40, rect.y + rect.height / 2, { steps: 4 })
+      await page.mouse.up()
+      await page.keyboard.press('Backspace')
+      await expect(page.getByRole('button', { name: /^1\. Remove/ })).toBeVisible()
+      await expect(page.locator('.annotation-highlight.deletion')).not.toHaveCount(0)
+
+      await page.locator('.annotation-highlight').first().click()
+      await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: 'Comment' }).click()
+      const composer = page.getByRole('dialog', { name: 'Edit comment' })
+      await composer.getByRole('textbox').fill('Not needed in the intro')
+      await page.keyboard.press('ControlOrMeta+Enter')
+
+      await expect(page.getByRole('button', { name: /^1\. Remove/ })).toBeVisible()
+      await expect(page.locator('.annotation-highlight.deletion')).not.toHaveCount(0)
+      await page.getByRole('button', { name: /^Send feedback/ }).click()
+      await cli.exited
+      expect(cli.stdout()).toMatch(/## 1\. Remove · Text \(Line \d+\)[^\n]*\n```\n[^\n]*\n```\n> Not needed in the intro/)
+    } finally {
+      if (cli.child.exitCode === null) { cli.child.kill() }
+    }
+  })
+})
+
 test('the composer removes with its Remove button, and the settings offer no default intent', async ({ page }) => {
   await withTargets(async ({ image }) => {
     const cli = startCli([image])
