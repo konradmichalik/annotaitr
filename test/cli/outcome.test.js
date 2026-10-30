@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { composeOutput, describeDomElement } from '../../cli/outcome.js'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { composeOutput, describeDomElement, handleOutcome } from '../../cli/outcome.js'
 import { exportFeedback } from '../../server/image/common/feedback.js'
 
 const carried = [{
@@ -81,5 +81,24 @@ describe('composeOutput', () => {
     expect(text).toContain('### [#b7210e44] Question · Comment pin: bottom')
     expect(text).toContain('> Round 1, mark 2: Button colour')
     expect(text.indexOf('### 1. [#a3f19c2e]')).toBeLessThan(repliesIndex(text))
+  })
+})
+
+describe('handleOutcome without a decision', () => {
+  afterEach(() => { vi.restoreAllMocks() })
+
+  it.each([
+    ['a closed tab', { disconnected: true }, 'Browser tab closed. No decision made.\n'],
+    ['an interrupt', { aborted: true }, 'Interrupted. No decision made.\n']
+  ])('prints nothing on stdout and exits 1 for %s', async (_name, decision, message) => {
+    const out = vi.spyOn(process.stdout, 'write').mockReturnValue(true)
+    const err = vi.spyOn(process.stderr, 'write').mockReturnValue(true)
+    const exit = vi.spyOn(process, 'exit').mockImplementation(() => undefined)
+    const server = { shutdown: vi.fn() }
+    await handleOutcome(server, decision, () => 'APPROVED: No changes requested.\n')
+    expect(out).not.toHaveBeenCalled()
+    expect(err).toHaveBeenCalledWith(message)
+    expect(exit).toHaveBeenCalledWith(1)
+    expect(server.shutdown).toHaveBeenCalled()
   })
 })
