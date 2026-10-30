@@ -37,9 +37,9 @@ const OWN_PAGE_FETCH_SITES = new Set(['same-origin', 'none'])
 
 /**
  * Whether a state-changing request comes from the annotator's own page.
- * Browsers label requests from other websites with Sec-Fetch-Site and
- * Origin, which a page cannot forge. Clients without a browser (the CLI,
- * tests) send neither header and are let through.
+ * Browsers mark cross-site requests with Sec-Fetch-Site and Origin, which a
+ * page cannot forge. Non-browser clients send neither. The Origin check is
+ * the fallback for browsers without Fetch Metadata.
  */
 export function isAllowedWrite(method, headers) {
   if (SAFE_METHODS.has(method)) { return true }
