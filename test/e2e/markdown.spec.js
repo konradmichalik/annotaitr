@@ -264,7 +264,7 @@ test('a note on part of an image names the region in the pixels of the image its
       await page.mouse.down()
       await page.mouse.move(image.x + image.width * 0.6, image.y + image.height * 0.5, { steps: 8 })
       await page.mouse.up()
-      await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: /^Change/ }).click()
+      await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: /^Comment/ }).click()
       const composer = page.getByRole('dialog', { name: 'Comment on selection' })
       await composer.getByRole('textbox').fill('Thicker bar')
       await composer.getByRole('button', { name: 'Add', exact: true }).click()
@@ -291,7 +291,7 @@ test('a region note can be added to an image that already has a note on the whol
       const composer = page.getByRole('dialog', { name: 'Comment on selection' })
 
       await page.locator('.annotatable-image-wrapper').click()
-      await bar.getByRole('button', { name: /^Change/ }).click()
+      await bar.getByRole('button', { name: /^Comment/ }).click()
       await composer.getByRole('textbox').fill('Wrong colours')
       await composer.getByRole('button', { name: 'Add', exact: true }).click()
 
@@ -302,7 +302,7 @@ test('a region note can be added to an image that already has a note on the whol
       await page.mouse.down()
       await page.mouse.move(image.x + image.width * 0.75, image.y + image.height * 0.75, { steps: 8 })
       await page.mouse.up()
-      await bar.getByRole('button', { name: /^Change/ }).click()
+      await bar.getByRole('button', { name: /^Comment/ }).click()
       await composer.getByRole('textbox').fill('Legend is cut off')
       await composer.getByRole('button', { name: 'Add', exact: true }).click()
 
