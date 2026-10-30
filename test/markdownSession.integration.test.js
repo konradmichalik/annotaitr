@@ -70,8 +70,8 @@ describe('a markdown review session across rounds', () => {
     expect(await second.exited).toBe(0)
     const out = second.stdout()
     expect(out).toMatch(/^Feedback: 2 replies to round 1, no new notes\.\n/)
-    expect(out).toContain(`### [#a3f19c2e] Change · Text (Line 5, ${file.path})\nSelected: \`intro says hello\`\n> Round 1, note 1 (Line 3): Friendlier\nAgent (question): Warmer or shorter?\nReviewer: Warmer\n`)
-    expect(out).toContain('### [#b7210e44] Change · Text (no longer in the document)\nSelected: `goodbye paragraph`\n> Round 1, note 2 (Line 5): Drop it\n')
+    expect(out).toContain(`### [#a3f19c2e] Text (Line 5, ${file.path})\nSelected: \`intro says hello\`\n> Round 1, note 1 (Line 3): Friendlier\nAgent (question): Warmer or shorter?\nReviewer: Warmer\n`)
+    expect(out).toContain('### [#b7210e44] Text (no longer in the document)\nSelected: `goodbye paragraph`\n> Round 1, note 2 (Line 5): Drop it\n')
     expect(out).toContain(`Session: ${sessionId} (round 2). Reply per note with:`)
   }, 45_000)
 
@@ -147,7 +147,7 @@ describe('a markdown review session across rounds', () => {
     await api2.post('/api/approve', {})
     await second.exited
     expect(second.stdout()).toMatch(/^APPROVED WITH NOTES: 1 reply to round 1\. The target is approved as-is\./)
-    expect(second.stdout()).toContain(`### [#a3f19c2e] Change · Text (Line 3, ${file.path})`)
+    expect(second.stdout()).toContain(`### [#a3f19c2e] Text (Line 3, ${file.path})`)
   }, 45_000)
 })
 
@@ -202,7 +202,7 @@ describe('a changes review session across a new commit', () => {
     await api2.post('/api/threads/a3f19c2e/replies', { text: 'Three' })
     await api2.post('/api/feedback', { files: [{ path: walkthrough.path, blocks: [], annotations: [] }] })
     expect(await second.exited).toBe(0)
-    expect(second.stdout()).toContain('### [#a3f19c2e] Change · Text (new Line 2 in a.js)\n')
+    expect(second.stdout()).toContain('### [#a3f19c2e] Text (new Line 2 in a.js)\n')
     expect(second.stdout()).toContain(`Session: ${sessionId} (round 2)`)
   }, 60_000)
 })

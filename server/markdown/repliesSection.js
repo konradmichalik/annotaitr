@@ -1,4 +1,4 @@
-import { isNumbered, intentOf, intentWord } from '../core/notes.js'
+import { isNumbered, kindPrefix } from '../core/notes.js'
 import { formatReplies } from '../core/session/repliesFormat.js'
 import { noteWhat } from './feedback.js'
 
@@ -22,7 +22,7 @@ function heading(thread, located, kind) {
   const { annotation } = thread
   if (!isNumbered(annotation)) { return `### [#${thread.handle}] General comment` }
   const where = placeText(located, kind)
-  return `### [#${thread.handle}] ${intentWord(intentOf(annotation))} · ${noteWhat(annotation, null)}${where ? ` (${where})` : ''}`
+  return `### [#${thread.handle}] ${kindPrefix(annotation)}${noteWhat(annotation, null)}${where ? ` (${where})` : ''}`
 }
 
 // A code span needs a backtick run longer than any inside it, and a space where the text touches the fence.

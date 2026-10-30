@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { loadImage, createCanvas } from '@napi-rs/canvas'
-import { flattenAnnotations, renderAnnotatedWithCrops, composeContactSheet, CONTACT_SHEET_GAP, CONTACT_SHEET_LABEL_HEIGHT } from '../../../../server/image/common/render.js'
+import { flattenAnnotations, markOf, renderAnnotatedWithCrops, composeContactSheet, CONTACT_SHEET_GAP, CONTACT_SHEET_LABEL_HEIGHT } from '../../../../server/image/common/render.js'
 import { makeFixturePng } from '../../../helpers/fixtureImage.js'
 
 describe('flattenAnnotations', () => {
@@ -319,5 +319,21 @@ describe('renderAnnotatedWithCrops', () => {
     } finally {
       warn.mockRestore()
     }
+  })
+})
+
+describe('markOf', () => {
+  it('rotates through four colours by note number, so neighbours differ', () => {
+    expect([1, 2, 3, 4, 5, 6].map((n) => markOf(n).mark)).toEqual(
+      ['#c04a00', '#e69f00', '#0072b2', '#a8457e', '#c04a00', '#e69f00']
+    )
+  })
+
+  it('puts a dark number on amber and a white one on the rest', () => {
+    expect([1, 2, 3, 4].map((n) => markOf(n).onMark)).toEqual(['#fff', '#16181d', '#fff', '#fff'])
+  })
+
+  it('falls back to the first colour without a usable number', () => {
+    for (const number of [undefined, null, 0, -2, 1.5, '3']) { expect(markOf(number).mark).toBe('#c04a00') }
   })
 })

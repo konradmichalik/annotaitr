@@ -1,5 +1,5 @@
 import { annotationHandle } from '../core/annotationHandle.js'
-import { normalizeNotes, intentWord, intentCounts } from '../core/notes.js'
+import { normalizeNotes, kindPrefix, intentCounts } from '../core/notes.js'
 import { countNewlines, diffLineRef, lineRefOf } from './diffLines.js'
 import { attachmentLines } from './attachments.js'
 
@@ -86,7 +86,7 @@ function describeAnnotation(ann, block) {
     const after = ann.afterContext ? `After: \`${ann.afterContext}\`\n` : ''
     return {
       what: 'Insertion', where,
-      body: `${after}\`\`\`\n${ann.text ?? ''}\n\`\`\`\n> User wants this text inserted at this point in the document.\n`
+      body: `${after}\`\`\`\n${ann.text ?? ''}\n\`\`\`\n> User comment at this point in the document.\n`
     }
   }
   const selection = `\`\`\`\n${ann.originalText}\n\`\`\`\n`
@@ -102,7 +102,7 @@ export const noteWhere = (ann, block) => describeAnnotation(ann, block).where
 export const noteWhat = (ann, block) => describeAnnotation(ann, block).what
 
 /**
- * One numbered note: `## 3. Question · Text (Line 7)`, the handle at the end
+ * One numbered note: `## 3. Text (Line 7)` or `## 3. Remove · Text (Line 7)`, the handle at the end
  * of the heading, then the quoted selection and the comment. The number is
  * the one the note kept for the whole round, so it can have gaps.
  */
@@ -112,7 +112,7 @@ function formatAnnotation(ann, block, level) {
   const handleTag = handle ? ` [#${handle}]` : ''
   // A restored draft note whose text is gone from the file has no line left to point at.
   const place = ann.unanchored ? '' : ` (${where})`
-  return `${level} ${ann.number}. ${intentWord(ann.intent)} · ${what}${place}${tag}${handleTag}\n${attachmentLines(ann)}${body}\n`
+  return `${level} ${ann.number}. ${kindPrefix(ann)}${what}${place}${tag}${handleTag}\n${attachmentLines(ann)}${body}\n`
 }
 
 /**

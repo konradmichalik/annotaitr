@@ -1,5 +1,5 @@
 import { annotationLabel } from './feedback.js'
-import { isNumbered, intentOf, intentWord } from '../../core/notes.js'
+import { isNumbered, kindPrefix } from '../../core/notes.js'
 import { formatReplies } from '../../core/session/repliesFormat.js'
 import { describePosition } from './geometry.js'
 import { formatTimecode } from '../video/timeline.js'
@@ -23,7 +23,7 @@ function heading(thread, view) {
   if (!isNumbered(annotation)) { return `### [#${thread.handle}] General comment` }
   const where = location(annotation, view)
   const what = annotation.type === 'comment' ? 'Comment' : annotationLabel(annotation)
-  return `### [#${thread.handle}] ${intentWord(intentOf(annotation))} · ${what}${where ? `: ${where}` : ''}`
+  return `### [#${thread.handle}] ${kindPrefix(annotation)}${what}${where ? `: ${where}` : ''}`
 }
 
 /** Last round's threads the reviewer answered, headed by where the mark sits on the image, in the recording or in the PDF. */

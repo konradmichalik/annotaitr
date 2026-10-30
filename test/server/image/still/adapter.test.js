@@ -59,7 +59,7 @@ describe('image annotator server', () => {
     })
     await fetch(`${server.url}/api/feedback`, { method: 'POST' })
     const decision = await server.waitForDecision()
-    expect(decision.annotations).toEqual([{ ...annotation, intent: 'question', number: 1 }])
+    expect(decision.annotations).toEqual([{ ...annotation, intent: 'comment', number: 1 }])
     expect(decision.domMap).toEqual(domMap)
   })
 
@@ -143,7 +143,7 @@ describe('image annotator server', () => {
     await fetch(`${server.url}/api/approve`, { method: 'POST' })
     const decision = await server.waitForDecision()
     expect(decision.approved).toBe(true)
-    expect(decision.output).toContain('APPROVED WITH NOTES: 1 note (1 Question).')
+    expect(decision.output).toContain('APPROVED WITH NOTES: 1 note (1 Comment).')
     expect(decision.annotationCount).toBe(1)
   })
 
@@ -163,7 +163,7 @@ describe('image annotator server', () => {
       const crops = cropPaths(output)
       expect(crops.map((path) => basename(path))).toEqual(['crop-01.png', 'crop-02.png'])
       expect(crops.every((path) => dirname(path) === dirname(annotated) && existsSync(path))).toBe(true)
-      expect(output).toMatch(/### 1\. [^\n]*Change · Boxed area: [^\n]+\nCrop: .+crop-01\.png\n> Top left/)
+      expect(output).toMatch(/### 1\. [^\n]*Boxed area: [^\n]+\nCrop: .+crop-01\.png\n> Top left/)
     })
 
     it('decides without crops when writing them fails, leaving only the annotated screenshot', async () => {
@@ -234,7 +234,7 @@ describe('image annotator server', () => {
     await fetch(`${server.url}/api/feedback`, { method: 'POST' })
     const decision = await server.waitForDecision()
     expect(decision.approved).toBe(false)
-    expect(decision.output).toContain('1 annotation (1 Change) on the screenshot.')
+    expect(decision.output).toContain('1 annotation (1 Comment) on the screenshot.')
     expect(decision.annotationCount).toBe(1)
   })
 

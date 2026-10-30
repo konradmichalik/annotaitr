@@ -15,7 +15,7 @@ describe('formatMarkdownReplies', () => {
     const places = { b7210e44: { anchor: 'moved', place: { path: 'docs/a.md', where: 'Line 9', line: 9 } } }
     expect(formatMarkdownReplies([thread('b7210e44', comment)], 1, { places, kind: 'markdown' })).toBe(
       '\n## Replies to round 1\n\n' +
-      '### [#b7210e44] Change · Text (Line 9, docs/a.md)\n' +
+      '### [#b7210e44] Text (Line 9, docs/a.md)\n' +
       'Selected: `The intro says hello.`\n' +
       '> Round 1, note 2 (Line 3): Make it shorter\n' +
       'Agent (question): Shorter or gone?\n' +
@@ -26,14 +26,14 @@ describe('formatMarkdownReplies', () => {
   it('says when the text is no longer in the document and keeps the original quote', () => {
     const places = { b7210e44: { anchor: 'orphan', place: null } }
     const text = formatMarkdownReplies([thread('b7210e44', comment)], 1, { places, kind: 'markdown' })
-    expect(text).toContain('### [#b7210e44] Change · Text (no longer in the document)\nSelected: `The intro says hello.`\n')
+    expect(text).toContain('### [#b7210e44] Text (no longer in the document)\nSelected: `The intro says hello.`\n')
   })
 
   it('leaves out the walkthrough path in a changes review and names the insertion point of an insertion', () => {
     const insertion = { type: 'INSERTION', afterContext: 'const a = 1', text: 'const c = 4' }
     const places = { c1: { anchor: 'exact', place: { path: '.git/annotaitr/changes.md', where: 'new Line 2 in src/a.js', line: 7 } } }
     const text = formatMarkdownReplies([thread('c1', insertion, { anchor: { ...anchor, quote: 'const a = 1' } })], 1, { places, kind: 'changes' })
-    expect(text).toContain('### [#c1] Add · Insertion (new Line 2 in src/a.js)\nAfter: `const a = 1`\n')
+    expect(text).toContain('### [#c1] Insertion (new Line 2 in src/a.js)\nAfter: `const a = 1`\n')
     const gone = formatMarkdownReplies([thread('c1', insertion)], 1, { places: { c1: { anchor: 'orphan', place: null } }, kind: 'changes' })
     expect(gone).toContain('(no longer in the changes)')
   })

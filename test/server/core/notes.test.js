@@ -1,41 +1,56 @@
 import { describe, it, expect } from 'vitest'
-import { intentOf, intentWord, normalizeNotes, intentCounts, isNumbered } from '../../../server/core/notes.js'
+import { intentOf, intentWord, kindPrefix, normalizeNotes, intentCounts, isNumbered } from '../../../server/core/notes.js'
 
 describe('intentOf', () => {
-  it('keeps a known intent', () => {
-    expect(intentOf({ type: 'box', intent: 'question' })).toBe('question')
-    expect(intentOf({ type: 'COMMENT', intent: 'add' })).toBe('add')
+  it('knows two kinds: a comment and a removal', () => {
+    expect(intentOf({ type: 'box', geometry: {} })).toBe('comment')
+    expect(intentOf({ type: 'box', geometry: {}, intent: 'remove' })).toBe('remove')
+    expect(intentOf({ type: 'pin', geometry: {} })).toBe('comment')
+    expect(intentOf({ type: 'COMMENT' })).toBe('comment')
   })
 
-  it('derives the default from the type when the intent is missing or unknown', () => {
-    expect(intentOf({ type: 'box', geometry: {} })).toBe('change')
-    expect(intentOf({ type: 'text', geometry: {} })).toBe('change')
-    expect(intentOf({ type: 'pin', geometry: {} })).toBe('question')
-    expect(intentOf({ type: 'arrow', geometry: {}, intent: 'shout' })).toBe('change')
-    expect(intentOf({ type: 'COMMENT' })).toBe('change')
+  it('reads the four intents of older data as a comment, Remove stays', () => {
+    for (const intent of ['change', 'add', 'question', 'shout']) {
+      expect(intentOf({ type: 'arrow', geometry: {}, intent })).toBe('comment')
+    }
+    expect(intentOf({ type: 'pin', geometry: {} })).toBe('comment')
   })
 
-  it('reads a markdown deletion and insertion as Remove and Add, whatever the field says', () => {
-    expect(intentOf({ type: 'DELETION' })).toBe('remove')
-    expect(intentOf({ type: 'INSERTION', intent: 'question' })).toBe('add')
+  it('reads a markdown deletion as Remove and an insertion as a comment, whatever the field says', () => {
+    expect(intentOf({ type: 'DELETION', intent: 'comment' })).toBe('remove')
+    expect(intentOf({ type: 'INSERTION', intent: 'remove' })).toBe('comment')
   })
 
-  it('gives a comment on a page or a time the default for notes without a shape', () => {
-    expect(intentOf({ type: 'comment', geometry: null, page: 2 })).toBe('change')
-    expect(intentOf({ type: 'comment', geometry: null, time: 1.5, intent: 'question' })).toBe('question')
+  it('gives a comment on a page or a time the kind of its field', () => {
+    expect(intentOf({ type: 'comment', geometry: null, page: 2 })).toBe('comment')
+    expect(intentOf({ type: 'comment', geometry: null, time: 1.5, intent: 'remove' })).toBe('remove')
   })
 
   it('gives a general comment and an agent note no intent', () => {
-    expect(intentOf({ type: 'COMMENT', targetType: 'global', intent: 'change' })).toBeNull()
+    expect(intentOf({ type: 'COMMENT', targetType: 'global', intent: 'remove' })).toBeNull()
     expect(intentOf({ type: 'comment', geometry: null })).toBeNull()
     expect(intentOf({ type: 'NOTES' })).toBeNull()
   })
 })
 
 describe('intentWord', () => {
-  it('names the intent in sentence case', () => {
-    expect(intentWord('change')).toBe('Change')
-    expect(intentWord('question')).toBe('Question')
+  it('names the kind in sentence case', () => {
+    expect(intentWord('comment')).toBe('Comment')
+    expect(intentWord('remove')).toBe('Remove')
+    expect(intentWord(null)).toBe('General')
+  })
+})
+
+describe('kindPrefix', () => {
+  it('marks a removal and leaves a comment bare', () => {
+    expect(kindPrefix({ type: 'box', geometry: {}, intent: 'remove' })).toBe('Remove · ')
+    expect(kindPrefix({ type: 'DELETION' })).toBe('Remove · ')
+    expect(kindPrefix({ type: 'box', geometry: {} })).toBe('')
+    expect(kindPrefix({ type: 'box', geometry: {}, intent: 'question' })).toBe('')
+  })
+
+  it('leaves a general comment bare', () => {
+    expect(kindPrefix({ type: 'comment', geometry: null, intent: 'remove' })).toBe('')
   })
 })
 
@@ -88,7 +103,7 @@ describe('normalizeNotes', () => {
       { type: 'pin', geometry: {} }
     ])
     expect(notes[0]).toEqual({ type: 'comment', geometry: null, text: 'overall', intent: null })
-    expect(notes[1]).toMatchObject({ intent: 'question', number: 1 })
+    expect(notes[1]).toMatchObject({ intent: 'comment', number: 1 })
   })
 
   it('does not mutate its input', () => {
@@ -99,7 +114,7 @@ describe('normalizeNotes', () => {
 })
 
 describe('intentCounts', () => {
-  it('counts notes per intent in a fixed order, general comments last', () => {
+  it('counts notes per kind in a fixed order, general comments last', () => {
     const notes = [
       { type: 'pin', geometry: {} },
       { type: 'box', geometry: {} },
@@ -108,7 +123,7 @@ describe('intentCounts', () => {
       { type: 'comment', geometry: null },
       { type: 'box', geometry: {} }
     ]
-    expect(intentCounts(notes)).toBe('2 Change, 1 Add, 1 Remove, 1 Question, 1 General')
+    expect(intentCounts(notes)).toBe('4 Comment, 1 Remove, 1 General')
   })
 
   it('is empty without notes', () => {
