@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, resolve as resolvePath } from 'node:path'
-import { changeState, collectChanges, compareInfo, fullFileDiff, gitPath, listCommits, repoRoot, resolveBase } from '../server/changes/git.js'
+import { changeState, collectChanges, compareInfo, fullFileDiff, gitPath, listCommits, listRepoFiles, readRepoFile, repoRoot, resolveBase } from '../server/changes/git.js'
 import { createChangesRouter } from '../server/changes/routes.js'
 import { buildWalkthrough, hunksOnly, unchangedPaths } from '../server/changes/walkthrough.js'
 import { parseArgs } from './args.js'
@@ -202,7 +202,8 @@ export async function runChanges(args) {
     return { error: opened.error }
   }
   try {
-    await runMarkdown({ targets: [prepared.path], origin: parsed.origin, feedbackNotes: parsed.feedbackNotes, kind: 'changes', label: prepared.label, routes: createChangesRouter(fullDiff), onDecision, opened })
+    const repo = { list: () => listRepoFiles(prepared.root), read: (path) => readRepoFile(prepared.root, path) }
+    await runMarkdown({ targets: [prepared.path], origin: parsed.origin, feedbackNotes: parsed.feedbackNotes, kind: 'changes', label: prepared.label, routes: createChangesRouter(fullDiff, repo), onDecision, opened })
   } catch (err) {
     await removeWalkthrough()
     return { error: err.message }

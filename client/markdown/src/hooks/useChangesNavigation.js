@@ -13,15 +13,17 @@ const isComposing = () => document.querySelector('.annotation-toolbar, .comment-
  * The changed file in view (`null` for the overview): picked in the tree or
  * with `J` and `K`, opened if it was collapsed and scrolled to the top. `P`
  * hands the current file to `onCycleView`, which switches Diff, Read and Changes.
+ * `onNavigate` runs first on every pick, for what has to give way to the walkthrough.
  */
-export function useChangesNavigation({ sections, expand, onCycleView }) {
+export function useChangesNavigation({ sections, expand, onCycleView, onNavigate }) {
   const [current, setCurrent] = useState(null)
 
   const select = useCallback((path) => {
+    onNavigate?.()
     setCurrent(path)
     if (path !== null) { expand(path) }
     requestAnimationFrame(() => scrollToCard(path))
-  }, [expand])
+  }, [expand, onNavigate])
 
   useEffect(() => {
     if (!sections) { return undefined }

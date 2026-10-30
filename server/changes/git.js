@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process'
-import { lstat } from 'node:fs/promises'
+import { lstat, readFile } from 'node:fs/promises'
 import { basename, join, resolve } from 'node:path'
+import { isPathInside } from '../markdown/file.js'
 
 // Repository config can run programs while git reads changes: an external
 // diff, textconv, fsmonitor, a signature check in git log. Those are switched
@@ -12,6 +13,7 @@ const MAX_BUFFER = 64 * 1024 * 1024
 const TIMEOUT_MS = 20_000
 const MAX_FILE_LINES = 1000
 const MAX_FILE_BYTES = 256 * 1024
+const TOO_LARGE = `larger than ${MAX_FILE_BYTES / 1024} KB`
 const MAX_DIFF_BYTES = 512 * 1024
 const CONCURRENCY = 8
 
@@ -129,7 +131,7 @@ function looksLikeSecret(path) {
 async function fileOmission(root, path) {
   try {
     const stats = await lstat(join(root, path))
-    return stats.isFile() && stats.size > MAX_FILE_BYTES ? `larger than ${MAX_FILE_BYTES / 1024} KB` : null
+    return stats.isFile() && stats.size > MAX_FILE_BYTES ? TOO_LARGE : null
   } catch {
     return null
   }
@@ -139,7 +141,7 @@ async function fileOmission(root, path) {
 async function blobOmission(root, mergeBase, path) {
   try {
     const size = Number((await git(['cat-file', '-s', `${mergeBase}:${path}`], { cwd: root })).trim())
-    return size > MAX_FILE_BYTES ? `larger than ${MAX_FILE_BYTES / 1024} KB` : null
+    return size > MAX_FILE_BYTES ? TOO_LARGE : null
   } catch {
     return null
   }
@@ -284,4 +286,61 @@ export async function fullFileDiff(root, mergeBase, file) {
 /** A path inside the git directory, which is never committed and never part of the diff. */
 export async function gitPath(root, name) {
   return resolve(root, (await git(['rev-parse', '--git-path', name], { cwd: root })).trim())
+}
+
+const MAX_LISTED_FILES = 20_000
+
+const nameOmission = (path) => {
+  if (LOCK_FILES.has(basename(path))) { return 'lock file' }
+  return looksLikeSecret(path) ? 'possible secret' : null
+}
+
+/**
+ * The files git knows in the working tree, tracked or untracked and not
+ * ignored, in path order. `omitted` says why a file's content is not offered,
+ * for the names the walkthrough does not read either.
+ */
+export async function listRepoFiles(root, { limit = MAX_LISTED_FILES } = {}) {
+  const paths = [...new Set(splitZ(await git(['ls-files', '--cached', '--others', '--exclude-standard', '-z'], { cwd: root })))].sort()
+  return {
+    files: paths.slice(0, limit).map((path) => ({ path, omitted: nameOmission(path) })),
+    truncated: paths.length > limit
+  }
+}
+
+/** Whether git lists exactly this path. A pattern, an empty path and one outside the repository are no entry. */
+async function isListed(root, path) {
+  if (!path) { return false }
+  try {
+    const listed = await git(['--literal-pathspecs', 'ls-files', '--cached', '--others', '--exclude-standard', '-z', '--', path], { cwd: root })
+    return splitZ(listed).includes(path)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * A file of that list, by its exact path: `{ path, content }`, or `{ path,
+ * omitted }` for one that is not read. Null for any other path, so nothing
+ * outside the list can be reached through it.
+ */
+export async function readRepoFile(root, path) {
+  if (!await isListed(root, path)) { return null }
+  const omitted = nameOmission(path)
+  if (omitted) { return { path, omitted } }
+  const absolute = join(root, path)
+  let stats
+  try {
+    stats = await lstat(absolute)
+  } catch {
+    // Still in the index, but removed from the working tree.
+    return { path, omitted: 'deleted in the working tree' }
+  }
+  if (stats.isSymbolicLink()) { return { path, omitted: 'symbolic link' } }
+  if (!stats.isFile()) { return { path, omitted: 'not a regular file' } }
+  // A directory replaced by a link would lead the listed path out of the repository.
+  if (!await isPathInside(root, absolute)) { return { path, omitted: 'outside the repository' } }
+  if (stats.size > MAX_FILE_BYTES) { return { path, omitted: TOO_LARGE } }
+  const buffer = await readFile(absolute)
+  return buffer.includes(0) ? { path, omitted: 'binary file' } : { path, content: buffer.toString('utf8') }
 }

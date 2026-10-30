@@ -24,6 +24,8 @@ import { useChangesReview } from './hooks/useChangesReview.js'
 import { useChangesNavigation } from './hooks/useChangesNavigation.js'
 import { useReadViews } from './hooks/useReadViews.js'
 import { ChangedFilesPanel } from './components/ChangedFilesPanel.jsx'
+import { RepoFileView } from './components/RepoFileView.jsx'
+import { useRepoFiles } from './hooks/useRepoFiles.js'
 import { changesFacts, groupChangeSections, noteCounts } from './utils/changeSections.js'
 import { agentName } from '../../shared/utils/origin.js'
 import { initialAnnotationState } from './state/annotationReducer.js'
@@ -170,7 +172,18 @@ export default function App() {
   // The Changes view keeps blocks with a note out of its folds.
   const notedBlocks = useMemo(() => new Set(annotations.map((ann) => ann.blockId).filter(Boolean)), [annotations])
   const readViews = useReadViews({ sections: changeSections, review: changesReview })
-  const changesNav = useChangesNavigation({ sections: changeSections, expand: changesReview.expand, onCycleView: readViews.cycle })
+  const repoFiles = useRepoFiles()
+  const [repoFilePath, setRepoFilePath] = useState(null)
+  const closeRepoFile = useCallback(() => setRepoFilePath(null), [])
+  // A file of the repository gives way to the walkthrough when a changed file is picked, with the mouse or J and K, or a note in the panel.
+  const changesNav = useChangesNavigation({ sections: changeSections, expand: changesReview.expand, onCycleView: readViews.cycle, onNavigate: closeRepoFile })
+  useEffect(() => { closeRepoFile() }, [selectedAnnotationId, closeRepoFile])
+  const backToChanges = useCallback(() => {
+    const path = repoFilePath
+    setRepoFilePath(null)
+    // The file view and its button unmount, so focus goes back to the file's row in the tree.
+    requestAnimationFrame(() => document.querySelector(`[data-repo-path="${CSS.escape(path)}"]`)?.focus())
+  }, [repoFilePath])
   // The Read views' blocks join the walkthrough's wherever notes are placed, listed or sent.
   const readBlocks = isChanges ? readViews.blocks : NO_FILES
   const withReadBlocks = useMemo(() => (readBlocks.length > 0 ? [...(activeBlocks ?? []), ...readBlocks] : null), [activeBlocks, readBlocks])
@@ -594,6 +607,7 @@ export default function App() {
               onToggleReviewed={(path) => changesReview.markReviewed(path, !changesReview.reviewed.has(path))}
               width={changesSidebarWidth}
               collapsed={tocCollapsed}
+              repo={{ ...repoFiles, current: repoFilePath, onOpen: setRepoFilePath }}
             />
             {!tocCollapsed && <div className="panel-splitter" onMouseDown={(e) => handleTocResize(e, changesSidebarWidth)} />}
           </>
@@ -625,7 +639,7 @@ export default function App() {
             )}
           </>
         )}
-        <div className="viewer-wrapper canvas-surface">
+        <div className={`viewer-wrapper canvas-surface${repoFilePath ? ' is-repo-file' : ''}`}>
           <CanvasTopbar
             shiftHeld={shiftHeld}
             pinpointMode={effectivePinpointMode}
@@ -674,6 +688,7 @@ export default function App() {
               onSelectAnnotation={handleSelectAnnotation}
             />
           )}
+          {repoFilePath && <RepoFileView key={repoFilePath} path={repoFilePath} onBack={backToChanges} />}
         </div>
         {!sidebarCollapsed && (
           <div

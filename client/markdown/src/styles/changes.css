@@ -319,6 +319,9 @@
 .changed-tree-file.is-current {
   border-color: var(--line);
   background: var(--card);
+
+  /* A bar as well, the border and the tint are hardly visible */
+  box-shadow: inset 2px 0 0 var(--ink);
 }
 
 .changed-tree-overview {
@@ -628,4 +631,118 @@
 .changed-files-focus-count {
   margin-left: auto;
   font-variant-numeric: tabular-nums;
+}
+
+/* Changes or all files of the repository */
+.changed-files-scope {
+  display: flex;
+  gap: 2px;
+  margin: 0 var(--space-3) var(--space-2);
+  padding: 2px;
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-control);
+  background: var(--card);
+}
+
+.changed-files-scope button {
+  flex: 1;
+  min-height: 26px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.changed-files-scope button[aria-pressed="true"] {
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--line-control);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.changed-files-retry {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* A file of the repository that is not part of the changes, shown in place of the walkthrough */
+.viewer-wrapper.is-repo-file > :not(.repo-file) {
+  display: none;
+}
+
+.repo-file {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-4) 2rem;
+  overflow: auto;
+}
+
+/* Why a file is not shown, in words, next to its name */
+.changed-tree-note {
+  margin-left: auto;
+  padding-left: var(--space-2);
+  color: var(--ink-muted);
+  font-size: var(--fs-key);
+  white-space: nowrap;
+}
+
+.repo-file-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.repo-file-back {
+  min-height: 30px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-control);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.repo-file-path {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.repo-file-note {
+  color: var(--ink-muted);
+}
+
+.repo-file-lines {
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.repo-file-number {
+  min-width: 3ch;
+  padding-right: var(--space-3);
+  color: var(--ink-muted);
+  font-weight: 400;
+  text-align: right;
+  vertical-align: top;
+  user-select: none;
+}
+
+.repo-file-code code {
+  font: inherit;
+  white-space: pre;
 }
