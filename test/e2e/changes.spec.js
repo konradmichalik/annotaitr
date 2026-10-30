@@ -832,6 +832,8 @@ test('a path:line in the explanation shows the code around it on hover and on ke
 
       await reference.click()
       await expect(page.getByRole('region', { name: 'cache.js' })).toBeFocused()
+      // The card of the clicked reference closes on its own time, a second one must not be read as it.
+      await expect(page.getByRole('tooltip')).toHaveCount(0)
 
       await overview.getByRole('button', { name: 'notes.md:9' }).hover()
       await expect(page.getByRole('tooltip')).toContainText('Line 9 is not part of the diff')
