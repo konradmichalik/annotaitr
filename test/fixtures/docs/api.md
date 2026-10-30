@@ -48,18 +48,19 @@ Returns all loaded files with content and metadata.
 }
 ```
 
-### GET /api/file/open
+### POST /api/file/open
 
 Opens a linked file by relative path.
 
-**Query parameters:**
+**JSON body:**
 - `path` (required) - Relative path to the markdown file
 - `relativeTo` (optional) - Path of the referring file
 
 **Security:** Rejects paths outside `process.cwd()`.
 
 ```
-GET /api/file/open?path=./guide.md&relativeTo=docs/api.md
+POST /api/file/open
+{ "path": "./guide.md", "relativeTo": "docs/api.md" }
 ```
 
 ### POST /api/feedback

@@ -1,5 +1,5 @@
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { writeFile, rm } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { describe, it, expect, afterEach } from 'vitest'
@@ -79,5 +79,53 @@ describe('buildMarkdownServer', () => {
     server = await buildMarkdownServer({ filePaths: [readablePath] })
     const body = await (await fetch(`${server.url}/api/files`)).json()
     expect(body.data.files[0].kind).toBe('document')
+  })
+
+  describe('opening a linked file', () => {
+    const apiDoc = resolve('test/fixtures/docs/api.md')
+    const open = (path) => fetch(`${server.url}/api/file/open`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path })
+    })
+    const fileCount = async () => (await (await fetch(`${server.url}/api/files`)).json()).data.files.length
+
+    it('adds the linked file to the review on POST', async () => {
+      server = await buildMarkdownServer({ filePaths: [apiDoc] })
+      const body = await (await open('./guide.md')).json()
+      expect(body.data.index).toBe(1)
+      expect(await fileCount()).toBe(2)
+    })
+
+    it('does not change the review on GET, which any website can trigger', async () => {
+      server = await buildMarkdownServer({ filePaths: [apiDoc] })
+      const res = await fetch(`${server.url}/api/file/open?path=./guide.md`)
+      expect(res.status).toBe(404)
+      expect(await fileCount()).toBe(1)
+    })
+
+    it('ignores a body that is not JSON, as a cross-site form post sends it', async () => {
+      server = await buildMarkdownServer({ filePaths: [apiDoc] })
+      const res = await fetch(`${server.url}/api/file/open`, {
+        method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ path: './guide.md' })
+      })
+      expect(res.status).toBe(400)
+      expect(await fileCount()).toBe(1)
+    })
+
+    it('answers 400 to a path that is not a string instead of failing', async () => {
+      server = await buildMarkdownServer({ filePaths: [apiDoc] })
+      const res = await fetch(`${server.url}/api/file/open`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: { a: 1 } })
+      })
+      expect(res.status).toBe(400)
+      const relative = await fetch(`${server.url}/api/file/open`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: './guide.md', relativeTo: ['x'] })
+      })
+      expect(relative.status).toBe(400)
+    })
+
+    it('rejects a path outside the project', async () => {
+      server = await buildMarkdownServer({ filePaths: [apiDoc] })
+      expect((await open('../../../../../etc/hosts')).status).toBe(403)
+    })
   })
 })
