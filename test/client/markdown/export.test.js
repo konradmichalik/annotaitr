@@ -359,3 +359,17 @@ describe('formatAnnotationsForExport on a Read view block', () => {
     expect(order.every((at, i) => at > (order[i - 1] ?? -1))).toBe(true)
   })
 })
+
+describe('a note on part of an image', () => {
+  const imageRegion = { x: 120, y: 40, width: 300, height: 180, imageWidth: 1200, imageHeight: 800 }
+  const note = makeAnnotation({ targetType: 'image', originalText: '![Team](team.png)', imageAlt: 'Team', imageSrc: 'team.png', imageRegion })
+
+  it('names the region in the markdown export', () => {
+    const output = formatAnnotationsForExport([note], [makeBlock()], 'doc.md')
+    expect(output).toContain('Region: x 120, y 40, 300 x 180 px of 1200 x 800 px')
+  })
+
+  it('keeps the region in the JSON export', () => {
+    expect(formatAnnotationsForJsonExport([note], 'doc.md', 'hash').annotations[0].imageRegion).toEqual(imageRegion)
+  })
+})

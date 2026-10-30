@@ -51,6 +51,7 @@ export function createElementAnnotation(elementData, type, text, label) {
     endMeta: null,
     imageAlt: elementData.imageAlt,
     imageSrc: elementData.imageSrc,
+    ...(elementData.imageRegion ? { imageRegion: elementData.imageRegion } : {}),
     label: label || null
   }
 }

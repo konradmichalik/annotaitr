@@ -79,8 +79,9 @@ export function formatAnnotationsForExport(annotations, blocks, filePath) {
       output += `Image: \`${ann.originalText}\`\n\n`
       if (ann.imageAlt) { output += `Alt text: "${ann.imageAlt}"\n\n` }
       if (ann.imageSrc) { output += `Source: ${ann.imageSrc}\n\n` }
+      if (ann.imageRegion) { output += `Region: x ${ann.imageRegion.x}, y ${ann.imageRegion.y}, ${ann.imageRegion.width} x ${ann.imageRegion.height} px of ${ann.imageRegion.imageWidth} x ${ann.imageRegion.imageHeight} px\n\n` }
       if (isDeletion) {
-        output += `> User wants this image removed from the document.\n\n`
+        output += `> User wants this ${ann.imageRegion ? 'part of the image' : 'image'} removed from the document.\n\n`
       } else {
         output += `> ${(ann.text ?? '').replace(/\n/g, '\n> ')}\n\n`
       }
@@ -201,6 +202,7 @@ export function formatAnnotationsForJsonExport(annotations, filePath, contentHas
       if (ann.label) { base.label = ann.label }
       if (ann.imageAlt !== undefined) { base.imageAlt = ann.imageAlt }
       if (ann.imageSrc !== undefined) { base.imageSrc = ann.imageSrc }
+      if (ann.imageRegion) { base.imageRegion = ann.imageRegion }
       if (ann.afterContext !== undefined) { base.afterContext = ann.afterContext }
       return base
     })

@@ -37,11 +37,21 @@ const ELEMENTS = {
   diagram: { name: (block) => DIAGRAM_NAMES[block?.language] ?? 'Mermaid diagram', removed: 'diagram' }
 }
 
+/** Nothing when the client sent numbers that do not describe a box, so a bad note cannot print a false location. */
+function regionLine(region) {
+  const values = ['x', 'y', 'width', 'height', 'imageWidth', 'imageHeight'].map((field) => region?.[field])
+  if (!values.every(Number.isFinite)) { return '' }
+  const [x, y, width, height, imageWidth, imageHeight] = values.map(Math.round)
+  if (x < 0 || y < 0 || width < 1 || height < 1 || imageWidth < 1 || imageHeight < 1) { return '' }
+  return `Region: x ${x}, y ${y}, ${width} x ${height} px of ${imageWidth} x ${imageHeight} px\n`
+}
+
 function elementBody(ann, block) {
   if (ann.targetType === 'image') {
     let output = `Image: \`${ann.originalText}\`\n`
     if (ann.imageAlt) { output += `Alt text: "${ann.imageAlt}"\n` }
     if (ann.imageSrc) { output += `Source: ${ann.imageSrc}\n` }
+    if (ann.imageRegion) { output += regionLine(ann.imageRegion) }
     return output
   }
   if (ann.targetType === 'math') { return `\`\`\`latex\n${block?.content || ann.originalText}\n\`\`\`\n` }
@@ -59,8 +69,9 @@ function describeAnnotation(ann, block) {
   const contentStartLine = blockStartLine + (block?.type === 'code' ? 1 : 0)
   const element = ELEMENTS[ann.targetType]
   if (element) {
+    const removed = ann.imageRegion ? 'part of the image' : element.removed
     const body = elementBody(ann, block) + (ann.type === 'DELETION'
-      ? `> User wants this ${element.removed} removed from the document.\n`
+      ? `> User wants this ${removed} removed from the document.\n`
       : quoted(ann.text))
     return { what: element.name(block), where: inFile(block, `Line ${blockStartLine}`), body }
   }

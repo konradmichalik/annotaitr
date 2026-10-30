@@ -5,7 +5,7 @@ import { QuickLabelPicker } from './QuickLabelPicker.jsx'
 import { CloseIcon } from '../../../shared/components/CloseIcon.jsx'
 import { MOD } from '../../../shared/utils/keys.js'
 import { useRovingFocus } from '../../../shared/hooks/useRovingFocus.js'
-import { TrashIcon, PencilIcon, ExternalLinkIcon, FileIcon, TagIcon } from './Icons.jsx'
+import { TrashIcon, PencilIcon, ExternalLinkIcon, FileIcon, TagIcon, RegionIcon } from './Icons.jsx'
 import { IntentIcon } from '../../../shared/components/IntentIcon.jsx'
 import { intentOf } from '../../../shared/utils/intents.js'
 
@@ -48,8 +48,9 @@ const OpenLinkButton = ({ linkUrl, onOpenLink }) => {
  * The bar over a selection: Comment and Remove, Label and Open. Typing
  * starts a comment at once, `⌫` marks the selection for removal, so the bar
  * only has to be read, never used. Either way a comment composer follows.
+ * `onDrawRegion` offers Region on an image, to note part of it.
  */
-export function Toolbar({ highlightElement, onAnnotate, onClose, onDelete, onQuickLabel, requestedStep: requestedStepProp, editAnnotation, elementMode, insertionMode, linkUrl, onOpenLink }) {
+export function Toolbar({ highlightElement, onAnnotate, onDrawRegion = null, onClose, onDelete, onQuickLabel, requestedStep: requestedStepProp, editAnnotation, elementMode, insertionMode, linkUrl, onOpenLink }) {
   const [step, setStep] = useState('menu')
   const [initialText, setInitialText] = useState('')
   const [position, setPosition] = useState(null)
@@ -178,6 +179,7 @@ export function Toolbar({ highlightElement, onAnnotate, onClose, onDelete, onQui
       <>
         <BarButton icon={<TrashIcon />} label="Delete" title="Delete annotation" onClick={handleDelete} />
         <BarButton icon={<PencilIcon />} label={hasText ? 'Edit' : 'Comment'} hint={modKey('K')} shortcut={IS_MAC ? 'Meta+K' : 'Control+K'} onClick={() => setStep('input')} />
+        {onDrawRegion && <BarButton icon={<RegionIcon />} label="Region" title="Mark part of the image" onClick={onDrawRegion} />}
         {linkButton}
         {divider}
         {closeButton('Close')}
@@ -197,6 +199,7 @@ export function Toolbar({ highlightElement, onAnnotate, onClose, onDelete, onQui
         <BarButton icon={<IntentIcon intent="comment" />} label="Comment" hint={modKey('K')} shortcut={IS_MAC ? 'Meta+K' : 'Control+K'} title={`Comment (type, or ${modKey('K')})`} onClick={() => openComposer()} />
         <BarButton icon={<IntentIcon intent="remove" />} label="Remove" hint="⌫" shortcut={`Backspace ${IS_MAC ? 'Meta+D' : 'Control+D'}`} title={`Remove (⌫ or ${modKey('D')})`} onClick={() => onAnnotate('DELETION')} />
         <BarButton icon={<TagIcon />} label="Label" hint={LABEL_KEYS} title="Quick label" onClick={() => setLabelPickerOpen(true)} />
+        {onDrawRegion && <BarButton icon={<RegionIcon />} label="Region" title="Mark part of the image" onClick={onDrawRegion} />}
         {linkButton}
         {divider}
         {closeButton('Cancel')}
