@@ -79,7 +79,7 @@ test('a note on a diff line names the file and its new line', async ({ page }) =
       await page.mouse.move(rect.x + 200, rect.y + rect.height / 2, { steps: 4 })
       await page.mouse.up()
 
-      await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: 'Change' }).click()
+      await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: 'Comment' }).click()
       const field = page.getByRole('dialog', { name: 'Comment on selection' }).getByRole('textbox', { name: 'Comment on selection' })
       await field.fill('Use the language too')
       await page.keyboard.press('ControlOrMeta+Enter')
@@ -87,7 +87,7 @@ test('a note on a diff line names the file and its new line', async ({ page }) =
 
       await page.getByRole('button', { name: /^Send feedback/ }).click()
       expect(await cli.exited).toBe(0)
-      expect(cli.stdout()).toMatch(/## 1\. Change · Text \(new Line 1 in cache\.js\) \[#[0-9a-f]{8}\]/)
+      expect(cli.stdout()).toMatch(/## 1\. Text \(new Line 1 in cache\.js\) \[#[0-9a-f]{8}\]/)
       expect(cli.stdout()).toContain('> Use the language too')
       expect(existsSync(join(dir, '.git', 'annotaitr', 'changes.md'))).toBe(false)
     } finally {
@@ -253,7 +253,7 @@ async function selectText(page, selector, text) {
 
 async function comment(page, selector, text, note) {
   await selectText(page, selector, text)
-  await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: /^Change/ }).click()
+  await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: /^Comment/ }).click()
   const composer = page.getByRole('dialog', { name: 'Comment on selection' })
   await composer.getByRole('textbox').fill(note)
   await composer.getByRole('button', { name: 'Add', exact: true }).click()
@@ -287,7 +287,7 @@ test('a markdown card reads as rendered markdown and a note there names the new 
 
       await page.getByRole('button', { name: /^Send feedback/ }).click()
       expect(await cli.exited).toBe(0)
-      expect(cli.stdout()).toMatch(/## 1\. Change · Text \(new Lines 5-6 in guide\.md\) \[#[0-9a-f]{8}\]\n```\nline\nsecond\n```\n> Keep it on one line/)
+      expect(cli.stdout()).toMatch(/## 1\. Text \(new Lines 5-6 in guide\.md\) \[#[0-9a-f]{8}\]\n```\nline\nsecond\n```\n> Keep it on one line/)
     } finally {
       if (cli.child.exitCode === null) { cli.child.kill() }
     }
@@ -373,8 +373,8 @@ test('the Changes view marks what changed in a markdown file, folds the rest and
 
       await page.getByRole('button', { name: /^Send feedback/ }).click()
       expect(await cli.exited).toBe(0)
-      expect(cli.stdout()).toMatch(/## \d+\. Change · Text \(old Line 13 in guide\.md\) \[#[0-9a-f]{8}\]\n```\nGone\n```\n> Keep this one/)
-      expect(cli.stdout()).toMatch(/## \d+\. Change · Text \(new Line 11 in guide\.md\) \[#[0-9a-f]{8}\]\n```\nNew step\n```\n> Say which step/)
+      expect(cli.stdout()).toMatch(/## \d+\. Text \(old Line 13 in guide\.md\) \[#[0-9a-f]{8}\]\n```\nGone\n```\n> Keep this one/)
+      expect(cli.stdout()).toMatch(/## \d+\. Text \(new Line 11 in guide\.md\) \[#[0-9a-f]{8}\]\n```\nNew step\n```\n> Say which step/)
     } finally {
       if (cli.child.exitCode === null) { cli.child.kill() }
     }
@@ -402,7 +402,7 @@ async function commentAcross(page, fromText, toText, note) {
     window.getSelection().addRange(range)
     end.el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
   }, [fromText, toText])
-  await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: /^Change/ }).click()
+  await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: /^Comment/ }).click()
   const composer = page.getByRole('dialog', { name: 'Comment on selection' })
   await composer.getByRole('textbox').fill(note)
   await composer.getByRole('button', { name: 'Add', exact: true }).click()
@@ -706,7 +706,7 @@ test('a note in the Read view of a file whose name holds a quote or a backslash 
         // The selection bar closes itself over text that is out of view.
         await card.locator('.change-read .block-paragraph:visible').scrollIntoViewIfNeeded()
         await selectText(page, `.change-file[data-path="${name.replace(/["\\]/g, '\\$&')}"] .change-read .block-paragraph:visible`, 'Fresh')
-        await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: /^Change/ }).click()
+        await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: /^Comment/ }).click()
         const composer = page.getByRole('dialog', { name: 'Comment on selection' })
         await composer.getByRole('textbox').fill(`Note on ${name}`)
         await composer.getByRole('button', { name: 'Add', exact: true }).click()

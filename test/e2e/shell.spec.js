@@ -217,7 +217,7 @@ test('the markdown selection bar opens the composer, which keeps a draft on a cl
 
       const bar = page.getByRole('toolbar', { name: 'Selection' })
       await expect(bar.getByRole('button', { name: 'Remove' })).toHaveAttribute('type', 'button')
-      await bar.getByRole('button', { name: 'Change' }).click()
+      await bar.getByRole('button', { name: 'Comment' }).click()
 
       const composer = page.getByRole('dialog', { name: 'Comment on selection' })
       const field = composer.getByRole('textbox', { name: 'Comment on selection' })
@@ -238,7 +238,7 @@ test('the markdown selection bar opens the composer, which keeps a draft on a cl
   })
 })
 
-test('the markdown selection bar asks with 4 and adds after the selection with 2', async ({ page }) => {
+test('the markdown selection bar starts a comment with the first key typed and removes on Backspace', async ({ page }) => {
   await withTargets(async ({ markdown }) => {
     const cli = startCli([markdown])
     const select = async (from, to) => {
@@ -251,28 +251,29 @@ test('the markdown selection bar asks with 4 and adds after the selection with 2
     }
     try {
       await page.goto(await cli.url)
+      const bar = page.getByRole('toolbar', { name: 'Selection' })
       await select(2, 40)
+      await expect(bar.getByRole('button', { name: 'Comment' })).toBeVisible()
+      await expect(bar.getByRole('button', { name: 'Remove' })).toBeVisible()
+      await expect(bar.getByRole('button', { name: /^(Change|Add|Ask)/ })).toHaveCount(0)
+      // A digit is text now, it used to pick an intent.
       await page.keyboard.press('4')
-      const ask = page.getByRole('dialog', { name: 'Question on selection' })
-      await expect(ask.getByRole('button', { name: 'Intent: Question' })).toBeVisible()
-      await ask.getByRole('textbox').fill('Which paragraph?')
+      const composer = page.getByRole('dialog', { name: 'Comment on selection' })
+      await expect(composer.getByRole('textbox')).toHaveValue('4')
+      await expect(composer.getByRole('button', { name: /^Intent/ })).toHaveCount(0)
+      await composer.getByRole('textbox').fill('Which paragraph?')
       await page.keyboard.press('ControlOrMeta+Enter')
-      await expect(page.getByRole('button', { name: /^1\. Question/ })).toBeVisible()
+      await expect(page.getByRole('button', { name: /^1\. Comment/ })).toBeVisible()
 
       await select(60, 110)
-      await page.keyboard.press('2')
-      const add = page.getByRole('dialog', { name: 'Text to insert' })
-      await expect(add.getByRole('button', { name: /^Intent/ })).toHaveCount(0)
-      await add.getByRole('textbox').fill(' Mind the gap.')
-      await page.keyboard.press('ControlOrMeta+Enter')
-      await expect(page.getByRole('button', { name: /^2\. Add/ })).toBeVisible()
+      await page.keyboard.press('Backspace')
+      await expect(page.getByRole('button', { name: /^2\. Remove/ })).toBeVisible()
 
       await page.getByRole('button', { name: /^Send feedback/ }).click()
       await cli.exited
-      const stdout = cli.stdout()
-      expect(stdout).toContain('2 annotations (1 Add, 1 Question):')
-      expect(stdout).toMatch(/## 1\. Question · Text \(Line 3\)[^\n]*\n```\n[^\n]+\n```\n> Which paragraph\?/)
-      expect(stdout).toMatch(/## 2\. Add · Insertion \(Line 3\)[^\n]*\nAfter: `[^`]+`\n```\nMind the gap\.\n```/)
+      expect(cli.stdout()).toContain('2 annotations (1 Comment, 1 Remove)')
+      expect(cli.stdout()).toMatch(/## 1\. Text \(Line \d+\)/)
+      expect(cli.stdout()).toMatch(/## 2\. Remove · Text \(Line \d+\)/)
     } finally {
       if (cli.child.exitCode === null) { cli.child.kill() }
     }
@@ -393,13 +394,13 @@ test('? opens the shortcut list of the open mode', async ({ page }) => {
   })
 })
 
-test('the default intent setting starts a new box with that intent', async ({ page }) => {
+test('the composer removes with its Remove button, and the settings offer no default intent', async ({ page }) => {
   await withTargets(async ({ image }) => {
     const cli = startCli([image])
     try {
       await page.goto(await cli.url)
       await page.getByRole('button', { name: 'Settings' }).click()
-      await page.getByLabel('Default intent').selectOption('remove')
+      await expect(page.getByLabel('Default intent')).toHaveCount(0)
       await page.keyboard.press('Escape')
       await page.keyboard.press('r')
       const canvas = await page.locator('.image-canvas-wrapper').boundingBox()
@@ -407,13 +408,13 @@ test('the default intent setting starts a new box with that intent', async ({ pa
       await page.mouse.down()
       await page.mouse.move(canvas.x + 60, canvas.y + 60)
       await page.mouse.up()
-      await expect(page.getByRole('button', { name: 'Intent: Remove' })).toBeVisible()
+      await expect(page.getByRole('button', { name: /^Intent/ })).toHaveCount(0)
       await page.getByPlaceholder('Add a comment…').fill('Drop this block')
-      await page.keyboard.press('ControlOrMeta+Enter')
+      await page.getByRole('button', { name: /^Remove/ }).click()
       await expect(page.getByRole('button', { name: /^1\. Remove, Box/ })).toBeVisible()
       await page.keyboard.press('c')
       await page.mouse.click(canvas.x + 120, canvas.y + 100)
-      await expect(page.getByRole('button', { name: 'Intent: Remove' })).toBeVisible()
+      await expect(page.getByRole('button', { name: /^Remove/ })).toBeVisible()
       await page.keyboard.press('Escape')
     } finally {
       cli.child.kill()

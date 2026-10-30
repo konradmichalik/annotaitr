@@ -30,7 +30,7 @@ async function selectText(page, selector, text) {
 
 async function comment(page, selector, text, note) {
   await selectText(page, selector, text)
-  await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: /^Change/ }).click()
+  await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: /^Comment/ }).click()
   const composer = page.getByRole('dialog', { name: 'Comment on selection' })
   await composer.getByRole('textbox').fill(note)
   await composer.getByRole('button', { name: 'Add', exact: true }).click()
@@ -94,7 +94,7 @@ test.describe('replies from the last round of a Markdown review', () => {
     await second.exited
     const out = second.stdout()
     expect(out).toMatch(/^Feedback: 1 reply to round 1, no new notes\./)
-    expect(out).toContain(`### [#${friendlier}] Change · Text (Line 5, `)
+    expect(out).toContain(`### [#${friendlier}] Text (Line 5, `)
     expect(out).toContain('> Round 1, note 1 (Line 3): Make this friendlier\nAgent (question): Warmer or shorter?\nReviewer: Warmer\n')
     expect(out).toContain(`Session: ${sessionId} (round 2)`)
   })
@@ -133,7 +133,7 @@ test.describe('replies from the last round of a Markdown review', () => {
     await expect.poll(() => page.evaluate(() => [...(CSS.highlights.get('annotaitr-previous') ?? [])].map((r) => r.toString()))).toEqual(['Keep this'])
     await page.getByRole('button', { name: /^Send feedback/ }).click()
     await second.exited
-    expect(second.stdout()).toMatch(/## 1\. Change · Text \(Line 7\) \[#[0-9a-f]{8}\]\n```\nnew installer\n```\n> Which version\?\n/)
+    expect(second.stdout()).toMatch(/## 1\. Text \(Line 7\) \[#[0-9a-f]{8}\]\n```\nnew installer\n```\n> Which version\?\n/)
   })
 
   test('undo, redo, search and a restored draft leave the changes view for the preview', async ({ page }) => {
