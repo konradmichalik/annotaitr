@@ -797,3 +797,48 @@ test('a file of the repository gives way to the walkthrough on K at the start of
     }
   })
 })
+
+test('a path:line in the explanation shows the code around it on hover and on keyboard focus', async ({ page }) => {
+  await withRepo(async ({ dir, explain }) => {
+    const cli = startCli(['changes', '--origin', 'claude-code', '--explain', explain], {}, { cwd: dir })
+    try {
+      await page.goto(await cli.url)
+      const overview = page.getByRole('region', { name: 'Overview' })
+      const reference = overview.getByRole('button', { name: 'cache.js:1' })
+
+      await reference.hover()
+      const card = page.getByRole('tooltip')
+      await expect(card).toContainText('cache.js:1')
+      await expect(card).toContainText('const key = `${page}_${workspace}`')
+      await expect(card).toContainText('export default key')
+      // Outside every file card, which would clip it.
+      await expect(page.locator('body > .file-line-ref-card')).toHaveCount(1)
+      const placed = await card.boundingBox()
+      const anchor = await reference.boundingBox()
+      expect(placed.y).toBeGreaterThanOrEqual(anchor.y + anchor.height - 1)
+      expect(placed.x).toBeGreaterThanOrEqual(0)
+
+      await card.hover()
+      await page.waitForTimeout(300)
+      await expect(card).toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('tooltip')).toHaveCount(0)
+
+      await page.mouse.move(0, 0)
+      await reference.focus()
+      await expect(page.getByRole('tooltip')).toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('tooltip')).toHaveCount(0)
+
+      await reference.click()
+      await expect(page.getByRole('region', { name: 'cache.js' })).toBeFocused()
+      // The card of the clicked reference closes on its own time, a second one must not be read as it.
+      await expect(page.getByRole('tooltip')).toHaveCount(0)
+
+      await overview.getByRole('button', { name: 'notes.md:9' }).hover()
+      await expect(page.getByRole('tooltip')).toContainText('Line 9 is not part of the diff')
+    } finally {
+      if (cli.child.exitCode === null) { cli.child.kill() }
+    }
+  }, { summary: 'The key is built in cache.js:1, see also notes.md:9.' })
+})

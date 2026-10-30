@@ -1,6 +1,9 @@
+import { useContext } from 'react'
 import { sanitizeHTML } from '../../utils/sanitize.js'
 import { matchInlineMath } from '../../utils/math.js'
 import { renderMath } from '../../utils/renderMath.js'
+import { FileRefsContext } from './fileRefsContext.js'
+import { FileLineRef } from './FileLineRef.jsx'
 
 const EMOJI_MAP = {
   'wave': '👋', 'rocket': '🚀', 'warning': '⚠️', 'check': '✅',
@@ -92,6 +95,7 @@ function handleAnchorClick(e, href) {
 }
 
 export function InlineMarkdown({ text, onImageClick, annotatedImages, blockId }) {
+  const fileRefs = useContext(FileRefsContext)
   const parts = []
   let remaining = text
   let key = 0
@@ -152,6 +156,12 @@ export function InlineMarkdown({ text, onImageClick, annotatedImages, blockId })
     match = remaining.match(/^`([^`]+)`/)
     if (match) {
       const codeText = match[1]
+      const codeRef = fileRefs?.find(codeText)
+      if (codeRef?.index === 0 && codeRef.length === codeText.length) {
+        parts.push(<FileLineRef key={key++} reference={codeRef} label={codeText} code />)
+        remaining = remaining.slice(match[0].length)
+        continue
+      }
       const isHexColor = HEX_COLOR_RE.test(codeText)
       parts.push(
         <code key={key++} className="inline-code">
@@ -233,7 +243,12 @@ export function InlineMarkdown({ text, onImageClick, annotatedImages, blockId })
           ? <img src={badgeMatch[2]} alt={badgeMatch[1]} className="inline-image" />
           : <>{badgeMatch[1] || ''}</>
       } else {
-        linkContent = <InlineMarkdown text={match[1]} onImageClick={onImageClick} annotatedImages={annotatedImages} blockId={blockId} />
+        // A button inside a link would be two controls in one.
+        linkContent = (
+          <FileRefsContext.Provider value={null}>
+            <InlineMarkdown text={match[1]} onImageClick={onImageClick} annotatedImages={annotatedImages} blockId={blockId} />
+          </FileRefsContext.Provider>
+        )
       }
       if (isAnchor) {
         parts.push(<a key={key++} href={href} onClick={(e) => handleAnchorClick(e, href)}>{linkContent}</a>)
@@ -287,7 +302,15 @@ export function InlineMarkdown({ text, onImageClick, annotatedImages, blockId })
     // Plain text fallback: extract until next special char, then post-process
     // for autolinks (URLs, emails) and smart punctuation.
     // Break on markdown special chars or ':' only when NOT followed by '//' (URL scheme)
-    const nextSpecial = remaining.slice(1).search(/[*`![<~$]|\\[([]|:(?!\/{2})/)
+    const fileRef = fileRefs?.find(remaining)
+    if (fileRef?.index === 0) {
+      parts.push(<FileLineRef key={key++} reference={fileRef} label={remaining.slice(0, fileRef.length)} />)
+      remaining = remaining.slice(fileRef.length)
+      continue
+    }
+    let nextSpecial = remaining.slice(1).search(/[*`![<~$]|\\[([]|:(?!\/{2})/)
+    // A path:line is cut out whole: its own colon would split it otherwise.
+    if (fileRef && (nextSpecial === -1 || fileRef.index - 1 < nextSpecial)) { nextSpecial = fileRef.index - 1 }
     const plainText = nextSpecial === -1 ? remaining : remaining.slice(0, nextSpecial + 1)
     for (const seg of splitAutolinks(plainText)) {
       if (seg.type === 'url') {

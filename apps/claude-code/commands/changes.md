@@ -58,6 +58,11 @@ Use `focus` rarely, at most a few files, and always with a real reason, or
 everything looks critical and the flag means nothing. Every file stays visible
 whatever its weight, and the reviewer judges your weighting too.
 
+To point at a place in any of these texts, write `path:line` or `path:from-to`
+for a changed file, with lines of the new file, such as `src/Cache.php:42`.
+The reviewer sees the code around it on hover. Only lines inside the diff
+have a preview.
+
 ### 3. Open it
 
 Run `annotaitr changes --origin claude-code --explain <explain.json path>`
