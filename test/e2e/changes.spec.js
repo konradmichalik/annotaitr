@@ -17,6 +17,8 @@ async function withRepo(run, extra = {}) {
   try {
     git('init', '-q', '-b', 'main')
     await writeFile(join(dir, 'cache.js'), 'const key = page\nexport default key\n')
+    await mkdir(join(dir, 'docs'))
+    await writeFile(join(dir, 'docs', 'guide.md'), '# Guide\nStays as it is.\n')
     git('add', '.')
     git('commit', '-q', '-m', 'init')
     await writeFile(join(dir, 'cache.js'), 'const key = `${page}_${workspace}`\nexport default key\n')
@@ -719,6 +721,77 @@ test('a note in the Read view of a file whose name holds a quote or a backslash 
       await page.getByRole('button', { name: /^Send feedback/ }).click()
       expect(await cli.exited).toBe(0)
       expect(cli.stdout()).toContain('(new Line 3 in say "hi".md)')
+    } finally {
+      if (cli.child.exitCode === null) { cli.child.kill() }
+    }
+  })
+})
+
+test('every file of the repository can be read next to the changes, except the ones it does not read', async ({ page }) => {
+  await withRepo(async ({ dir, explain }) => {
+    await writeFile(join(dir, '.env.local'), 'TOKEN=abc\n')
+    const cli = startCli(['changes', '--origin', 'claude-code', '--explain', explain], {}, { cwd: dir })
+    try {
+      await page.goto(await cli.url)
+      await page.getByRole('button', { name: 'All files' }).click()
+      const tree = page.getByRole('navigation', { name: 'All files' })
+      await expect(tree.getByRole('button', { name: 'cache.js' })).toBeVisible()
+
+      await tree.getByRole('button', { name: 'guide.md' }).click()
+      const file = page.getByRole('region', { name: 'docs/guide.md' })
+      await expect(file).toContainText('Stays as it is.')
+      await expect(file.getByRole('rowheader', { name: '2' })).toBeVisible()
+      await expect(file).toBeFocused()
+      await expect(page.getByRole('region', { name: 'Overview' })).toBeHidden()
+
+      await tree.getByRole('button', { name: /^\.env\.local, not shown: possible secret/ }).click()
+      await expect(page.getByRole('region', { name: '.env.local' })).toContainText('This file is not shown: possible secret.')
+      await expect(page.locator('body')).not.toContainText('TOKEN=abc')
+
+      await page.getByRole('button', { name: 'Back to changes' }).click()
+      await expect(page.locator('.repo-file')).toHaveCount(0)
+      await expect(page.getByRole('region', { name: 'Overview' })).toBeVisible()
+
+      await page.getByRole('group', { name: 'Files to show' }).getByRole('button', { name: 'Changes' }).click()
+      await expect(page.getByRole('navigation', { name: 'Changed files' })).toBeVisible()
+    } finally {
+      if (cli.child.exitCode === null) { cli.child.kill() }
+    }
+  })
+})
+
+test('a file of the repository gives way to the walkthrough on K at the start of the list and on picking a note', async ({ page }) => {
+  await withRepo(async ({ dir, explain }) => {
+    const cli = startCli(['changes', '--origin', 'claude-code', '--explain', explain], {}, { cwd: dir })
+    try {
+      await page.goto(await cli.url)
+      await page.getByRole('button', { name: 'All files' }).click()
+      const tree = page.getByRole('navigation', { name: 'All files' })
+
+      // The overview is current, so K selects it again: the file view must still close.
+      await tree.getByRole('button', { name: 'guide.md' }).click()
+      await expect(page.locator('.repo-file')).toHaveCount(1)
+      await page.locator('body').press('k')
+      await expect(page.locator('.repo-file')).toHaveCount(0)
+      await expect(page.getByRole('region', { name: 'Overview' })).toBeVisible()
+
+      // A note made on the walkthrough leads back to it from the file view.
+      const added = page.getByRole('region', { name: 'cache.js' }).locator('.diff-add').first()
+      await added.scrollIntoViewIfNeeded()
+      const rect = await added.boundingBox()
+      await page.mouse.move(rect.x + 90, rect.y + rect.height / 2)
+      await page.mouse.down()
+      await page.mouse.move(rect.x + 200, rect.y + rect.height / 2, { steps: 4 })
+      await page.mouse.up()
+      await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: 'Change' }).click()
+      await page.getByRole('dialog', { name: 'Comment on selection' }).getByRole('textbox', { name: 'Comment on selection' }).fill('Rename this')
+      await page.keyboard.press('ControlOrMeta+Enter')
+      await expect(page.locator('.note-card', { hasText: 'Rename this' })).toBeVisible()
+
+      await tree.getByRole('button', { name: 'guide.md' }).click()
+      await expect(page.locator('.repo-file')).toHaveCount(1)
+      await page.locator('.note-card', { hasText: 'Rename this' }).click()
+      await expect(page.locator('.repo-file')).toHaveCount(0)
     } finally {
       if (cli.child.exitCode === null) { cli.child.kill() }
     }
