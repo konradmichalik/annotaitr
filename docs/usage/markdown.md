@@ -15,6 +15,21 @@ Markdown (`.md`, `.markdown`, `.mdown`, `.mkd`) renders as formatted text. Confi
 
 Files above 2 MB are rejected. A real `.env` file is not supported, because it commonly holds secrets.
 
+## Notes on part of an image
+
+Click an image in the preview and choose **Region**, then drag a box over the part you mean. The note you write next belongs to that box, which stays drawn on the image. `Esc` or a box that is too small cancels. An image can carry several region notes next to a note on the whole image. Dragging works with a mouse or touch only, a region note is reached by keyboard through its card in the panel.
+
+The feedback names the box in the pixels of the image itself, whatever size the preview shows it at:
+
+```text
+## 1. Change · Image (Line 5)
+Image: `![Chart](chart.png)`
+Alt text: "Chart"
+Source: chart.png
+Region: x 100, y 40, 140 x 60 px of 400 x 200 px
+> Make this bar thicker
+```
+
 ## Rounds and replies
 
 Reopening the same set of files continues its [review session](sessions.md):
