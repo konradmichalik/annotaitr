@@ -1,11 +1,14 @@
+import { useMemo } from 'react'
 import { groupHtmlWrappers } from '../../utils/htmlWrappers.js'
+import { FileRefsContext } from './fileRefsContext.js'
+import { createFileLineRefFinder } from '../../utils/fileLineRefs.js'
 import { parseDiffLines } from '../../utils/diffLines.js'
 import { DiffCode } from './CodeBlock.jsx'
 import { ViewerBlocks } from './ViewerBlocks.jsx'
 import { InlineMarkdown } from './InlineMarkdown.jsx'
 import { DiffCounts } from './DiffCounts.jsx'
 import { CheckIcon } from '../FilesSection.jsx'
-import { STATUS_LABEL, countFocus } from '../../utils/changeSections.js'
+import { STATUS_LABEL, countFocus, isDiffBlock } from '../../utils/changeSections.js'
 import { VIEWS, canRead } from '../../utils/fileVersions.js'
 import { RenderedView } from './RenderedView.jsx'
 
@@ -96,7 +99,7 @@ function FileCard({ file, agent, collapsed, reviewed, onToggle, onReview, read, 
   const bodyId = `change-file-body-${file.heading.id}`
   const classes = ['change-file', collapsed && 'is-collapsed', !file.explained && 'is-unexplained', file.attention === 'high' && 'is-focus', whole.open && !reading && 'is-whole', reading && 'is-read'].filter(Boolean).join(' ')
   return (
-    <section className={classes} data-path={file.path} aria-label={file.path}>
+    <section className={classes} data-path={file.path} aria-label={file.path} tabIndex={-1}>
       {/* The header sits outside every data-block-id, so it never shifts the offsets of a selection. */}
       <div className="change-file-header">
         <button type="button" className="change-file-toggle" aria-expanded={!collapsed} aria-controls={bodyId} onClick={() => onToggle(file.path)}>
@@ -211,8 +214,21 @@ function OverviewBlocks({ sections, changes, blockProps }) {
  * stay mounted for highlights, search and notes.
  */
 export function ChangesBlocks({ sections, changes, ...blockProps }) {
+  const fileRefs = useMemo(() => {
+    const diffs = new Map(sections.files.map((file) => [
+      file.path,
+      file.blocks.filter((b) => !b.parentId && isDiffBlock(b)).map((b) => b.content).join('\n')
+    ]))
+    const jump = (path) => {
+      changes.select(path)
+      // The scroll alone leaves keyboard focus on the reference, so the next Tab would continue in the overview.
+      document.querySelector(`.change-file[data-path="${CSS.escape(path)}"]`)?.focus({ preventScroll: true })
+    }
+    return { find: createFileLineRefFinder(new Set(diffs.keys())), diffOf: (path) => diffs.get(path) ?? '', jump }
+  }, [sections, changes])
+
   return (
-    <>
+    <FileRefsContext.Provider value={fileRefs}>
       <section className="change-overview" aria-label="Overview">
         <span className="change-overview-label"><AgentIcon />Explained by {changes.agent}</span>
         <OverviewBlocks sections={sections} changes={changes} blockProps={blockProps} />
@@ -223,6 +239,6 @@ export function ChangesBlocks({ sections, changes, ...blockProps }) {
           {sections.groups.map((group) => <GroupSection key={group.heading.id} group={group} changes={changes} blockProps={blockProps} />)}
         </>
       ) : <FileCards files={sections.files} changes={changes} blockProps={blockProps} />}
-    </>
+    </FileRefsContext.Provider>
   )
 }

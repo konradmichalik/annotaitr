@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useMemo, useState } from 'react'
 import { ViewerBlocks } from './ViewerBlocks.jsx'
 import { BlockChange } from './BlockChange.jsx'
+import { FileRefsContext } from './fileRefsContext.js'
 import { foldRuns } from '../../utils/fileVersions.js'
 
 const LABELS = { added: 'Added:', removed: 'Removed:', before: 'Changed, before:', after: 'Now:' }
@@ -35,7 +36,9 @@ export function RenderedView({ entries, view, hidden, noted, blockProps }) {
   const toggle = useCallback((key) => setOpen((prev) => (prev.has(key) ? new Set([...prev].filter((k) => k !== key)) : new Set(prev).add(key))), [])
   const changes = view === 'changes'
   const render = (node, earlier) => <ViewerBlocks nodes={[node]} {...blockProps} earlier={earlier} diagrams={false} />
+  // The file's own text is shown as it is, a path:line in it is not the agent's pointer.
   return (
+    <FileRefsContext.Provider value={null}>
     <div className={`change-read${changes ? ' is-changes' : ''}`} hidden={hidden}>
       {entries.map((entry, i) => {
         const fold = folds.get(i)
@@ -51,5 +54,6 @@ export function RenderedView({ entries, view, hidden, noted, blockProps }) {
         )
       })}
     </div>
+    </FileRefsContext.Provider>
   )
 }

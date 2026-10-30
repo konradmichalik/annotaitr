@@ -469,6 +469,71 @@
   text-decoration: underline;
 }
 
+/* A path:line in the agent's text, with the code around it on hover and focus */
+.file-line-ref-link {
+  border: 0;
+  color: var(--primary);
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+
+/* Inside inline code the button keeps the look of .inline-code, around plain text it takes the text's */
+.file-line-ref-link:not(.inline-code) {
+  padding: 0;
+  background: none;
+  font: inherit;
+}
+
+/* Fixed and in the body: a file's card clips whatever hangs out of it */
+.file-line-ref-card {
+  position: fixed;
+  z-index: 50;
+  width: max-content;
+  min-width: 14rem;
+  max-width: min(40rem, calc(100vw - 16px));
+  max-height: 60vh;
+  padding: 0.5rem 0.75rem;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-lg);
+  font-size: 0.8rem;
+}
+
+.file-line-ref-title {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--text-muted);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.file-line-ref-line {
+  display: flex;
+  gap: 0.75rem;
+  white-space: pre;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+/* A bar as well as weight, since the tint alone is hardly visible on the card */
+.file-line-ref-line.is-target {
+  font-weight: 600;
+  background: var(--bg-secondary);
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+
+.file-line-ref-no {
+  min-width: 2.5ch;
+  color: var(--text-muted);
+  text-align: right;
+  user-select: none;
+}
+
+.file-line-ref-note {
+  display: block;
+  color: var(--text-muted);
+}
+
 .inline-image {
   max-width: 100%;
   height: auto;
