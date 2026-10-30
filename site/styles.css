@@ -35,13 +35,9 @@
   --term-text: #e6e8ec;
   --term-muted: #a3a9b5;
   --change: #c04a00;
-  --change-text: #9a3b00;
   --add: #e69f00;
-  --add-text: #7a5400;
   --remove: #a8457e;
-  --remove-text: #8a3466;
   --question: #0072b2;
-  --question-text: #005a8c;
   --font: geist, system-ui, sans-serif;
   --mono: "Geist Mono", ui-monospace, monospace;
   --dots: radial-gradient(rgb(22 24 29 / 9%) 1px, transparent 1px);
@@ -387,7 +383,7 @@ h1 {
   grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
 }
 
-.grid-intents {
+.grid-notes {
   grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
   gap: 16px;
 }
@@ -433,28 +429,28 @@ h1 {
   font-weight: 600;
 }
 
-/* Intents */
-.i-change {
+/* Marks: a note takes the next of four colours by its number, never by what it asks for. */
+.mark-1 {
   --i: var(--change);
-  --i-text: var(--change-text);
+  --i-text: var(--ink);
   --i-on: var(--white);
 }
 
-.i-add {
+.mark-2 {
   --i: var(--add);
-  --i-text: var(--add-text);
+  --i-text: var(--ink);
   --i-on: var(--ink);
 }
 
-.i-remove {
-  --i: var(--remove);
-  --i-text: var(--remove-text);
+.mark-3 {
+  --i: var(--question);
+  --i-text: var(--ink);
   --i-on: var(--white);
 }
 
-.i-question {
-  --i: var(--question);
-  --i-text: var(--question-text);
+.mark-4 {
+  --i: var(--remove);
+  --i-text: var(--ink);
   --i-on: var(--white);
 }
 
@@ -492,15 +488,36 @@ h1 {
   font-weight: 500;
 }
 
-.intent {
+.kind {
   padding: 20px;
 }
 
-.intent p {
+.kind p {
   font-size: 15px;
 }
 
-.intent-head {
+.kind kbd {
+  font-family: var(--mono, monospace);
+  font-size: 13px;
+}
+
+.dots {
+  display: inline-flex;
+}
+
+.dots span {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--i);
+  box-shadow: 0 0 0 2px var(--white);
+}
+
+.dots span + span {
+  margin-left: -6px;
+}
+
+.kind-head {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -637,14 +654,6 @@ h1 {
 
 .out-head {
   color: var(--white);
-}
-
-.out-change {
-  color: #ffb07a;
-}
-
-.out-question {
-  color: #8fd0f5;
 }
 
 .d-mark {
@@ -933,7 +942,7 @@ h1 {
     box-shadow: 0 12px 32px rgb(22 24 29 / 10%);
   }
 
-  .intent:hover .num {
+  .kind:hover .num {
     animation: bump 0.45s ease;
   }
 

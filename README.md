@@ -19,9 +19,9 @@ An agent can read your code. It cannot see your page. annotaitr closes that gap 
 
 1. **The agent opens it.** When it has something for you to judge, it calls annotaitr and your browser opens with the screenshot, page, recording, PDF or document.
 2. **You mark it up.** Draw boxes and arrows, drop pins, select text, or pick an element straight off a captured page. Add a comment where it helps.
-3. **It acts on your notes.** The agent gets each note with its number, intent and position, and reopens the annotator for another round until you approve.
+3. **It acts on your notes.** The agent gets each note with its number, your words and position, and reopens the annotator for another round until you approve.
 
-Every note carries one of four intents, each with its own colour, icon and word: **Change** (rework this), **Add** (something is missing), **Remove** (take this out) and **Question** (explain this before I decide).
+A note is a comment or a removal: mark something and type what you mean, a change, an addition or a question. Press `⌫` before typing to take it out instead. Each note takes the next of four colours by its number, so neighbours never look alike.
 
 ## ✨ Features
 
@@ -211,7 +211,7 @@ Every flag, environment variable and exit code: [docs/usage.md](docs/usage.md).
 |-------|----------------|
 | [Usage](docs/usage.md) | Every flag, environment variable, exit code and the mode-detection rules, with one guide per target: [web pages](docs/usage/web-pages.md), [images](docs/usage/images.md), [video](docs/usage/video.md), [PDFs](docs/usage/pdf.md), [Markdown](docs/usage/markdown.md) and [changes before a commit](docs/usage/markdown.md#presenting-changes-before-a-commit) |
 | [Review sessions](docs/usage/sessions.md) | Rounds, `annotaitr reply`, its statuses and replying to the agent |
-| [Tools and the feedback panel](docs/usage/interface.md) | Tool keys, writing a note, intents, finishing a review, settings |
+| [Tools and the feedback panel](docs/usage/interface.md) | Tool keys, writing a note, kinds of note, finishing a review, settings |
 | [How it works](docs/how-it-works.md) | The annotation and review-loop mechanism behind each mode |
 | [Migration](docs/migration.md) | Moving from `md-annotator` to `annotaitr` |
 

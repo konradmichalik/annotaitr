@@ -31,8 +31,8 @@ and `Enter` annotates it. Past the last element `Tab` leaves the canvas.
 under **Shortcuts**; the keyboard button in the header does the same. The
 status bar names what the active tool does and its keys (unless **Tool hints**
 is off). The feedback
-panel lists one card per note: its number on the intent's colour, the intent
-as icon and word, the location with the kind of mark (`Page 1 · Box`), then
+panel lists one card per note: its number on its colour, the kind
+as icon and word (Comment or Remove), the location with the kind of mark (`Page 1 · Box`), then
 the quote and the comment. The number is the one the agent reads in the output
 and the one on the mark.
 Selecting a mark selects its card and the other way round. With two or more notes, the arrows in the panel header and `N` and `Shift+N` select the next and the previous note in number order (`2 of 5`), scroll to its mark and select its card. They stop at the first and the last note instead of wrapping, and with several markdown files they walk the notes of the open file. With an earlier
@@ -46,9 +46,9 @@ appears as a **General** card at the top of the list, with edit and delete.
 A new mark or text selection opens the comment box with its text field
 focused. Ctrl/Cmd+Enter or **Add** saves the note, `Esc` or **Cancel**
 discards it. A click outside keeps a box that holds a draft (typed text, a
-changed intent, or in image mode a changed ink or stroke) open, so a stray click never loses it; an
+or in image mode a changed ink or stroke) open, so a stray click never loses it; an
 untouched box closes, and a mark that was just drawn goes with it. The footer
-starts with the [intent](#intents-and-numbers) chip. In image mode the palette
+starts with **Remove** (`⌫`), see [notes and numbers](#notes-and-numbers). In image mode the palette
 button next to it holds the ink colour, line width, line style and arrow end. In markdown mode `@` suggests files to reference and
 the expand button opens a larger editor, which `Esc` collapses again.
 
@@ -60,34 +60,29 @@ with the note count per section, and **Mark file as reviewed** at the bottom
 records that the file is done (a second click takes it back). Opening a file
 does not mark it as reviewed. A single file shows only its contents.
 
-Selecting text in markdown mode shows a bar with **Change** (`1` or
-Ctrl/Cmd+K), **Add** (`2`, inserts text after the selection), **Remove** (`3`
-or Ctrl/Cmd+D), **Ask** (`4`, a comment with the intent Question), **Label**
-(Alt+1 to 0) and, on a link, **Open**. Any other key starts a comment with
-the [default intent](#settings) and that key. **Add** is offered on text selections only; Alt+click still
-inserts text at any position. The arrow keys move between the bar's buttons.
+Selecting text in markdown mode shows a bar with **Comment** (Ctrl/Cmd+K),
+**Remove** (`⌫`, or Ctrl/Cmd+D), **Label** (Alt+1 to 0) and, on a link,
+**Open**. Any printable key starts a comment with that key, so selecting and
+typing is enough. Alt+click comments at any position. The arrow keys move
+between the bar's buttons.
 
-## Intents and numbers
+## Notes and numbers
 
-Every note says what the agent should do with it. The intent is shown as an
-icon and a word on the card, in the composer and in the output, and the mark
-takes its colour:
+A note is a comment or a removal, nothing else. What a comment asks for, a
+change, something to add or a question, is in its words, so there is nothing to
+pick before typing. A removal takes out what the note points at. It is shown as
+an icon and a word on the card and in the output:
 
-| Intent | Meaning for the agent | Default for |
+| Kind | Meaning for the agent | How it is made |
 | --- | --- | --- |
-| Change | Apply the comment to what the note points at | Shapes, pins, text selections, comments on a page or a time, markdown comments (unless **Default intent** in the settings names another) |
-| Add | Add something there; a markdown insertion carries the text | Markdown insertions |
-| Remove | Remove what the note points at | Markdown deletions |
-| Question | The reviewer asks, no edit is requested | Chosen by the reviewer (key `4`) |
+| Comment | Read the text and do what it asks | Typing in the composer. Shapes, pins, text selections and comments on a page or a time start as comments |
+| Remove | Take out what the note points at | The composer's **Remove** button, or `⌫` before anything is typed, or `⌫` on a markdown selection |
 
-The composer's footer starts with the intent chip (`✎ Change ▾`), which opens
-a menu of the four. The keys `1` to `4` switch it while focus is in the
-composer but not in its text field, for example after `Tab` from the field
-onto the chip, so digits typed into a comment stay text. In the image modes
-the same keys change the intent of the note selected on the canvas, and undo
-takes the change back. A markdown deletion
-is always Remove and an insertion always Add. The general comment has no
-intent.
+`⌫` only counts in a field nothing was typed into: text that was typed and
+then deleted never turns into a removal. A saved note keeps its kind, so to
+change one, delete the note and make it again. In markdown a deletion is
+always Remove, an insertion (Alt+click) a comment at a position. The general
+comment has no kind.
 
 A note gets its number when it is made and keeps it for the whole round.
 Deleting a note never renumbers the others, so the output can have gaps. The
@@ -96,15 +91,18 @@ output, which lists the notes by position (line, page or time), not by
 number. The next round starts at 1 again; earlier marks keep the round and
 number they were raised with (`Round 1, mark 2`).
 
-Notes saved before intents and numbers existed (a JSON export, a restored
-draft, a session file from an earlier round) load as they are: the intent
-comes from the type (an old pin is a Question, a markdown deletion a Remove), the
-number from the order the earlier version used.
+Notes saved before kinds and numbers existed (a JSON export, a restored
+draft, a session file from an earlier round) load as they are: Change, Add and
+Question read as comments, a markdown deletion as a removal, and the number
+comes from the order the earlier version used.
 
-Marks take their intent's colour. A shape can carry its own ink instead, for
-visibility on a busy image: pick it in the composer's palette, or fix one for
-new marks with the dock's colour button (**Intent colour** is the default).
-The number badge always shows the intent's colour.
+The colour of a mark follows its number: note 1 is orange, 2 amber, 3 blue, 4
+pink, then it starts over at orange. Neighbouring notes differ, and the colour
+never says what a note asks for: that is the icon and the word. A shape can
+carry its own ink instead, for visibility on a busy image: pick it in the
+composer's palette, or fix one for new marks with the dock's colour button
+(**Automatic colour** is the default). The number badge always shows the
+colour of the number.
 
 ## Finishing a review
 
@@ -151,7 +149,6 @@ kept in cookies on `localhost`, so they carry over between runs and modes;
 | General | Close tab after a decision | Never (default), Now, 3 s, 5 s |
 | General | Keep drafts | Markdown only: unsent notes survive a reload or a closed tab (default on), also when the agent edited the file in between: a restored note moves to where its text (or its image, link or diagram) is now, and one that cannot be found stays in the panel marked `Unanchored` and goes to the agent without a line number. Restoring from the source view switches to the preview to place the notes. A walkthrough from `annotaitr changes` keeps its draft only while it is unchanged. Image modes keep the notes on the server until the decision |
 | General | Tool hints | The help line in the status bar, and in markdown mode the first-run hint for Shift+click (default on) |
-| General | Default intent | The intent new pins, shapes and text selections start with (default Change) |
 | Markdown | Content width, Font size, Starting mode | Markdown mode only |
 | Shortcuts | | The keys of the open mode, searchable, also opened with `?` |
 | About | | Version and repository |

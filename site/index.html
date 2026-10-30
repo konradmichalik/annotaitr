@@ -28,10 +28,8 @@
 <body id="top">
 <svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
   <symbol id="i-github" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></symbol>
-  <symbol id="i-change" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
-  <symbol id="i-add" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke-width="2.2"/></symbol>
+  <symbol id="i-comment" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
   <symbol id="i-remove" viewBox="0 0 24 24"><path d="M5 12h14" stroke-width="2.2"/></symbol>
-  <symbol id="i-question" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></symbol>
   <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
 </svg>
 
@@ -41,7 +39,7 @@
   <a class="brand" href="#top"><img src="images/logo.svg" alt="annotaitr" width="280" height="44"></a>
   <nav class="nav" aria-label="Main">
     <a class="nl" href="#modes">Modes</a>
-    <a class="nl" href="#intents">Intents</a>
+    <a class="nl" href="#notes">Notes</a>
     <a class="nl" href="#output">Output</a>
     <a class="nl" href="#install">Install</a>
     <a class="nl nl-outline" href="https://github.com/konradmichalik/annotaitr"><svg class="icon icon-fill" width="16" height="16" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
@@ -82,14 +80,14 @@
       <div class="reveal lift card step">
         <span class="step-num">3</span>
         <h3>It acts on your notes</h3>
-        <p>The agent gets each note with its number, intent and position, and reopens the annotator for another round until you approve.</p>
+        <p>The agent gets each note with its number, your words and position, and reopens the annotator for another round until you approve.</p>
       </div>
     </div>
   </section>
 
   <section class="section" id="demo">
     <h2 class="reveal">From a mark to a line the agent can use.</h2>
-    <p class="section-lead">Draw a box, ask a question. Each mark becomes a numbered note, and each note becomes a line in the agent's feedback.</p>
+    <p class="section-lead">Draw a box, type what you mean. Each mark becomes a numbered note, and each note becomes a line in the agent's feedback.</p>
     <div class="reveal demo">
       <div class="demo-row">
         <div class="demo-canvas">
@@ -118,46 +116,42 @@
             <rect class="d-box d-draw" pathLength="1" x="178" y="84" width="164" height="134" rx="6" fill="none" stroke="#c04a00" stroke-width="2.5"/>
             <g class="d-mark d-pin1"><circle cx="342" cy="84" r="11" fill="#c04a00" stroke="#fff" stroke-width="2"/><text x="342" y="88.2" text-anchor="middle" font-size="12" font-weight="600" fill="#fff">1</text></g>
             <path class="d-arrow d-draw" pathLength="1" d="M470 205 C 440 240, 380 252, 318 248" fill="none" stroke="#fff" stroke-width="5.5" stroke-opacity="0.7" stroke-linecap="round"/>
-            <path class="d-arrow d-draw" pathLength="1" d="M470 205 C 440 240, 380 252, 318 248 M318 248 l11 -9 M318 248 l13 5" fill="none" stroke="#0072b2" stroke-width="2.5" stroke-linecap="round"/>
-            <g class="d-mark d-pin2"><circle cx="476" cy="200" r="11" fill="#0072b2" stroke="#fff" stroke-width="2"/><text x="476" y="204.2" text-anchor="middle" font-size="12" font-weight="600" fill="#fff">2</text></g>
+            <path class="d-arrow d-draw" pathLength="1" d="M470 205 C 440 240, 380 252, 318 248 M318 248 l11 -9 M318 248 l13 5" fill="none" stroke="#e69f00" stroke-width="2.5" stroke-linecap="round"/>
+            <g class="d-mark d-pin2"><circle cx="476" cy="200" r="11" fill="#e69f00" stroke="#fff" stroke-width="2"/><text x="476" y="204.2" text-anchor="middle" font-size="12" font-weight="600" fill="#16181d">2</text></g>
             <g class="d-cursor" aria-hidden="true"><path d="M0 0 L0 15 L4 11.5 L7 18 L9.5 17 L6.5 10.5 L12 10.5 Z" fill="#16181d" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></g>
           </svg>
         </div>
         <div class="demo-panel">
           <span class="demo-panel-title">Feedback</span>
-          <div class="d-card1 note i-change">
-            <span class="note-head"><span class="badge badge-sm">1</span><span class="label label-sm"><svg class="icon" width="13" height="13" aria-hidden="true"><use href="#i-change"/></svg>Change</span><span class="note-kind">Box</span></span>
+          <div class="d-card1 note mark-1">
+            <span class="note-head"><span class="badge badge-sm">1</span><span class="label label-sm"><svg class="icon" width="13" height="13" aria-hidden="true"><use href="#i-comment"/></svg>Comment</span><span class="note-kind">Box</span></span>
             <span class="note-text">Highlight is too loud next to the hero.</span>
           </div>
-          <div class="d-card2 note i-question">
-            <span class="note-head"><span class="badge badge-sm">2</span><span class="label label-sm"><svg class="icon" width="13" height="13" aria-hidden="true"><use href="#i-question"/></svg>Question</span><span class="note-kind">Arrow</span></span>
+          <div class="d-card2 note mark-2">
+            <span class="note-head"><span class="badge badge-sm">2</span><span class="label label-sm"><svg class="icon" width="13" height="13" aria-hidden="true"><use href="#i-comment"/></svg>Comment</span><span class="note-kind">Arrow</span></span>
             <span class="note-text">Is the FAQ still loaded lazily?</span>
           </div>
         </div>
       </div>
-      <div class="term demo-out"><span class="d-out0 out-line out-muted">2 annotations (1 Change, 1 Question) on the screenshot.</span><span class="d-out1 out-line"><span class="out-head">### 1.</span> <span class="out-change">Change</span> · Boxed area: center</span><span class="d-out2 out-line"><span class="out-head">### 2.</span> <span class="out-question">Question</span> · Arrow: bottom right</span></div>
+      <div class="term demo-out"><span class="d-out0 out-line out-muted">2 annotations on the screenshot.</span><span class="d-out1 out-line"><span class="out-head">### 1.</span> Boxed area: center <span class="out-muted">Highlight is too loud next to the hero.</span></span><span class="d-out2 out-line"><span class="out-head">### 2.</span> Arrow: bottom right <span class="out-muted">Is the FAQ still loaded lazily?</span></span></div>
     </div>
   </section>
 
-  <section class="section" id="intents">
-    <h2 class="reveal">Every note says what to do.</h2>
-    <p class="section-lead">Four intents, each with its own colour, icon and word, so the meaning survives colour blindness and a quick glance. The agent receives the intent with every note.</p>
-    <div class="grid grid-intents">
-      <div class="reveal lift card intent i-change">
-        <span class="intent-head"><span class="badge num">1</span><span class="label"><svg class="icon" width="16" height="16" aria-hidden="true"><use href="#i-change"/></svg>Change</span></span>
-        <p>This is wrong or off. Rework it.</p>
+  <section class="section" id="notes">
+    <h2 class="reveal">Mark it, type what you mean.</h2>
+    <p class="section-lead">No type to pick before you write. Change this, add that, why is it like this: the agent reads it from your words. Only a removal is its own kind, so a cut is never mistaken for a comment.</p>
+    <div class="grid grid-notes">
+      <div class="reveal lift card kind mark-1">
+        <span class="kind-head"><span class="badge num">1</span><span class="label"><svg class="icon" width="16" height="16" aria-hidden="true"><use href="#i-comment"/></svg>Comment</span></span>
+        <p>Select, start typing, <kbd>⌘↵</kbd>. A fix, an addition or a question, all in your own words.</p>
       </div>
-      <div class="reveal lift card intent i-add">
-        <span class="intent-head"><span class="badge num">2</span><span class="label"><svg class="icon" width="16" height="16" aria-hidden="true"><use href="#i-add"/></svg>Add</span></span>
-        <p>Something is missing here.</p>
+      <div class="reveal lift card kind mark-2">
+        <span class="kind-head"><span class="badge num">2</span><span class="label"><svg class="icon" width="16" height="16" aria-hidden="true"><use href="#i-remove"/></svg>Remove</span></span>
+        <p>Press <kbd>⌫</kbd> before typing and the selection is struck out for the agent to take out.</p>
       </div>
-      <div class="reveal lift card intent i-remove">
-        <span class="intent-head"><span class="badge num">3</span><span class="label"><svg class="icon" width="16" height="16" aria-hidden="true"><use href="#i-remove"/></svg>Remove</span></span>
-        <p>Take this out.</p>
-      </div>
-      <div class="reveal lift card intent i-question">
-        <span class="intent-head"><span class="badge num">4</span><span class="label"><svg class="icon" width="16" height="16" aria-hidden="true"><use href="#i-question"/></svg>Question</span></span>
-        <p>Explain this before I decide.</p>
+      <div class="reveal lift card kind">
+        <span class="kind-head"><span class="dots" aria-hidden="true"><span class="mark-1"></span><span class="mark-2"></span><span class="mark-3"></span><span class="mark-4"></span></span><span class="label">Colours tell notes apart</span></span>
+        <p>Each note takes the next of four colours, so neighbours never look alike. Mark and card share number and colour.</p>
       </div>
     </div>
   </section>
@@ -176,7 +170,7 @@
       </article>
       <article class="reveal mode">
         <img class="shot" src="images/05-markdown.png" width="1440" height="900" loading="lazy" data-zoom alt="A Markdown review with a Files overview, numbered highlights in the text and notes in the panel">
-        <div><h3>Markdown and plain text</h3><p>Select text to change, add, remove or ask. Review several files in one session, with a Files overview that shows what you have read. Mermaid, PlantUML and math are annotatable as a whole.</p></div>
+        <div><h3>Markdown and plain text</h3><p>Select text and type a comment, or strike it out for removal. Review several files in one session, with a Files overview that shows what you have read. Mermaid, PlantUML and math are annotatable as a whole.</p></div>
       </article>
       <article class="reveal mode">
         <img class="shot" src="images/06-image-dark.png" width="1440" height="900" loading="lazy" data-zoom alt="An image in the dark theme with a note being written in the composer">
@@ -193,17 +187,17 @@
     <div class="output-in">
       <div class="output-copy">
         <h2>The agent gets a list, not a screenshot to squint at.</h2>
-        <p>Your notes arrive as text, each with its number, intent and a plain-language position. The marked-up image is saved next to it, so the agent can match both.</p>
+        <p>Your notes arrive as text, each with its number, your words and a plain-language position. The marked-up image is saved next to it, so the agent can match both.</p>
         <p>Approve with nothing to change, or approve with notes that are only context. The agent knows the difference.</p>
       </div>
       <div class="reveal output-window">
         <div class="window-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="window-title">what the agent reads</span></div>
-        <pre class="term output-pre"><span class="out-muted">2 annotations (1 Change, 1 Question) on the screenshot.</span>
+        <pre class="term output-pre"><span class="out-muted">2 annotations on the screenshot.</span>
 
-<span class="out-head">### 1. [#a3f19c2e]</span> <span class="out-change">Change</span> · Boxed area: top left
+<span class="out-head">### 1. [#a3f19c2e]</span> Boxed area: top left
 <span class="out-muted">Make the title shorter.</span>
 
-<span class="out-head">### 3. [#7b210e44]</span> <span class="out-question">Question</span> · Comment pin: bottom right
+<span class="out-head">### 3. [#7b210e44]</span> Comment pin: bottom right
 <span class="out-muted">Are refunds net or gross?</span></pre>
       </div>
     </div>

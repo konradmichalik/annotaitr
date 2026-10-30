@@ -13,7 +13,7 @@ agent applies the feedback  ←  decision printed to stdout  ←  submit
 | Image | image, captured URL, clipboard, video, GIF, PDF | numbered notes with position, plus the annotated image |
 | Markdown | Markdown, plain text, config and data files | one block per note with line reference and requested change |
 
-Every note has a number it keeps for the whole round and one of four intents: Change, Add, Remove, Question.
+Every note has a number it keeps for the whole round and one of two kinds: a comment, or a removal. A comment's text says what it wants.
 
 ## Image mode
 
@@ -21,7 +21,7 @@ Draw a box, arrow, freehand or highlighter mark, or drop a numbered pin, each wi
 
 On submit:
 
-- The marks are baked into a copy of the image, each number on its intent's colour, with a legend such as `3. Question · Pin`. The copy is written to a fresh temp directory and its path goes to the agent.
+- The marks are baked into a copy of the image, each number on the colour its number takes (four colours, round and round), with a legend such as `3. Pin` or `3. Remove · Pin`. The copy is written to a fresh temp directory and its path goes to the agent.
 - Next to it, each note (or group of notes close together) gets a crop of the marked area at full resolution, cut from the marked-up copy, so other marks stay visible. Comments and crops covering more than half the image are skipped. The overview stays one file and the crops carry the detail an agent loses when it scales a large image down.
 - The feedback lists each note with a plain-language position (for example "top right, ~15% from top") and flags notes placed too close for that label to tell them apart.
 
@@ -63,17 +63,15 @@ Select text to see the selection bar:
 
 | Action | Key | Effect |
 |--------|-----|--------|
-| Change | `1` | highlight text and request a change |
-| Add | `2` | insert new text after the selection |
-| Remove | `3` | mark text as struck through |
-| Ask | `4` | highlight text and ask a question |
+| Comment | any printable key, or `Ctrl/Cmd+K` | highlight text and type what you mean: a change, an addition or a question |
+| Remove | `⌫` or `Ctrl/Cmd+D` | mark text as struck through |
 | Quick label | `Alt+1` to `Alt+0` | categorize a selection instantly |
-| Insert | `Alt+click` | place the cursor to add text there |
+| Comment at a position | `Alt+click` | place the cursor to comment there |
 | Global comment | | general feedback not tied to a selection |
 
 Images, Mermaid, PlantUML and Kroki diagrams can be commented on or marked for deletion like text.
 
-On submit, each note becomes a Markdown block headed by its number and intent and naming the lines, such as `## 3. Question · Text (Line 7)`. A multi-file session groups blocks by file and numbers across all files.
+On submit, each note becomes a Markdown block headed by its number, `Remove ·` for a removal, and naming the lines, such as `## 3. Text (Line 7)`. A multi-file session groups blocks by file and numbers across all files.
 
 ### Changes walkthrough
 
@@ -81,7 +79,7 @@ On submit, each note becomes a Markdown block headed by its number and intent an
 
 - **Source**: the hunks always come from git, the agent's `--explain` file only adds text around them. git runs without a shell and with external diffs, textconv and fsmonitor switched off. File sizes and line counts are checked before a diff is read, so a huge file is listed with its counts instead of being loaded. A diff over 512 KB is only dropped after git has produced it.
 - **Document**: the walkthrough is written to `changes.md` in the git directory, never committed, and deleted after the decision. The client lays it out as an overview, a file tree and one card per file. `Whole file` asks `/api/changes/full` for the diff of that one file with all of it as context.
-- **Output**: a note on a diff line is mapped back to the file and to its `new` or `old` line, such as `## 1. Change · Text (new Lines 43-49 in src/Foo.php)`.
+- **Output**: a note on a diff line is mapped back to the file and to its `new` or `old` line, such as `## 1. Text (new Lines 43-49 in src/Foo.php)`.
 - **At the decision**: the CLI takes a cheap fingerprint of the changes again, without reading a diff. If it moved while the review was open, the output starts with `CHANGED DURING REVIEW:`, so the agent knows the notes may point at code that changed since.
 
 ## Decisions
