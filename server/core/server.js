@@ -48,7 +48,8 @@ export function isAllowedWrite(method, headers) {
   const origin = headers.origin
   if (!origin) { return true }
   try {
-    return new URL(origin).host === headers.host
+    const { protocol, host } = new URL(origin)
+    return protocol === 'http:' && host === headers.host
   } catch {
     return false
   }

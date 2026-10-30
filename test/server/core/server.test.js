@@ -104,6 +104,10 @@ describe('isAllowedWrite', () => {
     expect(isAllowedWrite('POST', { ...own, origin: 'http://127.0.0.1:4001' })).toBe(false)
   })
 
+  it('rejects an HTTPS Origin, since the server only speaks HTTP', () => {
+    expect(isAllowedWrite('POST', { ...own, origin: 'https://127.0.0.1:4000' })).toBe(false)
+  })
+
   it('rejects an opaque or malformed Origin', () => {
     expect(isAllowedWrite('POST', { ...own, origin: 'null' })).toBe(false)
     expect(isAllowedWrite('POST', { ...own, origin: 'not a url' })).toBe(false)
