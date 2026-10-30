@@ -118,13 +118,17 @@ export function createApiRouter(filePaths, resolveDecision, origin = 'cli', stor
     }
   })
 
-  // Open a linked file (linked navigation)
+  // Open a linked file (linked navigation). A POST because it adds the file
+  // to the review, and a GET could be triggered by any website.
   const baseDir = process.cwd()
 
-  router.get('/api/file/open', async (req, res) => {
-    const { path: requestedPath, relativeTo } = req.query
-    if (!requestedPath) {
-      return res.status(400).json(failure('path query parameter required'))
+  router.post('/api/file/open', async (req, res) => {
+    const { path: requestedPath, relativeTo } = req.body ?? {}
+    if (typeof requestedPath !== 'string' || !requestedPath) {
+      return res.status(400).json(failure('path is required'))
+    }
+    if (relativeTo !== undefined && typeof relativeTo !== 'string') {
+      return res.status(400).json(failure('relativeTo must be a string'))
     }
 
     const referenceDir = relativeTo

@@ -121,8 +121,11 @@ export function useReviewFiles({ viewerRef, setStatus, setErrorStatus }) {
     }
 
     try {
-      const params = new URLSearchParams({ path: pathOnly, relativeTo: activeFilePath })
-      const res = await fetch(`/api/file/open?${params}`)
+      const res = await fetch('/api/file/open', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: pathOnly, relativeTo: activeFilePath })
+      })
       const json = await res.json()
       if (json.success) {
         // A directory link resolves to its index document, so dedupe on the real path
