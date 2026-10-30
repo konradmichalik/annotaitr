@@ -5,7 +5,7 @@ import { PinpointOverlay } from '../PinpointOverlay.jsx'
 import { BlockHoverHint } from '../BlockHoverHint.jsx'
 import { SearchBar } from '../SearchBar.jsx'
 import { ViewerBlocks } from './ViewerBlocks.jsx'
-import { ImageRegionDraw, ImageRegionBoxes } from './ImageRegions.jsx'
+import { ImageRegionDraw, ImageRegionBoxes, PendingRegionBox } from './ImageRegions.jsx'
 import { ChangesBlocks } from './ChangesBlocks.jsx'
 import { useHighlighter } from '../../hooks/useHighlighter.js'
 import { useDocumentSearch } from '../../hooks/useDocumentSearch.js'
@@ -523,6 +523,7 @@ export const Viewer = forwardRef(function Viewer({
           linkUrl={toolbarState?.linkIsOpenable && changes ? null : toolbarState?.linkUrl || null}
           onOpenLink={toolbarState?.linkIsOpenable ? onOpenFile : null}
         />
+        {toolbarState?.elementData?.imageRegion && <PendingRegionBox wrapper={toolbarState.element} region={toolbarState.elementData.imageRegion} />}
         <ImageRegionBoxes targets={regionTargets} onSelect={(annotation, wrapper) => openElementToolbar(wrapper, annotation, {})} />
         {regionDraw && <ImageRegionDraw wrapper={regionDraw.wrapper} onDone={finishRegionDraw} onCancel={cancelRegionDraw} />}
         {pinpointMode && <PinpointOverlay target={pinpointTarget} />}

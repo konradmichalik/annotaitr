@@ -550,6 +550,7 @@
 
 .note-card-head {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   align-items: center;
   min-height: 24px;
@@ -606,21 +607,20 @@
   height: 14px;
 }
 
-/* A long location (a deep section, a selector) wraps instead of hiding behind the actions. */
+/* The location (a file, a section, a selector) has a line of its own under the kind, so a long one never crowds the actions. */
 .note-location {
-  flex: 1 1 0;
+  flex: 1 0 100%;
+  order: 1;
   min-width: 0;
   color: var(--ink-muted);
   font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
-  text-align: right;
 }
 
 /* A state such as Unanchored: the word carries it, the dashed outline matches the Not explained pill. */
 .note-tag {
   flex: none;
-  margin-left: auto;
   padding: 0 var(--space-2);
   border: 1px dashed var(--line-control);
   border-radius: var(--radius-full);
@@ -629,22 +629,11 @@
   font-weight: 500;
 }
 
-.note-location + .note-tag {
-  margin-left: 0;
-}
-
 .note-card-actions {
   display: flex;
   gap: 2px;
-  opacity: 0;
-}
-
-.note-location + .note-card-actions {
-  margin-left: 0;
-}
-
-.note-card-select + .note-card-actions {
   margin-left: auto;
+  opacity: 0;
 }
 
 .note-card:hover .note-card-actions,

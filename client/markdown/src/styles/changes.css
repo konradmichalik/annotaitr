@@ -681,8 +681,12 @@
 .repo-file {
   flex: 1;
   min-width: 0;
-  padding: var(--space-4) 2rem;
+  margin: var(--space-4) 2rem;
+  padding: var(--space-4) var(--space-5);
   overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--card);
 }
 
 /* Why a file is not shown, in words, next to its name */

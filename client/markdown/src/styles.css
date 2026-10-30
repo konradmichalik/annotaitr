@@ -596,6 +596,10 @@
   cursor: pointer;
 }
 
+.image-region-box--pending {
+  pointer-events: none;
+}
+
 .image-region-draw-hint {
   position: absolute;
   inset: 4px auto auto 4px;
