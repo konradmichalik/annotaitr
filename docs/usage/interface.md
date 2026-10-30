@@ -70,8 +70,9 @@ between the bar's buttons.
 
 A note is a comment or a removal, nothing else. What a comment asks for, a
 change, something to add or a question, is in its words, so there is nothing to
-pick before typing. A removal takes out what the note points at. It is shown as
-an icon and a word on the card and in the output:
+pick before typing. A removal takes out what the note points at. On the card
+every note shows its kind as an icon and a word. In the output to the agent only
+a removal is named (`Remove ·` after the number), a comment has no kind word:
 
 | Kind | Meaning for the agent | How it is made |
 | --- | --- | --- |

@@ -309,7 +309,7 @@ Nothing else moves.
 
 ## Output contract
 
-The kind (`comment` or `remove`) is a field of every annotation. In the stdout output only a removal is named (`Remove ·`), a comment has no word. Adding a kind changes the contract with the calling agent, so it goes with tests, the instructions in `apps/` and an update to [usage.md](../usage.md).
+Every annotation has an `intent` field: `comment` or `remove`, and `null` for the general comment. In the stdout output only a removal is named (`Remove ·`), a comment has no word. Adding a kind changes the contract with the calling agent, so it goes with tests, the instructions in `apps/` and an update to [usage.md](../usage.md).
 
 Changes round 1 is built on the markdown client (`annotaitr changes` writes the walkthrough, the client lays it out); code and later rounds are deferred. Changes adds to the contract in both directions:
 
