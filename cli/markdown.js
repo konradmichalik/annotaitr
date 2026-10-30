@@ -90,9 +90,9 @@ export async function runMarkdown({
   await openBrowser(server.url)
 
   const decision = await server.waitForDecision()
-  // A mode may put a note in front of the decision, such as a warning that the reviewed changes moved.
-  const note = (await onDecision?.()) ?? ''
   const decided = !decision.aborted && !decision.disconnected
+  // A mode may put a note in front of the decision, such as a warning that the reviewed changes moved.
+  const note = (decided && await onDecision?.()) || ''
   const output = decided ? await sessionOutput(opened, decision) : ''
   await handleOutcome(server, decision, () => note + output)
 }

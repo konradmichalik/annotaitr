@@ -54,7 +54,9 @@ command directly.
 
 ## Your task
 
-Address the annotation feedback above. The user marked up an image in the
+If the command printed nothing and exited with code 1 (`No decision made.` on stderr), the user closed the tab or interrupted the review. That is not an approval: change nothing and ask what they want.
+
+Otherwise address the annotation feedback above. The user marked up an image in the
 browser UI: boxes, arrows, freehand marks, highlighter marks, and numbered
 comment pins, each with an optional text comment. An arrow drawn in
 dimension-line style (perpendicular ticks, no arrowhead) marks a distance or

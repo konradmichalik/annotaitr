@@ -31,6 +31,9 @@ The command prints the result to stdout:
 - `APPROVED:` → the user approved the file with no changes. Confirm and stop.
 - `APPROVED WITH NOTES:` → the user approved the file as-is but left annotations.
   Do **not** edit the file; read the notes as context, acknowledge them, and stop.
+- Nothing on stdout and exit code 1 (`No decision made.` on stderr) → the user
+  closed the tab or interrupted the review. That is not an approval: change
+  nothing and ask what they want.
 - Structured annotation feedback → apply the requested edits to the file(s).
   Each heading names the note's number and intent, such as
   `## 3. Question · Text (Line 7) [#a3f19c2e]`:
