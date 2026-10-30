@@ -73,8 +73,8 @@ describe('needsDiscardConfirm', () => {
 })
 
 describe('describeIntents', () => {
-  it('counts the notes per intent in a fixed order, general comments last', () => {
-    expect(describeIntents(['question', 'change', null, 'question', 'remove'])).toBe('1 Change, 1 Remove, 2 Question, 1 General')
+  it('counts the notes per kind in a fixed order, general comments last', () => {
+    expect(describeIntents(['remove', 'comment', null, 'comment', 'comment'])).toBe('3 Comment, 1 Remove, 1 General')
   })
 
   it('is empty without notes', () => {

@@ -68,8 +68,8 @@ export function formatAnnotationsForExport(annotations, blocks, filePath) {
     const block = blocks.find(blk => blk.id === ann.blockId)
     const blockStartLine = block?.startLine || 1
     const tag = handleTag(ann.id)
-    // The number the note keeps for the round and its intent, as the card and the agent's feedback show them.
-    const heading = `${ann.number ?? index + 1}. ${intentWord(intentOf(ann))} · `
+    // The number the note keeps for the round, and Remove for a removal, as the card and the agent's feedback show them.
+    const heading = `${ann.number ?? index + 1}. ${intentOf(ann) === 'remove' ? `${intentWord('remove')} · ` : ''}`
 
     // Element-level annotations
     if (ann.targetType === 'image') {
@@ -123,7 +123,7 @@ export function formatAnnotationsForExport(annotations, blocks, filePath) {
       output += `\`\`\`\n${ann.originalText}\n\`\`\`\n\n`
       output += `> ${ann.text}\n\n`
     } else if (ann.type === 'INSERTION') {
-      output += `Insert text${place}${tag}\n\n`
+      output += `Comment at a position${place}${tag}\n\n`
       if (ann.afterContext) {
         output += `After: \`${ann.afterContext}\`\n\n`
       }

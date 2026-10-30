@@ -1,17 +1,13 @@
-import { INTENTS } from './intents.js'
-
 /** Settings both modes offer, stored once so a change in one mode carries over to the other. */
 export const SHARED_DEFAULTS = {
   theme: 'auto',
   autoCloseDelay: 'off',
-  toolHints: true,
-  defaultIntent: 'change'
+  toolHints: true
 }
 
 const ALLOWED = {
   theme: ['light', 'dark', 'auto'],
   autoCloseDelay: ['off', '0', '3', '5'],
-  defaultIntent: INTENTS.map((intent) => intent.id),
   changesView: ['diff', 'read', 'changes']
 }
 

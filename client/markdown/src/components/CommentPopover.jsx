@@ -33,7 +33,7 @@ function computePosition(anchorRect) {
  * The comment composer on a text selection. `draftBaseline` is the text it
  * counts as untouched: the stored comment when editing, nothing for a new one
  * (even when typing a key opened it with that key already in the field).
- * `initialIntent` shows the intent chip; an insertion has none, it is always Add.
+ * `onRemove`, for a new selection, adds the Remove button: it marks the selection for removal instead.
  * `attachable` offers images next to the text, picked, pasted or dropped.
  */
 export function CommentPopover({
@@ -43,15 +43,14 @@ export function CommentPopover({
   draftBaseline = '',
   placeholder = 'Add a comment…',
   submitLabel = 'Save',
-  initialIntent = null,
   initialAttachments = NO_ATTACHMENTS,
   attachable = true,
+  onRemove = null,
   onSubmit,
   onClose,
 }) {
   const [mode, setMode] = useState('popover')
   const [text, setText] = useState(initialText)
-  const [intent, setIntent] = useState(initialIntent)
   const [cursorPos, setCursorPos] = useState(initialText.length)
   const [position, setPosition] = useState(null)
   const [offscreenSide, setOffscreenSide] = useState(null)
@@ -129,9 +128,9 @@ export function CommentPopover({
 
   const handleSubmit = useCallback(() => {
     if (text.trim()) {
-      onSubmit(text, intent ?? undefined, images.attachments)
+      onSubmit(text, images.attachments)
     }
-  }, [text, intent, images.attachments, onSubmit])
+  }, [text, images.attachments, onSubmit])
 
   // The removed thumbnail took the focus with it, which would otherwise fall out of the composer.
   const removeAttachment = (id) => {
@@ -206,11 +205,10 @@ export function CommentPopover({
       titleId={titleId}
       className={isDialog ? 'comment-popover--dialog' : ''}
       style={popoverStyle}
-      dirty={hasDraft(text, draftBaseline, intent !== initialIntent) || images.attachments !== initialAttachments}
+      dirty={hasDraft(text, draftBaseline) || images.attachments !== initialAttachments}
       submitLabel={submitLabel}
       submitDisabled={!hasText || images.busy}
-      intent={intent}
-      onIntentChange={initialIntent ? setIntent : null}
+      onRemove={onRemove}
       tools={tools}
       onSave={handleSubmit}
       onDiscard={onClose}

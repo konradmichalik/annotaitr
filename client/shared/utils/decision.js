@@ -50,7 +50,7 @@ export function needsDiscardConfirm(choice, notes) {
   return choice === 'approve' && notes > 0
 }
 
-/** "2 Change, 1 Question, 1 General": the notes per intent, in the order the composer lists them. `null` is a general comment. */
+/** "3 Comment, 1 Remove, 1 General": the notes per kind, in the order the panel lists them. `null` is a general comment. */
 export function describeIntents(intents) {
   const order = [...INTENTS.map((i) => i.id), null]
   return order

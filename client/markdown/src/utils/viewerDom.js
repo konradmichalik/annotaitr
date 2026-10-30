@@ -1,6 +1,7 @@
 import { isOpenableFileLink } from './links.js'
 import { reanchorAnnotations } from './draftAnchors.js'
 import { isOldBlock } from './fileVersions.js'
+import { markIndex } from '../../../shared/utils/intents.js'
 
 /**
  * The selector of a rendered block. A Read view block id holds its file's
@@ -200,29 +201,8 @@ export function createPersistentInsertionMarker(id, blockEl, offset, number) {
   marker.className = 'insertion-marker'
   marker.dataset.highlightId = id
   marker.dataset.insertionId = id
-  if (Number.isInteger(number)) { marker.dataset.noteNumber = String(number) }
+  if (Number.isInteger(number)) { marker.dataset.noteNumber = String(number); marker.dataset.noteMark = String(markIndex(number)) }
   return placeMarker(marker, textRootOf(blockEl), offset)
-}
-
-/** The marker Add puts after a selection, which the composer anchors to until the text is saved. */
-export function createTemporaryInsertionMarker(blockEl, offset) {
-  const marker = document.createElement('span')
-  marker.className = 'insertion-marker-temp'
-  return placeMarker(marker, textRootOf(blockEl), offset)
-}
-
-/** Where a selection ends inside its block, counted as insertion offsets count: markers do not count. */
-export function insertionPointAfter(el) {
-  let blockEl = el.parentElement
-  while (blockEl && !blockEl.dataset?.blockId) { blockEl = blockEl.parentElement }
-  if (!blockEl) { return null }
-  const root = textRootOf(blockEl)
-  const range = document.createRange()
-  range.selectNodeContents(root)
-  range.setEndAfter(el)
-  const offset = range.toString().replaceAll('\u200B', '').length
-  const text = root.textContent.replaceAll('\u200B', '')
-  return { blockEl, blockId: blockEl.dataset.blockId, offset, afterContext: text.slice(Math.max(0, offset - 50), offset) }
 }
 
 function placeMarker(marker, blockEl, offset) {

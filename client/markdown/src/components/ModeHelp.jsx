@@ -9,7 +9,7 @@ export function ModeHelp({ pinpoint }) {
   }
   return (
     <>
-      Select text: mark the words you mean to comment, remove or add. <KeyCap>{ALT}</KeyCap>+click inserts at a position,
+      Select text, then type to comment or press <KeyCap>⌫</KeyCap> to remove it. <KeyCap>{ALT}</KeyCap>+click comments at a position,
       hold <KeyCap>Shift</KeyCap> for Pinpoint
     </>
   )

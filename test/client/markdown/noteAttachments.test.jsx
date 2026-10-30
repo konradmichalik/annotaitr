@@ -10,7 +10,7 @@ const blocks = [{ id: 'block-0', type: 'paragraph', content: 'Hello world', star
 const id = `${'a'.repeat(32)}.png`
 const note = (overrides) => ({
   id: 'n1', blockId: 'block-0', startOffset: 0, endOffset: 5, type: 'COMMENT', number: 1,
-  intent: 'change', text: 'Fix', originalText: 'Hello', ...overrides
+  intent: 'comment', text: 'Fix', originalText: 'Hello', ...overrides
 })
 
 let host

@@ -9,7 +9,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true
 const blocks = [{ id: 'block-0', type: 'paragraph', content: 'Hello world', startLine: 3 }]
 const note = (overrides) => ({
   id: 'n1', blockId: 'block-0', startOffset: 0, endOffset: 5, type: 'COMMENT', number: 1,
-  intent: 'change', text: 'Fix', originalText: 'Hello', ...overrides
+  intent: 'comment', text: 'Fix', originalText: 'Hello', ...overrides
 })
 
 let host
@@ -49,7 +49,7 @@ describe('an unanchored note in the panel', () => {
     expect(tag.getAttribute('title')).toBe('Text no longer in the file')
     expect(tag.querySelector('.visually-hidden').textContent).toBe(': text no longer in the file')
     expect(card.querySelector('.note-location')).toBeNull()
-    expect(card.querySelector('.note-card-select').getAttribute('aria-label')).toBe('1. Change, Unanchored: text no longer in the file')
+    expect(card.querySelector('.note-card-select').getAttribute('aria-label')).toBe('1. Comment, Unanchored: text no longer in the file')
   })
 
   it('offers delete but no edit, since there is no text left to edit it on', () => {

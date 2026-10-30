@@ -26,18 +26,24 @@
   --status-accent: #7c4dcc;
   --tint: 12%;
 
-  /* Intents. Marks keep their colour in both themes, labels switch. */
+  /* Mark colours: a note takes the next one by its number and starts over after the fourth, in both themes. */
+  --mark-1: #c04a00;
+  --mark-1-on: #fff;
+  --mark-2: #e69f00;
+  --mark-2-on: #16181d;
+  --mark-3: #0072b2;
+  --mark-3-on: #fff;
+  --mark-4: #a8457e;
+  --mark-4-on: #fff;
+
+  /* Notes on a whole block (diagram, image, formula) are still tinted by their type, from base.css. Text and shapes take the marks above. */
   --intent-change-mark: #c04a00;
-  --intent-change-on-mark: #fff;
   --intent-change-label: #9a3b00;
   --intent-add-mark: #e69f00;
-  --intent-add-on-mark: #16181d;
   --intent-add-label: #7a5400;
   --intent-remove-mark: #a8457e;
-  --intent-remove-on-mark: #fff;
   --intent-remove-label: #8a3466;
   --intent-question-mark: #0072b2;
-  --intent-question-on-mark: #fff;
   --intent-question-label: #005a8c;
   --intent-earlier-mark: #5a6170;
   --mark-halo: rgb(255 255 255 / 60%);

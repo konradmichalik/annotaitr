@@ -37,7 +37,7 @@ function computePosition(anchorPoint) {
 export default function CommentPopover({
   anchorPoint, title, initialText = '', initialIntent, initialColor, annotationType, initialArrowStyle,
   initialStrokeWidth, initialDashStyle, isEditing = false, timeBadge = null, voiceNotes = false, elementHint = null,
-  onIntentChange = null, onSubmit, onClose
+  onSubmit, onClose
 }) {
   const [text, setText] = useState(initialText)
   const [initialStyle] = useState(() => ({
@@ -47,10 +47,9 @@ export default function CommentPopover({
     dashStyle: initialDashStyle || 'solid'
   }))
   const [style, setStyle] = useState(initialStyle)
-  const [intent, setIntent] = useState(initialIntent)
   const textareaRef = useRef(null)
   const titleId = useId()
-  const styleChanged = intent !== initialIntent || Object.keys(style).some((key) => style[key] !== initialStyle[key])
+  const styleChanged = Object.keys(style).some((key) => style[key] !== initialStyle[key])
 
   useEffect(() => {
     const id = setTimeout(() => textareaRef.current?.focus(), 0)
@@ -65,8 +64,13 @@ export default function CommentPopover({
   }, [])
 
   const handleSubmit = useCallback(() => {
-    onSubmit({ text: text.trim(), intent, ...style })
-  }, [text, intent, style, onSubmit])
+    onSubmit({ text: text.trim(), intent: initialIntent, ...style })
+  }, [text, initialIntent, style, onSubmit])
+
+  // A removal needs no words, so it is saved right away. What was typed stays as the reason.
+  const handleRemove = useCallback(() => {
+    onSubmit({ text: text.trim(), intent: 'remove', ...style })
+  }, [text, style, onSubmit])
 
   const tools = (
     <>
@@ -82,11 +86,7 @@ export default function CommentPopover({
       style={{ ...computePosition(anchorPoint), width: POPOVER_WIDTH }}
       dirty={hasDraft(text, initialText, styleChanged)}
       submitLabel={isEditing ? 'Save' : 'Add'}
-      intent={intent}
-      onIntentChange={(picked) => {
-        setIntent(picked)
-        onIntentChange?.(picked)
-      }}
+      onRemove={isEditing ? null : handleRemove}
       tools={tools}
       onSave={handleSubmit}
       onDiscard={onClose}

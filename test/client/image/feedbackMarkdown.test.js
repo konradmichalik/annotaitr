@@ -4,8 +4,8 @@ import { feedbackMarkdown } from '../../../client/image/src/utils/feedbackMarkdo
 describe('feedbackMarkdown', () => {
   const annotations = [
     { id: 'g', type: 'comment', geometry: null, text: 'Overall fine' },
-    { id: 'b', type: 'pin', number: 2, intent: 'question', geometry: { x: 1, y: 1 }, text: 'Why?', page: 2 },
-    { id: 'a', type: 'box', number: 1, intent: 'change', geometry: { x: 0, y: 0, width: 5, height: 5 }, text: '' }
+    { id: 'b', type: 'pin', number: 2, intent: 'remove', geometry: { x: 1, y: 1 }, text: 'Why?', page: 2 },
+    { id: 'a', type: 'box', number: 1, intent: 'comment', geometry: { x: 0, y: 0, width: 5, height: 5 }, text: '' }
   ]
 
   it('lists numbered notes by number, then the general comment', () => {
@@ -13,8 +13,8 @@ describe('feedbackMarkdown', () => {
     expect(feedbackMarkdown(annotations, { target: 'plan.pdf', locate })).toBe([
       '# Feedback on plan.pdf',
       '',
-      '1. **Change** (Box): (no comment)',
-      '2. **Question** (Pin, Page 2): Why?',
+      '1. (Box): (no comment)',
+      '2. **Remove** (Pin, Page 2): Why?',
       '- **General**: Overall fine',
       ''
     ].join('\n'))

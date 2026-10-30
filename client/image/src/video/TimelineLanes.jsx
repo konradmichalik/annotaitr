@@ -3,8 +3,8 @@ import { formatTimecode, formatTimes, isSpan, layoutMarkerLanes, clusterNotes, d
 import { TOOL_ICONS, ACTION_ICONS } from '../utils/icons.jsx'
 import { PreviousMark, previousMarkName } from '../threads/PreviousTimelineMarks.jsx'
 import { threadNumber } from '../../../shared/threads/threadView.js'
-import { intentMark, intentOnMark } from '../utils/annotationColors.js'
-import { intentWord } from '../../../shared/utils/intents.js'
+import { numberMark, numberOnMark } from '../utils/annotationColors.js'
+import { intentWord, markIndex } from '../../../shared/utils/intents.js'
 import { useRovingFocus } from '../../../shared/hooks/useRovingFocus.js'
 
 const ROW_GAP_PX = 2
@@ -22,7 +22,7 @@ function markerLabel(marker) {
   return `Annotation ${marker.number} ${formatTimes(marker, { at: 'at ', from: 'from ' })}, ${typeLabel(marker)}`
 }
 
-const markerColors = (intent) => ({ '--marker-color': intentMark(intent), '--marker-on-color': intentOnMark(intent) })
+const markerColors = (number) => ({ '--marker-color': numberMark(number), '--marker-on-color': numberOnMark(number) })
 
 /** The rendered width of the lanes: overlap and clusters are a question of pixels, not seconds. */
 function useWidth(ref) {
@@ -117,7 +117,7 @@ function Marker({ marker, duration, row = 0, dragHandlers }) {
         top: row * (MARKER_SIZE_PX + ROW_GAP_PX),
         left: percent(marker.time, duration),
         width: span ? `calc(${percent(marker.endTime, duration)} - ${percent(marker.time, duration)})` : undefined,
-        ...markerColors(marker.intent)
+        ...markerColors(marker.number)
       }}
       {...dragHandlers(marker)}
       aria-label={markerLabel(marker)}
@@ -141,7 +141,7 @@ function Marker({ marker, duration, row = 0, dragHandlers }) {
   )
 }
 
-/** A row of the cluster list: number on the intent colour (dashed grey for an earlier round), intent and timecode. */
+/** A row of the cluster list: number on its colour (dashed grey for an earlier round), kind and timecode. */
 function ClusterItem({ item, round, onPick }) {
   const previous = item.kind === 'previous'
   const number = previous ? threadNumber(item.thread) : item.number
@@ -149,7 +149,7 @@ function ClusterItem({ item, round, onPick }) {
   return (
     <li>
       <button type="button" className="timeline-cluster-item" data-dock-item onClick={() => onPick(item)}>
-        <span className={`timeline-cluster-number${previous ? ' timeline-cluster-number--previous' : ''}`} style={previous ? undefined : markerColors(item.intent)}>
+        <span className={`timeline-cluster-number${previous ? ' timeline-cluster-number--previous' : ''}`} style={previous ? undefined : markerColors(item.number)}>
           {number}
         </span>
         <span className="timeline-cluster-word">{word}</span>
@@ -168,7 +168,7 @@ function Cluster({ cluster, duration, round, open, onToggle, onPick }) {
   const listId = useId()
   const chipRef = useRef(null)
   const roving = useRovingFocus()
-  const colours = [...new Set(cluster.items.map((item) => (item.kind === 'previous' ? 'previous' : item.intent ?? 'change')))]
+  const colours = [...new Set(cluster.items.map((item) => (item.kind === 'previous' ? 'previous' : markIndex(item.number))))]
   const name = `${cluster.items.length} notes around ${formatTimecode(cluster.time)}`
 
   useEffect(() => {
@@ -197,7 +197,7 @@ function Cluster({ cluster, duration, round, open, onToggle, onPick }) {
             <span
               key={colour}
               className={`timeline-cluster-dot${colour === 'previous' ? ' timeline-cluster-dot--previous' : ''}`}
-              style={colour === 'previous' ? undefined : { background: intentMark(colour) }}
+              style={colour === 'previous' ? undefined : { background: numberMark(colour) }}
             />
           ))}
         </span>

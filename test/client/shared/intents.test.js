@@ -1,41 +1,36 @@
 import { describe, it, expect } from 'vitest'
 import {
-  INTENTS, defaultIntent, intentOf, intentWord, intentForKey, nextNumber, normalizeNotes, isNumbered
+  INTENTS, defaultIntent, intentOf, intentWord, markIndex, markStyle, nextNumber, normalizeNotes, isNumbered
 } from '../../../client/shared/utils/intents.js'
 
 describe('INTENTS', () => {
-  it('lists the four intents with their words and keys', () => {
-    expect(INTENTS.map((i) => `${i.key} ${i.word}`)).toEqual(['1 Change', '2 Add', '3 Remove', '4 Question'])
+  it('lists the two kinds of a note with their words', () => {
+    expect(INTENTS.map((i) => `${i.id} ${i.word}`)).toEqual(['comment Comment', 'remove Remove'])
   })
 })
 
 describe('defaultIntent', () => {
-  it('starts every mark, pins included, as a change', () => {
-    expect(defaultIntent('pin')).toBe('change')
-    expect(defaultIntent('box')).toBe('change')
-    expect(defaultIntent('text')).toBe('change')
-    expect(defaultIntent('COMMENT')).toBe('change')
+  it('starts every mark, pins included, as a comment', () => {
+    for (const type of ['pin', 'box', 'text', 'COMMENT', 'INSERTION']) { expect(defaultIntent(type)).toBe('comment') }
   })
 
-  it('maps markdown deletions and insertions to Remove and Add', () => {
+  it('maps a markdown deletion to Remove', () => {
     expect(defaultIntent('DELETION')).toBe('remove')
-    expect(defaultIntent('INSERTION')).toBe('add')
-  })
-
-  it('starts new marks with the preferred intent, except fixed types', () => {
-    expect(defaultIntent('box', 'remove')).toBe('remove')
-    expect(defaultIntent('COMMENT', 'question')).toBe('question')
-    expect(defaultIntent('pin', 'add')).toBe('add')
-    expect(defaultIntent('DELETION', 'add')).toBe('remove')
-    expect(defaultIntent('box', 'praise')).toBe('change')
   })
 })
 
 describe('intentOf', () => {
-  it('keeps a known intent and falls back to the type default for old data', () => {
-    expect(intentOf({ type: 'box', geometry: {}, intent: 'add' })).toBe('add')
-    expect(intentOf({ type: 'pin', geometry: {} })).toBe('question')
-    expect(intentOf({ type: 'box', geometry: {}, intent: 'nope' })).toBe('change')
+  it('keeps Remove and reads every other value, also the four intents of older data, as a comment', () => {
+    expect(intentOf({ type: 'box', geometry: {}, intent: 'remove' })).toBe('remove')
+    for (const intent of ['change', 'add', 'question', 'nope', undefined]) {
+      expect(intentOf({ type: 'box', geometry: {}, intent })).toBe('comment')
+    }
+    expect(intentOf({ type: 'pin', geometry: {} })).toBe('comment')
+  })
+
+  it('reads a deletion as Remove and an insertion as a comment, whatever the field says', () => {
+    expect(intentOf({ type: 'DELETION', intent: 'comment' })).toBe('remove')
+    expect(intentOf({ type: 'INSERTION', intent: 'remove' })).toBe('comment')
   })
 
   it('has no intent for a general comment or an agent note', () => {
@@ -46,16 +41,26 @@ describe('intentOf', () => {
   })
 })
 
-describe('intentWord and intentForKey', () => {
-  it('names an intent and calls a missing one General', () => {
+describe('intentWord', () => {
+  it('names a kind and calls a missing one General', () => {
+    expect(intentWord('comment')).toBe('Comment')
     expect(intentWord('remove')).toBe('Remove')
     expect(intentWord(null)).toBe('General')
   })
+})
 
-  it('maps the keys 1 to 4 and nothing else', () => {
-    expect(intentForKey('1')).toBe('change')
-    expect(intentForKey('4')).toBe('question')
-    expect(intentForKey('5')).toBeNull()
+describe('markIndex and markStyle', () => {
+  it('rotates through four colours by note number', () => {
+    expect([1, 2, 3, 4, 5, 6, 8, 9].map(markIndex)).toEqual([1, 2, 3, 4, 1, 2, 4, 1])
+  })
+
+  it('falls back to the first colour without a usable number', () => {
+    for (const number of [undefined, null, 0, -1, 2.5, '3']) { expect(markIndex(number)).toBe(1) }
+  })
+
+  it('pairs the colour with the colour of its number', () => {
+    expect(markStyle(2)).toEqual({ background: 'var(--mark-2)', color: 'var(--mark-2-on)' })
+    expect(markStyle(5)).toEqual({ background: 'var(--mark-1)', color: 'var(--mark-1-on)' })
   })
 })
 
@@ -70,7 +75,7 @@ describe('nextNumber', () => {
 describe('normalizeNotes', () => {
   it('keeps stored numbers and gaps', () => {
     const notes = normalizeNotes([{ type: 'box', geometry: {}, number: 2 }, { type: 'pin', geometry: {}, number: 5 }])
-    expect(notes.map((n) => [n.number, n.intent])).toEqual([[2, 'change'], [5, 'question']])
+    expect(notes.map((n) => [n.number, n.intent])).toEqual([[2, 'comment'], [5, 'comment']])
   })
 
   it('numbers old data in the given order without reordering the array', () => {

@@ -68,7 +68,7 @@ describe('formatAnnotationsForExport', () => {
   it('appends the handle to the heading, like the stdout feedback', () => {
     const ann = makeAnnotation({ id: 'a3f19c2e-1b4d-4f7a-9c3e-2d5f8a1b6c4d' })
     const output = formatAnnotationsForExport([ann], [makeBlock()], '/test.md')
-    expect(output).toContain('## 1. Change · Comment (Line 1) [#a3f19c2e]\n')
+    expect(output).toContain('## 1. Comment (Line 1) [#a3f19c2e]\n')
   })
 
   it('gives a global comment a heading that carries its handle', () => {
@@ -291,7 +291,7 @@ describe('formatAnnotationsForExport with unanchored notes', () => {
       [makeBlock({ startLine: 7 })],
       '/test.md'
     )
-    expect(output).toContain('## 1. Change · Comment\n\n```\ngone\n```\n\n> Fix this\n')
+    expect(output).toContain('## 1. Comment\n\n```\ngone\n```\n\n> Fix this\n')
     expect(output).not.toContain('Line 7')
   })
 })
@@ -319,7 +319,7 @@ describe('formatAnnotationsForExport on a Read view block', () => {
   it('names the new file line and the path', () => {
     const blocks = [read({ content: 'First line\nsecond line.', startLine: 14 })]
     const ann = makeAnnotation({ blockId: 'read:docs/usage.md:block-4', number: 2, originalText: 'line\nsecond', startOffset: 6, endOffset: 17 })
-    expect(formatAnnotationsForExport([ann], blocks, 'changes.md')).toContain('## 2. Change · Comment (new Lines 14-15 in docs/usage.md)')
+    expect(formatAnnotationsForExport([ann], blocks, 'changes.md')).toContain('## 2. Comment (new Lines 14-15 in docs/usage.md)')
   })
 
   it('names the old file line for a block of the old file in the Changes view', () => {

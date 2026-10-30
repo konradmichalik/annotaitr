@@ -2,8 +2,7 @@ import {
   HIGHLIGHTER_OPACITY, dimensionCapLines, dimensionTickLengthFor
 } from '../utils/drawing.js'
 import { resolveArrowStyle, strokeWidthOf, dashArrayFor } from '../utils/annotationStyles.js'
-import { markColor, intentMark, intentOnMark } from '../utils/annotationColors.js'
-import { intentOf } from '../../../shared/utils/intents.js'
+import { markColor, numberMark, numberOnMark } from '../utils/annotationColors.js'
 
 /**
  * The marks as SVG, drawn the way the server renders them
@@ -80,28 +79,28 @@ function HighlighterShape({ geometry, color, strokeWidth, dash, selectionProps }
 }
 
 /**
- * The number on its intent's colour, with a soft light halo that only shows
+ * The number on its colour, with a soft light halo that only shows
  * on dark images. The same badge sits on every mark, as in the image the
  * server renders (server/image/common/render.js).
  */
-function NumberBadge({ x, y, number, intent, r = 11, fontSize = 12 }) {
+function NumberBadge({ x, y, number, r = 11, fontSize = 12 }) {
   if (number === undefined || number === null) { return null }
   return (
     <>
-      <circle cx={x} cy={y} r={r} fill={intentMark(intent)} stroke="var(--mark-halo)" strokeWidth="1" />
-      <text x={x} y={y} textAnchor="middle" dominantBaseline="central" fill={intentOnMark(intent)} fontSize={fontSize} fontWeight="700">
+      <circle cx={x} cy={y} r={r} fill={numberMark(number)} stroke="var(--mark-halo)" strokeWidth="1" />
+      <text x={x} y={y} textAnchor="middle" dominantBaseline="central" fill={numberOnMark(number)} fontSize={fontSize} fontWeight="700">
         {number}
       </text>
     </>
   )
 }
 
-function PinShape({ geometry, intent, number, selectionProps }) {
+function PinShape({ geometry, number, selectionProps }) {
   const { x, y } = geometry
   return (
     <>
       {selectionProps && <circle cx={x} cy={y} r="18" fill="none" {...selectionProps} />}
-      <NumberBadge x={x} y={y} number={number ?? ''} intent={intent} r={14} fontSize={13} />
+      <NumberBadge x={x} y={y} number={number ?? ''} r={14} fontSize={13} />
     </>
   )
 }
@@ -136,20 +135,19 @@ function badgePoint({ type, geometry }) {
 
 // `badge` is off for an earlier round's mark, whose number sits in its status badge instead.
 export function AnnotationShape({ annotation, number, markerId, dashed = false, selected = false, badge = true }) {
-  const color = markColor(annotation)
-  const intent = intentOf(annotation)
-  const shape = <ShapeBody annotation={annotation} color={color} intent={intent} number={number} markerId={markerId} dashed={dashed} selected={selected} />
+  const color = markColor(annotation, number)
+  const shape = <ShapeBody annotation={annotation} color={color} number={number} markerId={markerId} dashed={dashed} selected={selected} />
   if (!badge || annotation.type === 'pin' || !annotation.geometry) { return shape }
   const point = badgePoint(annotation)
   return (
     <>
       {shape}
-      {point && <NumberBadge x={point.x} y={point.y} number={number} intent={intent} />}
+      {point && <NumberBadge x={point.x} y={point.y} number={number} />}
     </>
   )
 }
 
-function ShapeBody({ annotation, color, intent, number, markerId, dashed, selected }) {
+function ShapeBody({ annotation, color, number, markerId, dashed, selected }) {
   const strokeWidth = strokeWidthOf(annotation)
   // The live "uncommitted preview" dash always wins over a stored dashStyle:
   // a not-yet-drawn annotation has no dashStyle chosen yet, and this is the
@@ -164,7 +162,7 @@ function ShapeBody({ annotation, color, intent, number, markerId, dashed, select
   if (type === 'arrow') { return <ArrowShape annotation={annotation} color={color} strokeWidth={strokeWidth} dash={dash} markerId={markerId} selectionProps={selectionProps} /> }
   if (type === 'freehand') { return <FreehandShape geometry={geometry} color={color} strokeWidth={strokeWidth} dash={dash} selectionProps={selectionProps} /> }
   if (type === 'highlighter') { return <HighlighterShape geometry={geometry} color={color} strokeWidth={strokeWidth} dash={dash} selectionProps={selectionProps} /> }
-  if (type === 'pin') { return <PinShape geometry={geometry} intent={intent} number={number} selectionProps={selectionProps} /> }
+  if (type === 'pin') { return <PinShape geometry={geometry} number={number} selectionProps={selectionProps} /> }
   return null
 }
 

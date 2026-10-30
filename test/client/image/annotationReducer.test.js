@@ -19,7 +19,7 @@ describe('annotationReducer', () => {
   it('ADD appends an annotation and records history', () => {
     const ann = makeAnnotation()
     const next = annotationReducer(initialAnnotationState, { type: 'ADD', annotation: ann })
-    const numbered = { ...ann, intent: 'question', number: 1 }
+    const numbered = { ...ann, intent: 'comment', number: 1 }
     expect(next.annotations).toEqual([numbered])
     expect(next.history).toEqual([{ action: 'add', annotation: numbered }])
     expect(next.redo).toEqual([])
@@ -86,7 +86,7 @@ describe('annotationReducer', () => {
       expect(undone.redo).toHaveLength(1)
 
       const redone = annotationReducer(undone, { type: 'REDO' })
-      expect(redone.annotations).toEqual([{ ...ann, intent: 'question', number: 1 }])
+      expect(redone.annotations).toEqual([{ ...ann, intent: 'comment', number: 1 }])
       expect(redone.redo).toEqual([])
     })
 
@@ -133,13 +133,13 @@ describe('annotationReducer', () => {
   describe('intent and stable numbers', () => {
     const add = (state, annotation) => annotationReducer(state, { type: 'ADD', annotation })
 
-    it('numbers new notes in the order they are added and gives them the default intent', () => {
+    it('numbers new notes in the order they are added and gives them the default kind', () => {
       let state = add(initialAnnotationState, makeAnnotation({ id: 'a', type: 'box', geometry: { x: 0, y: 0, width: 5, height: 5 } }))
       state = add(state, makeAnnotation({ id: 'b' }))
-      expect(state.annotations.map((a) => [a.id, a.number, a.intent])).toEqual([['a', 1, 'change'], ['b', 2, 'question']])
+      expect(state.annotations.map((a) => [a.id, a.number, a.intent])).toEqual([['a', 1, 'comment'], ['b', 2, 'comment']])
     })
 
-    it('keeps the intent the composer picked', () => {
+    it('keeps the removal the composer marked', () => {
       const state = add(initialAnnotationState, makeAnnotation({ intent: 'remove' }))
       expect(state.annotations[0].intent).toBe('remove')
     })
@@ -172,7 +172,7 @@ describe('annotationReducer', () => {
           makeAnnotation({ id: 'early', type: 'box', time: 1 })
         ]
       })
-      expect(state.annotations.map((a) => [a.id, a.number, a.intent])).toEqual([['late', 2, 'question'], ['early', 1, 'change']])
+      expect(state.annotations.map((a) => [a.id, a.number, a.intent])).toEqual([['late', 2, 'comment'], ['early', 1, 'comment']])
     })
   })
 })

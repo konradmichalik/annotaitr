@@ -29,7 +29,7 @@ const GROUPS = [
       { label: 'Select text', keys: ['V'], kinds: ['markdown'] },
       { label: 'Pinpoint', keys: ['C'], kinds: ['markdown'] },
       { label: 'Other mode while held', keys: ['Shift'], kinds: ['markdown'] },
-      { label: 'Insert text at a position', keys: [ALT, 'Click'], kinds: ['markdown'] },
+      { label: 'Comment at a position', keys: [ALT, 'Click'], kinds: ['markdown'] },
       { label: 'Diff, Read or Changes view of the current file (changes)', keys: ['P'], kinds: ['markdown'] }
     ]
   },
@@ -38,13 +38,10 @@ const GROUPS = [
     title: 'Notes',
     items: [
       { label: 'Save note', keys: [MOD, '↵'], kinds: ALL },
-      { label: 'Pick intent', keys: ['1', '4'], range: true, kinds: ALL },
-      { label: 'Change on the selection', keys: [MOD, 'K'], kinds: ['markdown'] },
-      { label: 'Remove the selection', keys: [MOD, 'D'], kinds: ['markdown'] },
+      { label: 'Mark for removal, before typing', keys: ['⌫'], kinds: ALL },
       { label: 'Quick label on the selection', keys: [ALT, '1', '0'], range: true, kinds: ['markdown'] },
       { label: 'General comment', keys: ['G'], kinds: ALL },
       { label: 'Next, previous note', keys: ['N', '⇧ N'], kinds: ALL },
-      { label: 'Intent of the selected note', keys: ['1', '4'], range: true, kinds: IMAGE },
       { label: 'Delete selected', keys: ['⌫'], kinds: IMAGE },
       { label: 'Discard the note being written', keys: ['Esc'], kinds: ALL },
       { label: 'Undo', keys: [MOD, 'Z'], kinds: ALL },

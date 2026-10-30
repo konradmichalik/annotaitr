@@ -4,7 +4,7 @@ import { noteType } from '../../../shared/utils/noteTypes.js'
 import { NoteCard } from '../../../shared/components/NoteCard.jsx'
 import { GeneralCommentCard } from '../../../shared/components/GeneralCommentCard.jsx'
 import { IntentIcon } from '../../../shared/components/IntentIcon.jsx'
-import { intentBadgeStyle } from '../../../shared/utils/intents.js'
+import { markStyle } from '../../../shared/utils/intents.js'
 import { PanelEmpty } from '../../../shared/components/PanelEmpty.jsx'
 import { isSaveKey } from '../../../shared/utils/keys.js'
 
@@ -112,7 +112,7 @@ export default function AnnotationPanel({
             key={annotation.id}
             id={annotation.id}
             number={annotation.number ?? null}
-            badgeStyle={intentBadgeStyle(intent)}
+            badgeStyle={intent ? markStyle(annotation.number) : undefined}
             word={word}
             intent={intent}
             icon={<IntentIcon intent={intent} />}

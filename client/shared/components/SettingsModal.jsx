@@ -6,7 +6,6 @@ import { SettingRow, SegmentedControl, Toggle, ThemeTiles } from './SettingsCont
 import { ShortcutList } from './ShortcutList.jsx'
 import { useModalDismiss } from '../hooks/useModalDismiss.js'
 import { trapTab } from '../utils/focusTrap.js'
-import { INTENTS } from '../utils/intents.js'
 import { KIND_LABELS } from '../utils/shortcuts.js'
 
 const VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '?'
@@ -33,17 +32,6 @@ function GeneralSection({ settings, updateSetting, drafts, tips }) {
       )}
       <SettingRow id="setting-hints" label="Tool hints" description={tips ? 'First-run tips and the help line in the status bar' : 'The help line in the status bar'}>
         <Toggle id="setting-hints" checked={settings.toolHints} onChange={(v) => updateSetting('toolHints', v)} />
-      </SettingRow>
-      <SettingRow id="setting-intent" label="Default intent" description="For new pins, shapes and selections" labelFor="setting-intent-select">
-        <select
-          id="setting-intent-select"
-          className="settings-select"
-          aria-describedby="setting-intent-desc"
-          value={settings.defaultIntent}
-          onChange={(event) => updateSetting('defaultIntent', event.target.value)}
-        >
-          {INTENTS.map((intent) => <option key={intent.id} value={intent.id}>{intent.word}</option>)}
-        </select>
       </SettingRow>
     </div>
   )

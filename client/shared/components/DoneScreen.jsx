@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { agentName } from '../utils/origin.js'
 import { countsLabel, previewNotes } from '../utils/done.js'
-import { intentBadgeStyle, intentWord } from '../utils/intents.js'
+import { markStyle, intentWord } from '../utils/intents.js'
 import { plural } from '../utils/decision.js'
 import { Logo } from './Logo.jsx'
 
@@ -26,9 +26,9 @@ function NoteRows({ notes, more, label, dashed = false }) {
       <ul className="done-note-list" aria-label={label}>
         {notes.map((note) => (
           <li key={note.id} className="done-note">
-            <span className="done-note-badge" style={intentBadgeStyle(note.intent)} aria-hidden={!note.number}>{note.number ?? ''}</span>
+            <span className="done-note-badge" style={note.number ? markStyle(note.number) : undefined} aria-hidden={!note.number}>{note.number ?? ''}</span>
             <span className="done-note-text">{note.text}</span>
-            <span className="done-note-intent" style={note.intent ? { color: `var(--intent-${note.intent}-label)` } : undefined}>{intentWord(note.intent)}</span>
+            <span className="done-note-intent">{intentWord(note.intent)}</span>
           </li>
         ))}
       </ul>

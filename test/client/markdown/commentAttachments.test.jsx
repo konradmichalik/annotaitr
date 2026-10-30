@@ -28,7 +28,7 @@ function respondWith(...attachments) {
 
 async function render(props = {}) {
   await act(async () => {
-    root.render(<CommentPopover anchorEl={anchor} initialIntent="change" onSubmit={onSubmit} onClose={onClose} {...props} />)
+    root.render(<CommentPopover anchorEl={anchor} onSubmit={onSubmit} onClose={onClose} {...props} />)
   })
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)) })
 }
@@ -90,7 +90,7 @@ describe('attaching images to a note', () => {
     expect(thumbnails()[0].getAttribute('src')).toBe(`/api/attachments/${one.id}`)
     type('Looks off')
     await act(async () => popover().querySelector('.composer-submit').click())
-    expect(onSubmit).toHaveBeenCalledWith('Looks off', 'change', [{ id: one.id, path: one.path, name: 'shot-1.png' }])
+    expect(onSubmit).toHaveBeenCalledWith('Looks off', [{ id: one.id, path: one.path, name: 'shot-1.png' }])
   })
 
   it('removes an image with its own button', async () => {
