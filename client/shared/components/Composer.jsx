@@ -16,16 +16,18 @@ const isUntouchedField = (event, typed) => event.key === 'Backspace' && !event.n
  * Remove button, and `⌫` in a field nothing was typed into does the same: it
  * takes the thing out instead of commenting on it. Text that was typed and
  * then cleared never counts, so correcting a comment cannot remove anything.
+ * `typedRef` lets a caller that remounts the composer (the expanded editor) keep that history.
  */
 export function Composer({
   title, titleId, className = '', style, dirty, submitLabel, submitDisabled = false,
-  onRemove = null, tools = null, children, onSave, onDiscard, onEscape = onDiscard, rootRef
+  onRemove = null, tools = null, children, onSave, onDiscard, onEscape = onDiscard, rootRef, typedRef
 }) {
   const ownRef = useRef(null)
   const ref = rootRef ?? ownRef
   const fallbackId = useId()
   const headingId = titleId ?? fallbackId
-  const typed = useRef(false)
+  const ownTyped = useRef(false)
+  const typed = typedRef ?? ownTyped
 
   useEffect(() => {
     if (dirty) { return }

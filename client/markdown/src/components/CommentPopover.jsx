@@ -56,6 +56,7 @@ export function CommentPopover({
   const [offscreenSide, setOffscreenSide] = useState(null)
   const textareaRef = useRef(null)
   const popoverRef = useRef(null)
+  const typedRef = useRef(false)
   const titleId = useId()
   const images = useAttachments(initialAttachments)
 
@@ -201,6 +202,7 @@ export function CommentPopover({
   const composer = (
     <Composer
       rootRef={popoverRef}
+      typedRef={typedRef}
       title={title}
       titleId={titleId}
       className={isDialog ? 'comment-popover--dialog' : ''}
