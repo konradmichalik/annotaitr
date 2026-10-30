@@ -68,6 +68,14 @@ export function ImageRegionDraw({ wrapper, onDone, onCancel }) {
   )
 }
 
+/** The box just drawn stays on the image while its note is written, so the note does not float free of it. */
+export function PendingRegionBox({ wrapper, region }) {
+  return createPortal(
+    <span className="image-region-box image-region-box--pending" aria-hidden="true" style={regionStyle(region)} />,
+    wrapper
+  )
+}
+
 /**
  * The boxes of the notes that point at part of an image, drawn over it.
  * They are a mouse shortcut to the note, the panel reaches every note by keyboard.

@@ -264,8 +264,11 @@ test('a note on part of an image names the region in the pixels of the image its
       await page.mouse.down()
       await page.mouse.move(image.x + image.width * 0.6, image.y + image.height * 0.5, { steps: 8 })
       await page.mouse.up()
+      // The box stays drawn while its note is being written, not only once the note is saved.
+      await expect(page.locator('.image-region-box')).toHaveCount(1)
       await page.getByRole('toolbar', { name: 'Selection' }).getByRole('button', { name: /^Comment/ }).click()
       const composer = page.getByRole('dialog', { name: 'Comment on selection' })
+      await expect(page.locator('.image-region-box')).toHaveCount(1)
       await composer.getByRole('textbox').fill('Thicker bar')
       await composer.getByRole('button', { name: 'Add', exact: true }).click()
 
