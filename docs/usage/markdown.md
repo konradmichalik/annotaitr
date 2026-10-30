@@ -22,7 +22,7 @@ Click an image in the preview and choose **Region**, then drag a box over the pa
 The feedback names the box in the pixels of the image itself, whatever size the preview shows it at:
 
 ```text
-## 1. Change · Image (Line 5)
+## 1. Image (Line 5)
 Image: `![Chart](chart.png)`
 Alt text: "Chart"
 Source: chart.png
